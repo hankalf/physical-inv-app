@@ -111,7 +111,9 @@ function requireAdmin(req) {
 /* ------------------------------------------------------------ static */
 
 async function serveStatic(req, res, pathname) {
-  const rel = pathname === '/' ? '/index.html' : pathname;
+  const rel = pathname === '/' ? '/index.html'
+    : /^\/admin\/?$/.test(pathname) ? '/admin.html'
+    : pathname;
   const filePath = join(PUBLIC_DIR, normalize(rel).replace(/^(\.\.[/\\])+/, ''));
   if (!filePath.startsWith(PUBLIC_DIR)) return send(req, res, 403, 'forbidden');
   try {
