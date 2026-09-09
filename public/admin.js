@@ -57,6 +57,7 @@
       sessionStorage.setItem('admToken', token);
       $('fPassword').value = '';
       show('main');
+      await loadLayouts();
       await loadSessions();
     } catch (err) { msg($('loginMsg'), 'err', err.message); }
   }
@@ -151,6 +152,7 @@
     $('fPalletMode').value = s.pallet_mode;
     $('fGuided').checked = !!s.guided;
     $('fAskComments').checked = !!s.ask_comments;
+    $('fLayout').value = s.layout || '';
     $('btnCloseSession').textContent = s.status === 'closed' ? 'Reopen session' : 'Close session';
   }
 
@@ -309,7 +311,6 @@
   }
 
   /* ------------------------------------------------------------ warehouse map */
-  const SEP = /[-_./\\ ]/;
   const natural = (a, b) => String(a).localeCompare(String(b), undefined, { numeric: true });
   const svgEl = (tag, attrs = {}) => {
     const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
@@ -317,48 +318,120 @@
     return el;
   };
 
-  // Bin code -> bay: the segment after the aisle ("A03-12-1" -> "12"). Bins that
-  // only differ by level land in the same bay cell, coloured by how many are done.
-  function bayOf(code, aisle) {
-    const parts = String(code).split(SEP).filter(Boolean);
-    if (parts.length >= 2) return parts[1];
-    const up = String(code).toUpperCase();
-    return up.startsWith(aisle) && up.length > aisle.length ? up.slice(aisle.length) : code;
+  // Same rules as src/util/bincode.js: "A03-12-1" -> bay 12, "F01A001" -> bay 001.
+  function parseBinCode(raw) {
+    const code = String(raw || '').trim().toUpperCase();
+    const parts = code.split(/[-_./\\ ]/).filter(Boolean);
+    if (parts.length >= 2) return { aisle: parts[0], bay: parts[1], level: parts[2] || '' };
+    const m = /^([A-Z]+\d+)([A-Z])(\d+)$/.exec(code);
+    if (m) return { aisle: m[1], level: m[2], bay: m[3] };
+    const a = /^([A-Z]+)(\d*)$/.exec(code);
+    if (a) return { aisle: a[1], bay: a[2] || code, level: '' };
+    return { aisle: code, bay: code, level: '' };
   }
+  const bayOf = (code) => parseBinCode(code).bay;
+  const aisleNumber = (aisle) => { const m = /(\d+)\s*$/.exec(String(aisle || '')); return m ? String(Number(m[1])) : String(aisle || '').toUpperCase(); };
 
-  async function refreshMap() {
-    const data = await apiJson(`/api/admin/sessions/${sessionId}/map`);
-    const svg = $('map');
-    svg.innerHTML = '';
-    if (!data.bins.length) { $('mapNote').textContent = 'Upload a bin list to draw the map.'; svg.setAttribute('height', 0); return; }
+  const CELL_FILL = (frac) => (frac === 0 ? '#8b949e' : frac < 1 ? '#d29922' : '#2ea043');
 
-    // aisle -> bay -> {bins, counted, flagged}
+  // bins -> aisle -> bay -> {bins, counted, flagged}
+  function groupBays(bins) {
     const byAisle = new Map();
-    for (const [code, aisle, lines, flagged] of data.bins) {
+    for (const [code, aisle, lines, flagged] of bins) {
       if (!byAisle.has(aisle)) byAisle.set(aisle, new Map());
       const bays = byAisle.get(aisle);
-      const bay = bayOf(code, aisle);
+      const bay = bayOf(code);
       if (!bays.has(bay)) bays.set(bay, { bins: [], counted: 0, flagged: 0 });
       const b = bays.get(bay);
       b.bins.push(code);
       if (lines > 0) b.counted++;
       if (flagged > 0) b.flagged++;
     }
+    return byAisle;
+  }
 
-    // blocks in order; aisles inside a block touch (shared racking), blocks are
-    // separated by a walkway.
+  function cellTitle(aisle, bay, b) {
+    return `${aisle} bay ${bay}: ${b.counted}/${b.bins.length} counted` + (b.flagged ? `, ${b.flagged} flagged` : '') + '\n' + b.bins.join(', ');
+  }
+
+  /** Heat map drawn over a floor-plan drawing: each aisle has pixel boxes in the layout file. */
+  function renderBlueprint(svg, data, layout) {
+    svg.classList.add('blueprint');
+    const W = layout.width, H = layout.height;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.removeAttribute('width'); svg.removeAttribute('height');
+    svg.appendChild(svgEl('image', { href: layout.image, x: 0, y: 0, width: W, height: H, opacity: 0.7 }));
+
+    const byAisle = groupBays(data.bins);
+    const info = new Map(data.aisles.map((a) => [aisleNumber(a.aisle), a]));
+    const placed = new Set();
+    let counted = 0, total = 0;
+
+    for (const [key, spec] of Object.entries(layout.aisles)) {
+      const a = info.get(String(key));
+      const bays = a ? byAisle.get(a.aisle) : null;
+      const segs = spec.segments;
+      if (!a || !bays) {
+        for (const [x, y, w, h] of segs) svg.appendChild(svgEl('rect', { x, y, width: w, height: h, fill: 'none', stroke: '#8b949e', 'stroke-dasharray': '4 3', opacity: 0.6 }));
+        continue;
+      }
+      placed.add(a.aisle);
+      const keys = [...bays.keys()].sort(natural);
+      if (spec.reverse) keys.reverse();
+      const horizontal = spec.dir !== 'v';
+      const lengths = segs.map(([, , w, h]) => (horizontal ? w : h));
+      const totalLen = lengths.reduce((s, v) => s + v, 0);
+      // spread the bays over the segments in proportion to their length
+      let bi = 0;
+      segs.forEach(([x, y, w, h], si) => {
+        const n = si === segs.length - 1 ? keys.length - bi : Math.round((lengths[si] / totalLen) * keys.length);
+        const size = n ? lengths[si] / n : 0;
+        for (let k = 0; k < n; k++, bi++) {
+          const bay = keys[bi];
+          const b = bays.get(bay);
+          total += b.bins.length; counted += b.counted;
+          const frac = b.bins.length ? b.counted / b.bins.length : 0;
+          const attrs = horizontal
+            ? { x: x + k * size + 0.5, y: y + 1, width: Math.max(1, size - 1), height: h - 2 }
+            : { x: x + 1, y: y + k * size + 0.5, width: w - 2, height: Math.max(1, size - 1) };
+          const r = svgEl('rect', { ...attrs, fill: CELL_FILL(frac), class: 'cell', opacity: 0.9,
+            stroke: b.flagged ? '#f85149' : 'none', 'stroke-width': b.flagged ? 2 : 0 });
+          const t = svgEl('title'); t.textContent = cellTitle(a.aisle, bay, b); r.appendChild(t);
+          svg.appendChild(r);
+        }
+      });
+      // label + team badge at the start of the aisle
+      const [x, y, w, h] = segs[0];
+      const lx = horizontal ? x - 4 : x + w / 2, ly = horizontal ? y + h / 2 + 4 : y - 6;
+      const label = svgEl('text', { x: lx, y: ly, 'text-anchor': horizontal ? 'end' : 'middle', class: 'aisle-label' });
+      label.textContent = a.aisle;
+      svg.appendChild(label);
+      if (a.activeTeam || a.done) {
+        const bw = 26, bh = 14;
+        const bx = horizontal ? x + 2 : x + w / 2 - bw / 2, by = horizontal ? y + h / 2 - bh / 2 : y + 2;
+        svg.appendChild(svgEl('rect', { x: bx, y: by, width: bw, height: bh, rx: 7, fill: a.activeTeam ? '#2f81f7' : '#2ea043' }));
+        const t = svgEl('text', { x: bx + bw / 2, y: by + bh - 3, 'text-anchor': 'middle', class: 'team' });
+        t.textContent = a.activeTeam ? 'T' + a.activeTeam : '✓';
+        svg.appendChild(t);
+      }
+    }
+    const missing = [...byAisle.keys()].filter((k) => !placed.has(k));
+    return { counted, total, missing };
+  }
+
+  /** Fallback when no drawing is chosen: aisles as columns, blocks touching. */
+  function renderSchematic(svg, data) {
+    svg.classList.remove('blueprint');
+    const byAisle = groupBays(data.bins);
     const blocks = new Map();
     for (const a of data.aisles.sort((x, y) => natural(x.block, y.block) || natural(x.aisle, y.aisle))) {
       if (!blocks.has(a.block)) blocks.set(a.block, []);
       blocks.get(a.block).push(a);
     }
-    for (const aisle of byAisle.keys()) {
-      if (!data.aisles.some((a) => a.aisle === aisle)) blocks.set(aisle, [{ aisle, block: aisle }]);
-    }
+    for (const aisle of byAisle.keys()) if (!data.aisles.some((a) => a.aisle === aisle)) blocks.set(aisle, [{ aisle, block: aisle }]);
 
     const CW = 34, CH = 22, GAP = 3, WALK = 28, TOP = 46, LEFT = 10;
-    let x = LEFT;
-    let maxBays = 0;
+    let x = LEFT, maxBays = 0;
     const cells = [];
     for (const aisles of blocks.values()) {
       for (const a of aisles) {
@@ -370,25 +443,19 @@
       }
       x += WALK;
     }
-    const width = x + LEFT;
-    const height = TOP + maxBays * (CH + GAP) + 12;
+    const width = x + LEFT, height = TOP + maxBays * (CH + GAP) + 12;
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-    svg.setAttribute('width', width);
-    svg.setAttribute('height', height);
+    svg.setAttribute('width', width); svg.setAttribute('height', height);
 
     let counted = 0, total = 0;
     for (const { a, x: cx, keys, bays } of cells) {
-      // column background: tinted when a team is in it
       const colH = maxBays * (CH + GAP);
       svg.appendChild(svgEl('rect', { x: cx - 1, y: TOP - 1, width: CW + 2, height: colH + 2, rx: 4,
         fill: a.activeTeam ? '#1f4d8f' : a.done ? '#10281a' : '#161b22', opacity: a.activeTeam ? 0.55 : 1 }));
       const label = svgEl('text', { x: cx + CW / 2, y: 14, 'text-anchor': 'middle', class: 'aisle-label' });
-      label.textContent = a.aisle;
-      svg.appendChild(label);
+      label.textContent = a.aisle; svg.appendChild(label);
       if (a.activeTeam || a.done || a.queuedTeams) {
-        const badge = svgEl('rect', { x: cx + 2, y: 20, width: CW - 4, height: 16, rx: 8,
-          fill: a.activeTeam ? '#2f81f7' : a.done ? '#2ea043' : '#30363d' });
-        svg.appendChild(badge);
+        svg.appendChild(svgEl('rect', { x: cx + 2, y: 20, width: CW - 4, height: 16, rx: 8, fill: a.activeTeam ? '#2f81f7' : a.done ? '#2ea043' : '#30363d' }));
         const t = svgEl('text', { x: cx + CW / 2, y: 32, 'text-anchor': 'middle', class: 'team' });
         t.textContent = a.activeTeam ? 'T' + a.activeTeam : a.done ? '✓' : 'T' + String(a.queuedTeams).split(',')[0].trim();
         svg.appendChild(t);
@@ -397,21 +464,27 @@
         const b = bays.get(bay);
         total += b.bins.length; counted += b.counted;
         const frac = b.bins.length ? b.counted / b.bins.length : 0;
-        const fill = frac === 0 ? '#2a3038' : frac < 1 ? '#d29922' : '#2ea043';
         const y = TOP + i * (CH + GAP);
-        const r = svgEl('rect', { x: cx + 2, y, width: CW - 4, height: CH, rx: 3, fill, class: 'cell',
+        const r = svgEl('rect', { x: cx + 2, y, width: CW - 4, height: CH, rx: 3, fill: CELL_FILL(frac), class: 'cell',
           stroke: b.flagged ? '#f85149' : 'none', 'stroke-width': b.flagged ? 2 : 0 });
-        const title = svgEl('title');
-        title.textContent = `${a.aisle} bay ${bay}: ${b.counted}/${b.bins.length} counted` + (b.flagged ? `, ${b.flagged} flagged` : '') + '\n' + b.bins.join(', ');
-        r.appendChild(title);
-        svg.appendChild(r);
-        const bl = svgEl('text', { x: cx + CW / 2, y: y + CH / 2 + 3, 'text-anchor': 'middle', class: 'bay-label',
-          style: frac > 0 ? 'fill:#0d1117;font-weight:700' : '' });
-        bl.textContent = bay;
-        svg.appendChild(bl);
+        const t = svgEl('title'); t.textContent = cellTitle(a.aisle, bay, b); r.appendChild(t); svg.appendChild(r);
+        const bl = svgEl('text', { x: cx + CW / 2, y: y + CH / 2 + 3, 'text-anchor': 'middle', class: 'bay-label', style: frac > 0 ? 'fill:#0d1117;font-weight:700' : '' });
+        bl.textContent = bay; svg.appendChild(bl);
       });
     }
-    $('mapNote').textContent = `${counted.toLocaleString()} of ${total.toLocaleString()} bins have a count. Each cell is a bay; hover for the bins in it.`;
+    return { counted, total, missing: [] };
+  }
+
+  async function refreshMap() {
+    const data = await apiJson(`/api/admin/sessions/${sessionId}/map`);
+    const svg = $('map');
+    svg.innerHTML = '';
+    $('btnLayoutBlocks').hidden = !data.layout;
+    if (!data.bins.length) { $('mapNote').textContent = 'Upload a bin list to draw the map.'; svg.setAttribute('height', 0); return; }
+    const r = data.layout ? renderBlueprint(svg, data, data.layout) : renderSchematic(svg, data);
+    $('mapSub').textContent = data.layout ? data.layout.name : 'top-down, built from the bin codes · aisles that share racking are drawn back-to-back';
+    $('mapNote').textContent = `${r.counted.toLocaleString()} of ${r.total.toLocaleString()} bins have a count. Each cell is a bay; hover for the bins in it.` +
+      (r.missing.length ? ` Not on the drawing: ${r.missing.join(', ')}.` : '');
   }
 
   async function refreshAll() {
@@ -448,6 +521,7 @@
     try {
       await postJson(`/api/admin/sessions/${sessionId}/settings`, {
         palletMode: $('fPalletMode').value, guided: $('fGuided').checked, askComments: $('fAskComments').checked,
+        layout: $('fLayout').value,
       });
       msg($('sessionMsg'), 'ok', 'Settings saved. Scanners pick them up at their next sign-on.');
       await loadSessions();
@@ -480,6 +554,14 @@
     } catch (err) { msg($('uploadMsg'), 'err', 'Upload failed', err.message); }
   };
 
+  $('btnLayoutBlocks').onclick = async () => {
+    try {
+      const r = await postJson(`/api/admin/sessions/${sessionId}/aisles/apply-layout`, {});
+      renderAisles(r.aisles);
+      msg($('assignMsg'), 'ok', `Paired ${r.applied} aisle(s) the way the drawing shows them.`);
+      await refreshAssignments();
+    } catch (err) { alert(err.message); }
+  };
   $('btnAutoBlock').onclick = async () => {
     try {
       renderAisles(await postJson(`/api/admin/sessions/${sessionId}/aisles/auto-block`, { size: Number($('fBlockSize').value), offset: Number($('fBlockOffset').value) }));
@@ -506,9 +588,17 @@
   $('btnExportUncounted').onclick = () => download(`/api/admin/sessions/${sessionId}/export/uncounted.csv`, `uncounted-bins-session-${sessionId}.csv`);
 
   /* ------------------------------------------------------------ boot */
+  async function loadLayouts() {
+    const sel = $('fLayout');
+    for (const l of await apiJson('/api/admin/layouts')) {
+      const o = document.createElement('option');
+      o.value = l.id; o.textContent = `${l.name} (${l.aisles} aisles)`;
+      sel.appendChild(o);
+    }
+  }
   (async () => {
     if (!token) return show('login');
-    try { await apiJson('/api/admin/sessions'); show('main'); await loadSessions(); }
+    try { await apiJson('/api/admin/sessions'); show('main'); await loadLayouts(); await loadSessions(); }
     catch { show('login'); }
   })();
   setInterval(() => { if (token && sessionId) refreshAll().catch(() => {}); }, 30000);

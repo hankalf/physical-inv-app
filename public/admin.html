@@ -52,6 +52,9 @@
   #map .bay-label { font-size: 9px; fill: var(--muted); }
   #map .team { font-size: 10px; font-weight: 700; fill: #fff; }
   #map rect.cell:hover { stroke: #fff; stroke-width: 2; }
+  #map.blueprint { max-width: 100%; height: auto; background: #fff; border-radius: 6px; }
+  #map.blueprint .aisle-label { fill: #0d1117; font-size: 11px; }
+  #map.blueprint .bay-label { display: none; }
   .colguide { margin-top: 10px; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
   .colguide .cols { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
   .colguide code { background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 2px 7px; font-size: 12px; }
@@ -109,6 +112,10 @@
         </div>
         <div class="auto"><label class="cb"><input type="checkbox" id="fGuided"> Guided by aisle plan</label></div>
         <div class="auto"><label class="cb"><input type="checkbox" id="fAskComments"> Ask for comments</label></div>
+        <div class="auto">
+          <label for="fLayout">Map drawing</label>
+          <select id="fLayout"><option value="">Schematic (auto from bin codes)</option></select>
+        </div>
         <div class="auto"><button id="btnSaveSettings">Save</button></div>
         <div class="auto"><button id="btnCloseSession" class="danger">Close session</button></div>
       </div>
@@ -149,12 +156,12 @@
 
     <!-- ============ warehouse map ============ -->
     <div class="card">
-      <h2>Warehouse map <span class="muted">top-down, built from the bin codes · aisles that share racking are drawn back-to-back</span></h2>
+      <h2>Warehouse map <span class="muted" id="mapSub">top-down, built from the bin codes · aisles that share racking are drawn back-to-back</span></h2>
       <div class="legend">
-        <span><i style="background:#2a3038"></i> not counted</span>
+        <span><i style="background:#8b949e"></i> not counted</span>
         <span><i style="background:#d29922"></i> partly counted</span>
         <span><i style="background:#2ea043"></i> counted</span>
-        <span><i style="background:#2a3038;box-shadow:inset 0 0 0 2px #f85149"></i> has a flagged line</span>
+        <span><i style="background:#8b949e;box-shadow:inset 0 0 0 2px #f85149"></i> has a flagged line</span>
         <span><i style="background:#1f4d8f"></i> team active in aisle</span>
       </div>
       <div class="scroll" id="mapWrap"><svg id="map" xmlns="http://www.w3.org/2000/svg"></svg></div>
@@ -173,6 +180,7 @@
           <div class="auto"><label for="fBlockSize">Aisles per block</label><input id="fBlockSize" class="sm" type="number" value="2" min="1"></div>
           <div class="auto"><label for="fBlockOffset">Skip first</label><input id="fBlockOffset" class="sm" type="number" value="0" min="0" title="Set to 1 if the first aisle has a wall behind it"></div>
           <div class="auto"><button id="btnAutoBlock">Auto-pair aisles</button></div>
+          <div class="auto"><button id="btnLayoutBlocks" class="primary" hidden>Pair from drawing</button></div>
         </div>
         <div class="scroll" style="margin-top:10px"><table id="aisleTable"></table></div>
       </div>

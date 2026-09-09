@@ -1,4 +1,5 @@
-import { db, norm } from '../db.js';
+import { db, norm, resolveAisle } from '../db.js';
+import { aisleNumber } from '../util/bincode.js';
 
 /*
  * Guided counting.
@@ -124,10 +125,9 @@ export function queueAssignments(sessionId, team, aisles) {
   db.exec('BEGIN');
   try {
     for (const raw of aisles) {
-      const aisle = norm(raw);
-      if (!aisle) continue;
-      const known = db.prepare('SELECT 1 FROM aisles WHERE session_id = ? AND aisle = ?').get(id, aisle);
-      if (!known) { skipped.push({ aisle, reason: 'no such aisle in this session' }); continue; }
+      if (!norm(raw)) continue;
+      const aisle = resolveAisle(id, raw);
+      if (!aisle) { skipped.push({ aisle: norm(raw), reason: 'no such aisle in this session' }); continue; }
       const existing = db
         .prepare('SELECT status FROM assignments WHERE session_id = ? AND team = ? AND aisle = ?')
         .get(id, t, aisle);
@@ -260,4 +260,30 @@ export function teamStatus(sessionId, team) {
     done,
     waitingOn,
   };
+}
+
+/** Group the session's aisles into the racking blocks a layout drawing defines. */
+export function applyLayoutBlocks(sessionId, layout) {
+  const id = Number(sessionId);
+  const byNumber = new Map(
+    db.prepare('SELECT aisle FROM aisles WHERE session_id = ?').all(id).map((r) => [aisleNumber(r.aisle), r.aisle])
+  );
+  let applied = 0;
+  db.exec('BEGIN');
+  try {
+    for (const group of layout.blocks || []) {
+      const members = group.map((n) => byNumber.get(String(n))).filter(Boolean);
+      if (!members.length) continue;
+      const label = members.length > 1 ? `${members[0]}+${members[members.length - 1]}` : members[0];
+      for (const aisle of members) {
+        db.prepare('UPDATE aisles SET block = ? WHERE session_id = ? AND aisle = ?').run(label, id, aisle);
+        applied++;
+      }
+    }
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+  return { applied, aisles: aisleOverview(id) };
 }

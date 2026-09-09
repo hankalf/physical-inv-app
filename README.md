@@ -98,10 +98,18 @@ Columns are matched by name, so most ERP exports work unchanged.
 | **Pallet list** | pallet id/container/LPN, sku, description, uom, qty, location | The validation list for question 1, plus what is on each pallet and where the system thinks it is. |
 | **Counting plan** | team, aisle | One row per aisle, in the order each team should count. Optional — aisles can also be queued in the dashboard. |
 
-Without an `Aisle` column, the aisle is taken from the first part of the bin code
-(`A03-12-1` → `A03`, `03.14.2` → `03`). Add the column if your codes don't follow that.
+Without an `Aisle` column, the aisle is read from the bin code. Two shapes are understood:
 
-Sample files are in `sample-data/`.
+| Bin code | Aisle | Bay | Level |
+|---|---|---|---|
+| `A03-12-1` (separated) | `A03` | `12` | `1` |
+| `F01A001` (zone, aisle, level, bin) | `F01` | `001` | `A` |
+
+Add the column if your codes don't follow either. Wherever an aisle is typed — a
+counting plan, the assignment box — `1`, `01` and `F01` all mean the same row.
+
+Sample files are in `sample-data/`, and each upload type has a downloadable template
+with its columns explained in the dashboard.
 
 ### 3. Pair aisles that share racking
 
@@ -118,7 +126,21 @@ and the handheld shows *"Waiting: team 1 is still in aisle A03, which shares rac
 with A04"*. Trying to force-start a conflicting aisle from the dashboard is refused
 with the same message.
 
-### 5. Watch, then export
+### 5. Put the map on the real floor plan
+
+The **Warehouse map** card draws every bay as a cell coloured by how much of it has a
+count. With no drawing chosen it lays aisles out schematically. Pick a **Map drawing**
+in the session settings and it draws the same cells over the actual rack layout, in
+the positions the racking really has, with team badges on the aisles they're in.
+
+A drawing is a pair of files in `public/layouts/`: `<name>.png` (the floor plan) and
+`<name>.json` (the pixel box of every aisle on it, keyed by aisle number, plus the
+racking pairs). `fort-royal` — Frazier drawing D-22P9170-L001 rev A — ships in the
+repo; **Pair from drawing** in the aisles card applies its back-to-back pairs as the
+racking blocks. To move an aisle, edit its box in the JSON; to add a site, add a pair
+of files.
+
+### 6. Watch, then export
 
 Progress by team (scanner, employees, active aisle, last scan), by aisle, and a pallet
 report with these statuses:

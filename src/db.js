@@ -157,7 +157,30 @@ CREATE INDEX IF NOT EXISTS idx_counts_team    ON counts(session_id, team);
 CREATE INDEX IF NOT EXISTS idx_counts_device  ON counts(session_id, device_id);
 `);
 
+// Added after the first schema: a drawing the map is laid over, per session.
+if (!db.prepare("PRAGMA table_info('sessions')").all().some((c) => c.name === 'layout')) {
+  db.exec("ALTER TABLE sessions ADD COLUMN layout TEXT");
+}
+
 export const norm = (v) => (v == null ? '' : String(v).trim().toUpperCase());
+
+/**
+ * Find a session aisle from what a person typed: exact match first, then by
+ * aisle number ("1", "01" and "F01" all mean row 1) when that is unambiguous.
+ */
+export function resolveAisle(sessionId, raw) {
+  const want = norm(raw);
+  if (!want) return null;
+  const id = Number(sessionId);
+  if (db.prepare('SELECT 1 FROM aisles WHERE session_id = ? AND aisle = ?').get(id, want)) return want;
+  const num = /(\d+)\s*$/.exec(want);
+  if (!num) return null;
+  const n = String(Number(num[1]));
+  const hits = db
+    .prepare('SELECT aisle FROM aisles WHERE session_id = ?').all(id)
+    .filter((r) => { const m = /(\d+)\s*$/.exec(r.aisle); return m && String(Number(m[1])) === n; });
+  return hits.length === 1 ? hits[0].aisle : null;
+}
 
 /* ------------------------------------------------------------------ sessions */
 
@@ -191,6 +214,7 @@ export const publicSession = (s) => ({
   guided: !!s.guided,
   askComments: !!s.ask_comments,
   masterVersion: s.master_version,
+  layout: s.layout || null,
 });
 
 /* ------------------------------------------------------- handheld master data */

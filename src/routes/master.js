@@ -1,4 +1,5 @@
-import { db, norm, bumpMasterVersion, getSession } from '../db.js';
+import { db, norm, bumpMasterVersion, getSession, resolveAisle } from '../db.js';
+import { parseBinCode } from '../util/bincode.js';
 import { parseRecords, pick } from '../util/csv.js';
 
 const LOCATION_ALIASES = ['location', 'loc', 'bin', 'binlocation', 'locationcode', 'slot', 'code', 'warehouselocation', 'binlocationcode'];
@@ -12,18 +13,11 @@ const QTY_ALIASES = ['qty', 'quantity', 'onhand', 'onhandqty', 'expected', 'expe
 const TEAM_ALIASES = ['team', 'teamnumber', 'teamno', 'crew', 'group'];
 
 /**
- * Work out which aisle a bin belongs to when the file has no aisle column.
- * Takes the first separated segment ("A-01-02" -> "A", "03.14.2" -> "03"), and
- * failing that the leading letters ("AA0102" -> "AA"). A supervisor can always
- * add an Aisle column, or re-map aisles in the dashboard afterwards.
+ * Which aisle a bin belongs to when the file has no aisle column - see
+ * util/bincode.js for the code shapes understood ("A03-12-1" -> A03,
+ * "F01A001" -> F01). A supervisor can always add an Aisle column instead.
  */
-export function deriveAisle(code) {
-  const c = norm(code);
-  const seg = c.split(/[-_./\\ ]/).filter(Boolean);
-  if (seg.length > 1) return seg[0];
-  const alpha = /^([A-Z]+)/.exec(c);
-  return alpha ? alpha[1] : c;
-}
+export const deriveAisle = (code) => parseBinCode(code).aisle;
 
 const upLocation = db.prepare(
   `INSERT INTO locations (session_id, code, zone, aisle, description) VALUES (?, ?, ?, ?, ?)
@@ -110,10 +104,8 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
 
       if (kind === 'plan') {
         const team = norm(pick(rec, TEAM_ALIASES));
-        const aisle = norm(pick(rec, AISLE_ALIASES));
+        const aisle = resolveAisle(id, pick(rec, AISLE_ALIASES));
         if (!team || !aisle) { stats.skipped++; continue; }
-        const known = db.prepare('SELECT 1 FROM aisles WHERE session_id = ? AND aisle = ?').get(id, aisle);
-        if (!known) { stats.skipped++; continue; }
         const pos = db
           .prepare('SELECT COALESCE(MAX(position), -1) + 1 AS p FROM assignments WHERE session_id = ? AND team = ?')
           .get(id, team).p;

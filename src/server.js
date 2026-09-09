@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, stat, readdir } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,7 +12,7 @@ import {
 import { importMaster } from './routes/master.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
-  setAssignmentStatus, deleteAssignment, teamStatus,
+  setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks,
 } from './routes/assignments.js';
 import { progress, palletReport, uncountedBins, rawCounts, exceptions, mapData } from './routes/reports.js';
 import { toCsv } from './util/csv.js';
@@ -130,6 +130,30 @@ async function serveStatic(req, res, pathname) {
   }
 }
 
+/* ------------------------------------------------------------ layouts */
+
+// A layout is a floor-plan image plus the pixel box of every aisle on it,
+// shipped as public/layouts/<name>.json.
+async function listLayouts() {
+  const dir = join(PUBLIC_DIR, 'layouts');
+  let files = [];
+  try { files = await readdir(dir); } catch { return []; }
+  const out = [];
+  for (const f of files.filter((n) => n.endsWith('.json'))) {
+    try {
+      const j = JSON.parse(await readFile(join(dir, f), 'utf8'));
+      out.push({ id: f.replace(/\.json$/, ''), name: j.name || f, aisles: Object.keys(j.aisles || {}).length });
+    } catch { /* skip a broken file */ }
+  }
+  return out;
+}
+
+async function loadLayout(id) {
+  if (!id || !/^[a-z0-9_-]+$/i.test(id)) return null;
+  try { return JSON.parse(await readFile(join(PUBLIC_DIR, 'layouts', id + '.json'), 'utf8')); }
+  catch { return null; }
+}
+
 /* ------------------------------------------------------------ routes */
 
 function openSession(id) {
@@ -244,9 +268,10 @@ async function handleAdmin(req, res, url, m) {
     const s = getSession(m[1]);
     if (!s) throw httpError(404, 'session not found');
     const mode = ['off', 'warn', 'strict'].includes(body.palletMode) ? body.palletMode : s.pallet_mode;
-    db.prepare('UPDATE sessions SET pallet_mode = ?, guided = ?, ask_comments = ?, master_version = master_version + 1 WHERE id = ?')
+    const layout = body.layout === undefined ? s.layout : (body.layout && (await loadLayout(body.layout)) ? body.layout : null);
+    db.prepare('UPDATE sessions SET pallet_mode = ?, guided = ?, ask_comments = ?, layout = ?, master_version = master_version + 1 WHERE id = ?')
       .run(mode, body.guided == null ? s.guided : (body.guided ? 1 : 0),
-           body.askComments == null ? s.ask_comments : (body.askComments ? 1 : 0), s.id);
+           body.askComments == null ? s.ask_comments : (body.askComments ? 1 : 0), layout, s.id);
     return sendJson(req, res, 200, getSession(m[1]));
   }
 
@@ -310,8 +335,20 @@ async function handleAdmin(req, res, url, m) {
     const limit = Number(url.searchParams.get('limit') || 500);
     return sendJson(req, res, 200, { total: rows.length, rows: rows.slice(0, limit) });
   }
+  if (p === '/api/admin/layouts' && method === 'GET') return sendJson(req, res, 200, await listLayouts());
+
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/aisles\/apply-layout$/)) && method === 'POST') {
+    const s = getSession(m[1]);
+    if (!s) throw httpError(404, 'session not found');
+    const layout = await loadLayout(s.layout);
+    if (!layout) throw httpError(400, 'pick a layout drawing in the session settings first');
+    return sendJson(req, res, 200, applyLayoutBlocks(m[1], layout));
+  }
+
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/map$/)) && method === 'GET') {
-    return sendJson(req, res, 200, mapData(m[1]));
+    const s = getSession(m[1]);
+    if (!s) throw httpError(404, 'session not found');
+    return sendJson(req, res, 200, { ...mapData(m[1]), layout: await loadLayout(s.layout) });
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/uncounted$/)) && method === 'GET') {
     return sendJson(req, res, 200, uncountedBins(m[1]));
