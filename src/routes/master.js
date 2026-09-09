@@ -1,5 +1,6 @@
 import { db, norm, bumpMasterVersion, getSession, resolveAisle } from '../db.js';
 import { parseBinCode } from '../util/bincode.js';
+import { autoActivate } from './assignments.js';
 import { parseRecords, pick } from '../util/csv.js';
 
 const LOCATION_ALIASES = ['location', 'loc', 'bin', 'binlocation', 'locationcode', 'slot', 'code', 'warehouselocation', 'binlocationcode'];
@@ -127,6 +128,7 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
   }
 
   stats.aisles = newAisles.size;
+  if (kind === 'plan') stats.activated = autoActivate(id);
   bumpMasterVersion(id);
   stats.totals = {
     bins: db.prepare('SELECT COUNT(*) n FROM locations WHERE session_id = ?').get(id).n,
