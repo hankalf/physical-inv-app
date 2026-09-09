@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inventory Count — Supervisor</title>
+<link rel="icon" href="/icon.svg">
+<link rel="stylesheet" href="/styles.css">
+<style>
+  body { font-size: 15px; }
+  main { max-width: 1100px; margin: 0 auto; width: 100%; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .card h2 { margin: 0 0 10px; font-size: 17px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  .stat { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .stat .n { font-size: 26px; font-weight: 800; }
+  .stat .l { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .tag { font-size: 11px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); }
+  .tag.MATCH { color: var(--ok); border-color: #1d572a; }
+  .tag.VARIANCE { color: var(--warn); border-color: #5c4813; }
+  .tag.MISSING { color: var(--err); border-color: #6e2c2f; }
+  .tag.FOUND { color: var(--accent); border-color: #1f4d8f; }
+  .scroll { overflow-x: auto; }
+  button { width: auto; padding: 9px 14px; font-size: 14px; }
+  input, select { font-size: 15px; padding: 9px 10px; font-weight: 500; }
+  .inline { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+  .inline > div { flex: 1 1 180px; }
+  .bar { height: 8px; background: var(--panel-2); border-radius: 4px; overflow: hidden; min-width: 90px; }
+  .bar i { display: block; height: 100%; background: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="title">Inventory Count — Supervisor</span>
+  <span class="chip" id="sessionChip" hidden></span>
+  <button id="btnLogout" class="ghost" hidden style="width:auto;margin:0;padding:6px 10px;font-size:12px">Log out</button>
+</header>
+
+<main>
+
+  <section class="screen active" id="scrLogin">
+    <div class="card" style="max-width:420px;margin:40px auto">
+      <h2>Supervisor sign-in</h2>
+      <label for="fPassword">Password</label>
+      <input id="fPassword" type="password" autocomplete="current-password">
+      <button class="primary" id="btnLogin" style="width:100%">Sign in</button>
+      <div class="feedback" id="loginMsg"></div>
+    </div>
+  </section>
+
+  <section class="screen" id="scrMain">
+
+    <div class="card">
+      <h2>Count sessions</h2>
+      <div class="inline">
+        <div>
+          <label for="fSessionPick">Active session</label>
+          <select id="fSessionPick"></select>
+        </div>
+        <div style="flex:0 0 auto">
+          <button id="btnCloseSession">Close session</button>
+          <button id="btnReopenSession" class="ghost">Reopen</button>
+        </div>
+      </div>
+      <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+      <div class="inline">
+        <div>
+          <label for="fNewName">New session name</label>
+          <input id="fNewName" placeholder="e.g. Q3 2026 wall-to-wall">
+        </div>
+        <div style="flex:0 0 auto">
+          <label><input type="checkbox" id="fBlind" checked style="width:auto"> Blind count</label>
+        </div>
+        <div style="flex:0 0 auto">
+          <label><input type="checkbox" id="fRequireLpn" style="width:auto"> Require LPN scan</label>
+        </div>
+        <div style="flex:0 0 auto">
+          <label><input type="checkbox" id="fAllowOverride" checked style="width:auto"> Allow overrides</label>
+        </div>
+        <div style="flex:0 0 auto"><button class="primary" id="btnCreate">Create</button></div>
+      </div>
+      <div class="feedback" id="sessionMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Upload master data (CSV)</h2>
+      <div class="muted">
+        Columns are matched by name, so most ERP exports work as-is.
+        <b>On-hand</b> wants location / sku / qty (description, uom, zone, barcode optional).
+      </div>
+      <div class="inline" style="margin-top:10px">
+        <div>
+          <label for="fKind">File type</label>
+          <select id="fKind">
+            <option value="onhand">On-hand snapshot (location, sku, qty)</option>
+            <option value="locations">Locations (location, zone, description)</option>
+            <option value="items">Items (sku, description, uom, barcode)</option>
+            <option value="barcodes">Extra barcodes (barcode, sku, pack_qty)</option>
+          </select>
+        </div>
+        <div>
+          <label for="fFile">CSV file</label>
+          <input type="file" id="fFile" accept=".csv,.tsv,.txt,text/csv">
+        </div>
+        <div style="flex:0 0 auto">
+          <label><input type="checkbox" id="fReplace" style="width:auto"> Replace existing</label>
+        </div>
+        <div style="flex:0 0 auto"><button class="primary" id="btnUpload">Upload</button></div>
+      </div>
+      <div class="feedback" id="uploadMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Progress</h2>
+      <div class="grid" id="stats"></div>
+      <div class="scroll" style="margin-top:14px">
+        <table id="zoneTable"></table>
+      </div>
+      <div class="scroll" style="margin-top:14px">
+        <table id="counterTable"></table>
+      </div>
+      <button id="btnRefresh" style="margin-top:12px">Refresh</button>
+      <span class="muted" id="refreshedAt"></span>
+    </div>
+
+    <div class="card">
+      <h2>Variance</h2>
+      <div class="inline">
+        <div style="flex:0 0 auto">
+          <label><input type="checkbox" id="fOnlyVariance" checked style="width:auto"> Hide matching lines</label>
+        </div>
+        <div style="flex:0 0 auto">
+          <button id="btnExportVariance">Export variance CSV</button>
+          <button id="btnExportCounts">Export raw counts CSV</button>
+        </div>
+      </div>
+      <div class="scroll" style="margin-top:10px">
+        <table id="varianceTable"></table>
+      </div>
+      <div class="muted" id="varianceNote"></div>
+    </div>
+
+  </section>
+</main>
+
+<script src="/admin.js"></script>
+</body>
+</html>

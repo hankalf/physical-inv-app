@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<title>Inventory Count</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<header>
+  <span class="title" id="hdrTitle">Inventory Count</span>
+  <span class="chip" id="chipNet">…</span>
+  <span class="chip queued" id="chipQueue" hidden>0</span>
+</header>
+
+<main>
+
+  <!-- ---------------- setup ---------------- -->
+  <section class="screen active" id="scrSetup">
+    <label for="fCounter">Counter (badge or name)</label>
+    <input id="fCounter" class="big" autocomplete="off" autocapitalize="characters" placeholder="Scan or type badge">
+
+    <label for="fSession">Count session</label>
+    <select id="fSession"><option value="">Loading…</option></select>
+
+    <label for="fDevice">Device ID</label>
+    <input id="fDevice" autocomplete="off" placeholder="e.g. MC9300-04">
+
+    <button class="primary" id="btnStart">Load list &amp; start counting</button>
+    <button class="ghost" id="btnRefreshSessions">Refresh sessions</button>
+
+    <div class="feedback" id="setupMsg"></div>
+    <div class="spacer"></div>
+    <div class="muted" id="cacheInfo"></div>
+  </section>
+
+  <!-- ---------------- scanning ---------------- -->
+  <section class="screen" id="scrScan">
+    <div class="context" id="ctx"></div>
+
+    <div class="step" id="stepLabel">Step 1 of 3</div>
+    <h2 class="prompt" id="prompt">Scan location</h2>
+
+    <input id="fScan" class="big" autocomplete="off" autocorrect="off" autocapitalize="characters"
+           spellcheck="false" inputmode="none" enterkeyhint="done">
+
+    <div class="row">
+      <button id="btnKeyboard" class="ghost">Keyboard</button>
+      <button id="btnBack" class="ghost">Back</button>
+    </div>
+
+    <div class="feedback" id="scanMsg"></div>
+
+    <div class="row">
+      <button id="btnChangeLoc" class="ghost">Change location</button>
+      <button id="btnHistory" class="ghost">History</button>
+    </div>
+    <button id="btnEnd" class="ghost">End session on this device</button>
+  </section>
+
+  <!-- ---------------- override ---------------- -->
+  <section class="screen" id="scrOverride">
+    <h2 class="prompt">Not on the list</h2>
+    <div class="context" id="ovCtx"></div>
+    <label for="fReason">Reason (required)</label>
+    <select id="fReason">
+      <option value="">Choose a reason…</option>
+      <option>Label damaged / unreadable</option>
+      <option>New item not in master file</option>
+      <option>New location not in master file</option>
+      <option>Item in wrong location</option>
+      <option>Supervisor approved</option>
+      <option>Other</option>
+    </select>
+    <label for="fReasonNote">Note (optional)</label>
+    <input id="fReasonNote" autocomplete="off" placeholder="Free text">
+    <button class="primary" id="btnOverrideAccept">Accept and continue</button>
+    <button class="ghost" id="btnOverrideCancel">Cancel — rescan</button>
+  </section>
+
+  <!-- ---------------- history ---------------- -->
+  <section class="screen" id="scrHistory">
+    <h2 class="prompt">Recent counts</h2>
+    <div class="muted">Most recent 50 lines from this device. Void removes a line from the totals.</div>
+    <div class="list" id="historyList"></div>
+    <button class="primary" id="btnHistoryBack">Back to scanning</button>
+  </section>
+
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>

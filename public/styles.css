@@ -1,0 +1,108 @@
+/* Tuned for a 4"-5" handheld in a warehouse: high contrast, huge targets,
+   no reliance on hover, everything reachable with one thumb or the keypad. */
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --panel-2: #1f2630;
+  --line: #30363d;
+  --text: #e6edf3;
+  --muted: #9aa7b4;
+  --accent: #2f81f7;
+  --ok: #2ea043;
+  --warn: #d29922;
+  --err: #f85149;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: var(--bg); color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 17px; overscroll-behavior: none;
+}
+body { display: flex; flex-direction: column; }
+
+header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; background: var(--panel);
+  border-bottom: 1px solid var(--line); flex: 0 0 auto;
+}
+header .title { font-weight: 700; font-size: 15px; flex: 1; }
+header .chip {
+  font-size: 12px; padding: 3px 8px; border-radius: 999px;
+  background: var(--panel-2); border: 1px solid var(--line); color: var(--muted);
+  white-space: nowrap;
+}
+header .chip.online { color: var(--ok); border-color: #1d572a; }
+header .chip.offline { color: var(--warn); border-color: #5c4813; }
+header .chip.queued { color: var(--accent); border-color: #1f4d8f; }
+
+main { flex: 1 1 auto; overflow-y: auto; padding: 10px; }
+.screen { display: none; }
+.screen.active { display: block; }
+
+label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; text-transform: uppercase; letter-spacing: .04em; }
+input, select, textarea {
+  width: 100%; padding: 14px 12px; font-size: 20px; font-weight: 600;
+  color: var(--text); background: var(--panel-2);
+  border: 2px solid var(--line); border-radius: 8px; outline: none;
+}
+input:focus, select:focus { border-color: var(--accent); }
+input.big { font-size: 26px; letter-spacing: .02em; }
+
+button {
+  width: 100%; padding: 14px; margin-top: 10px; font-size: 17px; font-weight: 700;
+  color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
+}
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.danger { background: #40191b; border-color: #6e2c2f; color: #ffb3ae; }
+button.ghost { background: transparent; }
+button:active { transform: translateY(1px); }
+.row { display: flex; gap: 8px; }
+.row > * { flex: 1; }
+
+.step {
+  font-size: 12px; color: var(--muted); text-transform: uppercase;
+  letter-spacing: .08em; margin-bottom: 2px;
+}
+.prompt { font-size: 24px; font-weight: 800; margin: 0 0 8px; }
+
+.context {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; font-size: 14px;
+}
+.context div { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
+.context .k { color: var(--muted); }
+.context .v { font-weight: 700; text-align: right; word-break: break-all; }
+
+.feedback { margin-top: 10px; padding: 12px; border-radius: 8px; font-weight: 700; display: none; }
+.feedback.show { display: block; }
+.feedback.ok { background: #10281a; border: 1px solid var(--ok); color: #7ee29a; }
+.feedback.err { background: #2d1214; border: 1px solid var(--err); color: #ffb3ae; }
+.feedback.warn { background: #2b2410; border: 1px solid var(--warn); color: #f2cc60; }
+.feedback .detail { font-weight: 400; font-size: 14px; margin-top: 4px; color: var(--muted); }
+
+.list { margin-top: 10px; }
+.list .item {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 10px; margin-bottom: 6px; font-size: 14px;
+}
+.list .item.voided { opacity: .45; text-decoration: line-through; }
+.list .item .top { display: flex; justify-content: space-between; font-weight: 700; }
+.list .item .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.list .item button { width: auto; padding: 6px 10px; font-size: 12px; margin-top: 6px; }
+
+.muted { color: var(--muted); font-size: 13px; }
+.err-text { color: var(--err); }
+.center { text-align: center; }
+.spacer { height: 16px; }
+progress { width: 100%; height: 14px; }
+
+.flash-ok { animation: fok .35s ease-out; }
+.flash-err { animation: ferr .45s ease-out; }
+@keyframes fok { 0% { background: #10281a; } 100% { background: var(--bg); } }
+@keyframes ferr { 0%, 40% { background: #3a1518; } 100% { background: var(--bg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .flash-ok, .flash-err { animation: none; }
+}

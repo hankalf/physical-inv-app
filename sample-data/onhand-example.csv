@@ -1,0 +1,7 @@
+Location,Zone,Item Number,Description,UOM,On Hand Qty,UPC
+A-01-01,AISLE A,SKU-1001,"Widget, blue, 10mm",EA,25,0012345678905
+A-01-02,AISLE A,SKU-1002,Gadget large,EA,10,0012345678912
+A-02-01,AISLE A,SKU-1003,"Bracket, steel",EA,144,
+B-01-01,AISLE B,SKU-1001,"Widget, blue, 10mm",EA,5,0012345678905
+B-01-02,AISLE B,SKU-2001,Fastener kit,BOX,60,
+C-99-99,AISLE C,SKU-3001,Never counted item,EA,7,
