@@ -109,7 +109,14 @@ Add the column if your codes don't follow either. Wherever an aisle is typed —
 counting plan, the assignment box — `1`, `01` and `F01` all mean the same row.
 
 Sample files are in `sample-data/`, and each upload type has a downloadable template
-with its columns explained in the dashboard.
+with its columns explained in the dashboard. Excel files (`.xlsx`) upload as-is — the
+first sheet is converted in the browser.
+
+**Front Royal:** the full ERP bin list ships in the app — **Load Front Royal bin list**
+in the upload card loads all 13,734 bins: racks `F01`–`F24` and `A01`–`A04`, and the
+non-rack bins grouped into aisles `DOORS`, `STAGING`, `WIP`, `AREAS` and `SYSTEM` (which
+holds `NIL`, the not-in-location bin). Odd positions are the Front face of a double-deep
+rack, even positions the Back; the map shows both.
 
 ### 3. Pair aisles that share racking
 
@@ -136,7 +143,8 @@ the positions the racking really has, with team badges on the aisles they're in.
 A drawing is a pair of files in `public/layouts/`: `<name>.png` (the floor plan) and
 `<name>.json` (the pixel box of every aisle on it, keyed by aisle number, plus the
 racking pairs). `front-royal` — Frazier drawing D-22P9170-L001 rev A — ships in the
-repo (rows 1–24, bays left to right from bin 001); **Pair from drawing** in the aisles card applies its back-to-back pairs as the
+repo (rows `F01`–`F24` and the ambient racks `A01`–`A04` by the dry warehouse, positions
+left to right from 001, each bay split into its Front and Back face); **Pair from drawing** in the aisles card applies its back-to-back pairs as the
 racking blocks. To move an aisle, edit its box in the JSON; to add a site, add a pair
 of files.
 
@@ -159,10 +167,20 @@ flags, comments), exceptions only, and uncounted bins.
 
 ---
 
+### 7. Register the scanners
+
+The **Scanners** card lists every handheld. Add one by name (`SCANNER-05`) and it gets a
+unique link, `https://<server>/?d=<id>`. On the device, open that link in Chrome once —
+scan the QR from the dashboard into the address bar rather than typing it — then menu →
+**Add to Home screen**. From then on the app knows which scanner it is, the dashboard
+shows when it was last seen and which team had it, and removing it here stops the link.
+
+A scanner with no link can still type an ID on first run; it is marked "not registered".
+
 ## Counter — `/` on the handheld
 
-**First run only:** the scanner asks for its unique ID (e.g. `SCANNER-04`). It stays on
-the device.
+**First run:** if the scanner was opened from its registered link, nothing to do. Otherwise
+it asks for an ID.
 
 **Sign-on:** pick the session, enter the team number, scan or type each employee's badge
 (Enter after each), tap **Sign on & load list**.
@@ -215,6 +233,7 @@ Handheld (no auth — the team and scanner ID identify the counter):
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/api/sessions` | Open sessions |
+| `GET` | `/api/devices/:uid` | Which scanner a registered link belongs to |
 | `GET` | `/api/sessions/:id/master?have=<v>` | Bin + pallet lists; `have` skips an unchanged download |
 | `POST` | `/api/sessions/:id/signon` | Record who is on which scanner; returns the team's assignment |
 | `GET` | `/api/sessions/:id/team-status?team=` | Current aisle, bins, queue, or who the team is waiting on |
@@ -227,6 +246,8 @@ Supervisor (`Authorization: Bearer <token>` from `POST /api/admin/login`):
 
 | Method | Path | Purpose |
 |---|---|---|
+| `GET`/`POST` | `/api/admin/devices` | List / register scanners |
+| `POST`/`DELETE` | `/api/admin/devices/:uid` | Rename / remove a scanner |
 | `GET`/`POST` | `/api/admin/sessions` | List / create |
 | `POST` | `/api/admin/sessions/:id/settings` | Pallet check mode, guided, comments |
 | `POST` | `/api/admin/sessions/:id/master?kind=bins\|pallets\|plan&replace=` | Upload a list |

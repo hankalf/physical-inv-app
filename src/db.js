@@ -1,4 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
+import { randomBytes } from 'node:crypto';
 import { mkdirSync, accessSync, constants } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
@@ -148,6 +149,18 @@ CREATE TABLE IF NOT EXISTS counts (
   voided           INTEGER NOT NULL DEFAULT 0,
   scanned_at       TEXT    NOT NULL,
   received_at      TEXT    NOT NULL
+);
+
+-- Registered scanners. Each has a unique link (/?d=<uid>) saved on the device
+-- as its home-screen shortcut, which is how the app knows which scanner it is.
+CREATE TABLE IF NOT EXISTS devices (
+  uid          TEXT PRIMARY KEY,
+  name         TEXT NOT NULL UNIQUE,
+  notes        TEXT,
+  created_at   TEXT NOT NULL,
+  last_seen    TEXT,
+  last_team    TEXT,
+  last_session INTEGER
 );
 
 CREATE INDEX IF NOT EXISTS idx_counts_session ON counts(session_id, voided);
@@ -307,4 +320,45 @@ export function countedPallets(sessionId, since) {
       ).all(Number(sessionId));
   const latest = db.prepare('SELECT MAX(received_at) AS m FROM counts WHERE session_id = ?').get(Number(sessionId)).m;
   return { pallets: rows.map((r) => [r.pallet_id, r.location_code, r.team]), watermark: latest };
+}
+
+/* -------------------------------------------------------------------- devices */
+
+// Short, unambiguous id for a scanner link: no 0/O/1/I/L to misread off a label.
+function newUid() {
+  const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = randomBytes(8);
+  let out = '';
+  for (const b of bytes) out += alphabet[b % alphabet.length];
+  return out;
+}
+
+export const listDevices = () => db.prepare('SELECT * FROM devices ORDER BY name').all();
+export const getDevice = (uid) => db.prepare('SELECT * FROM devices WHERE uid = ?').get(String(uid || ''));
+
+export function createDevice({ name, notes }) {
+  const n = norm(name);
+  if (!n) throw Object.assign(new Error('scanner name required'), { status: 400 });
+  if (db.prepare('SELECT 1 FROM devices WHERE name = ?').get(n)) throw Object.assign(new Error(`a scanner called ${n} already exists`), { status: 409 });
+  let uid = newUid();
+  while (getDevice(uid)) uid = newUid();
+  db.prepare('INSERT INTO devices (uid, name, notes, created_at) VALUES (?, ?, ?, ?)').run(uid, n, notes ? String(notes) : null, new Date().toISOString());
+  return getDevice(uid);
+}
+
+export function updateDevice(uid, { name, notes }) {
+  const d = getDevice(uid);
+  if (!d) throw Object.assign(new Error('scanner not found'), { status: 404 });
+  const n = name == null ? d.name : norm(name);
+  if (!n) throw Object.assign(new Error('scanner name required'), { status: 400 });
+  db.prepare('UPDATE devices SET name = ?, notes = ? WHERE uid = ?').run(n, notes == null ? d.notes : String(notes), d.uid);
+  return getDevice(uid);
+}
+
+export const deleteDevice = (uid) => db.prepare('DELETE FROM devices WHERE uid = ?').run(String(uid || '')).changes;
+
+export function touchDevice(uid, { team, sessionId } = {}) {
+  if (!uid) return;
+  db.prepare('UPDATE devices SET last_seen = ?, last_team = COALESCE(?, last_team), last_session = COALESCE(?, last_session) WHERE uid = ?')
+    .run(new Date().toISOString(), team ? norm(team) : null, sessionId ? Number(sessionId) : null, String(uid));
 }

@@ -1,6 +1,7 @@
 import { db, norm, bumpMasterVersion, getSession, resolveAisle } from '../db.js';
 import { parseBinCode } from '../util/bincode.js';
 import { autoActivate } from './assignments.js';
+import { loadLayout, classifyByRules } from '../util/layouts.js';
 import { parseRecords, pick } from '../util/csv.js';
 
 const LOCATION_ALIASES = ['location', 'loc', 'bin', 'binlocation', 'locationcode', 'slot', 'code', 'warehouselocation', 'binlocationcode'];
@@ -60,6 +61,8 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
 
   const stats = { kind, rows: records.length, bins: 0, aisles: 0, pallets: 0, planned: 0, skipped: 0, headers };
   const newAisles = new Set();
+  const layout = loadLayout(session.layout);
+  const RACK = /^[A-Z]+\d+[A-Z]\d+$/;
 
   db.exec('BEGIN');
   try {
@@ -78,8 +81,16 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
       if (kind === 'bins') {
         const code = norm(pick(rec, LOCATION_ALIASES));
         if (!code) { stats.skipped++; continue; }
-        const aisle = norm(pick(rec, AISLE_ALIASES)) || deriveAisle(code);
-        upLocation.run(id, code, norm(pick(rec, ZONE_ALIASES)), aisle, pick(rec, DESC_ALIASES));
+        const desc = pick(rec, DESC_ALIASES);
+        let aisle = norm(pick(rec, AISLE_ALIASES));
+        let zone = norm(pick(rec, ZONE_ALIASES));
+        if (!aisle) {
+          const rule = !RACK.test(code) && classifyByRules(layout, code, desc);
+          aisle = rule ? norm(rule.aisle) : deriveAisle(code);
+          if (!zone && rule) zone = norm(rule.zone);
+          if (!zone && layout && layout.zones) zone = norm(layout.zones[/^[A-Z]+/.exec(code)?.[0]] || '');
+        }
+        upLocation.run(id, code, zone, aisle, desc);
         upAisle.run(id, aisle, aisle);
         newAisles.add(aisle);
         stats.bins++;

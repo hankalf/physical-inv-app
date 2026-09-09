@@ -23,7 +23,7 @@
   <!-- ---------------- device setup (once per scanner) ---------------- -->
   <section class="screen" id="scrDevice">
     <h2 class="prompt">Set up this scanner</h2>
-    <div class="muted">Give this scanner a unique ID. It is stamped on every count so we know which team was using it. Set once; it stays on the device.</div>
+    <div class="muted">The normal way: a supervisor registers this scanner in the dashboard and you open its link here once (then add it to the home screen). If you have no link, type an ID — it is stamped on every count so we know which team was using the scanner.</div>
     <label for="fDeviceId">Scanner ID</label>
     <input id="fDeviceId" class="big" autocomplete="off" autocapitalize="characters" placeholder="e.g. SCANNER-04">
     <button class="primary" id="btnSaveDevice">Save</button>
@@ -49,6 +49,7 @@
     <button class="primary" id="btnStart">Sign on &amp; load list</button>
     <button class="ghost" id="btnRefreshSessions">Refresh sessions</button>
     <button class="link" id="btnChangeDevice">Change scanner ID</button>
+    <div class="muted" id="deviceInfo"></div>
 
     <div class="feedback" id="signonMsg"></div>
     <div class="spacer"></div>

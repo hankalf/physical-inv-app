@@ -63,6 +63,7 @@
       $('fPassword').value = '';
       show('main');
       await loadLayouts();
+      await refreshDevices();
       await loadSessions();
     } catch (err) { msg($('loginMsg'), 'err', err.message); }
   }
@@ -101,7 +102,7 @@
     },
     plan: {
       file: 'plan-template.csv',
-      required: [['Team', 'team number'], ['Aisle', 'must match an aisle from the bin list']],
+      required: [['Team', 'team number'], ['Aisle', 'the full aisle code from the bin list, e.g. F01 - a bare number is refused when it could mean two aisles (A01 / F01)']],
       optional: [],
       note: 'One row per aisle, in the order each team should count. Upload the bin list first. Aisles can also be queued by hand in Team assignments below.',
     },
@@ -130,6 +131,68 @@
   }
   $('fKind').onchange = renderGuide;
   renderGuide();
+
+  /* ------------------------------------------------------------ scanners */
+  const deviceUrl = (uid) => `${location.origin}/?d=${uid}`;
+
+  async function refreshDevices() {
+    const rows = await apiJson('/api/admin/devices');
+    table($('deviceTable'),
+      [{ label: 'Scanner' }, { label: 'Link' }, { label: '' }, { label: 'Last seen' }, { label: 'Team' }, { label: 'Notes' }, { label: '' }],
+      rows,
+      (d) => {
+        const tr = document.createElement('tr');
+        tr.append(cell(d.name));
+        const tdLink = document.createElement('td');
+        const code = document.createElement('code'); code.className = 'link'; code.textContent = deviceUrl(d.uid);
+        tdLink.appendChild(code); tr.appendChild(tdLink);
+        const tdBtns = document.createElement('td');
+        const copy = document.createElement('button'); copy.className = 'sm'; copy.textContent = 'Copy';
+        copy.onclick = async () => { try { await navigator.clipboard.writeText(deviceUrl(d.uid)); copy.textContent = 'Copied'; setTimeout(() => (copy.textContent = 'Copy'), 1500); } catch { prompt('Copy this link', deviceUrl(d.uid)); } };
+        const qr = document.createElement('button'); qr.className = 'sm'; qr.textContent = 'QR'; qr.style.marginLeft = '4px';
+        qr.onclick = () => showQr(d);
+        tdBtns.append(copy, qr); tr.appendChild(tdBtns);
+        tr.append(cell(d.last_seen ? new Date(d.last_seen).toLocaleString() : 'never'), cell(d.last_team || '—'), cell(d.notes || '', 'wrap'));
+        const tdDel = document.createElement('td');
+        const del = document.createElement('button'); del.className = 'sm danger'; del.textContent = 'Remove';
+        del.onclick = async () => {
+          if (!confirm(`Remove ${d.name}? Its link will stop working on the device.`)) return;
+          try { await apiJson(`/api/admin/devices/${d.uid}`, { method: 'DELETE' }); await refreshDevices(); } catch (err) { msg($('deviceMsg'), 'err', err.message); }
+        };
+        tdDel.appendChild(del); tr.appendChild(tdDel);
+        return tr;
+      }, 'No scanners registered yet.');
+  }
+
+  async function showQr(d) {
+    $('qrTitle').textContent = d.name;
+    $('qrUrl').textContent = deviceUrl(d.uid);
+    $('qrBox').innerHTML = '';
+    $('qrModal').hidden = false;
+    try {
+      if (!window.QRCode) {
+        await new Promise((res, rej) => {
+          const sc = document.createElement('script');
+          sc.src = '/vendor/qrcode.min.js';
+          sc.onload = res; sc.onerror = () => rej(new Error('QR library missing - copy the link instead'));
+          document.head.appendChild(sc);
+        });
+      }
+      new window.QRCode($('qrBox'), { text: deviceUrl(d.uid), width: 220, height: 220, correctLevel: window.QRCode.CorrectLevel.M });
+    } catch (err) { $('qrBox').textContent = 'QR unavailable: ' + err.message; }
+  }
+  $('btnQrClose').onclick = () => { $('qrModal').hidden = true; };
+  $('qrModal').onclick = (e) => { if (e.target === $('qrModal')) $('qrModal').hidden = true; };
+
+  $('btnAddDevice').onclick = async () => {
+    try {
+      const d = await postJson('/api/admin/devices', { name: $('fDevName').value, notes: $('fDevNotes').value });
+      $('fDevName').value = ''; $('fDevNotes').value = '';
+      msg($('deviceMsg'), 'ok', `Added ${d.name}`, `Its link is ${deviceUrl(d.uid)} — open it on the device and add to the home screen.`);
+      await refreshDevices();
+    } catch (err) { msg($('deviceMsg'), 'err', err.message); }
+  };
+  $('fDevName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnAddDevice').click(); });
 
   /* ------------------------------------------------------------ sessions */
   async function loadSessions() {
@@ -339,24 +402,32 @@
 
   const CELL_FILL = (frac) => (frac === 0 ? '#8b949e' : frac < 1 ? '#d29922' : '#2ea043');
 
-  // bins -> aisle -> bay -> {bins, counted, flagged}
-  function groupBays(bins) {
+  // bins -> aisle -> bay -> {bins, counted, flagged, faces?}
+  // With `slotsPerBay` (from the layout) positions are grouped into physical
+  // bays and split by face: odd positions are Front, even are Back (double-deep).
+  const emptyCell = () => ({ bins: [], counted: 0, flagged: 0 });
+  function groupBays(bins, specFor = () => null) {
     const byAisle = new Map();
     for (const [code, aisle, lines, flagged] of bins) {
       if (!byAisle.has(aisle)) byAisle.set(aisle, new Map());
       const bays = byAisle.get(aisle);
-      const bay = bayOf(code);
-      if (!bays.has(bay)) bays.set(bay, { bins: [], counted: 0, flagged: 0 });
+      const spec = specFor(aisle);
+      const rawBay = bayOf(code);
+      const pos = Number(rawBay);
+      const grouped = spec && spec.slotsPerBay && Number.isFinite(pos);
+      const bay = grouped ? String(Math.ceil(pos / spec.slotsPerBay)) : rawBay;
+      if (!bays.has(bay)) bays.set(bay, { ...emptyCell(), faces: grouped ? { front: emptyCell(), back: emptyCell() } : null });
       const b = bays.get(bay);
-      b.bins.push(code);
-      if (lines > 0) b.counted++;
-      if (flagged > 0) b.flagged++;
+      const targets = [b];
+      if (b.faces) targets.push(pos % 2 === 1 ? b.faces.front : b.faces.back);
+      for (const t of targets) { t.bins.push(code); if (lines > 0) t.counted++; if (flagged > 0) t.flagged++; }
     }
     return byAisle;
   }
 
-  function cellTitle(aisle, bay, b) {
-    return `${aisle} bay ${bay}: ${b.counted}/${b.bins.length} counted` + (b.flagged ? `, ${b.flagged} flagged` : '') + '\n' + b.bins.join(', ');
+  function cellTitle(aisle, bay, b, face) {
+    const codes = b.bins.length > 12 ? b.bins.slice(0, 12).join(', ') + ` … (+${b.bins.length - 12})` : b.bins.join(', ');
+    return `${aisle} bay ${bay}${face ? ' ' + face : ''}: ${b.counted}/${b.bins.length} counted` + (b.flagged ? `, ${b.flagged} flagged` : '') + '\n' + codes;
   }
 
   /** Heat map drawn over a floor-plan drawing: each aisle has pixel boxes in the layout file. */
@@ -367,13 +438,20 @@
     svg.removeAttribute('width'); svg.removeAttribute('height');
     svg.appendChild(svgEl('image', { href: layout.image, x: 0, y: 0, width: W, height: H, opacity: 0.7 }));
 
-    const byAisle = groupBays(data.bins);
-    const info = new Map(data.aisles.map((a) => [aisleNumber(a.aisle), a]));
+    // layout key -> session aisle: exact code first ("F01"), then by number when unambiguous
+    const exact = new Map(data.aisles.map((a) => [a.aisle, a]));
+    const byNumber = new Map();
+    for (const a of data.aisles) { const n = aisleNumber(a.aisle); byNumber.set(n, byNumber.has(n) ? null : a); }
+    const resolve = (key) => exact.get(String(key).toUpperCase()) || byNumber.get(String(key)) || null;
+    const specOf = new Map();
+    for (const [key, spec] of Object.entries(layout.aisles)) { const a = resolve(key); if (a) specOf.set(a.aisle, spec); }
+
+    const byAisle = groupBays(data.bins, (aisle) => specOf.get(aisle));
     const placed = new Set();
     let counted = 0, total = 0;
 
     for (const [key, spec] of Object.entries(layout.aisles)) {
-      const a = info.get(String(key));
+      const a = resolve(key);
       const bays = a ? byAisle.get(a.aisle) : null;
       const segs = spec.segments;
       if (!a || !bays) {
@@ -386,7 +464,6 @@
       const horizontal = spec.dir !== 'v';
       const lengths = segs.map(([, , w, h]) => (horizontal ? w : h));
       const totalLen = lengths.reduce((s, v) => s + v, 0);
-      // spread the bays over the segments in proportion to their length
       let bi = 0;
       segs.forEach(([x, y, w, h], si) => {
         const n = si === segs.length - 1 ? keys.length - bi : Math.round((lengths[si] / totalLen) * keys.length);
@@ -395,17 +472,30 @@
           const bay = keys[bi];
           const b = bays.get(bay);
           total += b.bins.length; counted += b.counted;
-          const frac = b.bins.length ? b.counted / b.bins.length : 0;
-          const attrs = horizontal
-            ? { x: x + k * size + 0.5, y: y + 1, width: Math.max(1, size - 1), height: h - 2 }
-            : { x: x + 1, y: y + k * size + 0.5, width: w - 2, height: Math.max(1, size - 1) };
-          const r = svgEl('rect', { ...attrs, fill: CELL_FILL(frac), class: 'cell', opacity: 0.9,
-            stroke: b.flagged ? '#f85149' : 'none', 'stroke-width': b.flagged ? 2 : 0 });
-          const t = svgEl('title'); t.textContent = cellTitle(a.aisle, bay, b); r.appendChild(t);
-          svg.appendChild(r);
+          const box = horizontal
+            ? { x: x + k * size + 0.5, y: y + 1, w: Math.max(1, size - 1), h: h - 2 }
+            : { x: x + 1, y: y + k * size + 0.5, w: w - 2, h: Math.max(1, size - 1) };
+          // a double-deep bay is two cells across the depth: the Front face on the aisle side
+          const parts = b.faces
+            ? (() => {
+                const frontFirst = spec.front === 'top' || spec.front === 'left';
+                const [p1, p2] = frontFirst ? [b.faces.front, b.faces.back] : [b.faces.back, b.faces.front];
+                const [f1, f2] = frontFirst ? ['front', 'back'] : ['back', 'front'];
+                return horizontal
+                  ? [[p1, f1, { ...box, h: box.h / 2 - 0.5 }], [p2, f2, { ...box, y: box.y + box.h / 2 + 0.5, h: box.h / 2 - 0.5 }]]
+                  : [[p1, f1, { ...box, w: box.w / 2 - 0.5 }], [p2, f2, { ...box, x: box.x + box.w / 2 + 0.5, w: box.w / 2 - 0.5 }]];
+              })()
+            : [[b, '', box]];
+          for (const [cell, face, r] of parts) {
+            if (!cell.bins.length) continue;
+            const frac = cell.counted / cell.bins.length;
+            const el = svgEl('rect', { x: r.x, y: r.y, width: r.w, height: r.h, fill: CELL_FILL(frac), class: 'cell', opacity: 0.9,
+              stroke: cell.flagged ? '#f85149' : 'none', 'stroke-width': cell.flagged ? 1.5 : 0 });
+            const t = svgEl('title'); t.textContent = cellTitle(a.aisle, bay, cell, face); el.appendChild(t);
+            svg.appendChild(el);
+          }
         }
       });
-      // label + team badge at the start of the aisle
       const [x, y, w, h] = segs[0];
       const lx = horizontal ? x - 4 : x + w / 2, ly = horizontal ? y + h / 2 + 4 : y - 6;
       const label = svgEl('text', { x: lx, y: ly, 'text-anchor': horizontal ? 'end' : 'middle', class: 'aisle-label' });
@@ -420,7 +510,12 @@
         svg.appendChild(t);
       }
     }
-    const missing = [...byAisle.keys()].filter((k) => !placed.has(k));
+    // Areas with no place on the drawing (doors, staging, ...) are summarised, not lost.
+    const missing = [...byAisle.entries()].filter(([k]) => !placed.has(k)).map(([k, bays]) => {
+      let c = 0, t = 0; for (const b of bays.values()) { c += b.counted; t += b.bins.length; }
+      counted += c; total += t;
+      return `${k} ${c}/${t}`;
+    });
     return { counted, total, missing };
   }
 
@@ -489,7 +584,7 @@
     if (!data.bins.length) { $('mapNote').textContent = 'Upload a bin list to draw the map.'; svg.setAttribute('height', 0); return; }
     const r = data.layout ? renderBlueprint(svg, data, data.layout) : renderSchematic(svg, data);
     $('mapNote').textContent = `${r.counted.toLocaleString()} of ${r.total.toLocaleString()} bins have a count. Each cell is a bay; hover for the bins in it.` +
-      (r.missing.length ? ` Not on the drawing: ${r.missing.join(', ')}.` : '');
+      (r.missing.length ? ` Not on the drawing — ${r.missing.join(' · ')}.` : '');
   }
 
   async function refreshAll() {
@@ -543,15 +638,51 @@
     catch (err) { msg($('sessionMsg'), 'err', err.message); }
   };
 
+  // Excel files are converted to CSV in the browser (SheetJS, shipped with the app and
+  // loaded on first use), so the ERP export can be uploaded as-is - no internet needed.
+  async function fileToCsv(file) {
+    if (!/\.xls[xm]?$/i.test(file.name)) return file.text();
+    if (!window.XLSX) {
+      await new Promise((res, rej) => {
+        const sc = document.createElement('script');
+        sc.src = '/vendor/xlsx.full.min.js';
+        sc.onload = res; sc.onerror = () => rej(new Error('Could not load the Excel reader. Save the sheet as CSV instead.'));
+        document.head.appendChild(sc);
+      });
+    }
+    const wb = window.XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    return window.XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
+  }
+
+  async function uploadText(kind, text, label) {
+    if (!sessionId) return msg($('uploadMsg'), 'err', 'Create or select a session first');
+    msg($('uploadMsg'), 'warn', `Uploading ${label}…`);
+    try {
+      const stats = await apiJson(`/api/admin/sessions/${sessionId}/master?kind=${kind}&replace=${$('fReplace').checked ? 1 : 0}`,
+        { method: 'POST', headers: { 'content-type': 'text/csv' }, body: text });
+      const t = stats.totals;
+      msg($('uploadMsg'), 'ok', `Imported ${stats.rows.toLocaleString()} rows from ${label}`,
+        `Session now has ${t.bins.toLocaleString()} bins in ${t.aisles} aisles, ${t.pallets.toLocaleString()} pallets, ${t.assignments} planned aisle assignments` +
+        (stats.skipped ? ` · ${stats.skipped} row(s) skipped (missing required column, or unknown aisle)` : ''));
+      await refreshAll();
+    } catch (err) { msg($('uploadMsg'), 'err', 'Upload failed', err.message); }
+  }
+
+  $('btnLoadSiteBins').onclick = async () => {
+    if (!needSession($('uploadMsg'))) return;
+    const res = await fetch('/templates/front-royal-bins.csv');
+    await uploadText('bins', await res.text(), 'the Front Royal bin list');
+  };
+
   $('btnUpload').onclick = async () => {
     const file = $('fFile').files[0];
-    if (!file) return msg($('uploadMsg'), 'err', 'Choose a CSV file first');
+    if (!file) return msg($('uploadMsg'), 'err', 'Choose a file first');
     if (!sessionId) return msg($('uploadMsg'), 'err', 'Create or select a session first');
-    msg($('uploadMsg'), 'warn', `Uploading ${file.name}…`);
+    msg($('uploadMsg'), 'warn', `Reading ${file.name}…`);
     try {
       const kind = $('fKind').value;
       const stats = await apiJson(`/api/admin/sessions/${sessionId}/master?kind=${kind}&replace=${$('fReplace').checked ? 1 : 0}`,
-        { method: 'POST', headers: { 'content-type': 'text/csv' }, body: await file.text() });
+        { method: 'POST', headers: { 'content-type': 'text/csv' }, body: await fileToCsv(file) });
       const t = stats.totals;
       msg($('uploadMsg'), 'ok', `Imported ${stats.rows.toLocaleString()} rows from ${file.name}`,
         `Session now has ${t.bins.toLocaleString()} bins in ${t.aisles} aisles, ${t.pallets.toLocaleString()} pallets, ${t.assignments} planned aisle assignments` +
@@ -608,8 +739,8 @@
   }
   (async () => {
     if (!token) return show('login');
-    try { await apiJson('/api/admin/sessions'); show('main'); await loadLayouts(); await loadSessions(); }
+    try { await apiJson('/api/admin/sessions'); show('main'); await loadLayouts(); await refreshDevices(); await loadSessions(); }
     catch { show('login'); }
   })();
-  setInterval(() => { if (token && sessionId) refreshAll().catch(() => {}); }, 30000);
+  setInterval(() => { if (token) { refreshDevices().catch(() => {}); if (sessionId) refreshAll().catch(() => {}); } }, 30000);
 })();

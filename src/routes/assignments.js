@@ -127,7 +127,13 @@ export function queueAssignments(sessionId, team, aisles) {
     for (const raw of aisles) {
       if (!norm(raw)) continue;
       const aisle = resolveAisle(id, raw);
-      if (!aisle) { skipped.push({ aisle: norm(raw), reason: 'no such aisle in this session' }); continue; }
+      if (!aisle) {
+        const n = /(\d+)\s*$/.exec(norm(raw));
+        const same = n ? db.prepare('SELECT aisle FROM aisles WHERE session_id = ?').all(id).map((r) => r.aisle)
+          .filter((a) => { const m = /(\d+)\s*$/.exec(a); return m && Number(m[1]) === Number(n[1]); }) : [];
+        skipped.push({ aisle: norm(raw), reason: same.length > 1 ? `ambiguous - did you mean ${same.join(' or ')}?` : 'no such aisle in this session' });
+        continue;
+      }
       const existing = db
         .prepare('SELECT status FROM assignments WHERE session_id = ? AND team = ? AND aisle = ?')
         .get(id, t, aisle);
@@ -265,14 +271,16 @@ export function teamStatus(sessionId, team) {
 /** Group the session's aisles into the racking blocks a layout drawing defines. */
 export function applyLayoutBlocks(sessionId, layout) {
   const id = Number(sessionId);
-  const byNumber = new Map(
-    db.prepare('SELECT aisle FROM aisles WHERE session_id = ?').all(id).map((r) => [aisleNumber(r.aisle), r.aisle])
-  );
+  const all = db.prepare('SELECT aisle FROM aisles WHERE session_id = ?').all(id).map((r) => r.aisle);
+  const exact = new Set(all);
+  const byNumber = new Map();
+  for (const a of all) { const n = aisleNumber(a); byNumber.set(n, byNumber.has(n) ? null : a); } // null = ambiguous
+  const find = (key) => (exact.has(norm(key)) ? norm(key) : byNumber.get(String(key)) || null);
   let applied = 0;
   db.exec('BEGIN');
   try {
     for (const group of layout.blocks || []) {
-      const members = group.map((n) => byNumber.get(String(n))).filter(Boolean);
+      const members = group.map(find).filter(Boolean);
       if (!members.length) continue;
       const label = members.length > 1 ? `${members[0]}+${members[members.length - 1]}` : members[0];
       for (const aisle of members) {

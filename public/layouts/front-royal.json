@@ -3,62 +3,74 @@
  "image": "/layouts/front-royal.png",
  "width": 1560,
  "height": 1670,
- "note": "Keys are the aisle number from the bin code (F01A001 -> 1). Bays run left to right from bin 001; set \"reverse\": true on an aisle to flip it. Rows 1-24 only - the racks by the dry warehouse are not counted.",
+ "note": "Keys are aisle codes as they appear in the bin list (F01A001 -> F01). Positions run left to right (top to bottom for vertical racks) from 001; odd positions are the Front face, even the Back (double-deep), grouped 4 per bay. \"front\" says which side of the row its aisle is on. Set \"reverse\": true on an aisle to flip its direction.",
  "blocks": [
   [
-   "1"
+   "F01"
   ],
   [
-   "2",
-   "3"
+   "F02",
+   "F03"
   ],
   [
-   "4",
-   "5"
+   "F04",
+   "F05"
   ],
   [
-   "6",
-   "7"
+   "F06",
+   "F07"
   ],
   [
-   "8",
-   "9"
+   "F08",
+   "F09"
   ],
   [
-   "10",
-   "11"
+   "F10",
+   "F11"
   ],
   [
-   "12",
-   "13"
+   "F12",
+   "F13"
   ],
   [
-   "14",
-   "15"
+   "F14",
+   "F15"
   ],
   [
-   "16",
-   "17"
+   "F16",
+   "F17"
   ],
   [
-   "18",
-   "19"
+   "F18",
+   "F19"
   ],
   [
-   "20",
-   "21"
+   "F20",
+   "F21"
   ],
   [
-   "22",
-   "23"
+   "F22",
+   "F23"
   ],
   [
-   "24"
+   "F24"
+  ],
+  [
+   "A01"
+  ],
+  [
+   "A02",
+   "A03"
+  ],
+  [
+   "A04"
   ]
  ],
  "aisles": {
-  "1": {
+  "F01": {
    "dir": "h",
+   "front": "bottom",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -68,8 +80,10 @@
     ]
    ]
   },
-  "2": {
+  "F02": {
    "dir": "h",
+   "front": "top",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -79,8 +93,10 @@
     ]
    ]
   },
-  "3": {
+  "F03": {
    "dir": "h",
+   "front": "bottom",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -90,8 +106,10 @@
     ]
    ]
   },
-  "4": {
+  "F04": {
    "dir": "h",
+   "front": "top",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -101,8 +119,10 @@
     ]
    ]
   },
-  "5": {
+  "F05": {
    "dir": "h",
+   "front": "bottom",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -112,8 +132,10 @@
     ]
    ]
   },
-  "6": {
+  "F06": {
    "dir": "h",
+   "front": "top",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -123,8 +145,10 @@
     ]
    ]
   },
-  "7": {
+  "F07": {
    "dir": "h",
+   "front": "bottom",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -134,8 +158,10 @@
     ]
    ]
   },
-  "8": {
+  "F08": {
    "dir": "h",
+   "front": "top",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -145,8 +171,10 @@
     ]
    ]
   },
-  "9": {
+  "F09": {
    "dir": "h",
+   "front": "bottom",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -156,8 +184,10 @@
     ]
    ]
   },
-  "10": {
+  "F10": {
    "dir": "h",
+   "front": "top",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -167,8 +197,10 @@
     ]
    ]
   },
-  "11": {
+  "F11": {
    "dir": "h",
+   "front": "bottom",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -178,8 +210,10 @@
     ]
    ]
   },
-  "12": {
+  "F12": {
    "dir": "h",
+   "front": "top",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -189,8 +223,10 @@
     ]
    ]
   },
-  "13": {
+  "F13": {
    "dir": "h",
+   "front": "bottom",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -200,8 +236,10 @@
     ]
    ]
   },
-  "14": {
+  "F14": {
    "dir": "h",
+   "front": "top",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -211,8 +249,10 @@
     ]
    ]
   },
-  "15": {
+  "F15": {
    "dir": "h",
+   "front": "bottom",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -222,8 +262,10 @@
     ]
    ]
   },
-  "16": {
+  "F16": {
    "dir": "h",
+   "front": "top",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -233,8 +275,10 @@
     ]
    ]
   },
-  "17": {
+  "F17": {
    "dir": "h",
+   "front": "bottom",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -244,8 +288,10 @@
     ]
    ]
   },
-  "18": {
+  "F18": {
    "dir": "h",
+   "front": "top",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -255,8 +301,10 @@
     ]
    ]
   },
-  "19": {
+  "F19": {
    "dir": "h",
+   "front": "bottom",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -266,30 +314,36 @@
     ]
    ]
   },
-  "20": {
+  "F20": {
    "dir": "h",
+   "front": "top",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
      1325,
-     999,
+     1164,
      42
     ]
    ]
   },
-  "21": {
+  "F21": {
    "dir": "h",
+   "front": "bottom",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
      1367,
-     999,
+     1164,
      43
     ]
    ]
   },
-  "22": {
+  "F22": {
    "dir": "h",
+   "front": "top",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -299,8 +353,10 @@
     ]
    ]
   },
-  "23": {
+  "F23": {
    "dir": "h",
+   "front": "bottom",
+   "slotsPerBay": 4,
    "segments": [
     [
      43,
@@ -310,8 +366,10 @@
     ]
    ]
   },
-  "24": {
+  "F24": {
    "dir": "h",
+   "front": "top",
+   "slotsPerBay": 4,
    "segments": [
     [
      40,
@@ -326,6 +384,90 @@
      26
     ]
    ]
+  },
+  "A01": {
+   "dir": "v",
+   "front": "right",
+   "slotsPerBay": 4,
+   "segments": [
+    [
+     1229,
+     30,
+     20,
+     510
+    ]
+   ]
+  },
+  "A02": {
+   "dir": "v",
+   "front": "left",
+   "slotsPerBay": 4,
+   "segments": [
+    [
+     1306,
+     30,
+     31,
+     488
+    ]
+   ]
+  },
+  "A03": {
+   "dir": "v",
+   "front": "right",
+   "slotsPerBay": 4,
+   "segments": [
+    [
+     1347,
+     30,
+     33,
+     488
+    ]
+   ]
+  },
+  "A04": {
+   "dir": "v",
+   "front": "left",
+   "slotsPerBay": 4,
+   "segments": [
+    [
+     1437,
+     30,
+     22,
+     135
+    ]
+   ]
   }
+ },
+ "aisleRules": [
+  {
+   "match": "^DOOR|^KSTRANS$",
+   "aisle": "DOORS",
+   "zone": "Dock"
+  },
+  {
+   "match": "^(STAGE|PRYSTG|BRZST|BAGSSTG|PRODSTG|DANIEL|ISABEL|SARAH|FGSHPAL|OUTPUT)",
+   "aisle": "STAGING",
+   "zone": "Staging"
+  },
+  {
+   "match": "^W",
+   "descMatch": "WIP",
+   "aisle": "WIP",
+   "zone": "Production"
+  },
+  {
+   "match": "^(NIL|DEFAULT|VIRTUAL|COSTS)$",
+   "aisle": "SYSTEM",
+   "zone": "System"
+  },
+  {
+   "match": "^[A-Z&]+\\d*$",
+   "aisle": "AREAS",
+   "zone": "Other"
+  }
+ ],
+ "zones": {
+  "F": "Frozen",
+  "A": "Ambient"
  }
 }

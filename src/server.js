@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { readFile, stat, readdir } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +8,7 @@ import { randomUUID, timingSafeEqual } from 'node:crypto';
 import {
   db, listSessions, getSession, createSession, publicSession, masterPayload,
   saveCounts, countedPallets, recordSignon, norm,
+  listDevices, getDevice, createDevice, updateDevice, deleteDevice, touchDevice,
 } from './db.js';
 import { importMaster } from './routes/master.js';
 import {
@@ -16,6 +17,7 @@ import {
 } from './routes/assignments.js';
 import { progress, palletReport, uncountedBins, rawCounts, exceptions, mapData } from './routes/reports.js';
 import { toCsv } from './util/csv.js';
+import { listLayouts, loadLayout } from './util/layouts.js';
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -130,30 +132,6 @@ async function serveStatic(req, res, pathname) {
   }
 }
 
-/* ------------------------------------------------------------ layouts */
-
-// A layout is a floor-plan image plus the pixel box of every aisle on it,
-// shipped as public/layouts/<name>.json.
-async function listLayouts() {
-  const dir = join(PUBLIC_DIR, 'layouts');
-  let files = [];
-  try { files = await readdir(dir); } catch { return []; }
-  const out = [];
-  for (const f of files.filter((n) => n.endsWith('.json'))) {
-    try {
-      const j = JSON.parse(await readFile(join(dir, f), 'utf8'));
-      out.push({ id: f.replace(/\.json$/, ''), name: j.name || f, aisles: Object.keys(j.aisles || {}).length });
-    } catch { /* skip a broken file */ }
-  }
-  return out;
-}
-
-async function loadLayout(id) {
-  if (!id || !/^[a-z0-9_-]+$/i.test(id)) return null;
-  try { return JSON.parse(await readFile(join(PUBLIC_DIR, 'layouts', id + '.json'), 'utf8')); }
-  catch { return null; }
-}
-
 /* ------------------------------------------------------------ routes */
 
 function openSession(id) {
@@ -169,6 +147,14 @@ async function handleHandheld(req, res, url, m) {
 
   if (p === '/api/sessions' && method === 'GET') {
     return sendJson(req, res, 200, listSessions('open').map(publicSession));
+  }
+
+  // A scanner opening its own link asks who it is.
+  if ((m = p.match(/^\/api\/devices\/([a-z0-9]{4,32})$/)) && method === 'GET') {
+    const d = getDevice(m[1]);
+    if (!d) throw httpError(404, 'this scanner link is not registered - ask a supervisor');
+    touchDevice(d.uid);
+    return sendJson(req, res, 200, { uid: d.uid, name: d.name });
   }
 
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/master$/)) && method === 'GET') {
@@ -192,6 +178,7 @@ async function handleHandheld(req, res, url, m) {
       team: body.team,
       employees: Array.isArray(body.employees) ? body.employees.map((e) => norm(e)).filter(Boolean) : [],
     });
+    if (body.deviceUid) touchDevice(body.deviceUid, { team: body.team, sessionId: m[1] });
     return sendJson(req, res, 200, teamStatus(m[1], body.team));
   }
 
@@ -250,6 +237,20 @@ async function handleAdmin(req, res, url, m) {
 
   requireAdmin(req);
 
+  // --- scanners
+  if (p === '/api/admin/devices' && method === 'GET') return sendJson(req, res, 200, listDevices());
+  if (p === '/api/admin/devices' && method === 'POST') {
+    const body = await readJson(req);
+    return sendJson(req, res, 200, createDevice(body));
+  }
+  if ((m = p.match(/^\/api\/admin\/devices\/([a-z0-9]+)$/)) && method === 'POST') {
+    const body = await readJson(req);
+    return sendJson(req, res, 200, updateDevice(m[1], body));
+  }
+  if ((m = p.match(/^\/api\/admin\/devices\/([a-z0-9]+)$/)) && method === 'DELETE') {
+    return sendJson(req, res, 200, { deleted: deleteDevice(m[1]) });
+  }
+
   if (p === '/api/admin/sessions' && method === 'GET') return sendJson(req, res, 200, listSessions());
 
   if (p === '/api/admin/sessions' && method === 'POST') {
@@ -268,7 +269,7 @@ async function handleAdmin(req, res, url, m) {
     const s = getSession(m[1]);
     if (!s) throw httpError(404, 'session not found');
     const mode = ['off', 'warn', 'strict'].includes(body.palletMode) ? body.palletMode : s.pallet_mode;
-    const layout = body.layout === undefined ? s.layout : (body.layout && (await loadLayout(body.layout)) ? body.layout : null);
+    const layout = body.layout === undefined ? s.layout : (body.layout && loadLayout(body.layout) ? body.layout : null);
     db.prepare('UPDATE sessions SET pallet_mode = ?, guided = ?, ask_comments = ?, layout = ?, master_version = master_version + 1 WHERE id = ?')
       .run(mode, body.guided == null ? s.guided : (body.guided ? 1 : 0),
            body.askComments == null ? s.ask_comments : (body.askComments ? 1 : 0), layout, s.id);
@@ -335,12 +336,12 @@ async function handleAdmin(req, res, url, m) {
     const limit = Number(url.searchParams.get('limit') || 500);
     return sendJson(req, res, 200, { total: rows.length, rows: rows.slice(0, limit) });
   }
-  if (p === '/api/admin/layouts' && method === 'GET') return sendJson(req, res, 200, await listLayouts());
+  if (p === '/api/admin/layouts' && method === 'GET') return sendJson(req, res, 200, listLayouts());
 
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/aisles\/apply-layout$/)) && method === 'POST') {
     const s = getSession(m[1]);
     if (!s) throw httpError(404, 'session not found');
-    const layout = await loadLayout(s.layout);
+    const layout = loadLayout(s.layout);
     if (!layout) throw httpError(400, 'pick a layout drawing in the session settings first');
     return sendJson(req, res, 200, applyLayoutBlocks(m[1], layout));
   }
@@ -348,7 +349,7 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/map$/)) && method === 'GET') {
     const s = getSession(m[1]);
     if (!s) throw httpError(404, 'session not found');
-    return sendJson(req, res, 200, { ...mapData(m[1]), layout: await loadLayout(s.layout) });
+    return sendJson(req, res, 200, { ...mapData(m[1]), layout: loadLayout(s.layout) });
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/uncounted$/)) && method === 'GET') {
     return sendJson(req, res, 200, uncountedBins(m[1]));

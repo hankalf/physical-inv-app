@@ -44,6 +44,12 @@
   label.cb { display: inline-flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: 13px; }
   label.cb input { width: auto; }
   hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 10; }
+  .modal-box { background: #fff; color: #0d1117; border-radius: 12px; padding: 20px 24px; text-align: center; max-width: 360px; }
+  .modal-box h2 { margin: 0 0 12px; }
+  .modal-box .muted { color: #57606a; }
+  #qrBox { display: inline-block; padding: 8px; background: #fff; }
+  code.link { user-select: all; font-size: 12px; }
   .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
   .legend i { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -3px; margin-right: 4px; }
   #map { display: block; font-family: inherit; }
@@ -127,6 +133,27 @@
       <div class="feedback" id="sessionMsg"></div>
     </div>
 
+    <!-- ============ scanners ============ -->
+    <div class="card">
+      <h2>Scanners <span class="muted">each scanner gets its own link — open it once on the device and add it to the home screen</span></h2>
+      <div class="inline">
+        <div class="auto"><label for="fDevName">Scanner name</label><input id="fDevName" class="sm" style="width:160px" placeholder="SCANNER-05"></div>
+        <div><label for="fDevNotes">Notes (optional)</label><input id="fDevNotes" placeholder="e.g. asset tag, freezer unit"></div>
+        <div class="auto"><button class="primary" id="btnAddDevice">Add scanner</button></div>
+      </div>
+      <div class="feedback" id="deviceMsg"></div>
+      <div class="scroll" style="margin-top:10px"><table id="deviceTable"></table></div>
+      <div class="hint">On the device: open the link in Chrome (or scan the QR into the address bar), then menu → <b>Add to Home screen</b>. Removing a scanner here stops its link working.</div>
+    </div>
+    <div id="qrModal" class="modal" hidden>
+      <div class="modal-box">
+        <h2 id="qrTitle">Scanner</h2>
+        <div id="qrBox"></div>
+        <div class="muted" id="qrUrl" style="word-break:break-all;margin-top:8px"></div>
+        <button id="btnQrClose" style="margin-top:12px">Close</button>
+      </div>
+    </div>
+
     <!-- ============ uploads ============ -->
     <div class="card">
       <h2>Upload lists (CSV) <span class="muted">columns are matched by name</span></h2>
@@ -139,11 +166,15 @@
             <option value="plan">Counting plan — team, aisle (one row per aisle, in the order each team should count)</option>
           </select>
         </div>
-        <div><label for="fFile">CSV file</label><input type="file" id="fFile" accept=".csv,.tsv,.txt,text/csv"></div>
+        <div><label for="fFile">CSV or Excel file</label><input type="file" id="fFile" accept=".csv,.tsv,.txt,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
         <div class="auto"><label class="cb"><input type="checkbox" id="fReplace"> Replace existing</label></div>
         <div class="auto"><button class="primary" id="btnUpload">Upload</button></div>
       </div>
       <div class="colguide" id="colGuide"></div>
+      <div class="inline" style="margin-top:10px">
+        <div class="auto"><button id="btnLoadSiteBins">Load Front Royal bin list</button></div>
+        <div class="hint" style="margin:0">13,734 bins from the ERP export: racks F01–F24 and A01–A04, plus dock doors, staging, WIP and the NIL bin, already grouped into aisles.</div>
+      </div>
       <div class="feedback" id="uploadMsg"></div>
     </div>
 

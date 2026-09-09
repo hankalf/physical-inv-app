@@ -65,6 +65,7 @@
 
   const state = {
     deviceId: '',
+    deviceUid: '',   // set when this scanner was opened from its registered link
     team: '',
     employees: [],
     session: null,     // { id, name, palletMode, guided, askComments, masterVersion }
@@ -219,7 +220,10 @@
     const id = norm($('fDeviceId').value);
     if (!id) { feedback($('deviceMsg'), 'err', 'Enter a scanner ID'); return; }
     await metaSet('deviceId', id);
+    await metaSet('deviceUid', '');
     state.deviceId = id;
+    state.deviceUid = '';
+    $('deviceInfo').textContent = `Scanner ID ${id} was typed on this device (not registered).`;
     updateChips();
     showScreen('scrSignon');
   }
@@ -348,7 +352,7 @@
         try {
           state.assignment = await api(`/api/sessions/${session.id}/signon`, {
             method: 'POST',
-            body: JSON.stringify({ deviceId: state.deviceId, team, employees: state.employees }),
+            body: JSON.stringify({ deviceId: state.deviceId, deviceUid: state.deviceUid || null, team, employees: state.employees }),
           });
           await metaSet('assignment', state.assignment);
         } catch (err) {
@@ -824,10 +828,41 @@
   window.addEventListener('offline', updateChips);
   setInterval(() => { updateChips(); syncQueue(); }, 20000);
 
+  /**
+   * A registered scanner is opened from its own link (/?d=<uid>), saved as the
+   * home-screen shortcut. The server says which scanner that is; the answer is
+   * cached so the app still knows on a cold start with no Wi-Fi.
+   */
+  async function identifyFromLink() {
+    const uid = new URLSearchParams(location.search).get('d');
+    if (!uid) return null;
+    const cachedUid = await metaGet('deviceUid');
+    try {
+      const dev = await api('/api/devices/' + encodeURIComponent(uid));
+      await metaSet('deviceId', dev.name);
+      await metaSet('deviceUid', dev.uid);
+      return { ok: true, name: dev.name };
+    } catch (err) {
+      if (/not registered/.test(err.message)) {
+        // removed in the dashboard: forget it so nobody counts under a dead id
+        if (cachedUid === uid) { await metaSet('deviceId', ''); await metaSet('deviceUid', ''); }
+        return { ok: false, reason: 'This scanner link was removed by a supervisor. Ask for a new one.' };
+      }
+      if (cachedUid === uid) return { ok: true, name: await metaGet('deviceId'), offline: true };
+      return { ok: false, reason: 'Cannot reach the server to check this scanner link. Connect to Wi-Fi and reload.' };
+    }
+  }
+
   /* ------------------------------------------------------------ boot */
   (async () => {
     idb = await openDb();
+    const linked = await identifyFromLink();
     state.deviceId = (await metaGet('deviceId')) || '';
+    state.deviceUid = (await metaGet('deviceUid')) || '';
+    if (linked && !linked.ok) feedback($('deviceMsg'), 'err', 'Scanner link problem', linked.reason);
+    $('deviceInfo').textContent = state.deviceUid
+      ? `This scanner is registered as ${state.deviceId}${linked && linked.offline ? ' (offline - using saved identity)' : ''}.`
+      : (state.deviceId ? `Scanner ID ${state.deviceId} was typed on this device (not registered).` : '');
     state.employees = (await metaGet('employees')) || [];
     $('fTeam').value = (await metaGet('team')) || '';
     renderEmployees();
