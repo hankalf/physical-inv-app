@@ -25,6 +25,11 @@
   const apiJson = (p, o) => api(p, o).then((r) => r.json());
   const postJson = (p, body, method = 'POST') =>
     apiJson(p, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const needSession = (el) => {
+    if (sessionId) return true;
+    msg(el, 'err', 'Create a session first', 'Type a name under "New session name" and click Create session.');
+    return false;
+  };
 
   function msg(el, kind, text, detail) {
     el.className = 'feedback show ' + kind;
@@ -480,9 +485,9 @@
     const svg = $('map');
     svg.innerHTML = '';
     $('btnLayoutBlocks').hidden = !data.layout;
+    $('mapSub').textContent = data.layout ? data.layout.name : 'top-down, built from the bin codes · aisles that share racking are drawn back-to-back';
     if (!data.bins.length) { $('mapNote').textContent = 'Upload a bin list to draw the map.'; svg.setAttribute('height', 0); return; }
     const r = data.layout ? renderBlueprint(svg, data, data.layout) : renderSchematic(svg, data);
-    $('mapSub').textContent = data.layout ? data.layout.name : 'top-down, built from the bin codes · aisles that share racking are drawn back-to-back';
     $('mapNote').textContent = `${r.counted.toLocaleString()} of ${r.total.toLocaleString()} bins have a count. Each cell is a bay; hover for the bins in it.` +
       (r.missing.length ? ` Not on the drawing: ${r.missing.join(', ')}.` : '');
   }
@@ -493,6 +498,7 @@
   }
 
   async function download(path, filename) {
+    if (!needSession($('palletNote'))) return;
     const res = await api(path);
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement('a');
@@ -518,6 +524,7 @@
     } catch (err) { msg($('sessionMsg'), 'err', err.message); }
   };
   $('btnSaveSettings').onclick = async () => {
+    if (!needSession($('sessionMsg'))) return;
     try {
       await postJson(`/api/admin/sessions/${sessionId}/settings`, {
         palletMode: $('fPalletMode').value, guided: $('fGuided').checked, askComments: $('fAskComments').checked,
@@ -555,6 +562,7 @@
   };
 
   $('btnLayoutBlocks').onclick = async () => {
+    if (!needSession($('assignMsg'))) return;
     try {
       const r = await postJson(`/api/admin/sessions/${sessionId}/aisles/apply-layout`, {});
       renderAisles(r.aisles);
@@ -563,6 +571,7 @@
     } catch (err) { alert(err.message); }
   };
   $('btnAutoBlock').onclick = async () => {
+    if (!needSession($('assignMsg'))) return;
     try {
       renderAisles(await postJson(`/api/admin/sessions/${sessionId}/aisles/auto-block`, { size: Number($('fBlockSize').value), offset: Number($('fBlockOffset').value) }));
       await refreshAssignments();
@@ -570,6 +579,7 @@
   };
 
   $('btnAssign').onclick = async () => {
+    if (!needSession($('assignMsg'))) return;
     try {
       const r = await postJson(`/api/admin/sessions/${sessionId}/assignments`, { team: $('fAssignTeam').value, aisles: $('fAssignAisles').value });
       const parts = [];

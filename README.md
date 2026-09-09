@@ -135,7 +135,7 @@ the positions the racking really has, with team badges on the aisles they're in.
 
 A drawing is a pair of files in `public/layouts/`: `<name>.png` (the floor plan) and
 `<name>.json` (the pixel box of every aisle on it, keyed by aisle number, plus the
-racking pairs). `fort-royal` — Frazier drawing D-22P9170-L001 rev A — ships in the
+racking pairs). `front-royal` — Frazier drawing D-22P9170-L001 rev A — ships in the
 repo (rows 1–24, bays left to right from bin 001); **Pair from drawing** in the aisles card applies its back-to-back pairs as the
 racking blocks. To move an aisle, edit its box in the JSON; to add a site, add a pair
 of files.
