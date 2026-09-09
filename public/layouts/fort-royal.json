@@ -3,7 +3,7 @@
  "image": "/layouts/fort-royal.png",
  "width": 1560,
  "height": 1670,
- "note": "Keys are the aisle number from the bin code (F01A001 -> 1). Bay 001 is drawn at the left end of horizontal rows and the top end of vertical rows; set \"reverse\": true on an aisle to flip it.",
+ "note": "Keys are the aisle number from the bin code (F01A001 -> 1). Bays run left to right from bin 001; set \"reverse\": true on an aisle to flip it. Rows 1-24 only - the racks by the dry warehouse are not counted.",
  "blocks": [
   [
    "1"
@@ -54,16 +54,6 @@
   ],
   [
    "24"
-  ],
-  [
-   "25"
-  ],
-  [
-   "26",
-   "27"
-  ],
-  [
-   "28"
   ]
  ],
  "aisles": {
@@ -334,50 +324,6 @@
      1593,
      605,
      26
-    ]
-   ]
-  },
-  "25": {
-   "dir": "v",
-   "segments": [
-    [
-     1229,
-     30,
-     20,
-     510
-    ]
-   ]
-  },
-  "26": {
-   "dir": "v",
-   "segments": [
-    [
-     1306,
-     30,
-     31,
-     488
-    ]
-   ]
-  },
-  "27": {
-   "dir": "v",
-   "segments": [
-    [
-     1347,
-     30,
-     33,
-     488
-    ]
-   ]
-  },
-  "28": {
-   "dir": "v",
-   "segments": [
-    [
-     1437,
-     30,
-     22,
-     135
     ]
    ]
   }
