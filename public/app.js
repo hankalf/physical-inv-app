@@ -1,15 +1,19 @@
-/* Physical inventory handheld client.
+/* Physical inventory handheld client - pallet counting.
  *
- * Offline-first: the master list for a session is cached in IndexedDB, so every
- * scan is validated on the device with no network round trip. Counted lines are
- * written locally first and pushed to the server whenever a connection exists.
+ * Prompts, one per screen:  PALLET ID -> QTY -> BIN -> COMMENTS (optional)
+ *
+ * Offline-first: the session's bin list and pallet list are cached in IndexedDB
+ * at sign-on, so every scan is validated on the device with no network round
+ * trip. Count lines are written locally first and pushed to the server whenever
+ * a connection exists; each carries a device-generated id so a retry can never
+ * double-count.
  */
 (() => {
   'use strict';
 
-  // ------------------------------------------------------------------ IndexedDB
+  /* ------------------------------------------------------------ IndexedDB */
   const DB_NAME = 'invcount';
-  const DB_VERSION = 1;
+  const DB_VERSION = 2;
   let idb = null;
 
   function openDb() {
@@ -17,15 +21,15 @@
       const req = indexedDB.open(DB_NAME, DB_VERSION);
       req.onupgradeneeded = () => {
         const d = req.result;
+        // v1 stores from the SKU-based prototype are dropped outright.
+        for (const old of ['bc', 'item', 'lines', 'loc']) if (d.objectStoreNames.contains(old)) d.deleteObjectStore(old);
         if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta');
-        if (!d.objectStoreNames.contains('loc')) d.createObjectStore('loc', { keyPath: 'c' });
-        if (!d.objectStoreNames.contains('bc')) d.createObjectStore('bc', { keyPath: 'b' });
-        if (!d.objectStoreNames.contains('item')) d.createObjectStore('item', { keyPath: 's' });
-        if (!d.objectStoreNames.contains('lines')) {
-          const s = d.createObjectStore('lines', { keyPath: 'clientId' });
-          s.createIndex('synced', 'synced');
-          s.createIndex('ts', 'ts');
-        }
+        d.createObjectStore('loc', { keyPath: 'c' });
+        d.createObjectStore('pal', { keyPath: 'p' });
+        if (!d.objectStoreNames.contains('dup')) d.createObjectStore('dup', { keyPath: 'p' });
+        const s = d.createObjectStore('lines', { keyPath: 'clientId' });
+        s.createIndex('synced', 'synced');
+        s.createIndex('ts', 'ts');
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
@@ -33,12 +37,7 @@
   }
 
   const tx = (store, mode) => idb.transaction(store, mode).objectStore(store);
-  const wrap = (req) =>
-    new Promise((res, rej) => {
-      req.onsuccess = () => res(req.result);
-      req.onerror = () => rej(req.error);
-    });
-
+  const wrap = (req) => new Promise((res, rej) => { req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error); });
   const metaGet = (k) => wrap(tx('meta', 'readonly').get(k));
   const metaSet = (k, v) => wrap(tx('meta', 'readwrite').put(v, k));
 
@@ -51,7 +50,6 @@
       t.onerror = () => reject(t.error);
     });
   }
-
   function clearStores(names) {
     return new Promise((resolve, reject) => {
       const t = idb.transaction(names, 'readwrite');
@@ -61,52 +59,39 @@
     });
   }
 
-  // ------------------------------------------------------------------ state
+  /* ------------------------------------------------------------ state */
+  const LARGE_QTY = Number(localStorage.getItem('largeQtyThreshold') || 1000);
+  const QUICK_COMMENTS = ['Damaged', 'Partial pallet', 'Mixed pallet', 'Label unreadable', 'Needs recount', 'Blocked / could not reach'];
+
   const state = {
-    counter: '',
-    device: '',
-    session: null,       // { id, name, blind, requireLpn, allowOverride }
+    deviceId: '',
+    team: '',
+    employees: [],
+    session: null,     // { id, name, palletMode, guided, askComments, masterVersion }
+    assignment: null,  // team-status payload from the server
     steps: [],
     stepIndex: 0,
-    draft: {},           // location, sku, barcode, packQty, lpn
-    pendingOverride: null,
+    draft: {},
+    override: null,    // { title, why, rows, apply(reasonText) }
     qtyConfirm: null,
     syncing: false,
+    keyboardOn: false,
   };
-
-  const LARGE_QTY = Number(localStorage.getItem('largeQtyThreshold') || 1000);
 
   const $ = (id) => document.getElementById(id);
-  const els = {
-    hdrTitle: $('hdrTitle'), chipNet: $('chipNet'), chipQueue: $('chipQueue'),
-    scrSetup: $('scrSetup'), scrScan: $('scrScan'), scrOverride: $('scrOverride'), scrHistory: $('scrHistory'),
-    fCounter: $('fCounter'), fSession: $('fSession'), fDevice: $('fDevice'),
-    btnStart: $('btnStart'), btnRefreshSessions: $('btnRefreshSessions'),
-    setupMsg: $('setupMsg'), cacheInfo: $('cacheInfo'),
-    ctx: $('ctx'), stepLabel: $('stepLabel'), prompt: $('prompt'), fScan: $('fScan'),
-    btnKeyboard: $('btnKeyboard'), btnBack: $('btnBack'), scanMsg: $('scanMsg'),
-    btnChangeLoc: $('btnChangeLoc'), btnHistory: $('btnHistory'), btnEnd: $('btnEnd'),
-    ovCtx: $('ovCtx'), fReason: $('fReason'), fReasonNote: $('fReasonNote'),
-    btnOverrideAccept: $('btnOverrideAccept'), btnOverrideCancel: $('btnOverrideCancel'),
-    historyList: $('historyList'), btnHistoryBack: $('btnHistoryBack'),
-  };
-
   const norm = (v) => String(v == null ? '' : v).trim().toUpperCase();
-  const uuid = () =>
-    (crypto.randomUUID ? crypto.randomUUID()
-      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-          const r = (Math.random() * 16) | 0;
-          return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-        }));
+  const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0; return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+      }));
 
+  const SCREENS = ['scrDevice', 'scrSignon', 'scrAssign', 'scrScan', 'scrOverride', 'scrHistory'];
   function showScreen(name) {
-    for (const s of [els.scrSetup, els.scrScan, els.scrOverride, els.scrHistory]) s.classList.remove('active');
-    ({ setup: els.scrSetup, scan: els.scrScan, override: els.scrOverride, history: els.scrHistory })[name]
-      .classList.add('active');
-    if (name === 'scan') focusScan();
+    for (const s of SCREENS) $(s).classList.toggle('active', s === name);
+    if (name === 'scrScan') focusScan();
   }
 
-  // ------------------------------------------------------------------ feedback
+  /* ------------------------------------------------------------ feedback */
   let audio = null;
   function beep(kind) {
     try {
@@ -127,9 +112,7 @@
         osc.stop(now + at + 0.16);
       }
     } catch { /* audio is a nicety, never a blocker */ }
-    try {
-      if (navigator.vibrate) navigator.vibrate(kind === 'err' ? [90, 60, 90] : 40);
-    } catch { /* ignore */ }
+    try { if (navigator.vibrate) navigator.vibrate(kind === 'err' ? [90, 60, 90] : 40); } catch { /* ignore */ }
   }
 
   function feedback(el, kind, text, detail) {
@@ -149,15 +132,22 @@
   }
   const clearFeedback = (el) => { el.className = 'feedback'; el.textContent = ''; };
 
-  // ------------------------------------------------------------------ network
+  function kv(container, rows) {
+    container.innerHTML = '';
+    for (const [k, v] of rows) {
+      const row = document.createElement('div');
+      const ks = document.createElement('span'); ks.className = 'k'; ks.textContent = k;
+      const vs = document.createElement('span'); vs.className = 'v'; vs.textContent = v;
+      row.append(ks, vs);
+      container.appendChild(row);
+    }
+  }
+
+  /* ------------------------------------------------------------ network */
   const online = () => navigator.onLine !== false;
 
   async function api(path, options = {}) {
-    const res = await fetch(path, {
-      headers: { 'content-type': 'application/json' },
-      cache: 'no-store',
-      ...options,
-    });
+    const res = await fetch(path, { headers: { 'content-type': 'application/json' }, cache: 'no-store', ...options });
     if (!res.ok) {
       let msg = res.status + ' ' + res.statusText;
       try { msg = (await res.json()).error || msg; } catch { /* keep status text */ }
@@ -168,10 +158,12 @@
 
   async function updateChips() {
     const queued = await wrap(tx('lines', 'readonly').index('synced').count(0));
-    els.chipQueue.hidden = queued === 0;
-    els.chipQueue.textContent = queued + ' queued';
-    els.chipNet.textContent = online() ? 'online' : 'OFFLINE';
-    els.chipNet.className = 'chip ' + (online() ? 'online' : 'offline');
+    $('chipQueue').hidden = queued === 0;
+    $('chipQueue').textContent = queued + ' queued';
+    $('chipNet').textContent = online() ? 'online' : 'OFFLINE';
+    $('chipNet').className = 'chip ' + (online() ? 'online' : 'offline');
+    $('chipDevice').hidden = !state.deviceId;
+    $('chipDevice').textContent = state.deviceId + (state.team ? ' · T' + state.team : '');
   }
 
   async function syncQueue() {
@@ -180,35 +172,31 @@
     try {
       const pending = await wrap(tx('lines', 'readonly').index('synced').getAll(0));
       const toSend = pending.filter((l) => l.sessionId === state.session.id && !l.voidedLocal);
-      if (toSend.length) {
-        for (let i = 0; i < toSend.length; i += 200) {
-          const batch = toSend.slice(i, i + 200);
-          const result = await api(`/api/sessions/${state.session.id}/counts`, {
-            method: 'POST',
-            body: JSON.stringify(batch.map((l) => ({
-              clientId: l.clientId, location: l.location, sku: l.sku,
-              scannedBarcode: l.barcode, lpn: l.lpn, qty: l.qty,
-              counter: l.counter, device: l.device, pass: l.pass,
-              overrideReason: l.overrideReason, unknownItem: l.unknownItem,
-              unknownLocation: l.unknownLocation, scannedAt: l.ts,
-            }))),
-          });
-          const ok = new Set(result.accepted || []);
-          const t = idb.transaction('lines', 'readwrite');
-          const os = t.objectStore('lines');
-          for (const l of batch) if (ok.has(l.clientId)) os.put({ ...l, synced: 1 });
-          await new Promise((r) => { t.oncomplete = r; });
-        }
+      for (let i = 0; i < toSend.length; i += 200) {
+        const batch = toSend.slice(i, i + 200);
+        const result = await api(`/api/sessions/${state.session.id}/counts`, {
+          method: 'POST',
+          body: JSON.stringify(batch.map((l) => ({
+            clientId: l.clientId, palletId: l.palletId, qty: l.qty, location: l.location,
+            comments: l.comments, sku: l.sku, team: l.team, employees: l.employees,
+            deviceId: l.deviceId, aisle: l.aisle, unknownPallet: l.unknownPallet,
+            unknownLocation: l.unknownLocation, offAssignment: l.offAssignment,
+            duplicatePallet: l.duplicatePallet, overrideReason: l.overrideReason, scannedAt: l.ts,
+          }))),
+        });
+        const ok = new Set(result.accepted || []);
+        const t = idb.transaction('lines', 'readwrite');
+        const os = t.objectStore('lines');
+        for (const l of batch) if (ok.has(l.clientId)) os.put({ ...l, synced: 1 });
+        await new Promise((r) => { t.oncomplete = r; });
       }
-      // Voids raised while offline.
       const voids = (await wrap(tx('lines', 'readonly').getAll()))
         .filter((l) => l.voidedLocal && l.synced === 1 && !l.voidSynced);
       for (const l of voids) {
-        await api(`/api/sessions/${l.sessionId}/void`, {
-          method: 'POST', body: JSON.stringify({ clientId: l.clientId }),
-        });
+        await api(`/api/sessions/${l.sessionId}/void`, { method: 'POST', body: JSON.stringify({ clientId: l.clientId }) });
         await wrap(tx('lines', 'readwrite').put({ ...l, voidSynced: true }));
       }
+      await pullCountedPallets();
     } catch (err) {
       console.warn('sync deferred:', err.message);
     } finally {
@@ -217,154 +205,302 @@
     }
   }
 
-  // ------------------------------------------------------------------ setup
+  // Pallets other scanners have counted, so a duplicate is caught across devices.
+  async function pullCountedPallets() {
+    const since = (await metaGet('dupWatermark')) || '';
+    const q = since ? `?since=${encodeURIComponent(since)}` : '';
+    const data = await api(`/api/sessions/${state.session.id}/counted-pallets${q}`);
+    if (data.pallets.length) await bulkPut('dup', data.pallets, ([p, loc, team]) => ({ p, loc, team }));
+    if (data.watermark) await metaSet('dupWatermark', data.watermark);
+  }
+
+  /* ------------------------------------------------------------ device setup */
+  async function saveDevice() {
+    const id = norm($('fDeviceId').value);
+    if (!id) { feedback($('deviceMsg'), 'err', 'Enter a scanner ID'); return; }
+    await metaSet('deviceId', id);
+    state.deviceId = id;
+    updateChips();
+    showScreen('scrSignon');
+  }
+
+  /* ------------------------------------------------------------ sign-on */
   async function loadSessions() {
-    els.fSession.innerHTML = '';
+    const sel = $('fSession');
+    sel.innerHTML = '';
     try {
       const sessions = await api('/api/sessions');
-      if (!sessions.length) {
-        els.fSession.innerHTML = '<option value="">No open sessions on the server</option>';
-        return;
-      }
+      if (!sessions.length) { sel.innerHTML = '<option value="">No open sessions on the server</option>'; return; }
       for (const s of sessions) {
         const o = document.createElement('option');
         o.value = s.id;
         o.textContent = `#${s.id} — ${s.name}`;
         o.dataset.session = JSON.stringify(s);
-        els.fSession.appendChild(o);
+        sel.appendChild(o);
       }
       const last = await metaGet('lastSessionId');
-      if (last) els.fSession.value = String(last);
+      if (last) sel.value = String(last);
     } catch (err) {
-      // Offline start-up: fall back to whatever this device already cached.
       const cached = await metaGet('session');
       if (cached) {
         const o = document.createElement('option');
         o.value = cached.id;
         o.textContent = `#${cached.id} — ${cached.name} (cached)`;
         o.dataset.session = JSON.stringify(cached);
-        els.fSession.appendChild(o);
-        feedback(els.setupMsg, 'warn', 'Server unreachable', 'Using the list cached on this device. Scans will queue until Wi-Fi returns.');
+        sel.appendChild(o);
+        feedback($('signonMsg'), 'warn', 'Server unreachable', 'Using the list cached on this scanner. Counts will queue until Wi-Fi returns.');
       } else {
-        els.fSession.innerHTML = '<option value="">Server unreachable</option>';
-        feedback(els.setupMsg, 'err', 'Cannot reach the server', err.message);
+        sel.innerHTML = '<option value="">Server unreachable</option>';
+        feedback($('signonMsg'), 'err', 'Cannot reach the server', err.message);
       }
     }
+  }
+
+  function renderEmployees() {
+    const box = $('employeeChips');
+    box.innerHTML = '';
+    for (const e of state.employees) {
+      const b = document.createElement('button');
+      b.className = 'chip-btn remove';
+      b.textContent = e;
+      b.onclick = () => { state.employees = state.employees.filter((x) => x !== e); renderEmployees(); };
+      box.appendChild(b);
+    }
+  }
+  function addEmployee() {
+    const v = norm($('fEmployee').value);
+    $('fEmployee').value = '';
+    if (!v) return;
+    if (!state.employees.includes(v)) state.employees.push(v);
+    renderEmployees();
+    beep('ok');
+    $('fEmployee').focus();
   }
 
   async function describeCache() {
     const cached = await metaGet('session');
-    if (!cached) { els.cacheInfo.textContent = 'No list cached on this device yet.'; return; }
-    const [locs, bcs] = await Promise.all([
-      wrap(tx('loc', 'readonly').count()),
-      wrap(tx('bc', 'readonly').count()),
-    ]);
+    if (!cached) { $('cacheInfo').textContent = 'No list cached on this scanner yet.'; return; }
+    const [locs, pals] = await Promise.all([wrap(tx('loc', 'readonly').count()), wrap(tx('pal', 'readonly').count())]);
     const when = await metaGet('cachedAt');
-    els.cacheInfo.textContent =
-      `Cached: session #${cached.id}, ${locs.toLocaleString()} locations, ${bcs.toLocaleString()} barcodes` +
+    $('cacheInfo').textContent =
+      `Cached: session #${cached.id}, ${locs.toLocaleString()} bins, ${pals.toLocaleString()} pallets` +
       (when ? ` (downloaded ${new Date(when).toLocaleString()})` : '');
   }
 
-  async function downloadMaster(sessionId) {
+  async function downloadMaster(session) {
     const cachedSession = await metaGet('session');
     const haveVersion = await metaGet('masterVersion');
-    const sameSession = cachedSession && cachedSession.id === sessionId;
-    const q = sameSession && haveVersion != null ? `?have=${haveVersion}` : '';
-    const data = await api(`/api/sessions/${sessionId}/master${q}`);
-    if (data.unchanged) return { unchanged: true };
-
-    await clearStores(['loc', 'bc', 'item']);
-    await bulkPut('loc', data.locations, ([c, zone]) => ({ c, zone }));
-    await bulkPut('bc', data.barcodes, ([b, sku, pack]) => ({ b, sku, pack }));
-    await bulkPut('item', data.items, ([s, desc, uom]) => ({ s, desc, uom }));
+    const same = cachedSession && cachedSession.id === session.id;
+    const q = same && haveVersion != null ? `?have=${haveVersion}` : '';
+    const data = await api(`/api/sessions/${session.id}/master${q}`);
+    if (data.unchanged) return { unchanged: true, session: data };
+    await clearStores(['loc', 'pal', 'dup']);
+    await metaSet('dupWatermark', '');
+    await bulkPut('loc', data.locations, ([c, zone, aisle]) => ({ c, zone, aisle }));
+    await bulkPut('pal', data.pallets, ([p, sku, desc, expLoc]) => ({ p, sku, desc, expLoc }));
     await metaSet('masterVersion', data.masterVersion);
     await metaSet('cachedAt', Date.now());
-    return { locations: data.locations.length, barcodes: data.barcodes.length };
+    return { bins: data.locations.length, pallets: data.pallets.length, session: data };
   }
 
-  async function start() {
-    clearFeedback(els.setupMsg);
-    const counter = norm(els.fCounter.value);
-    if (!counter) { feedback(els.setupMsg, 'err', 'Enter or scan your badge first'); return; }
+  async function signon() {
+    clearFeedback($('signonMsg'));
+    const team = norm($('fTeam').value);
+    if (!team) { feedback($('signonMsg'), 'err', 'Enter your team number'); return; }
+    if (norm($('fEmployee').value)) addEmployee();
+    if (!state.employees.length) { feedback($('signonMsg'), 'err', 'Add at least one employee ID'); return; }
+    const opt = $('fSession').selectedOptions[0];
+    if (!opt || !opt.value) { feedback($('signonMsg'), 'err', 'Pick a count session'); return; }
+    let session = JSON.parse(opt.dataset.session);
 
-    const opt = els.fSession.selectedOptions[0];
-    if (!opt || !opt.value) { feedback(els.setupMsg, 'err', 'Pick a count session'); return; }
-    const session = JSON.parse(opt.dataset.session);
-
-    els.btnStart.disabled = true;
-    els.btnStart.textContent = 'Downloading list…';
+    $('btnStart').disabled = true;
+    $('btnStart').textContent = 'Downloading list…';
     try {
       if (online()) {
-        const r = await downloadMaster(session.id);
-        if (!r.unchanged && r.locations === 0) {
-          feedback(els.setupMsg, 'warn', 'This session has no master data loaded',
-            'A supervisor needs to upload the location/item file before counting.');
+        const r = await downloadMaster(session);
+        session = { ...session, ...r.session, id: session.id, name: session.name };
+        if (!r.unchanged && r.bins === 0) {
+          feedback($('signonMsg'), 'warn', 'This session has no bin list yet', 'A supervisor needs to upload it before counting.');
         }
       } else {
         const cached = await metaGet('session');
         if (!cached || cached.id !== session.id) {
-          feedback(els.setupMsg, 'err', 'Offline and no list cached for this session',
-            'Connect to Wi-Fi once to download it.');
+          feedback($('signonMsg'), 'err', 'Offline and no list cached for this session', 'Connect to Wi-Fi once to download it.');
           return;
         }
+        session = cached;
       }
       await metaSet('session', session);
       await metaSet('lastSessionId', session.id);
-      await metaSet('counter', counter);
-      await metaSet('device', els.fDevice.value.trim());
+      await metaSet('team', team);
+      await metaSet('employees', state.employees);
 
-      state.counter = counter;
-      state.device = els.fDevice.value.trim() || 'unknown';
+      state.team = team;
       state.session = session;
-      state.steps = ['location', 'item', ...(session.requireLpn ? ['lpn'] : []), 'qty'];
+      state.steps = ['pallet', 'qty', 'bin', ...(session.askComments ? ['comments'] : [])];
       state.draft = {};
       state.stepIndex = 0;
+      $('hdrTitle').textContent = `#${session.id} · ${session.name}`;
+      $('btnToAssign').hidden = !session.guided;
+      updateChips();
 
-      els.hdrTitle.textContent = `#${session.id} · ${counter}`;
-      showScreen('scan');
-      renderStep();
+      if (online()) {
+        try {
+          state.assignment = await api(`/api/sessions/${session.id}/signon`, {
+            method: 'POST',
+            body: JSON.stringify({ deviceId: state.deviceId, team, employees: state.employees }),
+          });
+          await metaSet('assignment', state.assignment);
+        } catch (err) {
+          feedback($('signonMsg'), 'warn', 'Signed on locally only', err.message);
+        }
+      } else {
+        state.assignment = (await metaGet('assignment')) || null;
+      }
+
+      if (session.guided) { renderAssignment(); showScreen('scrAssign'); }
+      else { showScreen('scrScan'); renderStep(); }
       syncQueue();
     } catch (err) {
-      feedback(els.setupMsg, 'err', 'Could not start', err.message);
+      feedback($('signonMsg'), 'err', 'Could not sign on', err.message);
     } finally {
-      els.btnStart.disabled = false;
-      els.btnStart.textContent = 'Load list & start counting';
+      $('btnStart').disabled = false;
+      $('btnStart').textContent = 'Sign on & load list';
       describeCache();
     }
   }
 
-  // ------------------------------------------------------------------ lookups
-  const lookupLocation = (code) => wrap(tx('loc', 'readonly').get(code));
-  const lookupBarcode = (code) => wrap(tx('bc', 'readonly').get(code));
-  const lookupItem = (sku) => wrap(tx('item', 'readonly').get(sku));
-
-  async function countedHere(location, sku) {
-    const all = await wrap(tx('lines', 'readonly').getAll());
-    return all
-      .filter((l) => l.sessionId === state.session.id && l.location === location && l.sku === sku && !l.voidedLocal)
-      .reduce((sum, l) => sum + Number(l.qty), 0);
+  /* ------------------------------------------------------------ assignment */
+  async function refreshAssignment(silent) {
+    if (!state.session || !online()) return;
+    try {
+      state.assignment = await api(`/api/sessions/${state.session.id}/team-status?team=${encodeURIComponent(state.team)}`);
+      await metaSet('assignment', state.assignment);
+      renderAssignment();
+    } catch (err) {
+      if (!silent) feedback($('assignMsg'), 'warn', 'Could not refresh', err.message);
+    }
   }
 
-  // ------------------------------------------------------------------ scan flow
+  async function localCountedBins(aisle) {
+    const all = await wrap(tx('lines', 'readonly').getAll());
+    return new Set(all.filter((l) => l.sessionId === state.session.id && !l.voidedLocal && l.aisle === aisle).map((l) => l.location));
+  }
+
+  async function renderAssignment() {
+    const a = state.assignment;
+    const card = $('assignCard');
+    clearFeedback($('assignMsg'));
+    $('btnAisleDone').hidden = !(a && a.active);
+
+    if (!a) {
+      card.innerHTML = '<div class="assign waiting"><div class="aisle">No plan</div><div class="sub">No assignment loaded for this team. Refresh once Wi-Fi is back, or count freely.</div></div>';
+      $('btnCount').textContent = 'Count without an assignment';
+      return;
+    }
+    if (a.active) {
+      const counted = new Set([...(a.progress?.countedBins || []), ...(await localCountedBins(a.active.aisle))]);
+      const total = a.bins.length;
+      card.innerHTML = '';
+      const box = document.createElement('div');
+      box.className = 'assign';
+      box.innerHTML = `<div class="sub">Team ${a.team} — your aisle</div><div class="aisle"></div><div class="sub bins-sub"></div><div class="bins"></div>`;
+      box.querySelector('.aisle').textContent = a.active.aisle;
+      box.querySelector('.bins-sub').textContent = `${counted.size} of ${total} bins have a count` +
+        (a.queued.length ? ` · next: ${a.queued.join(', ')}` : ' · last aisle in your plan');
+      const grid = box.querySelector('.bins');
+      for (const b of a.bins) {
+        const s = document.createElement('span');
+        s.textContent = b;
+        if (counted.has(b)) s.className = 'counted';
+        grid.appendChild(s);
+      }
+      card.appendChild(box);
+      $('btnCount').textContent = `Count aisle ${a.active.aisle}`;
+      return;
+    }
+    if (a.waitingOn) {
+      const w = a.waitingOn;
+      card.innerHTML = '';
+      const box = document.createElement('div');
+      box.className = 'assign waiting';
+      box.innerHTML = `<div class="sub">Team ${a.team} — next aisle</div><div class="aisle"></div><div class="sub why"></div>`;
+      box.querySelector('.aisle').textContent = w.aisle;
+      box.querySelector('.why').textContent = w.blockedByTeam
+        ? `Waiting: team ${w.blockedByTeam} is still in aisle ${w.blockedByAisle}, which shares racking with ${w.aisle}. Refresh when they finish.`
+        : 'Waiting for a supervisor to release this aisle.';
+      card.appendChild(box);
+      $('btnCount').textContent = 'Count anyway (flagged)';
+      return;
+    }
+    card.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'assign done';
+    box.innerHTML = `<div class="sub">Team ${a.team}</div><div class="aisle">All done</div><div class="sub"></div>`;
+    box.querySelector('.sub:last-child').textContent = a.done.length
+      ? `Finished: ${a.done.join(', ')}. Check with a supervisor for more.`
+      : 'No aisles assigned to this team yet. Check with a supervisor.';
+    card.appendChild(box);
+    $('btnCount').textContent = 'Count without an assignment';
+  }
+
+  async function completeAisle() {
+    const a = state.assignment;
+    if (!a || !a.active) return;
+    await syncQueue();
+    const counted = new Set([...(a.progress?.countedBins || []), ...(await localCountedBins(a.active.aisle))]);
+    const left = a.bins.filter((b) => !counted.has(b)).length;
+    if (left > 0 && !confirm(`${left} bin(s) in ${a.active.aisle} have no count. Empty bins are fine — complete the aisle anyway?`)) return;
+    if (!online()) { feedback($('assignMsg'), 'err', 'Need Wi-Fi to complete an aisle', 'The next aisle is released by the server.'); return; }
+    try {
+      state.assignment = await api(`/api/sessions/${state.session.id}/assignments/${a.active.id}/complete`, {
+        method: 'POST', body: JSON.stringify({ team: state.team }),
+      });
+      await metaSet('assignment', state.assignment);
+      beep('ok');
+      renderAssignment();
+    } catch (err) {
+      feedback($('assignMsg'), 'err', 'Could not complete aisle', err.message);
+    }
+  }
+
+  /* ------------------------------------------------------------ lookups */
+  const lookupLocation = (code) => wrap(tx('loc', 'readonly').get(code));
+  const lookupPallet = (id) => wrap(tx('pal', 'readonly').get(id));
+  const lookupDup = (id) => wrap(tx('dup', 'readonly').get(id));
+
+  async function alreadyCounted(palletId) {
+    const all = await wrap(tx('lines', 'readonly').getAll());
+    const mine = all.find((l) => l.sessionId === state.session.id && !l.voidedLocal && l.palletId === palletId);
+    if (mine) return { loc: mine.location, team: mine.team, here: true };
+    const other = await lookupDup(palletId);
+    return other ? { loc: other.loc, team: other.team, here: false } : null;
+  }
+
+  /* ------------------------------------------------------------ scan flow */
+  function focusScan() {
+    setTimeout(() => { try { $('fScan').focus(); } catch { /* ignore */ } }, 30);
+  }
+
   function renderStep() {
     state.qtyConfirm = null;
     const step = state.steps[state.stepIndex];
-    const n = state.stepIndex + 1;
-    els.stepLabel.textContent = `Step ${n} of ${state.steps.length}`;
-    els.prompt.textContent = {
-      location: 'Scan LOCATION',
-      item: 'Scan ITEM',
-      lpn: 'Scan PALLET / LPN',
-      qty: 'Enter QUANTITY',
-    }[step];
-
-    els.fScan.value = '';
-    if (step === 'qty') {
-      els.fScan.inputMode = 'decimal';
-      els.fScan.setAttribute('type', 'text');
-    } else {
-      els.fScan.inputMode = keyboardOn ? 'text' : 'none';
-      els.fScan.setAttribute('type', 'text');
+    $('stepLabel').textContent = `Step ${state.stepIndex + 1} of ${state.steps.length}`;
+    $('prompt').textContent = { pallet: 'Scan PALLET ID', qty: 'Enter QUANTITY', bin: 'Scan BIN LOCATION', comments: 'Comments (optional)' }[step];
+    const f = $('fScan');
+    f.value = '';
+    f.placeholder = step === 'comments' ? 'Type a note or tap one below' : '';
+    f.inputMode = step === 'qty' ? 'decimal' : step === 'comments' ? 'text' : (state.keyboardOn ? 'text' : 'none');
+    $('btnSkip').hidden = step !== 'comments';
+    $('commentChips').hidden = step !== 'comments';
+    if (step === 'comments' && !$('commentChips').childElementCount) {
+      for (const c of QUICK_COMMENTS) {
+        const b = document.createElement('button');
+        b.className = 'chip-btn';
+        b.textContent = c;
+        b.onclick = () => { f.value = f.value ? f.value + '; ' + c : c; focusScan(); };
+        $('commentChips').appendChild(b);
+      }
     }
     renderContext();
     focusScan();
@@ -373,58 +509,57 @@
   function renderContext() {
     const d = state.draft;
     const rows = [];
-    rows.push(['Location', d.location || '—']);
-    if (d.sku) rows.push(['Item', d.sku]);
-    if (d.description) rows.push(['Description', d.description]);
-    if (d.packQty > 1) rows.push(['Pack size', `${d.packQty} per scan`]);
-    if (d.lpn) rows.push(['LPN', d.lpn]);
-    els.ctx.innerHTML = '';
-    for (const [k, v] of rows) {
-      const row = document.createElement('div');
-      const ks = document.createElement('span'); ks.className = 'k'; ks.textContent = k;
-      const vs = document.createElement('span'); vs.className = 'v'; vs.textContent = v;
-      row.append(ks, vs);
-      els.ctx.appendChild(row);
-    }
-  }
-
-  let keyboardOn = false;
-  function focusScan() {
-    // Keep the field focused so the wedge always has somewhere to type.
-    setTimeout(() => { try { els.fScan.focus(); } catch { /* ignore */ } }, 30);
+    if (state.session?.guided && state.assignment?.active) rows.push(['Your aisle', state.assignment.active.aisle]);
+    if (d.palletId) rows.push(['Pallet', d.palletId]);
+    if (d.description || d.sku) rows.push(['Contents', [d.sku, d.description].filter(Boolean).join(' — ')]);
+    if (d.qty != null) rows.push(['Qty', String(d.qty)]);
+    if (d.location) rows.push(['Bin', d.location]);
+    kv($('ctx'), rows);
   }
 
   async function handleEntry(raw) {
     const value = norm(raw);
-    if (!value) return;
-    clearFeedback(els.scanMsg);
     const step = state.steps[state.stepIndex];
+    if (!value && step !== 'comments') return;
+    clearFeedback($('scanMsg'));
 
-    if (step === 'location') {
-      const hit = await lookupLocation(value);
-      if (!hit) return rejectOrOverride('location', value, `Location ${value} is not on the list`);
-      state.draft = { location: value, zone: hit.zone || '' };
-      advance('ok', `Location ${value}`, hit.zone ? `Zone ${hit.zone}` : '');
-      return;
-    }
+    if (step === 'pallet') {
+      const dup = await alreadyCounted(value);
+      const pal = await lookupPallet(value);
+      const mode = state.session.palletMode || 'warn';
 
-    if (step === 'item') {
-      const hit = await lookupBarcode(value);
-      if (!hit) return rejectOrOverride('item', value, `Barcode ${value} is not on the list`);
-      const item = await lookupItem(hit.sku);
-      state.draft.sku = hit.sku;
-      state.draft.barcode = value;
-      state.draft.packQty = Number(hit.pack) || 1;
-      state.draft.description = (item && item.desc) || '';
-      const already = await countedHere(state.draft.location, hit.sku);
-      advance('ok', state.draft.description || hit.sku,
-        already > 0 ? `Already counted here: ${already}. This will add to it.` : `SKU ${hit.sku}`);
-      return;
-    }
+      const applyPallet = () => {
+        state.draft.palletId = value;
+        state.draft.sku = pal ? pal.sku : '';
+        state.draft.description = pal ? pal.desc : '';
+        state.draft.expectedLocation = pal ? pal.expLoc : '';
+        if (!pal) state.draft.unknownPallet = 1;
+      };
 
-    if (step === 'lpn') {
-      state.draft.lpn = value;
-      advance('ok', `LPN ${value}`);
+      if (dup) {
+        return askOverride({
+          title: 'Pallet already counted',
+          why: `${value} was already counted in bin ${dup.loc}${dup.here ? ' on this scanner' : ` by team ${dup.team}`}.`,
+          rows: [['Pallet', value], ['Counted in', dup.loc], ['By team', dup.team]],
+          apply: (reason) => { applyPallet(); state.draft.duplicatePallet = 1; addReason(reason); },
+          feedbackText: 'Duplicate accepted',
+        });
+      }
+      if (!pal && mode === 'strict') {
+        feedback($('scanMsg'), 'err', `${value} is not on the pallet list`, 'Rescan, or ask a supervisor.');
+        return;
+      }
+      if (!pal && mode === 'warn') {
+        return askOverride({
+          title: 'Pallet not on the list',
+          why: `${value} is not in the uploaded pallet file.`,
+          rows: [['Scanned', value]],
+          apply: (reason) => { applyPallet(); addReason(reason); },
+          feedbackText: 'Unknown pallet accepted',
+        });
+      }
+      applyPallet();
+      advance('ok', pal ? (pal.desc || pal.sku || value) : `Pallet ${value}`, pal ? `Pallet ${value}${pal.sku ? ' · ' + pal.sku : ''}` : 'Not in the pallet list');
       return;
     }
 
@@ -432,9 +567,8 @@
       // Strict: a stray scan into the quantity field must never become a count.
       const cleaned = value.replace(/[\s,]/g, '');
       if (!/^\d+(\.\d+)?$/.test(cleaned)) {
-        feedback(els.scanMsg, 'err', `"${value}" is not a quantity`,
-          'Type a number. If you meant to scan an item, press Back first.');
-        els.fScan.value = '';
+        feedback($('scanMsg'), 'err', `"${value}" is not a quantity`, 'Type a number. If you meant to scan something, press Back first.');
+        $('fScan').value = '';
         focusScan();
         return;
       }
@@ -442,146 +576,169 @@
       // Fat-finger guard: a big number has to be entered twice.
       if (qty >= LARGE_QTY && state.qtyConfirm !== qty) {
         state.qtyConfirm = qty;
-        feedback(els.scanMsg, 'warn', `Confirm quantity ${qty}`,
-          'That is unusually large. Enter it again to accept, or type the correct number.');
-        els.fScan.value = '';
+        feedback($('scanMsg'), 'warn', `Confirm quantity ${qty}`, 'That is unusually large. Enter it again to accept, or type the correct number.');
+        $('fScan').value = '';
         focusScan();
         return;
       }
       state.qtyConfirm = null;
-      await commitLine(qty);
+      state.draft.qty = qty;
+      advance('ok', `Qty ${qty}`);
       return;
     }
+
+    if (step === 'bin') {
+      const loc = await lookupLocation(value);
+      const active = state.session.guided ? state.assignment?.active?.aisle : null;
+      const applyBin = () => {
+        state.draft.location = value;
+        state.draft.aisle = loc ? loc.aisle : active || '';
+        if (!loc) state.draft.unknownLocation = 1;
+      };
+      if (!loc) {
+        return askOverride({
+          title: 'Bin not on the list',
+          why: `${value} is not in the uploaded bin list.`,
+          rows: [['Scanned', value]],
+          apply: (reason) => { applyBin(); addReason(reason); },
+          feedbackText: 'Unknown bin accepted',
+        });
+      }
+      if (state.session.guided && loc.aisle !== active) {
+        return askOverride({
+          title: 'Not your aisle',
+          why: active
+            ? `Bin ${value} is in aisle ${loc.aisle}. Your team is assigned to aisle ${active}.`
+            : `Bin ${value} is in aisle ${loc.aisle}, but your team has no active aisle right now.`,
+          rows: [['Bin', value], ['Its aisle', loc.aisle], ['Your aisle', active || '—']],
+          apply: (reason) => { applyBin(); state.draft.offAssignment = 1; addReason(reason); },
+          feedbackText: 'Off-aisle bin accepted',
+        });
+      }
+      applyBin();
+      const detail = state.draft.expectedLocation && state.draft.expectedLocation !== value
+        ? `System expected this pallet in ${state.draft.expectedLocation}` : (loc.zone ? `Zone ${loc.zone}` : '');
+      advance(detail.startsWith('System') ? 'warn' : 'ok', `Bin ${value}`, detail);
+      if (state.stepIndex >= state.steps.length) await commitLine();
+      return;
+    }
+
+    if (step === 'comments') {
+      state.draft.comments = $('fScan').value.trim() || null;
+      await commitLine();
+    }
+  }
+
+  function addReason(reason) {
+    state.draft.overrideReason = state.draft.overrideReason ? `${state.draft.overrideReason} | ${reason}` : reason;
   }
 
   function advance(kind, text, detail) {
-    feedback(els.scanMsg, kind, text, detail);
+    feedback($('scanMsg'), kind, text, detail);
     state.stepIndex++;
-    renderStep();
+    if (state.stepIndex < state.steps.length) renderStep();
   }
 
-  function rejectOrOverride(what, value, message) {
-    if (!state.session.allowOverride) {
-      feedback(els.scanMsg, 'err', message, 'Rescan, or ask a supervisor.');
-      els.fScan.value = '';
+  function askOverride(spec) {
+    if (state.session && state.session.palletMode === 'strict' && spec.title !== 'Not your aisle') {
+      feedback($('scanMsg'), 'err', spec.title, spec.why + ' Overrides are off for this session.');
+      $('fScan').value = '';
       focusScan();
       return;
     }
-    state.pendingOverride = { what, value };
+    state.override = spec;
     beep('err');
-    els.ovCtx.innerHTML = '';
-    const row = document.createElement('div');
-    const k = document.createElement('span'); k.className = 'k';
-    k.textContent = what === 'location' ? 'Scanned location' : 'Scanned barcode';
-    const v = document.createElement('span'); v.className = 'v'; v.textContent = value;
-    row.append(k, v);
-    els.ovCtx.appendChild(row);
-    els.fReason.value = '';
-    els.fReasonNote.value = '';
-    showScreen('override');
+    $('ovTitle').textContent = spec.title;
+    $('ovWhy').textContent = spec.why;
+    kv($('ovCtx'), spec.rows);
+    $('fReason').value = '';
+    $('fReasonNote').value = '';
+    showScreen('scrOverride');
   }
 
-  function acceptOverride() {
-    const reason = els.fReason.value;
-    if (!reason) { feedback(els.scanMsg, 'err', 'Pick a reason'); return; }
-    const note = els.fReasonNote.value.trim();
+  async function acceptOverride() {
+    const reason = $('fReason').value;
+    if (!reason) { beep('err'); $('fReason').focus(); return; }
+    const note = $('fReasonNote').value.trim();
     const full = note ? `${reason}: ${note}` : reason;
-    const { what, value } = state.pendingOverride;
-
-    if (what === 'location') {
-      state.draft = { location: value, unknownLocation: true, overrideReason: full };
-    } else {
-      state.draft.sku = value;
-      state.draft.barcode = value;
-      state.draft.packQty = 1;
-      state.draft.description = '(not in master file)';
-      state.draft.unknownItem = true;
-      state.draft.overrideReason = full;
-    }
-    state.pendingOverride = null;
+    const spec = state.override;
+    state.override = null;
+    spec.apply(full);
     state.stepIndex++;
-    showScreen('scan');
-    renderStep();
-    feedback(els.scanMsg, 'warn', 'Accepted with override', full);
+    showScreen('scrScan');
+    if (state.stepIndex < state.steps.length) {
+      renderStep();
+      feedback($('scanMsg'), 'warn', spec.feedbackText, full);
+    } else {
+      await commitLine();
+    }
   }
 
-  async function commitLine(qty) {
+  async function commitLine() {
     const d = state.draft;
-    const pack = Number(d.packQty) || 1;
-    const total = qty * pack;
     const line = {
       clientId: uuid(),
       sessionId: state.session.id,
+      palletId: d.palletId,
+      qty: d.qty,
       location: d.location,
-      sku: d.sku,
-      barcode: d.barcode || null,
-      lpn: d.lpn || null,
-      qty: total,
-      counter: state.counter,
-      device: state.device,
-      pass: 1,
-      overrideReason: d.overrideReason || null,
-      unknownItem: d.unknownItem ? 1 : 0,
+      comments: d.comments || null,
+      sku: d.sku || null,
+      team: state.team,
+      employees: state.employees,
+      deviceId: state.deviceId,
+      aisle: d.aisle || null,
+      unknownPallet: d.unknownPallet ? 1 : 0,
       unknownLocation: d.unknownLocation ? 1 : 0,
+      offAssignment: d.offAssignment ? 1 : 0,
+      duplicatePallet: d.duplicatePallet ? 1 : 0,
+      overrideReason: d.overrideReason || null,
       ts: new Date().toISOString(),
       synced: 0,
       voidedLocal: false,
     };
     await wrap(tx('lines', 'readwrite').put(line));
+    await wrap(tx('dup', 'readwrite').put({ p: line.palletId, loc: line.location, team: line.team }));
     updateChips();
     syncQueue();
 
-    const detail = pack > 1
-      ? `${qty} × ${pack} = ${total} ${d.description || d.sku}`
-      : `${total} × ${d.description || d.sku}`;
-    // Location stays put; the next scan is the next item in the same bin.
-    state.draft = { location: d.location, zone: d.zone };
-    state.stepIndex = 1;
+    state.draft = {};
+    state.stepIndex = 0;
     renderStep();
-    feedback(els.scanMsg, 'ok', 'Counted', `${detail} @ ${d.location}`);
+    feedback($('scanMsg'), 'ok', `Counted ${line.palletId}`,
+      `${line.qty}${d.description ? ' × ' + d.description : ''} @ ${line.location}${line.overrideReason ? ' · flagged' : ''}`);
   }
 
   function stepBack() {
     if (state.stepIndex === 0) return;
     state.stepIndex--;
     const step = state.steps[state.stepIndex];
-    if (step === 'location') state.draft = {};
-    if (step === 'item') {
-      delete state.draft.sku; delete state.draft.barcode;
-      delete state.draft.description; delete state.draft.packQty;
-      delete state.draft.unknownItem;
-    }
-    if (step === 'lpn') delete state.draft.lpn;
-    clearFeedback(els.scanMsg);
+    if (step === 'pallet') state.draft = {};
+    if (step === 'qty') delete state.draft.qty;
+    if (step === 'bin') { delete state.draft.location; delete state.draft.aisle; delete state.draft.unknownLocation; delete state.draft.offAssignment; }
+    clearFeedback($('scanMsg'));
     renderStep();
   }
 
-  // ------------------------------------------------------------------ history
+  /* ------------------------------------------------------------ history */
   async function renderHistory() {
     const all = await wrap(tx('lines', 'readonly').getAll());
-    const mine = all
-      .filter((l) => l.sessionId === state.session.id)
-      .sort((a, b) => (a.ts < b.ts ? 1 : -1))
-      .slice(0, 50);
-    els.historyList.innerHTML = '';
-    if (!mine.length) {
-      els.historyList.innerHTML = '<div class="muted">Nothing counted on this device yet.</div>';
-      return;
-    }
+    const mine = all.filter((l) => l.sessionId === state.session.id).sort((a, b) => (a.ts < b.ts ? 1 : -1)).slice(0, 50);
+    const list = $('historyList');
+    list.innerHTML = '';
+    if (!mine.length) { list.innerHTML = '<div class="muted">Nothing counted on this scanner yet.</div>'; return; }
     for (const l of mine) {
       const div = document.createElement('div');
       div.className = 'item' + (l.voidedLocal ? ' voided' : '');
       const top = document.createElement('div');
       top.className = 'top';
-      const left = document.createElement('span');
-      left.textContent = `${l.location} · ${l.sku}`;
-      const right = document.createElement('span');
-      right.textContent = l.qty;
+      const left = document.createElement('span'); left.textContent = `${l.palletId} @ ${l.location}`;
+      const right = document.createElement('span'); right.textContent = l.qty;
       top.append(left, right);
       const sub = document.createElement('div');
       sub.className = 'sub';
       sub.textContent = `${new Date(l.ts).toLocaleTimeString()} · ${l.synced ? 'synced' : 'queued'}` +
-        (l.overrideReason ? ` · override: ${l.overrideReason}` : '');
+        (l.comments ? ` · ${l.comments}` : '') + (l.overrideReason ? ` · flagged: ${l.overrideReason}` : '');
       div.append(top, sub);
       if (!l.voidedLocal) {
         const btn = document.createElement('button');
@@ -589,11 +746,10 @@
         btn.textContent = 'Void this line';
         btn.onclick = async () => {
           await wrap(tx('lines', 'readwrite').put({ ...l, voidedLocal: true }));
+          await wrap(tx('dup', 'readwrite').delete(l.palletId));
           if (l.synced && online()) {
             try {
-              await api(`/api/sessions/${l.sessionId}/void`, {
-                method: 'POST', body: JSON.stringify({ clientId: l.clientId }),
-              });
+              await api(`/api/sessions/${l.sessionId}/void`, { method: 'POST', body: JSON.stringify({ clientId: l.clientId }) });
               await wrap(tx('lines', 'readwrite').put({ ...l, voidedLocal: true, voidSynced: true }));
             } catch { /* the sync loop retries it */ }
           }
@@ -603,73 +759,82 @@
         };
         div.appendChild(btn);
       }
-      els.historyList.appendChild(div);
+      list.appendChild(div);
     }
   }
 
-  // ------------------------------------------------------------------ wiring
-  els.btnStart.onclick = start;
-  els.btnRefreshSessions.onclick = loadSessions;
-  els.btnBack.onclick = stepBack;
-  els.btnChangeLoc.onclick = () => {
-    state.draft = {};
-    state.stepIndex = 0;
-    clearFeedback(els.scanMsg);
-    renderStep();
-  };
-  els.btnHistory.onclick = () => { renderHistory(); showScreen('history'); };
-  els.btnHistoryBack.onclick = () => { showScreen('scan'); renderStep(); };
-  els.btnOverrideAccept.onclick = acceptOverride;
-  els.btnOverrideCancel.onclick = () => {
-    state.pendingOverride = null;
-    showScreen('scan');
-    renderStep();
-  };
-  els.btnEnd.onclick = async () => {
+  /* ------------------------------------------------------------ wiring */
+  $('btnSaveDevice').onclick = saveDevice;
+  $('fDeviceId').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveDevice(); });
+  $('btnChangeDevice').onclick = () => { $('fDeviceId').value = state.deviceId; showScreen('scrDevice'); };
+
+  $('btnStart').onclick = signon;
+  $('btnRefreshSessions').onclick = loadSessions;
+  $('btnAddEmployee').onclick = addEmployee;
+  $('fEmployee').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addEmployee(); } });
+  $('fTeam').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('fEmployee').focus(); } });
+
+  $('btnCount').onclick = () => { showScreen('scrScan'); renderStep(); };
+  $('btnAisleDone').onclick = completeAisle;
+  $('btnAssignRefresh').onclick = () => refreshAssignment(false);
+  $('btnAssignHistory').onclick = () => { renderHistory(); state.historyReturn = 'scrAssign'; showScreen('scrHistory'); };
+  $('btnSignoff').onclick = async () => {
     await syncQueue();
     const queued = await wrap(tx('lines', 'readonly').index('synced').count(0));
-    if (queued > 0 && !confirm(`${queued} line(s) have not reached the server yet. Leave anyway?`)) return;
-    showScreen('setup');
+    if (queued > 0 && !confirm(`${queued} line(s) have not reached the server yet. Sign off anyway?`)) return;
+    state.team = '';
+    state.session = null;
+    state.assignment = null;
+    updateChips();
+    showScreen('scrSignon');
     describeCache();
   };
-  els.btnKeyboard.onclick = () => {
-    keyboardOn = !keyboardOn;
-    els.btnKeyboard.textContent = keyboardOn ? 'Keyboard on' : 'Keyboard';
-    els.fScan.inputMode = keyboardOn ? 'text' : 'none';
-    els.fScan.blur();
-    focusScan();
+
+  $('btnBack').onclick = stepBack;
+  $('btnSkip').onclick = () => { $('fScan').value = ''; handleEntry(''); };
+  $('btnToAssign').onclick = async () => { await refreshAssignment(true); renderAssignment(); showScreen('scrAssign'); };
+  $('btnHistory').onclick = () => { renderHistory(); state.historyReturn = 'scrScan'; showScreen('scrHistory'); };
+  $('btnHistoryBack').onclick = () => {
+    if (state.historyReturn === 'scrAssign') { renderAssignment(); showScreen('scrAssign'); }
+    else { showScreen('scrScan'); renderStep(); }
+  };
+  $('btnOverrideAccept').onclick = acceptOverride;
+  $('btnOverrideCancel').onclick = () => { state.override = null; showScreen('scrScan'); renderStep(); };
+  $('btnKeyboard').onclick = () => {
+    state.keyboardOn = !state.keyboardOn;
+    $('btnKeyboard').textContent = state.keyboardOn ? 'Keyboard on' : 'Keyboard';
+    $('fScan').blur();
+    renderStep();
   };
 
-  els.fScan.addEventListener('keydown', (e) => {
+  $('fScan').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const v = els.fScan.value;
-      els.fScan.value = '';
+      const v = $('fScan').value;
+      $('fScan').value = '';
       handleEntry(v);
     }
   });
-  // Tapping anywhere returns focus to the scan field.
-  els.scrScan.addEventListener('click', (e) => {
-    if (e.target.tagName !== 'BUTTON') focusScan();
-  });
+  $('scrScan').addEventListener('click', (e) => { if (e.target.tagName !== 'BUTTON') focusScan(); });
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && els.scrScan.classList.contains('active')) focusScan();
+    if (!document.hidden && $('scrScan').classList.contains('active')) focusScan();
   });
 
   window.addEventListener('online', () => { updateChips(); syncQueue(); });
   window.addEventListener('offline', updateChips);
   setInterval(() => { updateChips(); syncQueue(); }, 20000);
 
-  // ------------------------------------------------------------------ boot
+  /* ------------------------------------------------------------ boot */
   (async () => {
     idb = await openDb();
-    els.fCounter.value = (await metaGet('counter')) || '';
-    els.fDevice.value = (await metaGet('device')) || '';
+    state.deviceId = (await metaGet('deviceId')) || '';
+    state.employees = (await metaGet('employees')) || [];
+    $('fTeam').value = (await metaGet('team')) || '';
+    renderEmployees();
+    await updateChips();
     await loadSessions();
     await describeCache();
-    await updateChips();
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => { /* http-only hosts */ });
-    }
+    showScreen(state.deviceId ? 'scrSignon' : 'scrDevice');
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { /* http-only hosts */ });
   })();
 })();

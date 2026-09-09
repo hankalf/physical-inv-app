@@ -1,10 +1,12 @@
-/* Supervisor dashboard: sessions, master-data upload, live progress, variance. */
+/* Supervisor dashboard: sessions, list uploads, racking blocks, team
+   assignments (staggered by block), live progress, pallet report, exports. */
 (() => {
   'use strict';
 
   const $ = (id) => document.getElementById(id);
   let token = sessionStorage.getItem('admToken') || '';
   let sessionId = null;
+  let sessions = [];
 
   async function api(path, options = {}) {
     const res = await fetch(path, {
@@ -21,6 +23,8 @@
     return res;
   }
   const apiJson = (p, o) => api(p, o).then((r) => r.json());
+  const postJson = (p, body, method = 'POST') =>
+    apiJson(p, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 
   function msg(el, kind, text, detail) {
     el.className = 'feedback show ' + kind;
@@ -32,6 +36,7 @@
       el.appendChild(d);
     }
   }
+  const clearMsg = (el) => { el.className = 'feedback'; el.textContent = ''; };
 
   function show(which) {
     $('scrLogin').classList.toggle('active', which === 'login');
@@ -39,18 +44,12 @@
     $('btnLogout').hidden = which !== 'main';
     $('sessionChip').hidden = which !== 'main';
   }
-
-  function logout() {
-    token = '';
-    sessionStorage.removeItem('admToken');
-    show('login');
-  }
+  function logout() { token = ''; sessionStorage.removeItem('admToken'); show('login'); }
 
   async function login() {
     try {
       const res = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ password: $('fPassword').value }),
       });
       if (!res.ok) throw new Error('Wrong password');
@@ -59,68 +58,66 @@
       $('fPassword').value = '';
       show('main');
       await loadSessions();
-    } catch (err) {
-      msg($('loginMsg'), 'err', err.message);
-    }
+    } catch (err) { msg($('loginMsg'), 'err', err.message); }
   }
 
+  /* ------------------------------------------------------------ table helpers */
+  const cell = (text, cls) => { const td = document.createElement('td'); if (cls) td.className = cls; td.textContent = text ?? ''; return td; };
+  const tag = (text) => { const s = document.createElement('span'); s.className = 'tag ' + text; s.textContent = text; return s; };
+  function table(el, columns, rows, renderRow, empty) {
+    el.innerHTML = '';
+    const thead = document.createElement('thead');
+    const hr = document.createElement('tr');
+    for (const c of columns) { const th = document.createElement('th'); th.textContent = c.label; if (c.num) th.className = 'num'; hr.appendChild(th); }
+    thead.appendChild(hr);
+    const tbody = document.createElement('tbody');
+    if (!rows.length) { const tr = document.createElement('tr'); const td = cell(empty || 'Nothing yet.'); td.colSpan = columns.length; td.className = 'muted'; tr.appendChild(td); tbody.appendChild(tr); }
+    for (const r of rows) tbody.appendChild(renderRow(r));
+    el.append(thead, tbody);
+  }
+
+  /* ------------------------------------------------------------ sessions */
   async function loadSessions() {
-    const sessions = await apiJson('/api/admin/sessions');
+    sessions = await apiJson('/api/admin/sessions');
     const sel = $('fSessionPick');
     const prior = sessionId;
     sel.innerHTML = '';
     for (const s of sessions) {
       const o = document.createElement('option');
       o.value = s.id;
-      o.textContent = `#${s.id} — ${s.name} (${s.status}${s.blind ? ', blind' : ''})`;
+      o.textContent = `#${s.id} — ${s.name} (${s.status})`;
       sel.appendChild(o);
     }
-    if (!sessions.length) {
-      sel.innerHTML = '<option value="">No sessions yet — create one below</option>';
-      sessionId = null;
-      return;
-    }
+    if (!sessions.length) { sel.innerHTML = '<option value="">No sessions yet — create one below</option>'; sessionId = null; return; }
     sessionId = sessions.some((s) => s.id === prior) ? prior : sessions[0].id;
     sel.value = String(sessionId);
-    $('sessionChip').textContent = 'Session #' + sessionId;
-    await refresh();
+    applySessionSettings();
+    await refreshAll();
   }
 
-  function table(el, columns, rows, renderRow) {
-    el.innerHTML = '';
-    const thead = document.createElement('thead');
-    const hr = document.createElement('tr');
-    for (const c of columns) {
-      const th = document.createElement('th');
-      th.textContent = c.label;
-      if (c.num) th.className = 'num';
-      hr.appendChild(th);
-    }
-    thead.appendChild(hr);
-    const tbody = document.createElement('tbody');
-    for (const r of rows) tbody.appendChild(renderRow(r));
-    el.append(thead, tbody);
+  function applySessionSettings() {
+    const s = sessions.find((x) => x.id === sessionId);
+    if (!s) return;
+    $('sessionChip').textContent = `Session #${s.id}${s.status === 'closed' ? ' (closed)' : ''}`;
+    $('fPalletMode').value = s.pallet_mode;
+    $('fGuided').checked = !!s.guided;
+    $('fAskComments').checked = !!s.ask_comments;
+    $('btnCloseSession').textContent = s.status === 'closed' ? 'Reopen session' : 'Close session';
   }
 
-  const cell = (text, cls) => {
-    const td = document.createElement('td');
-    if (cls) td.className = cls;
-    td.textContent = text;
-    return td;
-  };
-
-  async function refresh() {
-    if (!sessionId) return;
+  /* ------------------------------------------------------------ progress */
+  async function refreshProgress() {
     const p = await apiJson(`/api/admin/sessions/${sessionId}/progress`);
-    const pct = p.locations_total ? Math.round((p.locations_counted / p.locations_total) * 100) : 0;
+    const pct = p.bins_total ? Math.round((p.bins_counted / p.bins_total) * 100) : 0;
     $('stats').innerHTML = '';
-    const stats = [
+    for (const [n, l] of [
       [p.lines.toLocaleString(), 'Count lines'],
-      [`${p.locations_counted.toLocaleString()} / ${p.locations_total.toLocaleString()}`, `Locations counted (${pct}%)`],
-      [p.counters, 'Counters active'],
-      [p.overrides, 'Exception lines'],
-    ];
-    for (const [n, l] of stats) {
+      [`${p.bins_counted.toLocaleString()} / ${p.bins_total.toLocaleString()}`, `Bins with a count (${pct}%)`],
+      [`${p.pallets_counted.toLocaleString()} / ${p.pallets_total.toLocaleString()}`, `Listed pallets found${p.pallets_unknown ? ` (+${p.pallets_unknown} not on list)` : ''}`],
+      [p.teams, 'Teams counting'],
+      [p.devices, 'Scanners'],
+      [p.exceptions, 'Flagged lines'],
+    ]) {
       const d = document.createElement('div');
       d.className = 'stat';
       d.innerHTML = '<div class="n"></div><div class="l"></div>';
@@ -129,120 +126,186 @@
       $('stats').appendChild(d);
     }
 
-    table($('zoneTable'),
-      [{ label: 'Zone' }, { label: 'Counted', num: true }, { label: 'Total', num: true }, { label: 'Progress' }],
-      p.byZone,
-      (z) => {
+    // Merge sign-ons (who is on which scanner) with counting activity.
+    const byTeam = new Map();
+    for (const s of p.signedOn) byTeam.set(s.team, { team: s.team, devices: s.devices, employees: JSON.parse(s.employees || '[]').join(', '), lines: 0, bins: 0 });
+    for (const t of p.byTeam) byTeam.set(t.team, { ...(byTeam.get(t.team) || { team: t.team, employees: '' }), ...t, devices: t.devices });
+    table($('teamTable'),
+      [{ label: 'Team' }, { label: 'Scanner(s)' }, { label: 'Employees' }, { label: 'Active aisle' }, { label: 'Lines', num: true }, { label: 'Bins', num: true }, { label: 'Last scan' }],
+      [...byTeam.values()].sort((a, b) => String(a.team).localeCompare(String(b.team), undefined, { numeric: true })),
+      (t) => {
         const tr = document.createElement('tr');
-        tr.append(cell(z.zone), cell(z.counted, 'num'), cell(z.total, 'num'));
+        tr.append(cell(t.team), cell(t.devices || '—'), cell(t.employees || '—', 'wrap'), cell(t.active_aisle || '—'),
+          cell(t.lines || 0, 'num'), cell(t.bins || 0, 'num'), cell(t.last_scan ? new Date(t.last_scan).toLocaleTimeString() : '—'));
+        return tr;
+      }, 'No team has signed on yet.');
+
+    renderAisles(p.byAisle);
+    $('refreshedAt').textContent = 'updated ' + new Date().toLocaleTimeString();
+  }
+
+  /* ------------------------------------------------------------ aisles */
+  function renderAisles(aisles) {
+    table($('aisleTable'),
+      [{ label: 'Aisle' }, { label: 'Block' }, { label: 'Bins', num: true }, { label: 'Counted', num: true }, { label: 'Progress' }, { label: 'Status' }],
+      aisles,
+      (a) => {
+        const tr = document.createElement('tr');
+        tr.append(cell(a.aisle));
+        const tdBlock = document.createElement('td');
+        const inp = document.createElement('input');
+        inp.className = 'sm';
+        inp.value = a.block;
+        inp.title = 'Type a block name and press Enter';
+        inp.onkeydown = async (e) => {
+          if (e.key !== 'Enter') return;
+          try { renderAisles(await postJson(`/api/admin/sessions/${sessionId}/aisles/block`, { aisle: a.aisle, block: inp.value })); await refreshAssignments(); }
+          catch (err) { alert(err.message); }
+        };
+        tdBlock.appendChild(inp);
+        tr.append(tdBlock, cell(a.bins, 'num'), cell(a.bins_counted, 'num'));
         const td = document.createElement('td');
-        const bar = document.createElement('div');
-        bar.className = 'bar';
-        const i = document.createElement('i');
-        i.style.width = (z.total ? Math.round((z.counted / z.total) * 100) : 0) + '%';
-        bar.appendChild(i);
-        td.appendChild(bar);
-        tr.appendChild(td);
+        const bar = document.createElement('div'); bar.className = 'bar';
+        const i = document.createElement('i'); i.style.width = (a.bins ? Math.round((a.bins_counted / a.bins) * 100) : 0) + '%';
+        bar.appendChild(i); td.appendChild(bar); tr.appendChild(td);
+        const st = document.createElement('td');
+        if (a.active_team) st.appendChild(tag('active')), st.append(` team ${a.active_team}`);
+        else if (a.done_count) st.appendChild(tag('done'));
+        else if (a.queued_teams) st.appendChild(tag('queued')), st.append(` team ${a.queued_teams}`);
+        else st.append('—');
+        tr.appendChild(st);
         return tr;
-      });
+      }, 'Upload a bin list to see aisles.');
+  }
 
-    table($('counterTable'),
-      [{ label: 'Counter' }, { label: 'Lines', num: true }, { label: 'Last scan' }],
-      p.byCounter,
-      (c) => {
-        const tr = document.createElement('tr');
-        tr.append(cell(c.counter), cell(c.lines, 'num'),
-          cell(c.last_scan ? new Date(c.last_scan).toLocaleString() : '—'));
-        return tr;
-      });
+  /* ------------------------------------------------------------ assignments */
+  async function refreshAssignments() {
+    const [rows, aisles] = await Promise.all([
+      apiJson(`/api/admin/sessions/${sessionId}/assignments`),
+      apiJson(`/api/admin/sessions/${sessionId}/aisles`),
+    ]);
+    const blockOf = new Map(aisles.map((a) => [a.aisle, a.block]));
+    const activeHolders = new Map(); // block -> team
+    for (const r of rows) if (r.status === 'active') activeHolders.set(blockOf.get(r.aisle) || r.aisle, r.team);
 
-    const only = $('fOnlyVariance').checked ? '?only=variance&limit=500' : '?limit=500';
-    const rows = await apiJson(`/api/admin/sessions/${sessionId}/variance${only}`);
-    table($('varianceTable'),
-      [{ label: 'Location' }, { label: 'SKU' }, { label: 'Description' },
-       { label: 'Expected', num: true }, { label: 'Counted', num: true },
-       { label: 'Variance', num: true }, { label: 'Status' }],
-      rows,
+    const teams = new Map();
+    for (const r of rows) { if (!teams.has(r.team)) teams.set(r.team, []); teams.get(r.team).push(r); }
+    const list = $('teamList');
+    list.innerHTML = '';
+    if (!teams.size) { list.innerHTML = '<div class="muted">No aisles queued yet. Queue some above or upload a counting plan.</div>'; return; }
+
+    for (const [team, items] of [...teams.entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0]), undefined, { numeric: true }))) {
+      const box = document.createElement('div');
+      box.className = 'team';
+      const head = document.createElement('div');
+      head.className = 'head';
+      const active = items.find((i) => i.status === 'active');
+      head.innerHTML = `<span>Team <b></b></span><span class="muted"></span>`;
+      head.querySelector('b').textContent = team;
+      head.querySelector('.muted').textContent = active ? `in aisle ${active.aisle}` : (items.every((i) => i.status === 'done') ? 'finished' : 'waiting');
+      box.appendChild(head);
+
+      const seq = document.createElement('div');
+      seq.className = 'seq';
+      for (const it of items.sort((a, b) => a.position - b.position || a.id - b.id)) {
+        const a = document.createElement('span');
+        a.className = 'a ' + it.status;
+        const holder = activeHolders.get(blockOf.get(it.aisle) || it.aisle);
+        const blocked = it.status === 'queued' && holder && holder !== team;
+        if (blocked) a.classList.add('blocked');
+        a.title = blocked ? `Held: team ${holder} is active in this block` : it.status;
+        a.append(it.aisle);
+        if (blocked) a.append(' ⏳');
+        const act = (label, status) => {
+          const b = document.createElement('button');
+          b.className = 'sm ghost';
+          b.textContent = label;
+          b.onclick = async () => {
+            try {
+              if (status === 'delete') await apiJson(`/api/admin/sessions/${sessionId}/assignments/${it.id}`, { method: 'DELETE' });
+              else await postJson(`/api/admin/sessions/${sessionId}/assignments/${it.id}`, { status });
+              clearMsg($('assignMsg'));
+              await refreshAll();
+            } catch (err) { msg($('assignMsg'), 'err', err.message); }
+          };
+          return b;
+        };
+        if (it.status === 'queued') { a.appendChild(act('start', 'active')); a.appendChild(act('✕', 'delete')); }
+        if (it.status === 'active') { a.appendChild(act('done', 'done')); a.appendChild(act('release', 'queued')); }
+        if (it.status === 'done') { a.appendChild(act('reopen', 'queued')); }
+        seq.appendChild(a);
+      }
+      box.appendChild(seq);
+      list.appendChild(box);
+    }
+  }
+
+  /* ------------------------------------------------------------ pallet report */
+  async function refreshPallets() {
+    const only = $('fOnlyExceptions').checked ? '&only=exceptions' : '';
+    const data = await apiJson(`/api/admin/sessions/${sessionId}/pallets?limit=500${only}`);
+    table($('palletTable'),
+      [{ label: 'Pallet' }, { label: 'SKU' }, { label: 'Description' }, { label: 'Expected', num: true }, { label: 'Counted', num: true },
+       { label: 'Expected bin' }, { label: 'Found in' }, { label: 'Team' }, { label: 'Comments' }, { label: 'Status' }],
+      data.rows,
       (r) => {
         const tr = document.createElement('tr');
-        tr.append(cell(r.location_code), cell(r.sku), cell(r.description),
-          cell(r.expected_qty, 'num'), cell(r.counted_qty, 'num'), cell(r.variance_qty, 'num'));
-        const td = document.createElement('td');
-        const tag = document.createElement('span');
-        tag.className = 'tag ' + r.status;
-        tag.textContent = r.status;
-        td.appendChild(tag);
-        tr.appendChild(td);
+        tr.append(cell(r.pallet_id), cell(r.sku), cell(r.description, 'wrap'), cell(r.expected_qty, 'num'), cell(r.counted_qty, 'num'),
+          cell(r.expected_location), cell(r.found_location), cell(r.teams), cell(r.comments, 'wrap'));
+        const td = document.createElement('td'); td.appendChild(tag(r.status)); tr.appendChild(td);
         return tr;
-      });
-    $('varianceNote').textContent = rows.length >= 500
-      ? 'Showing the first 500 rows — export the CSV for the full list.'
-      : `${rows.length} row(s).`;
-    $('refreshedAt').textContent = ' Updated ' + new Date().toLocaleTimeString();
+      }, 'No pallets to show.');
+    $('palletNote').textContent = data.total > data.rows.length
+      ? `Showing ${data.rows.length} of ${data.total} — export the CSV for the full list.` : `${data.total} row(s).`;
+  }
+
+  async function refreshAll() {
+    if (!sessionId) return;
+    await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets()]);
   }
 
   async function download(path, filename) {
     const res = await api(path);
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(await res.blob());
     const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   }
 
-  // ---------------------------------------------------------------- wiring
+  /* ------------------------------------------------------------ wiring */
   $('btnLogin').onclick = login;
   $('fPassword').addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
   $('btnLogout').onclick = logout;
-  $('btnRefresh').onclick = () => refresh().catch((e) => alert(e.message));
-  $('fOnlyVariance').onchange = () => refresh();
-  $('fSessionPick').onchange = (e) => {
-    sessionId = Number(e.target.value) || null;
-    $('sessionChip').textContent = 'Session #' + sessionId;
-    refresh();
-  };
+  $('fSessionPick').onchange = (e) => { sessionId = Number(e.target.value) || null; applySessionSettings(); refreshAll(); };
+  $('fOnlyExceptions').onchange = refreshPallets;
 
   $('btnCreate').onclick = async () => {
     try {
-      const s = await apiJson('/api/admin/sessions', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          name: $('fNewName').value,
-          blind: $('fBlind').checked,
-          requireLpn: $('fRequireLpn').checked,
-          allowOverride: $('fAllowOverride').checked,
-        }),
-      });
+      const s = await postJson('/api/admin/sessions', { name: $('fNewName').value });
       $('fNewName').value = '';
       sessionId = s.id;
-      msg($('sessionMsg'), 'ok', `Created session #${s.id}. Upload its master data next.`);
+      msg($('sessionMsg'), 'ok', `Created session #${s.id}. Upload its bin list and pallet list next.`);
       await loadSessions();
-    } catch (err) {
-      msg($('sessionMsg'), 'err', err.message);
-    }
+    } catch (err) { msg($('sessionMsg'), 'err', err.message); }
   };
-
-  const setStatus = async (status) => {
-    if (!sessionId) return;
+  $('btnSaveSettings').onclick = async () => {
     try {
-      await apiJson(`/api/admin/sessions/${sessionId}/status`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ status }),
+      await postJson(`/api/admin/sessions/${sessionId}/settings`, {
+        palletMode: $('fPalletMode').value, guided: $('fGuided').checked, askComments: $('fAskComments').checked,
       });
-      msg($('sessionMsg'), 'ok', `Session #${sessionId} is now ${status}.`);
+      msg($('sessionMsg'), 'ok', 'Settings saved. Scanners pick them up at their next sign-on.');
       await loadSessions();
-    } catch (err) {
-      msg($('sessionMsg'), 'err', err.message);
-    }
+    } catch (err) { msg($('sessionMsg'), 'err', err.message); }
   };
-  $('btnCloseSession').onclick = () => setStatus('closed');
-  $('btnReopenSession').onclick = () => setStatus('open');
+  $('btnCloseSession').onclick = async () => {
+    const s = sessions.find((x) => x.id === sessionId);
+    if (!s) return;
+    const next = s.status === 'closed' ? 'open' : 'closed';
+    if (next === 'closed' && !confirm('Close this session? Scanners will no longer be able to send counts to it.')) return;
+    try { await postJson(`/api/admin/sessions/${sessionId}/status`, { status: next }); await loadSessions(); }
+    catch (err) { msg($('sessionMsg'), 'err', err.message); }
+  };
 
   $('btnUpload').onclick = async () => {
     const file = $('fFile').files[0];
@@ -250,41 +313,48 @@
     if (!sessionId) return msg($('uploadMsg'), 'err', 'Create or select a session first');
     msg($('uploadMsg'), 'warn', `Uploading ${file.name}…`);
     try {
-      const text = await file.text();
       const kind = $('fKind').value;
-      const replace = $('fReplace').checked ? '1' : '0';
-      const stats = await apiJson(
-        `/api/admin/sessions/${sessionId}/master?kind=${kind}&replace=${replace}`,
-        { method: 'POST', headers: { 'content-type': 'text/csv' }, body: text }
-      );
-      msg($('uploadMsg'), 'ok',
-        `Imported ${stats.rows.toLocaleString()} rows from ${file.name}`,
-        `Session totals — locations: ${stats.totals.locations.toLocaleString()}, ` +
-        `items: ${stats.totals.items.toLocaleString()}, ` +
-        `barcodes: ${stats.totals.barcodes.toLocaleString()}, ` +
-        `expected lines: ${stats.totals.expected.toLocaleString()}` +
-        (stats.skipped ? ` · ${stats.skipped} row(s) skipped (missing location or sku)` : ''));
-      await refresh();
-    } catch (err) {
-      msg($('uploadMsg'), 'err', 'Upload failed', err.message);
-    }
+      const stats = await apiJson(`/api/admin/sessions/${sessionId}/master?kind=${kind}&replace=${$('fReplace').checked ? 1 : 0}`,
+        { method: 'POST', headers: { 'content-type': 'text/csv' }, body: await file.text() });
+      const t = stats.totals;
+      msg($('uploadMsg'), 'ok', `Imported ${stats.rows.toLocaleString()} rows from ${file.name}`,
+        `Session now has ${t.bins.toLocaleString()} bins in ${t.aisles} aisles, ${t.pallets.toLocaleString()} pallets, ${t.assignments} planned aisle assignments` +
+        (stats.skipped ? ` · ${stats.skipped} row(s) skipped (missing required column, or unknown aisle)` : ''));
+      $('fFile').value = '';
+      await refreshAll();
+    } catch (err) { msg($('uploadMsg'), 'err', 'Upload failed', err.message); }
   };
 
-  $('btnExportVariance').onclick = () =>
-    download(`/api/admin/sessions/${sessionId}/export/variance.csv`, `variance-session-${sessionId}.csv`);
-  $('btnExportCounts').onclick = () =>
-    download(`/api/admin/sessions/${sessionId}/export/counts.csv`, `counts-session-${sessionId}.csv`);
+  $('btnAutoBlock').onclick = async () => {
+    try {
+      renderAisles(await postJson(`/api/admin/sessions/${sessionId}/aisles/auto-block`, { size: Number($('fBlockSize').value), offset: Number($('fBlockOffset').value) }));
+      await refreshAssignments();
+    } catch (err) { alert(err.message); }
+  };
 
-  // ---------------------------------------------------------------- boot
+  $('btnAssign').onclick = async () => {
+    try {
+      const r = await postJson(`/api/admin/sessions/${sessionId}/assignments`, { team: $('fAssignTeam').value, aisles: $('fAssignAisles').value });
+      const parts = [];
+      if (r.added.length) parts.push(`queued ${r.added.join(', ')}`);
+      if (r.activated.length) parts.push(`started ${r.activated.map((a) => `team ${a.team} in ${a.aisle}`).join('; ')}`);
+      msg($('assignMsg'), r.skipped.length ? 'warn' : 'ok', parts.join(' · ') || 'Nothing to queue',
+        r.skipped.map((s) => `${s.aisle}: ${s.reason}`).join(' · '));
+      $('fAssignAisles').value = '';
+      await refreshAll();
+    } catch (err) { msg($('assignMsg'), 'err', err.message); }
+  };
+
+  $('btnExportPallets').onclick = () => download(`/api/admin/sessions/${sessionId}/export/pallets.csv`, `pallets-session-${sessionId}.csv`);
+  $('btnExportCounts').onclick = () => download(`/api/admin/sessions/${sessionId}/export/counts.csv`, `counts-session-${sessionId}.csv`);
+  $('btnExportExceptions').onclick = () => download(`/api/admin/sessions/${sessionId}/export/exceptions.csv`, `exceptions-session-${sessionId}.csv`);
+  $('btnExportUncounted').onclick = () => download(`/api/admin/sessions/${sessionId}/export/uncounted.csv`, `uncounted-bins-session-${sessionId}.csv`);
+
+  /* ------------------------------------------------------------ boot */
   (async () => {
     if (!token) return show('login');
-    try {
-      await apiJson('/api/admin/sessions');
-      show('main');
-      await loadSessions();
-    } catch {
-      show('login');
-    }
+    try { await apiJson('/api/admin/sessions'); show('main'); await loadSessions(); }
+    catch { show('login'); }
   })();
-  setInterval(() => { if (token && sessionId) refresh().catch(() => {}); }, 30000);
+  setInterval(() => { if (token && sessionId) refreshAll().catch(() => {}); }, 30000);
 })();

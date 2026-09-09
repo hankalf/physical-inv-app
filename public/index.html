@@ -13,66 +13,100 @@
 
 <header>
   <span class="title" id="hdrTitle">Inventory Count</span>
+  <span class="chip" id="chipDevice" hidden></span>
   <span class="chip" id="chipNet">…</span>
   <span class="chip queued" id="chipQueue" hidden>0</span>
 </header>
 
 <main>
 
-  <!-- ---------------- setup ---------------- -->
-  <section class="screen active" id="scrSetup">
-    <label for="fCounter">Counter (badge or name)</label>
-    <input id="fCounter" class="big" autocomplete="off" autocapitalize="characters" placeholder="Scan or type badge">
+  <!-- ---------------- device setup (once per scanner) ---------------- -->
+  <section class="screen" id="scrDevice">
+    <h2 class="prompt">Set up this scanner</h2>
+    <div class="muted">Give this scanner a unique ID. It is stamped on every count so we know which team was using it. Set once; it stays on the device.</div>
+    <label for="fDeviceId">Scanner ID</label>
+    <input id="fDeviceId" class="big" autocomplete="off" autocapitalize="characters" placeholder="e.g. SCANNER-04">
+    <button class="primary" id="btnSaveDevice">Save</button>
+    <div class="feedback" id="deviceMsg"></div>
+  </section>
 
+  <!-- ---------------- sign-on ---------------- -->
+  <section class="screen" id="scrSignon">
     <label for="fSession">Count session</label>
     <select id="fSession"><option value="">Loading…</option></select>
 
-    <label for="fDevice">Device ID</label>
-    <input id="fDevice" autocomplete="off" placeholder="e.g. MC9300-04">
+    <label for="fTeam">Team number</label>
+    <input id="fTeam" class="big" inputmode="numeric" autocomplete="off" placeholder="e.g. 3">
 
-    <button class="primary" id="btnStart">Load list &amp; start counting</button>
+    <label for="fEmployee">Employee IDs — scan badge or type, then Enter</label>
+    <div class="row">
+      <input id="fEmployee" autocomplete="off" autocapitalize="characters" placeholder="Badge / employee ID">
+      <button id="btnAddEmployee" style="flex:0 0 auto;margin-top:0">Add</button>
+    </div>
+    <div class="chips" id="employeeChips"></div>
+    <div class="hint">Tap an ID to remove it.</div>
+
+    <button class="primary" id="btnStart">Sign on &amp; load list</button>
     <button class="ghost" id="btnRefreshSessions">Refresh sessions</button>
+    <button class="link" id="btnChangeDevice">Change scanner ID</button>
 
-    <div class="feedback" id="setupMsg"></div>
+    <div class="feedback" id="signonMsg"></div>
     <div class="spacer"></div>
     <div class="muted" id="cacheInfo"></div>
   </section>
 
-  <!-- ---------------- scanning ---------------- -->
+  <!-- ---------------- assignment (guided) ---------------- -->
+  <section class="screen" id="scrAssign">
+    <div id="assignCard"></div>
+    <button class="primary" id="btnCount">Start counting</button>
+    <button id="btnAisleDone">Aisle complete — next aisle</button>
+    <div class="row">
+      <button class="ghost" id="btnAssignRefresh">Refresh</button>
+      <button class="ghost" id="btnAssignHistory">History</button>
+    </div>
+    <button class="ghost" id="btnSignoff">Sign off this scanner</button>
+    <div class="feedback" id="assignMsg"></div>
+  </section>
+
+  <!-- ---------------- counting ---------------- -->
   <section class="screen" id="scrScan">
     <div class="context" id="ctx"></div>
 
-    <div class="step" id="stepLabel">Step 1 of 3</div>
-    <h2 class="prompt" id="prompt">Scan location</h2>
+    <div class="step" id="stepLabel">Step 1 of 4</div>
+    <h2 class="prompt" id="prompt">Scan PALLET ID</h2>
 
     <input id="fScan" class="big" autocomplete="off" autocorrect="off" autocapitalize="characters"
            spellcheck="false" inputmode="none" enterkeyhint="done">
 
+    <div class="chips" id="commentChips" hidden></div>
+
     <div class="row">
       <button id="btnKeyboard" class="ghost">Keyboard</button>
       <button id="btnBack" class="ghost">Back</button>
+      <button id="btnSkip" class="primary" hidden>Skip</button>
     </div>
 
     <div class="feedback" id="scanMsg"></div>
 
     <div class="row">
-      <button id="btnChangeLoc" class="ghost">Change location</button>
+      <button id="btnToAssign" class="ghost">My aisle</button>
       <button id="btnHistory" class="ghost">History</button>
     </div>
-    <button id="btnEnd" class="ghost">End session on this device</button>
   </section>
 
   <!-- ---------------- override ---------------- -->
   <section class="screen" id="scrOverride">
-    <h2 class="prompt">Not on the list</h2>
+    <h2 class="prompt" id="ovTitle">Check this</h2>
+    <div class="feedback show warn" id="ovWhy"></div>
     <div class="context" id="ovCtx"></div>
-    <label for="fReason">Reason (required)</label>
+    <label for="fReason">Reason (required to continue)</label>
     <select id="fReason">
       <option value="">Choose a reason…</option>
       <option>Label damaged / unreadable</option>
-      <option>New item not in master file</option>
-      <option>New location not in master file</option>
-      <option>Item in wrong location</option>
+      <option>New pallet not in master file</option>
+      <option>New bin not in master file</option>
+      <option>Pallet has two labels</option>
+      <option>Pallet is in a different aisle</option>
       <option>Supervisor approved</option>
       <option>Other</option>
     </select>
@@ -85,9 +119,9 @@
   <!-- ---------------- history ---------------- -->
   <section class="screen" id="scrHistory">
     <h2 class="prompt">Recent counts</h2>
-    <div class="muted">Most recent 50 lines from this device. Void removes a line from the totals.</div>
+    <div class="muted">Most recent 50 lines from this scanner. Void removes a line from the totals.</div>
     <div class="list" id="historyList"></div>
-    <button class="primary" id="btnHistoryBack">Back to scanning</button>
+    <button class="primary" id="btnHistoryBack">Back</button>
   </section>
 
 </main>

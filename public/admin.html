@@ -8,29 +8,51 @@
 <link rel="stylesheet" href="/styles.css">
 <style>
   body { font-size: 15px; }
-  main { max-width: 1100px; margin: 0 auto; width: 100%; }
+  main { max-width: 1200px; margin: 0 auto; width: 100%; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
-  .card h2 { margin: 0 0 10px; font-size: 17px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  .card h2 { margin: 0 0 8px; font-size: 17px; display: flex; align-items: center; gap: 10px; }
+  .card h2 .muted { font-weight: 400; font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
   .stat { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
   .stat .n { font-size: 26px; font-weight: 800; }
   .stat .l { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: middle; }
   th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  .tag { font-size: 11px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); }
-  .tag.MATCH { color: var(--ok); border-color: #1d572a; }
-  .tag.VARIANCE { color: var(--warn); border-color: #5c4813; }
-  .tag.MISSING { color: var(--err); border-color: #6e2c2f; }
-  .tag.FOUND { color: var(--accent); border-color: #1f4d8f; }
+  td.wrap { white-space: normal; }
+  .tag { font-size: 11px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); white-space: nowrap; }
+  .tag.MATCH, .tag.done { color: var(--ok); border-color: #1d572a; }
+  .tag.QTY.VARIANCE, .tag.WRONG.BIN, .tag.queued { color: var(--warn); border-color: #5c4813; }
+  .tag.MISSING, .tag.COUNTED.TWICE { color: var(--err); border-color: #6e2c2f; }
+  .tag.NOT.IN.MASTER { color: var(--accent); border-color: #1f4d8f; }
+  .tag.active { color: #fff; background: #1f4d8f; border-color: var(--accent); }
+  .tag.blocked { color: var(--warn); border-color: #5c4813; }
   .scroll { overflow-x: auto; }
-  button { width: auto; padding: 9px 14px; font-size: 14px; }
+  button { width: auto; padding: 9px 14px; font-size: 14px; margin-top: 0; }
+  button.sm { padding: 4px 9px; font-size: 12px; }
   input, select { font-size: 15px; padding: 9px 10px; font-weight: 500; }
+  input.sm { padding: 4px 8px; font-size: 13px; width: 110px; }
   .inline { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
   .inline > div { flex: 1 1 180px; }
+  .inline > div.auto { flex: 0 0 auto; }
   .bar { height: 8px; background: var(--panel-2); border-radius: 4px; overflow: hidden; min-width: 90px; }
   .bar i { display: block; height: 100%; background: var(--accent); }
+  .block-row td:first-child { font-weight: 700; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 900px) { .two { grid-template-columns: 1fr; } }
+  label.cb { display: inline-flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: 13px; }
+  label.cb input { width: auto; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+  .team-list { display: flex; flex-direction: column; gap: 8px; }
+  .team { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .team .head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+  .team .seq { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .seq .a { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; font-size: 13px; background: var(--panel); }
+  .seq .a.active { border-color: var(--accent); background: #1f4d8f; }
+  .seq .a.done { opacity: .55; text-decoration: line-through; }
+  .seq .a.blocked { border-color: var(--warn); }
+  .seq .a button { padding: 1px 6px; font-size: 11px; border-radius: 4px; }
 </style>
 </head>
 <body>
@@ -38,7 +60,7 @@
 <header>
   <span class="title">Inventory Count — Supervisor</span>
   <span class="chip" id="sessionChip" hidden></span>
-  <button id="btnLogout" class="ghost" hidden style="width:auto;margin:0;padding:6px 10px;font-size:12px">Log out</button>
+  <button id="btnLogout" class="ghost" hidden style="padding:6px 10px;font-size:12px">Log out</button>
 </header>
 
 <main>
@@ -48,101 +70,114 @@
       <h2>Supervisor sign-in</h2>
       <label for="fPassword">Password</label>
       <input id="fPassword" type="password" autocomplete="current-password">
-      <button class="primary" id="btnLogin" style="width:100%">Sign in</button>
+      <button class="primary" id="btnLogin" style="width:100%;margin-top:10px">Sign in</button>
       <div class="feedback" id="loginMsg"></div>
     </div>
   </section>
 
   <section class="screen" id="scrMain">
 
+    <!-- ============ sessions ============ -->
     <div class="card">
-      <h2>Count sessions</h2>
+      <h2>Count session</h2>
       <div class="inline">
         <div>
           <label for="fSessionPick">Active session</label>
           <select id="fSessionPick"></select>
         </div>
-        <div style="flex:0 0 auto">
-          <button id="btnCloseSession">Close session</button>
-          <button id="btnReopenSession" class="ghost">Reopen</button>
+        <div class="auto">
+          <label for="fPalletMode">Pallet ID check</label>
+          <select id="fPalletMode">
+            <option value="warn">Validate — allow override with reason</option>
+            <option value="strict">Validate — no overrides</option>
+            <option value="off">Accept any ID (still blocks duplicates)</option>
+          </select>
         </div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fGuided"> Guided by aisle plan</label></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fAskComments"> Ask for comments</label></div>
+        <div class="auto"><button id="btnSaveSettings">Save</button></div>
+        <div class="auto"><button id="btnCloseSession" class="danger">Close session</button></div>
       </div>
-      <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+      <hr>
       <div class="inline">
-        <div>
-          <label for="fNewName">New session name</label>
-          <input id="fNewName" placeholder="e.g. Q3 2026 wall-to-wall">
-        </div>
-        <div style="flex:0 0 auto">
-          <label><input type="checkbox" id="fBlind" checked style="width:auto"> Blind count</label>
-        </div>
-        <div style="flex:0 0 auto">
-          <label><input type="checkbox" id="fRequireLpn" style="width:auto"> Require LPN scan</label>
-        </div>
-        <div style="flex:0 0 auto">
-          <label><input type="checkbox" id="fAllowOverride" checked style="width:auto"> Allow overrides</label>
-        </div>
-        <div style="flex:0 0 auto"><button class="primary" id="btnCreate">Create</button></div>
+        <div><label for="fNewName">New session name</label><input id="fNewName" placeholder="e.g. Q3 2026 wall-to-wall"></div>
+        <div class="auto"><button class="primary" id="btnCreate">Create session</button></div>
       </div>
       <div class="feedback" id="sessionMsg"></div>
     </div>
 
+    <!-- ============ uploads ============ -->
     <div class="card">
-      <h2>Upload master data (CSV)</h2>
-      <div class="muted">
-        Columns are matched by name, so most ERP exports work as-is.
-        <b>On-hand</b> wants location / sku / qty (description, uom, zone, barcode optional).
-      </div>
-      <div class="inline" style="margin-top:10px">
+      <h2>Upload lists (CSV) <span class="muted">columns are matched by name</span></h2>
+      <div class="inline">
         <div>
-          <label for="fKind">File type</label>
+          <label for="fKind">File</label>
           <select id="fKind">
-            <option value="onhand">On-hand snapshot (location, sku, qty)</option>
-            <option value="locations">Locations (location, zone, description)</option>
-            <option value="items">Items (sku, description, uom, barcode)</option>
-            <option value="barcodes">Extra barcodes (barcode, sku, pack_qty)</option>
+            <option value="bins">Bin list — bin location, zone, aisle (validation list for question 3)</option>
+            <option value="pallets">Pallet list — pallet id, sku, description, qty, location (validation + contents for question 1)</option>
+            <option value="plan">Counting plan — team, aisle (one row per aisle, in the order each team should count)</option>
           </select>
         </div>
-        <div>
-          <label for="fFile">CSV file</label>
-          <input type="file" id="fFile" accept=".csv,.tsv,.txt,text/csv">
-        </div>
-        <div style="flex:0 0 auto">
-          <label><input type="checkbox" id="fReplace" style="width:auto"> Replace existing</label>
-        </div>
-        <div style="flex:0 0 auto"><button class="primary" id="btnUpload">Upload</button></div>
+        <div><label for="fFile">CSV file</label><input type="file" id="fFile" accept=".csv,.tsv,.txt,text/csv"></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fReplace"> Replace existing</label></div>
+        <div class="auto"><button class="primary" id="btnUpload">Upload</button></div>
+      </div>
+      <div class="hint" style="margin-top:8px">
+        Without an <b>Aisle</b> column, the aisle is taken from the first part of the bin code (<code>A03-12-1</code> → <code>A03</code>).
       </div>
       <div class="feedback" id="uploadMsg"></div>
     </div>
 
+    <!-- ============ progress ============ -->
     <div class="card">
-      <h2>Progress</h2>
+      <h2>Progress <span class="muted" id="refreshedAt"></span></h2>
       <div class="grid" id="stats"></div>
-      <div class="scroll" style="margin-top:14px">
-        <table id="zoneTable"></table>
-      </div>
-      <div class="scroll" style="margin-top:14px">
-        <table id="counterTable"></table>
-      </div>
-      <button id="btnRefresh" style="margin-top:12px">Refresh</button>
-      <span class="muted" id="refreshedAt"></span>
+      <div class="scroll" style="margin-top:14px"><table id="teamTable"></table></div>
     </div>
 
+    <!-- ============ aisles & assignments ============ -->
+    <div class="two">
+      <div class="card">
+        <h2>Aisles &amp; racking blocks</h2>
+        <div class="hint">
+          Aisles in the same <b>block</b> share racking, so only one team can be active in a block at a time.
+          Pair them automatically, or type a block name on any row.
+        </div>
+        <div class="inline" style="margin-top:8px">
+          <div class="auto"><label for="fBlockSize">Aisles per block</label><input id="fBlockSize" class="sm" type="number" value="2" min="1"></div>
+          <div class="auto"><label for="fBlockOffset">Skip first</label><input id="fBlockOffset" class="sm" type="number" value="0" min="0" title="Set to 1 if the first aisle has a wall behind it"></div>
+          <div class="auto"><button id="btnAutoBlock">Auto-pair aisles</button></div>
+        </div>
+        <div class="scroll" style="margin-top:10px"><table id="aisleTable"></table></div>
+      </div>
+
+      <div class="card">
+        <h2>Team assignments</h2>
+        <div class="hint">Queue aisles per team in counting order. A team's next aisle waits automatically while another team holds its block — that is what staggers them.</div>
+        <div class="inline" style="margin-top:8px">
+          <div class="auto"><label for="fAssignTeam">Team</label><input id="fAssignTeam" class="sm" placeholder="3"></div>
+          <div><label for="fAssignAisles">Aisles, in order</label><input id="fAssignAisles" placeholder="A01, A03, A05"></div>
+          <div class="auto"><button class="primary" id="btnAssign">Queue</button></div>
+        </div>
+        <div class="feedback" id="assignMsg"></div>
+        <div class="team-list" id="teamList" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <!-- ============ pallet report ============ -->
     <div class="card">
-      <h2>Variance</h2>
+      <h2>Pallet report</h2>
       <div class="inline">
-        <div style="flex:0 0 auto">
-          <label><input type="checkbox" id="fOnlyVariance" checked style="width:auto"> Hide matching lines</label>
-        </div>
-        <div style="flex:0 0 auto">
-          <button id="btnExportVariance">Export variance CSV</button>
-          <button id="btnExportCounts">Export raw counts CSV</button>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fOnlyExceptions" checked> Hide matching pallets</label></div>
+        <div class="auto">
+          <button id="btnExportPallets">Pallet report CSV</button>
+          <button id="btnExportCounts">Raw counts CSV</button>
+          <button id="btnExportExceptions">Exceptions CSV</button>
+          <button id="btnExportUncounted">Uncounted bins CSV</button>
         </div>
       </div>
-      <div class="scroll" style="margin-top:10px">
-        <table id="varianceTable"></table>
-      </div>
-      <div class="muted" id="varianceNote"></div>
+      <div class="scroll" style="margin-top:10px"><table id="palletTable"></table></div>
+      <div class="muted" id="palletNote"></div>
     </div>
 
   </section>

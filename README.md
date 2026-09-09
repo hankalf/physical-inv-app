@@ -1,42 +1,51 @@
 # Physical Inventory Counting
 
-A warehouse physical-inventory app for Zebra Android handhelds (MC9300 / TC-series).
-The counter answers three prompts — **location → item → quantity** — and each scan is
-validated against the master list before it is accepted.
+A warehouse physical-inventory app for Zebra Android handhelds (MC9300 / TC-series),
+counting at **pallet level**. Each scanner asks four questions, one per screen:
 
-Built to run either in the cloud (Railway) or on a PC inside the warehouse, from the
-same image. No third-party runtime dependencies: Node 22's built-in HTTP server and
-`node:sqlite` only.
+1. **Pallet ID / container #** — checked against the uploaded pallet list; shows what
+   the system says is on it so the counter can confirm the right pallet
+2. **Quantity**
+3. **Bin location** — checked against the uploaded bin list
+4. **Comments** — optional, with one-tap quick notes
+
+Questions 1–3 are required. Teams sign on with a team number and their employee IDs;
+every scanner has a unique ID stamped on every line. A supervisor can upload a counting
+plan that sends each team to its aisles in order, with **racking-conflict blocking**
+so two teams are never in aisles that back onto each other.
+
+Runs from one Docker image either on Railway or on a PC inside the warehouse. No
+third-party runtime dependencies: Node 22's built-in HTTP server and `node:sqlite`.
 
 ---
 
-## Why it is offline-first
+## Offline-first
 
-Warehouse Wi-Fi has dead spots — racking, freezers, the far end of a building.
-So the handheld downloads the session's master list once at sign-on and keeps it in
-IndexedDB:
+Warehouse Wi-Fi has dead spots. So at sign-on the handheld downloads the session's bin
+list and pallet list into IndexedDB:
 
-* every scan is validated **on the device**, with no network round trip (instant, and
-  it works with no signal at all);
-* counted lines are written to local storage first and pushed to the server whenever a
-  connection exists;
+* every scan is validated **on the device** — instant, and it works with no signal;
+* count lines are written locally first and pushed whenever a connection exists;
 * each line carries a device-generated id, so a retry after a dropped connection can
   never double-count;
+* pallets counted by *other* scanners are pulled down during each sync, so a duplicate
+  is caught even when the second scanner is offline at the time;
 * the header shows `online` / `OFFLINE` and how many lines are still queued.
 
-A counter can walk into a dead zone, keep counting, and the lines sync when they walk out.
+Aisle hand-offs (marking an aisle complete) need a connection, since the next aisle is
+released by the server.
 
 ---
 
 ## Running it
 
-### Locally (development)
+### Locally
 
 ```bash
 npm start                 # http://localhost:3000
 ```
 
-### On a PC in the warehouse (production, on-site)
+### On a PC in the warehouse
 
 ```bash
 ADMIN_PASSWORD='pick-something' docker compose up -d
@@ -45,14 +54,15 @@ ADMIN_PASSWORD='pick-something' docker compose up -d
 Handhelds then point at `http://<that-pc-lan-ip>:3000/`. Give the PC a static IP or a
 DHCP reservation so the URL never changes.
 
-### On Railway (cloud)
+### On Railway
 
 Deploy from this repo — `railway.json` builds the Dockerfile. Then:
 
-1. Add a **volume mounted at `/data`** (without it, counts are lost on redeploy).
+1. Add a **volume mounted at `/data`** (Service → Settings → Volumes). Without it the
+   app starts with a warning and counts are lost on redeploy.
 2. Set `ADMIN_PASSWORD`.
 
-The scanners need internet access for this option, not just warehouse Wi-Fi.
+Scanners need internet access for this option, not just warehouse Wi-Fi.
 
 ### Environment variables
 
@@ -61,62 +71,101 @@ The scanners need internet access for this option, not just warehouse Wi-Fi.
 | `PORT` | `3000` | Listening port |
 | `HOST` | `0.0.0.0` | Bind address |
 | `ADMIN_PASSWORD` | `changeme` | Supervisor dashboard password — **set this** |
-| `DB_PATH` | `./data/inventory.db` | SQLite file |
-| `MAX_UPLOAD_MB` | `64` | Master-file upload cap |
+| `DB_PATH` | `./data/inventory.db` | SQLite file (falls back to `./data` if unwritable) |
+| `MAX_UPLOAD_MB` | `64` | Upload size cap |
 
 ---
 
-## Using it
+## Supervisor — `/admin.html`
 
-### Supervisor — `/admin.html`
+### 1. Create a session
 
-1. **Create a session** (e.g. "Q3 wall-to-wall"). Options: blind count, require LPN,
-   allow overrides.
-2. **Upload the master CSV.** Columns are matched by name, so most ERP exports work
-   unchanged — `Location`, `Item Number`, `On Hand Qty`, `location`, `sku`, `qty`,
-   `Bin`, `Part Number` and similar spellings all resolve.
-3. **Watch progress** — locations counted per zone, lines per counter, exception count.
-4. **Export** the raw count CSV and the variance report.
+Per-session settings:
 
-Master file types:
+| Setting | Options |
+|---|---|
+| Pallet ID check | **Validate, allow override with reason** (default) · Validate, no overrides · Accept any ID (duplicates still blocked) |
+| Guided by aisle plan | on / off |
+| Ask for comments | on / off (drops question 4) |
 
-| Type | Columns it looks for | Use it for |
+### 2. Upload the lists
+
+Columns are matched by name, so most ERP exports work unchanged.
+
+| File | Columns it looks for | What it is |
 |---|---|---|
-| On-hand snapshot | location, sku, qty (+ zone, description, uom, barcode) | The usual ERP export. Seeds locations, items and expected quantities in one go. |
-| Locations | location, zone, description | Location list only |
-| Items | sku, description, uom, barcode, pack_qty | Item master only |
-| Extra barcodes | barcode, sku, pack_qty | UPCs, alternates, case codes |
+| **Bin list** | location/bin, zone, aisle, description | The validation list for question 3. Also defines the aisles. |
+| **Pallet list** | pallet id/container/LPN, sku, description, uom, qty, location | The validation list for question 1, plus what is on each pallet and where the system thinks it is. |
+| **Counting plan** | team, aisle | One row per aisle, in the order each team should count. Optional — aisles can also be queued in the dashboard. |
 
-Several rows for the same location + SKU (lots, serials, pallets) are summed.
-Re-uploading the same file overwrites rather than doubling; tick **Replace existing**
-to wipe the session's master data first.
+Without an `Aisle` column, the aisle is taken from the first part of the bin code
+(`A03-12-1` → `A03`, `03.14.2` → `03`). Add the column if your codes don't follow that.
 
-A barcode with `pack_qty` greater than 1 is treated as a case code — entering `3`
-against a case of 12 records 36.
+Sample files are in `sample-data/`.
 
-### Counter — `/` on the handheld
+### 3. Pair aisles that share racking
 
-1. Scan or type a badge, pick the session, tap **Load list & start counting**.
-2. **Scan LOCATION** → validated against the location list.
-3. **Scan ITEM** → validated against every known barcode; the description is shown
-   so the counter can confirm the right thing was scanned.
-4. **Enter QUANTITY** → typed on the keypad.
+In **Aisles & racking blocks**, click **Auto-pair aisles** to group them in twos
+(A01+A02, A03+A04, …), or type a block name on any row. Set *Skip first* to 1 if the
+first aisle has a wall behind it. Only one team can be active in a block at a time.
 
-Then the app returns to the item prompt with the location held, so counting a whole
-bin is scan-item → qty, scan-item → qty. **Change location** moves to the next bin.
+### 4. Assign teams
 
-Behaviour worth knowing:
+Queue aisles per team in counting order. The first aisle for each team starts
+immediately if its block is free. When a team marks an aisle complete, its next aisle
+starts automatically — unless another team holds that block, in which case it waits
+and the handheld shows *"Waiting: team 1 is still in aisle A03, which shares racking
+with A04"*. Trying to force-start a conflicting aisle from the dashboard is refused
+with the same message.
 
-* **A scan that is not on the list is rejected** — error tone, red flash, and a reason
-  must be chosen before it can be accepted. Every override is flagged in the export.
-* **Junk in the quantity field is refused**, never counted as zero.
-* **Quantities of 1000 or more must be entered twice.** Adjustable per device via
-  `localStorage.largeQtyThreshold`.
-* **Already counted here** is shown when a SKU is re-scanned in the same location, with
-  the running total, so a counter can tell a genuine second pallet from a double scan.
-* **History** lists the last 50 lines from that device, and any of them can be voided.
-  Voided lines are excluded from totals but kept in the raw export for the audit trail.
-* It is a **blind count** by default: expected quantities are never sent to the handheld.
+### 5. Watch, then export
+
+Progress by team (scanner, employees, active aisle, last scan), by aisle, and a pallet
+report with these statuses:
+
+| Status | Meaning |
+|---|---|
+| `MATCH` | Found once, in the expected bin, expected quantity |
+| `QTY VARIANCE` | Found in the right bin, quantity differs |
+| `WRONG BIN` | Found in a bin other than the system location |
+| `COUNTED TWICE` | The same pallet ID was counted more than once |
+| `MISSING` | On the pallet list, never counted |
+| `NOT IN MASTER` | Counted, but not on the pallet list |
+
+Exports: pallet report, raw counts (every line with team, employees, scanner,
+flags, comments), exceptions only, and uncounted bins.
+
+---
+
+## Counter — `/` on the handheld
+
+**First run only:** the scanner asks for its unique ID (e.g. `SCANNER-04`). It stays on
+the device.
+
+**Sign-on:** pick the session, enter the team number, scan or type each employee's badge
+(Enter after each), tap **Sign on & load list**.
+
+**Assignment screen** (guided sessions): shows the team's aisle, a grid of its bins
+coloured as they get a count, and what comes next. **Aisle complete** hands the aisle
+back and pulls the next one.
+
+**Counting:** Pallet → Qty → Bin → Comments, then straight back to Pallet.
+
+What the app refuses or flags:
+
+* **Pallet already counted** — anywhere, by anyone: error tone, and a reason is required
+  to record it again. Reported as `COUNTED TWICE`.
+* **Pallet not on the list** — depends on the session setting (override / hard block /
+  accept). Reported as `NOT IN MASTER`.
+* **Bin not on the list** — reason required.
+* **Bin outside the team's aisle** — reason required, flagged `off_assignment`.
+* **Pallet in a different bin than the system expects** — accepted, but shown on screen
+  and reported as `WRONG BIN`.
+* **Junk in the quantity field** — refused, never counted as zero.
+* **Quantities of 1000+** — must be entered twice.
+
+**History** lists the last 50 lines from that scanner; any can be voided. Voided lines
+drop out of totals but stay in the raw export.
 
 ---
 
@@ -126,58 +175,49 @@ The app reads scans as keystrokes, so the scanner must be in keyboard-wedge mode
 an Enter suffix:
 
 1. Open **DataWedge** → the profile associated with Chrome (or create one and associate
-   the browser app).
+   the browser).
 2. **Keystroke output**: enabled.
 3. **Basic data formatting** → **Send ENTER key**: enabled. *(Without this the app never
    sees the end of a scan.)*
-4. **Barcode input** → enable the symbologies your labels use (Code 128, Code 39,
-   UPC-A/EAN-13, GS1-128 as applicable).
-5. Optional: **Intent output** off, **Send TAB key** off.
+4. **Barcode input** → enable the symbologies your labels use.
 
 Then in Chrome on the device, open the server URL and **Add to Home screen** — it
-launches full-screen with no address bar, and the app shell is cached so it starts
-even with no signal.
-
----
-
-## The count → variance flow
-
-1. Supervisor creates the session and uploads the on-hand export.
-2. Counters sign on; each device downloads the list once.
-3. Counting happens (online, offline, or both).
-4. Supervisor watches progress and exports the variance report.
-5. Variances get recounted — a second count of the same location and SKU adds another
-   line, and the report compares the total against expected.
-6. Supervisor closes the session; it stops accepting new counts.
-
-Variance statuses: `MATCH`, `VARIANCE` (counted ≠ expected), `MISSING` (expected,
-never counted), `FOUND` (counted, not expected — includes override lines).
+launches full-screen and the app shell is cached so it starts with no signal.
 
 ---
 
 ## API
 
-Handheld (no auth — the badge identifies the counter):
+Handheld (no auth — the team and scanner ID identify the counter):
 
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/api/sessions` | Open sessions |
-| `GET` | `/api/sessions/:id/master?have=<v>` | Master list; `have` skips an unchanged download |
+| `GET` | `/api/sessions/:id/master?have=<v>` | Bin + pallet lists; `have` skips an unchanged download |
+| `POST` | `/api/sessions/:id/signon` | Record who is on which scanner; returns the team's assignment |
+| `GET` | `/api/sessions/:id/team-status?team=` | Current aisle, bins, queue, or who the team is waiting on |
+| `POST` | `/api/sessions/:id/assignments/:aid/complete` | Team finishes an aisle |
+| `GET` | `/api/sessions/:id/counted-pallets?since=` | Pallets counted so far, for cross-device duplicate checks |
 | `POST` | `/api/sessions/:id/counts` | Batch upload; idempotent on `clientId` |
 | `POST` | `/api/sessions/:id/void` | Void a line |
-| `GET` | `/api/health` | Health check |
 
 Supervisor (`Authorization: Bearer <token>` from `POST /api/admin/login`):
 
 | Method | Path | Purpose |
 |---|---|---|
 | `GET`/`POST` | `/api/admin/sessions` | List / create |
-| `POST` | `/api/admin/sessions/:id/master?kind=&replace=` | Upload master CSV |
+| `POST` | `/api/admin/sessions/:id/settings` | Pallet check mode, guided, comments |
+| `POST` | `/api/admin/sessions/:id/master?kind=bins\|pallets\|plan&replace=` | Upload a list |
 | `POST` | `/api/admin/sessions/:id/status` | Open / close |
 | `GET` | `/api/admin/sessions/:id/progress` | Live progress |
-| `GET` | `/api/admin/sessions/:id/variance` | Variance rows |
-| `GET` | `/api/admin/sessions/:id/export/counts.csv` | Raw count export |
-| `GET` | `/api/admin/sessions/:id/export/variance.csv` | Variance export |
+| `GET` | `/api/admin/sessions/:id/aisles` | Aisles, blocks, who holds what |
+| `POST` | `/api/admin/sessions/:id/aisles/block` | Set an aisle's block |
+| `POST` | `/api/admin/sessions/:id/aisles/auto-block` | Pair aisles |
+| `GET`/`POST` | `/api/admin/sessions/:id/assignments` | List / queue aisles for a team |
+| `POST`/`DELETE` | `/api/admin/sessions/:id/assignments/:aid` | Start, complete, release, remove |
+| `GET` | `/api/admin/sessions/:id/pallets?only=exceptions` | Pallet report |
+| `GET` | `/api/admin/sessions/:id/uncounted` | Bins with no count |
+| `GET` | `/api/admin/sessions/:id/export/{pallets,counts,exceptions,uncounted}.csv` | Exports |
 
 ---
 
@@ -192,10 +232,7 @@ exposed publicly, put it behind a VPN or an authenticating proxy, and set a real
 
 ## Not built yet
 
-Deliberately left out of v1, all straightforward to add:
-
-* recount assignment (a supervisor pushing a variance list back to a specific counter)
-* per-counter task assignment by zone
-* live ERP/WMS integration (v1 is CSV in, CSV out)
+* recount pass (re-sending flagged pallets to a team as a second count)
 * `.xlsx` upload (save as CSV for now)
+* live ERP/WMS integration (v1 is CSV in, CSV out)
 * multi-warehouse support in one instance

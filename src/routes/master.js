@@ -1,52 +1,58 @@
 import { db, norm, bumpMasterVersion, getSession } from '../db.js';
 import { parseRecords, pick } from '../util/csv.js';
 
-const LOCATION_ALIASES = ['location', 'loc', 'bin', 'binlocation', 'locationcode', 'slot', 'code', 'warehouselocation'];
+const LOCATION_ALIASES = ['location', 'loc', 'bin', 'binlocation', 'locationcode', 'slot', 'code', 'warehouselocation', 'binlocationcode'];
+const AISLE_ALIASES = ['aisle', 'row', 'aisleno', 'aislenumber'];
+const ZONE_ALIASES = ['zone', 'area', 'section', 'region', 'warehouse'];
+const DESC_ALIASES = ['description', 'desc', 'itemdescription', 'name', 'productname', 'palletdescription'];
+const PALLET_ALIASES = ['palletid', 'pallet', 'containerid', 'container', 'containernumber', 'containerno', 'lpn', 'license', 'licenseplate', 'palletnumber', 'palletno', 'id', 'tag'];
 const SKU_ALIASES = ['sku', 'item', 'itemnumber', 'itemcode', 'partnumber', 'part', 'product', 'productcode', 'material', 'stockcode'];
-const DESC_ALIASES = ['description', 'desc', 'itemdescription', 'name', 'productname'];
 const UOM_ALIASES = ['uom', 'unit', 'unitofmeasure', 'um'];
-const ZONE_ALIASES = ['zone', 'area', 'aisle', 'section', 'region'];
-const QTY_ALIASES = ['qty', 'quantity', 'onhand', 'onhandqty', 'expected', 'expectedqty', 'systemqty', 'qtyonhand', 'stock'];
-const BARCODE_ALIASES = ['barcode', 'upc', 'ean', 'gtin', 'altbarcode', 'scancode', 'code'];
-const PACK_ALIASES = ['packqty', 'pack', 'casequantity', 'caseqty', 'conversion', 'multiplier'];
+const QTY_ALIASES = ['qty', 'quantity', 'onhand', 'onhandqty', 'expected', 'expectedqty', 'systemqty', 'qtyonhand', 'cases', 'units'];
+const TEAM_ALIASES = ['team', 'teamnumber', 'teamno', 'crew', 'group'];
+
+/**
+ * Work out which aisle a bin belongs to when the file has no aisle column.
+ * Takes the first separated segment ("A-01-02" -> "A", "03.14.2" -> "03"), and
+ * failing that the leading letters ("AA0102" -> "AA"). A supervisor can always
+ * add an Aisle column, or re-map aisles in the dashboard afterwards.
+ */
+export function deriveAisle(code) {
+  const c = norm(code);
+  const seg = c.split(/[-_./\\ ]/).filter(Boolean);
+  if (seg.length > 1) return seg[0];
+  const alpha = /^([A-Z]+)/.exec(c);
+  return alpha ? alpha[1] : c;
+}
 
 const upLocation = db.prepare(
-  `INSERT INTO locations (session_id, code, zone, description) VALUES (?, ?, ?, ?)
+  `INSERT INTO locations (session_id, code, zone, aisle, description) VALUES (?, ?, ?, ?, ?)
    ON CONFLICT(session_id, code) DO UPDATE SET
      zone = COALESCE(NULLIF(excluded.zone, ''), locations.zone),
+     aisle = COALESCE(NULLIF(excluded.aisle, ''), locations.aisle),
      description = COALESCE(NULLIF(excluded.description, ''), locations.description)`
 );
-const upItem = db.prepare(
-  `INSERT INTO items (session_id, sku, description, uom) VALUES (?, ?, ?, ?)
-   ON CONFLICT(session_id, sku) DO UPDATE SET
-     description = COALESCE(NULLIF(excluded.description, ''), items.description),
-     uom = COALESCE(NULLIF(excluded.uom, ''), items.uom)`
+const upAisle = db.prepare(
+  `INSERT INTO aisles (session_id, aisle, block) VALUES (?, ?, ?)
+   ON CONFLICT(session_id, aisle) DO NOTHING`
 );
-const upBarcode = db.prepare(
-  `INSERT INTO item_barcodes (session_id, barcode, sku, pack_qty) VALUES (?, ?, ?, ?)
-   ON CONFLICT(session_id, barcode) DO UPDATE SET sku = excluded.sku, pack_qty = excluded.pack_qty`
-);
-// An on-hand export can carry several rows for the same location/SKU (lots,
-// serials, pallets), so rows accumulate *within* one file - but a re-upload of
-// the same file must overwrite, never double. setExpected is used the first
-// time a key appears in the current file, addExpected for later occurrences.
-const setExpected = db.prepare(
-  `INSERT INTO expected (session_id, location_code, sku, qty) VALUES (?, ?, ?, ?)
-   ON CONFLICT(session_id, location_code, sku) DO UPDATE SET qty = excluded.qty`
-);
-const addExpected = db.prepare(
-  `INSERT INTO expected (session_id, location_code, sku, qty) VALUES (?, ?, ?, ?)
-   ON CONFLICT(session_id, location_code, sku) DO UPDATE SET qty = expected.qty + excluded.qty`
+const upPallet = db.prepare(
+  `INSERT INTO pallets (session_id, pallet_id, sku, description, uom, expected_qty, expected_location)
+   VALUES (?, ?, ?, ?, ?, ?, ?)
+   ON CONFLICT(session_id, pallet_id) DO UPDATE SET
+     sku = COALESCE(NULLIF(excluded.sku, ''), pallets.sku),
+     description = COALESCE(NULLIF(excluded.description, ''), pallets.description),
+     uom = COALESCE(NULLIF(excluded.uom, ''), pallets.uom),
+     expected_qty = COALESCE(excluded.expected_qty, pallets.expected_qty),
+     expected_location = COALESCE(NULLIF(excluded.expected_location, ''), pallets.expected_location)`
 );
 
 /**
  * Import a master-data CSV into a session.
  *
- * kind:
- *   'onhand'    - location, sku, qty  (also seeds locations + items; the usual ERP export)
- *   'locations' - location, zone, description
- *   'items'     - sku, description, uom, barcode, pack_qty
- *   'barcodes'  - barcode, sku, pack_qty
+ *   'bins'     - location, zone, aisle, description   (the validation list for question 3)
+ *   'pallets'  - pallet id, sku, description, qty, location  (validation + SKU for question 1)
+ *   'plan'     - team, aisle   (the guided-counting assignment plan)
  */
 export function importMaster(sessionId, kind, text, { replace = false } = {}) {
   const id = Number(sessionId);
@@ -57,86 +63,70 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
   const { headers, records } = parseRecords(text);
   if (!records.length) throw Object.assign(new Error('no data rows found'), { status: 400 });
 
-  const stats = { rows: records.length, locations: 0, items: 0, barcodes: 0, expected: 0, skipped: 0, headers };
-  const seenExpected = new Set();
+  const stats = { kind, rows: records.length, bins: 0, aisles: 0, pallets: 0, planned: 0, skipped: 0, headers };
+  const newAisles = new Set();
 
   db.exec('BEGIN');
   try {
     if (replace) {
-      if (kind === 'onhand') {
-        db.prepare('DELETE FROM expected WHERE session_id = ?').run(id);
+      if (kind === 'bins') {
         db.prepare('DELETE FROM locations WHERE session_id = ?').run(id);
-        db.prepare('DELETE FROM items WHERE session_id = ?').run(id);
-        db.prepare('DELETE FROM item_barcodes WHERE session_id = ?').run(id);
-      } else if (kind === 'locations') {
-        db.prepare('DELETE FROM locations WHERE session_id = ?').run(id);
-      } else if (kind === 'items') {
-        db.prepare('DELETE FROM items WHERE session_id = ?').run(id);
-        db.prepare('DELETE FROM item_barcodes WHERE session_id = ?').run(id);
-      } else if (kind === 'barcodes') {
-        db.prepare('DELETE FROM item_barcodes WHERE session_id = ?').run(id);
+        db.prepare('DELETE FROM aisles WHERE session_id = ?').run(id);
+      } else if (kind === 'pallets') {
+        db.prepare('DELETE FROM pallets WHERE session_id = ?').run(id);
+      } else if (kind === 'plan') {
+        db.prepare("DELETE FROM assignments WHERE session_id = ? AND status != 'done'").run(id);
       }
     }
 
     for (const rec of records) {
-      if (kind === 'locations') {
+      if (kind === 'bins') {
         const code = norm(pick(rec, LOCATION_ALIASES));
         if (!code) { stats.skipped++; continue; }
-        upLocation.run(id, code, norm(pick(rec, ZONE_ALIASES)), pick(rec, DESC_ALIASES));
-        stats.locations++;
+        const aisle = norm(pick(rec, AISLE_ALIASES)) || deriveAisle(code);
+        upLocation.run(id, code, norm(pick(rec, ZONE_ALIASES)), aisle, pick(rec, DESC_ALIASES));
+        upAisle.run(id, aisle, aisle);
+        newAisles.add(aisle);
+        stats.bins++;
         continue;
       }
 
-      if (kind === 'items') {
-        const sku = norm(pick(rec, SKU_ALIASES));
-        if (!sku) { stats.skipped++; continue; }
-        upItem.run(id, sku, pick(rec, DESC_ALIASES), norm(pick(rec, UOM_ALIASES)));
-        upBarcode.run(id, sku, sku, 1);
-        stats.items++;
-        const bc = norm(pick(rec, BARCODE_ALIASES));
-        if (bc && bc !== sku) {
-          const pack = Number(pick(rec, PACK_ALIASES)) || 1;
-          upBarcode.run(id, bc, sku, pack);
-          stats.barcodes++;
-        }
+      if (kind === 'pallets') {
+        const pallet = norm(pick(rec, PALLET_ALIASES));
+        if (!pallet) { stats.skipped++; continue; }
+        const qtyRaw = pick(rec, QTY_ALIASES);
+        const qty = Number(String(qtyRaw).replace(/[, ]/g, ''));
+        upPallet.run(
+          id, pallet,
+          norm(pick(rec, SKU_ALIASES)),
+          pick(rec, DESC_ALIASES),
+          norm(pick(rec, UOM_ALIASES)),
+          qtyRaw !== '' && Number.isFinite(qty) ? qty : null,
+          norm(pick(rec, LOCATION_ALIASES))
+        );
+        stats.pallets++;
         continue;
       }
 
-      if (kind === 'barcodes') {
-        const bc = norm(pick(rec, BARCODE_ALIASES));
-        const sku = norm(pick(rec, SKU_ALIASES));
-        if (!bc || !sku) { stats.skipped++; continue; }
-        upBarcode.run(id, bc, sku, Number(pick(rec, PACK_ALIASES)) || 1);
-        stats.barcodes++;
+      if (kind === 'plan') {
+        const team = norm(pick(rec, TEAM_ALIASES));
+        const aisle = norm(pick(rec, AISLE_ALIASES));
+        if (!team || !aisle) { stats.skipped++; continue; }
+        const known = db.prepare('SELECT 1 FROM aisles WHERE session_id = ? AND aisle = ?').get(id, aisle);
+        if (!known) { stats.skipped++; continue; }
+        const pos = db
+          .prepare('SELECT COALESCE(MAX(position), -1) + 1 AS p FROM assignments WHERE session_id = ? AND team = ?')
+          .get(id, team).p;
+        db.prepare(
+          `INSERT INTO assignments (session_id, team, aisle, position, status, created_at)
+           VALUES (?, ?, ?, ?, 'queued', ?)
+           ON CONFLICT(session_id, team, aisle) DO NOTHING`
+        ).run(id, team, aisle, pos, new Date().toISOString());
+        stats.planned++;
         continue;
       }
 
-      // onhand
-      const code = norm(pick(rec, LOCATION_ALIASES));
-      const sku = norm(pick(rec, SKU_ALIASES));
-      if (!code || !sku) { stats.skipped++; continue; }
-      upLocation.run(id, code, norm(pick(rec, ZONE_ALIASES)), '');
-      stats.locations++;
-      upItem.run(id, sku, pick(rec, DESC_ALIASES), norm(pick(rec, UOM_ALIASES)));
-      upBarcode.run(id, sku, sku, 1);
-      stats.items++;
-      const bc = norm(pick(rec, BARCODE_ALIASES));
-      if (bc && bc !== sku) {
-        upBarcode.run(id, bc, sku, Number(pick(rec, PACK_ALIASES)) || 1);
-        stats.barcodes++;
-      }
-      const qtyRaw = pick(rec, QTY_ALIASES);
-      const qty = Number(String(qtyRaw).replace(/[, ]/g, ''));
-      if (qtyRaw !== '' && Number.isFinite(qty)) {
-        const key = code + '\u0000' + sku;
-        if (seenExpected.has(key)) {
-          addExpected.run(id, code, sku, qty);
-        } else {
-          seenExpected.add(key);
-          setExpected.run(id, code, sku, qty);
-        }
-        stats.expected++;
-      }
+      throw Object.assign(new Error(`unknown file type "${kind}"`), { status: 400 });
     }
     db.exec('COMMIT');
   } catch (err) {
@@ -144,12 +134,13 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
     throw err;
   }
 
+  stats.aisles = newAisles.size;
   bumpMasterVersion(id);
   stats.totals = {
-    locations: db.prepare('SELECT COUNT(*) n FROM locations WHERE session_id = ?').get(id).n,
-    items: db.prepare('SELECT COUNT(*) n FROM items WHERE session_id = ?').get(id).n,
-    barcodes: db.prepare('SELECT COUNT(*) n FROM item_barcodes WHERE session_id = ?').get(id).n,
-    expected: db.prepare('SELECT COUNT(*) n FROM expected WHERE session_id = ?').get(id).n,
+    bins: db.prepare('SELECT COUNT(*) n FROM locations WHERE session_id = ?').get(id).n,
+    aisles: db.prepare('SELECT COUNT(*) n FROM aisles WHERE session_id = ?').get(id).n,
+    pallets: db.prepare('SELECT COUNT(*) n FROM pallets WHERE session_id = ?').get(id).n,
+    assignments: db.prepare('SELECT COUNT(*) n FROM assignments WHERE session_id = ?').get(id).n,
   };
   return stats;
 }
