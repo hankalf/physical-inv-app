@@ -76,6 +76,55 @@
     el.append(thead, tbody);
   }
 
+  /* ------------------------------------------------------------ upload guide */
+  const FILE_GUIDE = {
+    bins: {
+      file: 'bins-template.csv',
+      required: [['Bin Location', 'the code on the bin label; also accepts Location, Bin, Slot']],
+      optional: [['Aisle', 'which aisle the bin is in - taken from the first part of the code if missing (A03-12-1 → A03)'],
+                 ['Zone', 'area of the warehouse, for the progress view'], ['Description', '']],
+      note: 'One row per bin. This is the validation list for question 3 and defines the aisles used for team assignments.',
+    },
+    pallets: {
+      file: 'pallets-template.csv',
+      required: [['Pallet ID', 'the code on the pallet / container label; also accepts Container, LPN, License Plate']],
+      optional: [['SKU', 'shown to the counter after the pallet scan'], ['Description', 'shown to the counter'],
+                 ['UOM', ''], ['Qty', 'what the system says is on it - drives QTY VARIANCE'],
+                 ['Location', 'where the system says it is - drives WRONG BIN']],
+      note: 'One row per pallet. Validation list for question 1. Re-uploading the same pallet updates it rather than duplicating it.',
+    },
+    plan: {
+      file: 'plan-template.csv',
+      required: [['Team', 'team number'], ['Aisle', 'must match an aisle from the bin list']],
+      optional: [],
+      note: 'One row per aisle, in the order each team should count. Upload the bin list first. Aisles can also be queued by hand in Team assignments below.',
+    },
+  };
+
+  function renderGuide() {
+    const g = FILE_GUIDE[$('fKind').value];
+    const box = $('colGuide');
+    box.innerHTML = '';
+    const head = document.createElement('div');
+    head.innerHTML = '<b>Columns</b> — matched by name, any order, extra columns ignored. &nbsp; <a></a>';
+    const a = head.querySelector('a');
+    a.href = '/templates/' + g.file;
+    a.download = g.file;
+    a.textContent = '⬇ Download sample ' + g.file;
+    box.appendChild(head);
+    const cols = document.createElement('div');
+    cols.className = 'cols';
+    for (const [name, why] of g.required) { const c = document.createElement('code'); c.className = 'req'; c.textContent = name + ' (required)'; c.title = why; cols.appendChild(c); }
+    for (const [name, why] of g.optional) { const c = document.createElement('code'); c.textContent = name; c.title = why || 'optional'; cols.appendChild(c); }
+    box.appendChild(cols);
+    const list = document.createElement('div');
+    list.className = 'note';
+    list.innerHTML = [...g.required, ...g.optional].filter(([, why]) => why).map(([n, why]) => `<b>${n}</b>: ${why}`).join(' · ') + '<br>' + g.note;
+    box.appendChild(list);
+  }
+  $('fKind').onchange = renderGuide;
+  renderGuide();
+
   /* ------------------------------------------------------------ sessions */
   async function loadSessions() {
     sessions = await apiJson('/api/admin/sessions');

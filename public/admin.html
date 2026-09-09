@@ -44,6 +44,12 @@
   label.cb { display: inline-flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: 13px; }
   label.cb input { width: auto; }
   hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+  .colguide { margin-top: 10px; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
+  .colguide .cols { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+  .colguide code { background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 2px 7px; font-size: 12px; }
+  .colguide code.req { border-color: var(--accent); color: #fff; }
+  .colguide a { color: var(--accent); font-weight: 700; text-decoration: none; }
+  .colguide .note { color: var(--muted); margin-top: 4px; }
   .team-list { display: flex; flex-direction: column; gap: 8px; }
   .team { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
   .team .head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
@@ -122,9 +128,7 @@
         <div class="auto"><label class="cb"><input type="checkbox" id="fReplace"> Replace existing</label></div>
         <div class="auto"><button class="primary" id="btnUpload">Upload</button></div>
       </div>
-      <div class="hint" style="margin-top:8px">
-        Without an <b>Aisle</b> column, the aisle is taken from the first part of the bin code (<code>A03-12-1</code> → <code>A03</code>).
-      </div>
+      <div class="colguide" id="colGuide"></div>
       <div class="feedback" id="uploadMsg"></div>
     </div>
 

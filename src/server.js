@@ -36,6 +36,7 @@ const MIME = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.ico': 'image/x-icon',
+  '.csv': 'text/csv; charset=utf-8',
 };
 
 /* ------------------------------------------------------------ plumbing */

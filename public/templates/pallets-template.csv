@@ -1,0 +1,5 @@
+Pallet ID,SKU,Description,UOM,Qty,Location
+P100001,SKU-1001,"Widget, blue, 10mm",CS,48,A01-01-1
+P100002,SKU-1001,"Widget, blue, 10mm",CS,48,A01-02-1
+P100003,SKU-2044,Gadget large,EA,120,A02-01-1
+P100004,SKU-3310,"Bracket, steel",CS,36,B01-01-1
