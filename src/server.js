@@ -14,7 +14,7 @@ import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, teamStatus,
 } from './routes/assignments.js';
-import { progress, palletReport, uncountedBins, rawCounts, exceptions } from './routes/reports.js';
+import { progress, palletReport, uncountedBins, rawCounts, exceptions, mapData } from './routes/reports.js';
 import { toCsv } from './util/csv.js';
 
 const PORT = Number(process.env.PORT || 3000);
@@ -309,6 +309,9 @@ async function handleAdmin(req, res, url, m) {
     if (url.searchParams.get('only') === 'exceptions') rows = rows.filter((r) => r.status !== 'MATCH');
     const limit = Number(url.searchParams.get('limit') || 500);
     return sendJson(req, res, 200, { total: rows.length, rows: rows.slice(0, limit) });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/map$/)) && method === 'GET') {
+    return sendJson(req, res, 200, mapData(m[1]));
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/uncounted$/)) && method === 'GET') {
     return sendJson(req, res, 200, uncountedBins(m[1]));

@@ -170,3 +170,21 @@ export const exceptions = (sessionId) =>
   rawCounts(sessionId).filter(
     (r) => r.unknown_pallet || r.unknown_location || r.off_assignment || r.duplicate_pallet || r.override_reason
   );
+
+/** Everything the warehouse map needs: each bin's count state, and each aisle's block and team. */
+export function mapData(sessionId) {
+  const id = Number(sessionId);
+  const bins = db
+    .prepare(
+      `SELECT l.code, l.aisle,
+              (SELECT COUNT(*) FROM counts c WHERE c.session_id = l.session_id AND c.location_code = l.code AND c.voided = 0) AS lines,
+              (SELECT COUNT(*) FROM counts c WHERE c.session_id = l.session_id AND c.location_code = l.code AND c.voided = 0
+                  AND (c.unknown_pallet = 1 OR c.unknown_location = 1 OR c.off_assignment = 1 OR c.duplicate_pallet = 1 OR c.override_reason IS NOT NULL)) AS flagged
+         FROM locations l WHERE l.session_id = ? ORDER BY l.aisle, l.code`
+    )
+    .all(id);
+  return {
+    aisles: aisleOverview(id).map((a) => ({ aisle: a.aisle, block: a.block, activeTeam: a.active_team, queuedTeams: a.queued_teams, done: a.done_count > 0 })),
+    bins: bins.map((b) => [b.code, b.aisle, b.lines, b.flagged]),
+  };
+}

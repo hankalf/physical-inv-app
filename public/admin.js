@@ -308,9 +308,115 @@
       ? `Showing ${data.rows.length} of ${data.total} — export the CSV for the full list.` : `${data.total} row(s).`;
   }
 
+  /* ------------------------------------------------------------ warehouse map */
+  const SEP = /[-_./\\ ]/;
+  const natural = (a, b) => String(a).localeCompare(String(b), undefined, { numeric: true });
+  const svgEl = (tag, attrs = {}) => {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+    return el;
+  };
+
+  // Bin code -> bay: the segment after the aisle ("A03-12-1" -> "12"). Bins that
+  // only differ by level land in the same bay cell, coloured by how many are done.
+  function bayOf(code, aisle) {
+    const parts = String(code).split(SEP).filter(Boolean);
+    if (parts.length >= 2) return parts[1];
+    const up = String(code).toUpperCase();
+    return up.startsWith(aisle) && up.length > aisle.length ? up.slice(aisle.length) : code;
+  }
+
+  async function refreshMap() {
+    const data = await apiJson(`/api/admin/sessions/${sessionId}/map`);
+    const svg = $('map');
+    svg.innerHTML = '';
+    if (!data.bins.length) { $('mapNote').textContent = 'Upload a bin list to draw the map.'; svg.setAttribute('height', 0); return; }
+
+    // aisle -> bay -> {bins, counted, flagged}
+    const byAisle = new Map();
+    for (const [code, aisle, lines, flagged] of data.bins) {
+      if (!byAisle.has(aisle)) byAisle.set(aisle, new Map());
+      const bays = byAisle.get(aisle);
+      const bay = bayOf(code, aisle);
+      if (!bays.has(bay)) bays.set(bay, { bins: [], counted: 0, flagged: 0 });
+      const b = bays.get(bay);
+      b.bins.push(code);
+      if (lines > 0) b.counted++;
+      if (flagged > 0) b.flagged++;
+    }
+
+    // blocks in order; aisles inside a block touch (shared racking), blocks are
+    // separated by a walkway.
+    const blocks = new Map();
+    for (const a of data.aisles.sort((x, y) => natural(x.block, y.block) || natural(x.aisle, y.aisle))) {
+      if (!blocks.has(a.block)) blocks.set(a.block, []);
+      blocks.get(a.block).push(a);
+    }
+    for (const aisle of byAisle.keys()) {
+      if (!data.aisles.some((a) => a.aisle === aisle)) blocks.set(aisle, [{ aisle, block: aisle }]);
+    }
+
+    const CW = 34, CH = 22, GAP = 3, WALK = 28, TOP = 46, LEFT = 10;
+    let x = LEFT;
+    let maxBays = 0;
+    const cells = [];
+    for (const aisles of blocks.values()) {
+      for (const a of aisles) {
+        const bays = byAisle.get(a.aisle) || new Map();
+        const keys = [...bays.keys()].sort(natural);
+        maxBays = Math.max(maxBays, keys.length);
+        cells.push({ a, x, keys, bays });
+        x += CW + GAP;
+      }
+      x += WALK;
+    }
+    const width = x + LEFT;
+    const height = TOP + maxBays * (CH + GAP) + 12;
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', height);
+
+    let counted = 0, total = 0;
+    for (const { a, x: cx, keys, bays } of cells) {
+      // column background: tinted when a team is in it
+      const colH = maxBays * (CH + GAP);
+      svg.appendChild(svgEl('rect', { x: cx - 1, y: TOP - 1, width: CW + 2, height: colH + 2, rx: 4,
+        fill: a.activeTeam ? '#1f4d8f' : a.done ? '#10281a' : '#161b22', opacity: a.activeTeam ? 0.55 : 1 }));
+      const label = svgEl('text', { x: cx + CW / 2, y: 14, 'text-anchor': 'middle', class: 'aisle-label' });
+      label.textContent = a.aisle;
+      svg.appendChild(label);
+      if (a.activeTeam || a.done || a.queuedTeams) {
+        const badge = svgEl('rect', { x: cx + 2, y: 20, width: CW - 4, height: 16, rx: 8,
+          fill: a.activeTeam ? '#2f81f7' : a.done ? '#2ea043' : '#30363d' });
+        svg.appendChild(badge);
+        const t = svgEl('text', { x: cx + CW / 2, y: 32, 'text-anchor': 'middle', class: 'team' });
+        t.textContent = a.activeTeam ? 'T' + a.activeTeam : a.done ? '✓' : 'T' + String(a.queuedTeams).split(',')[0].trim();
+        svg.appendChild(t);
+      }
+      keys.forEach((bay, i) => {
+        const b = bays.get(bay);
+        total += b.bins.length; counted += b.counted;
+        const frac = b.bins.length ? b.counted / b.bins.length : 0;
+        const fill = frac === 0 ? '#2a3038' : frac < 1 ? '#d29922' : '#2ea043';
+        const y = TOP + i * (CH + GAP);
+        const r = svgEl('rect', { x: cx + 2, y, width: CW - 4, height: CH, rx: 3, fill, class: 'cell',
+          stroke: b.flagged ? '#f85149' : 'none', 'stroke-width': b.flagged ? 2 : 0 });
+        const title = svgEl('title');
+        title.textContent = `${a.aisle} bay ${bay}: ${b.counted}/${b.bins.length} counted` + (b.flagged ? `, ${b.flagged} flagged` : '') + '\n' + b.bins.join(', ');
+        r.appendChild(title);
+        svg.appendChild(r);
+        const bl = svgEl('text', { x: cx + CW / 2, y: y + CH / 2 + 3, 'text-anchor': 'middle', class: 'bay-label',
+          style: frac > 0 ? 'fill:#0d1117;font-weight:700' : '' });
+        bl.textContent = bay;
+        svg.appendChild(bl);
+      });
+    }
+    $('mapNote').textContent = `${counted.toLocaleString()} of ${total.toLocaleString()} bins have a count. Each cell is a bay; hover for the bins in it.`;
+  }
+
   async function refreshAll() {
     if (!sessionId) return;
-    await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets()]);
+    await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap()]);
   }
 
   async function download(path, filename) {
