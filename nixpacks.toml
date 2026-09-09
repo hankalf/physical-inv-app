@@ -1,0 +1,7 @@
+# Only used if Railway builds with Nixpacks instead of the Dockerfile.
+# node:sqlite needs Node 22.5+, so the version is pinned rather than inferred.
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
+[start]
+cmd = "node --no-warnings=ExperimentalWarning src/server.js"

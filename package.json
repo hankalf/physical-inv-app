@@ -10,6 +10,6 @@
     "dev": "node --no-warnings=ExperimentalWarning --watch src/server.js"
   },
   "engines": {
-    "node": ">=22.5.0"
+    "node": "22.x"
   }
 }

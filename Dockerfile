@@ -11,7 +11,6 @@ ENV PORT=3000
 # Point this at a mounted volume so counts survive a redeploy.
 ENV DB_PATH=/data/inventory.db
 RUN mkdir -p /data
-VOLUME ["/data"]
 
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
