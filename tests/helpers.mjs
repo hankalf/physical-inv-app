@@ -22,3 +22,22 @@ export async function signIn(page, { user = '', password = 'changeme' } = {}) {
   await expandSubTabs(page);
   await page.waitForTimeout(400);
 }
+
+/**
+ * Pick a count session from the header picker.
+ *
+ * It is a real menu now, not a <select>, so this drives it the way a person
+ * does: open it, click the row. Falls back to a <select> on the pages that
+ * still have one.
+ */
+export async function pickSession(page, id) {
+  const menu = await page.$('#sessionPick .sess-btn');
+  if (menu) {
+    await menu.click();
+    await page.waitForSelector('#sessionPick .sess-menu:not([hidden])', { timeout: 5000 });
+    await page.click(`#sessionPick .sess-row[data-id="${id}"]`);
+  } else {
+    await page.selectOption('#fSessionPick', String(id));
+  }
+  await page.waitForTimeout(1200);
+}

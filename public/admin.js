@@ -21,8 +21,15 @@
   function show(which) {
     $('scrLogin').classList.toggle('active', which === 'login');
     $('scrMain').classList.toggle('active', which === 'main');
-    $('sessionChip').hidden = which !== 'main';
+    $('sessionPick').hidden = which !== 'main';
   }
+
+  // the header picker: which count the whole page is about
+  const picker = api.sessionPicker('sessionPick', (id) => {
+    sessionId = Number(id) || null;
+    applySessionSettings();
+    refreshAll().catch(() => {});
+  });
 
   // "Freezer – Aisle F01": the zone comes from the bins in the aisle
   const titleCase = (z) => String(z || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
@@ -38,25 +45,26 @@
   /* ------------------------------------------------------------ sessions */
   async function loadSessions() {
     sessions = await apiJson('/api/admin/sessions');
-    const sel = $('fSessionPick');
     const prior = sessionId;
-    sel.innerHTML = '';
-    for (const s of sessions) {
-      const o = document.createElement('option');
-      o.value = s.id;
-      o.textContent = `#${s.id} — ${s.name} (${s.mode === 'cycle' ? 'cycle · ' : ''}${s.status})`;
-      sel.appendChild(o);
+    if (!sessions.length) {
+      sessionId = null;
+      picker.render([], null);
+      applySessionSettings();
+      return;
     }
-    if (!sessions.length) { sel.innerHTML = '<option value="">No sessions yet — create one below</option>'; sessionId = null; return; }
+    // the list puts open sessions first, so the default is a live count
     sessionId = sessions.some((s) => s.id === prior) ? prior : sessions[0].id;
-    sel.value = String(sessionId);
+    picker.render(sessions, sessionId);
     applySessionSettings();
     await refreshAll();
   }
 
   function applySessionSettings() {
     const s = sessions.find((x) => x.id === sessionId);
-    if (!s) return;
+    if (!s) {
+      $('sessionCardSub').textContent = 'no count session yet — create one below';
+      return;
+    }
     // a cycle session has no aisle plan, so its whole sub-tab goes
     const cycle = s.mode === 'cycle';
     $('teamPlanCard').hidden = cycle;
@@ -65,7 +73,7 @@
       tab.hidden = cycle;
       if (cycle && tab.classList.contains('current')) api.showSub('progress');
     }
-    $('sessionChip').textContent = `Session #${s.id}${s.status === 'closed' ? ' (closed)' : ''}`;
+    $('sessionCardSub').textContent = `#${s.id} · ${s.mode === 'cycle' ? 'cycle count' : 'full count'} · ${s.status}`;
     $('fPalletMode').value = s.pallet_mode;
     $('fGuided').checked = !!s.guided;
     $('fAskComments').checked = !!s.ask_comments;
@@ -711,9 +719,15 @@
       (r.missing.length ? ` Not on the drawing — ${r.missing.join(' · ')}.` : '');
   }
 
+  /** Re-read the session list so the header picker's progress stays live. */
+  async function refreshPicker() {
+    sessions = await apiJson('/api/admin/sessions');
+    picker.render(sessions, sessionId);
+  }
+
   async function refreshAll() {
     if (!sessionId) return;
-    await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts()]);
+    await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts(), refreshPicker()]);
   }
 
   // The map is the expensive one and it is usually off-screen, so redraw it when
@@ -727,15 +741,39 @@
       .catch((err) => msg($('palletNote'), 'err', err.message));
 
   /* ------------------------------------------------------------ wiring */
-  $('fSessionPick').onchange = (e) => { sessionId = Number(e.target.value) || null; applySessionSettings(); refreshAll(); };
   $('fOnlyExceptions').onchange = refreshPallets;
 
+  /* Creating a count is also where its lists come from: a count with no
+     inventory report to compare against is a count nobody can act on. Both
+     files are optional here, and Getting started tracks whatever is left. */
   $('btnCreate').onclick = async () => {
+    const files = [['bins', $('fNewBins').files[0]], ['pallets', $('fNewPallets').files[0]]].filter(([, f]) => f);
     try {
+      msg($('sessionMsg'), 'warn', 'Creating…');
       const s = await postJson('/api/admin/sessions', { name: $('fNewName').value, mode: $('fNewMode').value });
-      $('fNewName').value = '';
       sessionId = s.id;
-      msg($('sessionMsg'), 'ok', `Created ${s.mode === 'cycle' ? 'cycle-count' : 'full count'} session #${s.id}.`, 'Upload its bin list and inventory report next.');
+      $('fNewName').value = '';
+
+      const loaded = [];
+      const failed = [];
+      for (const [kind, file] of files) {
+        msg($('sessionMsg'), 'warn', `Reading ${file.name}…`);
+        try {
+          const stats = await apiJson(`/api/admin/sessions/${s.id}/master?kind=${kind}`,
+            { method: 'POST', headers: { 'content-type': 'text/csv' }, body: await window.appUi.fileToCsv(file) });
+          loaded.push(`${stats.rows.toLocaleString()} rows from ${file.name}`);
+        } catch (err) { failed.push(`${file.name}: ${err.message}`); }
+      }
+      $('fNewBins').value = ''; $('fNewPallets').value = '';
+
+      const what = `Created ${s.mode === 'cycle' ? 'cycle count' : 'full count'} #${s.id}.`;
+      if (failed.length) {
+        msg($('sessionMsg'), 'warn', what, `${loaded.length ? 'Imported ' + loaded.join(' and ') + '. ' : ''}Could not read ${failed.join('; ')}. Upload it under Settings.`);
+      } else if (loaded.length) {
+        msg($('sessionMsg'), 'ok', what, `Imported ${loaded.join(' and ')}. Check Settings → Getting started for anything still needed.`);
+      } else {
+        msg($('sessionMsg'), 'ok', what, 'Next: upload its bin list and inventory report — Settings → Getting started walks you through it.');
+      }
       await loadSessions();
     } catch (err) { msg($('sessionMsg'), 'err', err.message); }
   };

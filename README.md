@@ -168,6 +168,27 @@ session picked at the top of that page.
 
 ### 1. Create a session — Dashboard
 
+The session picker lives in the **header**, because which count you are looking at is
+context for the whole page, not a field in one card. Its menu carries a row per count with
+the type (full or cycle), whether it is open or closed, how far along it is and when it was
+last scanned — a name alone stops telling two counts apart once a site has a few.
+
+**Start a new count** takes the bin list and the inventory report with it, so a new count
+arrives with something to validate against. Both are optional at that moment; whatever is
+missing shows up under **Settings → Getting started**.
+
+### Getting started — Settings
+
+A checklist for a count that is not running yet, worked out from the database rather than
+from a box somebody ticked, so it cannot claim something is done that is not. Each step
+says what it is, **why it matters**, what is there now, and has a button that takes you to
+the place that does it.
+
+A full count wants: bin list, inventory report, scanners, rack drawing, racking blocks,
+crew and teams, and a team plan. A cycle count wants a different set, ending in its first
+batch. Steps are marked **needed to start**, **recommended** or **optional**, and the card
+says how many things are still blocking anyone from scanning.
+
 Per-session settings:
 
 | Setting | Options |

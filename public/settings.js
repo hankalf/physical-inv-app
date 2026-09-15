@@ -20,6 +20,76 @@
   const titleCase = (z) => String(z || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
   const aisleLabel = (aisle, zone) => (zone ? `${titleCase(zone)} – Aisle ${aisle}` : `Aisle ${aisle}`);
 
+
+  /* ------------------------------------------------------- getting started
+     A checklist the server works out from the database, so it can never claim
+     something is done that is not. Each step says why it matters and takes you
+     to the place that does it. */
+  const NEED_LABEL = { required: 'needed to start', wanted: 'recommended', optional: 'optional' };
+
+  async function refreshSetup() {
+    const box = $('startSteps');
+    if (!sessionId) {
+      box.innerHTML = '';
+      $('startSub').textContent = '';
+      $('startBar').style.width = '0%';
+      msg($('startMsg'), 'warn', 'No count picked yet', 'Create one on the Dashboard, then come back here.');
+      return;
+    }
+    const st = await api.json(`/api/admin/sessions/${sessionId}/setup`);
+    clearMsg($('startMsg'));
+    $('startSub').textContent = `${st.session.name} · ${st.session.mode === 'cycle' ? 'cycle count' : 'full count'}`;
+    $('startBar').style.width = Math.round((st.done / st.total) * 100) + '%';
+
+    if (st.started) {
+      msg($('startMsg'), 'ok', `This count is running — ${st.counted.toLocaleString()} bins have a count already.`,
+        'Anything still open below can be filled in as you go.');
+    } else if (st.ready) {
+      msg($('startMsg'), 'ok', 'Ready to count.', 'Everything needed is in place. Hand the scanners out.');
+    } else {
+      msg($('startMsg'), 'warn', `${st.blocking.length} thing(s) still needed before anyone can scan.`,
+        'The rest is recommended rather than required.');
+    }
+
+    box.innerHTML = '';
+    for (const step of st.steps) {
+      const li = document.createElement('li');
+      const blocking = !step.done && step.need === 'required';
+      li.className = step.done ? 'done' : blocking ? 'blocking' : '';
+
+      const mark = document.createElement('span');
+      mark.className = 'mark';
+      mark.textContent = step.done ? '✓' : blocking ? '!' : '·';
+      li.appendChild(mark);
+
+      const mid = document.createElement('div');
+      const title = document.createElement('div');
+      title.className = 'st-title';
+      title.append(step.title);
+      if (!step.done) {
+        const tag = document.createElement('span');
+        tag.className = 'tag ' + (step.need === 'required' ? 'off' : step.need === 'wanted' ? 'queued' : '');
+        tag.textContent = NEED_LABEL[step.need];
+        title.appendChild(tag);
+      }
+      const why = document.createElement('div');
+      why.className = 'st-why';
+      why.textContent = step.why;
+      const detail = document.createElement('div');
+      detail.className = 'st-detail';
+      detail.textContent = step.detail;
+      mid.append(title, why, detail);
+      li.appendChild(mid);
+
+      const go = button(step.done ? 'Change it' : step.label, 'sm' + (blocking ? ' primary' : ''), () => {
+        if (step.goto.page === '/settings') { api.showSub(step.goto.sub); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        else location.href = `${step.goto.page}#${step.goto.sub}`;
+      });
+      li.appendChild(go);
+      box.appendChild(li);
+    }
+  }
+
   /* ------------------------------------------------------------ accounts */
   async function refreshMe() {
     me = await api.json('/api/admin/me');
@@ -334,6 +404,7 @@
         (stats.skipped ? ` · ${stats.skipped} row(s) skipped (${stats.skippedNoLevels ? stats.skippedNoLevels + ' with no levels; ' : ''}missing required column, or unknown aisle)` : '') +
         (stats.excluded ? ` · ${stats.excluded} bins left out (counted manually: ${stats.excludedGroups.join(', ')})` : ''));
       await refreshAisles();
+      await refreshSetup().catch(() => {});
     } catch (err) { msg($('uploadMsg'), 'err', 'Upload failed', err.message); }
   }
 
@@ -507,13 +578,15 @@
 
   // the session bar only means anything to the panes that act on a session
   document.addEventListener('subshow', (e) => {
-    $('scopeBar').hidden = !['lists', 'erp'].includes(e.detail);
+    $('scopeBar').hidden = !['lists', 'erp', 'start'].includes(e.detail);
+    if (e.detail === 'start') refreshSetup().catch((err) => msg($('startMsg'), 'err', err.message));
   });
 
   $('fSessionPick').onchange = (e) => {
     sessionId = Number(e.target.value) || null;
     applyScope();
     refreshAisles().catch(() => {});
+    refreshSetup().catch(() => {});
   };
 
   /* ------------------------------------------------------------ boot */
@@ -526,6 +599,7 @@
     await refreshMe();
     await Promise.all([refreshDevices(), refreshErp(), refreshOps()]);
     await loadSessions();
+    await refreshSetup().catch(() => {});
   }
 
   document.addEventListener('auth', (e) => {

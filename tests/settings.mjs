@@ -132,7 +132,7 @@ check('Shell: the sidebar links all four pages, with this one marked',
   (await page.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/cycle,/teams,/settings'
     && (await page.$eval('#navTabs .tab.current', (a) => a.getAttribute('href'))) === '/settings');
 check('Shell: Settings is split into sub-tabs',
-  (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.replace(/\d+$/, '').trim()))).join(' | ') === 'Logins | Scanners | Lists & racking | ERP & backups',
+  (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.replace(/\d+$/, '').trim()))).join(' | ') === 'Getting started | Logins | Scanners | Lists & racking | ERP & backups',
   (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.trim()))).join(' | '));
 check('Shell: exactly one pane is on screen at a time',
   (await page.$$eval('[data-sub]', (p) => p.filter((x) => x.classList.contains('active')).length)) === 1);

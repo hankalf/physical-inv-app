@@ -1,5 +1,5 @@
 import { chromium } from 'playwright-core';
-import { expandSubTabs } from './helpers.mjs';
+import { expandSubTabs, pickSession } from './helpers.mjs';
 import { readFileSync } from 'node:fs';
 const S = new URL('.', import.meta.url).pathname;
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
@@ -39,11 +39,14 @@ check('Admin: the tab bar links the four supervisor pages',
   (await admin.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/cycle,/teams,/settings');
 
 await admin.fill('#fNewName', 'Front Royal Q3 physical'); await admin.click('#btnCreate'); await admin.waitForTimeout(600);
-check('Admin: create session', /Created full count session #\d+/.test(clean(await admin.textContent('#sessionMsg'))), clean(await admin.textContent('#sessionMsg')).slice(0, 60));
+check('Admin: create session, and it points at what to upload next',
+  /Created full count #\d+/.test(clean(await admin.textContent('#sessionMsg')))
+    && /Getting started|bin list/.test(clean(await admin.textContent('#sessionMsg'))),
+  clean(await admin.textContent('#sessionMsg')).slice(0, 90));
 await admin.selectOption('#fPalletMode', 'warn'); await admin.selectOption('#fLayout', 'front-royal');
 await admin.click('#btnSaveSettings'); await admin.waitForTimeout(500);
 check('Admin: save settings (Front Royal drawing, validate w/ override, guided, comments)', /Settings saved/.test(clean(await admin.textContent('#sessionMsg'))));
-await (await card('#fSessionPick')).asElement().screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-session.png` });
+await (await card('#fPalletMode')).asElement().screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-session.png` });
 
 /* ---- setup lives under Settings: scanners, list uploads, racking blocks ---- */
 const toSettings = async () => { await admin.goto(BASE + '/settings'); await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(700); };
@@ -455,13 +458,13 @@ await admin.waitForFunction(() => /Imported|failed/.test(document.getElementById
   check('Settings: raw ERP Bins.xlsx uploads as-is: 13,673 bins in 28 aisles', /Imported 13,734 rows/.test(m) && /13,673 bins in 28 aisles/.test(m), m.slice(0, 140));
 }
 await toDashboard();
-await admin.selectOption('#fSessionPick', '1'); await admin.waitForTimeout(800);
+await pickSession(admin, '1');
 { // a session put on the schematic is offered the drawing rather than just looking wrong
   const adm2 = { 'content-type': 'application/json', authorization: 'Bearer ' + (await admin.evaluate(() => sessionStorage.getItem('admToken'))) };
   const plain = await (await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: adm2, body: JSON.stringify({ name: 'schematic on purpose', layout: '' }) })).json();
   await fetch(`${BASE}/api/admin/sessions/${plain.id}/master?kind=bins`, { method: 'POST', headers: { authorization: adm2.authorization, 'content-type': 'text/csv' }, body: 'Bin Location\nF01A001\nF01A002\nF02A001\n' });
   await admin.reload(); await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(1500);
-  await admin.selectOption('#fSessionPick', String(plain.id)); await admin.waitForTimeout(2000);
+  await pickSession(admin, String(plain.id));
   check('Admin: a session on the schematic is offered the rack drawing',
     !(await admin.$eval('#mapFix', (el) => el.hidden)) && /Use Front Royal/.test(await admin.textContent('#btnUseDrawing')),
     clean(await admin.textContent('#btnUseDrawing')));
@@ -469,14 +472,20 @@ await admin.selectOption('#fSessionPick', '1'); await admin.waitForTimeout(800);
   check('Admin: one click switches it to the blueprint and the offer goes away',
     await admin.$eval('#map', (s) => s.classList.contains('blueprint')) && await admin.$eval('#mapFix', (el) => el.hidden),
     await admin.$eval('#fLayout', (s) => s.value));
-  await admin.selectOption('#fSessionPick', '1'); await admin.waitForTimeout(2500);
+  await pickSession(admin, '1');
 }
 // close session -> scanner rejected -> reopen
 await admin.click('#btnCloseSession'); await admin.waitForTimeout(600);
 const closedPost = await fetch(`${BASE}/api/sessions/1/counts`, { method: 'POST', headers: api.headers, body: JSON.stringify([{ clientId: 'x1', palletId: 'P', qty: 1, location: 'F01A001', team: '1', deviceId: 'D' }]) });
 check('Admin: closed session refuses new counts (409)', closedPost.status === 409);
+check('Admin: the header picker shows a closed count as closed',
+  await admin.$eval('#sessionPick .sess-btn', (b) => /closed/i.test(b.textContent)),
+  clean(await admin.textContent('#sessionPick .sess-btn')));
 await admin.click('#btnCloseSession'); await admin.waitForTimeout(600);
-check('Admin: reopen session', /\(open\)/.test(await admin.$eval('#fSessionPick', (s) => s.options[s.selectedIndex].textContent)));
+check('Admin: reopen session — the header picker drops the "closed" tag',
+  !(await admin.$eval('#sessionPick .sess-btn', (b) => /closed/i.test(b.textContent)))
+    && /open/.test(clean(await admin.textContent('#sessionCardSub'))),
+  clean(await admin.textContent('#sessionCardSub')));
 // idempotent resend
 const dup = await (await fetch(`${BASE}/api/sessions/1/counts`, { method: 'POST', headers: api.headers, body: JSON.stringify([{ clientId: 'idem-1', palletId: 'PLT06001A', qty: 1, location: 'F06A001', team: '9', deviceId: 'X' }, { clientId: 'idem-1', palletId: 'PLT06001A', qty: 1, location: 'F06A001', team: '9', deviceId: 'X' }]) })).json();
 const cnt = (await (await fetch(`${BASE}/api/sessions/1/counted-pallets`, { headers: api.headers })).json()).pallets.filter((p) => p[0] === 'PLT06001A').length;

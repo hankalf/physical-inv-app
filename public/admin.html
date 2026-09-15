@@ -63,9 +63,9 @@
 <div class="shell">
   <header class="topbar">
     <h1>Dashboard</h1>
-    <span class="chip" id="sessionChip" hidden></span>
-    <span class="muted" id="refreshedAt"></span>
+    <div id="sessionPick"></div>
     <span class="spacer"></span>
+    <span class="muted" id="refreshedAt"></span>
     <a class="chip" href="/board" target="_blank" style="text-decoration:none" title="A read-only progress board for the office screen">Office board ↗</a>
     <nav class="subtabs" id="subTabs"></nav>
   </header>
@@ -100,12 +100,9 @@
       <div class="scroll" style="margin-top:14px"><table id="teamTable"></table></div>
     </div>
     <div class="card">
-      <h2>Count session</h2>
-      <div class="inline">
-        <div>
-          <label for="fSessionPick">Active session</label>
-          <select id="fSessionPick"></select>
-        </div>
+      <h2>Count session <span class="muted" id="sessionCardSub"></span></h2>
+      <div class="hint" style="margin-top:0">Settings for the count picked in the header. Scanners pick them up at their next sign-on.</div>
+      <div class="inline" style="margin-top:12px">
         <div class="auto">
           <label for="fPalletMode">Pallet ID check</label>
           <select id="fPalletMode">
@@ -125,8 +122,9 @@
         <div class="auto"><button id="btnCloseSession" class="danger">Close session</button></div>
       </div>
       <hr>
+      <h3 style="margin-top:0">Start a new count</h3>
       <div class="inline">
-        <div><label for="fNewName">New session name</label><input id="fNewName" placeholder="e.g. Q3 2026 wall-to-wall"></div>
+        <div><label for="fNewName">Name</label><input id="fNewName" placeholder="e.g. Q3 2026 wall-to-wall"></div>
         <div class="auto">
           <label for="fNewMode">Type</label>
           <select id="fNewMode">
@@ -134,7 +132,22 @@
             <option value="cycle">Cycle count — a batch of bins per day/week</option>
           </select>
         </div>
-        <div class="auto"><button class="primary" id="btnCreate">Create session</button></div>
+      </div>
+      <div class="inline" style="margin-top:12px">
+        <div>
+          <label for="fNewBins">Bin list <span style="text-transform:none;letter-spacing:0">— optional, you can upload it later</span></label>
+          <input type="file" id="fNewBins" accept=".csv,.tsv,.txt,.xlsx,.xlsm">
+        </div>
+        <div>
+          <label for="fNewPallets">Inventory report <span style="text-transform:none;letter-spacing:0">— what the count is validated against</span></label>
+          <input type="file" id="fNewPallets" accept=".csv,.tsv,.txt,.xlsx,.xlsm">
+        </div>
+        <div class="auto"><button class="primary fit" id="btnCreate">Create count</button></div>
+      </div>
+      <div class="hint">
+        The inventory report is what the system thinks is on hand. With it you get variances and
+        second counts; without it a count still records what is there, but nothing is compared.
+        Either file can wait — <a href="/settings#start">Getting started</a> tracks what is still missing.
       </div>
       <div class="feedback" id="sessionMsg"></div>
     </div>

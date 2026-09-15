@@ -267,3 +267,79 @@ td.wrap { white-space: normal; }
 .modal-box { background: #fff; color: #10151c; border-radius: 14px; padding: 22px 26px; text-align: center; max-width: 380px; }
 .modal-box h2 { margin: 0 0 14px; font-size: 18px; }
 .modal-box .muted { color: #55606e; }
+
+/* ------------------------------------------------- the header session picker
+   Which count you are looking at is context for the whole page, so it sits in
+   the header. The menu rows carry type, state and progress, because a name on
+   its own does not tell two counts apart once a site has a few. */
+.sesspick { position: relative; }
+.sess-btn {
+  display: flex; align-items: center; gap: 9px; max-width: 460px;
+  padding: 6px 11px 6px 8px; border-radius: 9px; font-size: 14px; font-weight: 650;
+  background: var(--surface); border: 1px solid var(--line); color: var(--text);
+}
+.sess-btn:hover, .sess-btn.open { background: var(--surface-2); border-color: #3a4757; }
+.sess-btn .sb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sess-btn .sb-pct { color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 700; }
+.sess-btn .caret { color: var(--muted); font-size: 11px; margin-left: 1px; }
+.sess-btn.empty { color: var(--muted); font-weight: 600; }
+
+.sess-kind {
+  flex: 0 0 auto; font-size: 9.5px; font-weight: 800; letter-spacing: .07em;
+  padding: 3px 6px; border-radius: 5px; line-height: 1;
+}
+.sess-kind.full  { background: #1b3c68; color: #cfe3ff; }
+.sess-kind.cycle { background: #3a2b63; color: #dcd0ff; }
+
+.sess-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 30;
+  min-width: 360px; max-width: min(460px, 92vw); max-height: 68vh; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; box-shadow: var(--shadow); padding: 6px;
+}
+.sess-head {
+  font-size: 10.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--muted); padding: 9px 9px 5px;
+}
+.sess-empty { color: var(--muted); font-size: 13px; padding: 14px 10px; text-align: center; }
+.sess-row {
+  display: block; width: 100%; text-align: left; margin: 0 0 2px;
+  padding: 9px 10px; border-radius: 9px; background: none; border: 1px solid transparent;
+}
+.sess-row:hover { background: var(--surface-2); }
+.sess-row.current { background: #16283f; border-color: var(--accent); }
+.sess-row.closed { opacity: .72; }
+.sess-row .sr-top { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+.sess-row .sr-name { font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sess-row .bar { height: 5px; }
+.sess-row.current .bar i { background: var(--accent); }
+.sess-row .sr-meta {
+  display: flex; justify-content: space-between; gap: 10px;
+  font-size: 11.5px; color: var(--muted); margin-top: 6px; font-variant-numeric: tabular-nums;
+}
+@media (max-width: 700px) { .sess-menu { min-width: 0; width: min(460px, 92vw); } }
+
+/* --------------------------------------------------------- the setup steps */
+.setup-bar { height: 8px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; margin: 12px 0 4px; }
+.setup-bar i { display: block; height: 100%; background: var(--ok); border-radius: 999px; transition: width .5s ease; }
+ol.steps { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+ol.steps li {
+  display: grid; grid-template-columns: 26px 1fr auto; gap: 12px; align-items: start;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;
+}
+ol.steps li.done { border-color: #235c33; }
+ol.steps li.blocking { border-color: #6e2c2f; }
+ol.steps .mark {
+  width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; background: var(--surface-3); color: var(--muted); border: 1px solid var(--line);
+}
+ol.steps li.done .mark { background: var(--ok-ink); color: var(--ok); border-color: #235c33; }
+ol.steps li.blocking .mark { background: var(--err-ink); color: var(--err); border-color: #6e2c2f; }
+ol.steps .st-title { font-size: 14.5px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+ol.steps .st-why { font-size: 13px; color: var(--text-dim); margin-top: 4px; line-height: 1.5; }
+ol.steps .st-detail { font-size: 12.5px; color: var(--muted); margin-top: 5px; font-variant-numeric: tabular-nums; }
+ol.steps li.done .st-detail { color: var(--ok); }
+@media (max-width: 700px) {
+  ol.steps li { grid-template-columns: 26px 1fr; }
+  ol.steps li > button { grid-column: 2; justify-self: start; }
+}

@@ -13,6 +13,7 @@ import {
 } from './db.js';
 import { importMaster, pruneAreaAisles } from './routes/master.js';
 import { boardData } from './routes/board.js';
+import { setupState } from './routes/setup.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks,
@@ -448,6 +449,12 @@ async function handleAdmin(req, res, url, m) {
     });
     audit(actor, 'created session', `#${created.id} "${created.name}" (${created.mode})`, created.id);
     return sendJson(req, res, 200, created);
+  }
+
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/setup$/)) && method === 'GET') {
+    const state = setupState(m[1]);
+    if (!state) throw httpError(404, 'session not found');
+    return sendJson(req, res, 200, state);
   }
 
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/settings$/)) && method === 'POST') {

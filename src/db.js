@@ -323,10 +323,23 @@ export function resolveAisle(sessionId, raw) {
 
 /* ------------------------------------------------------------------ sessions */
 
+/*
+ * Sessions, with enough on each row to tell them apart in a picker: how big it
+ * is, how far along, and when it was last touched. A name and an id alone are
+ * not enough once a site has a few counts and a cycle programme running.
+ */
 export function listSessions(status) {
-  const sql = status
-    ? 'SELECT * FROM sessions WHERE status = ? ORDER BY id DESC'
-    : 'SELECT * FROM sessions ORDER BY id DESC';
+  const where = status ? 'WHERE s.status = ?' : '';
+  const sql = `
+    SELECT s.*,
+           (SELECT COUNT(*) FROM locations l WHERE l.session_id = s.id) AS bins,
+           (SELECT COUNT(DISTINCT c.location_code) FROM counts c
+             WHERE c.session_id = s.id AND c.voided = 0) AS bins_counted,
+           (SELECT COUNT(*) FROM counts c WHERE c.session_id = s.id AND c.voided = 0) AS lines,
+           (SELECT MAX(c.scanned_at) FROM counts c WHERE c.session_id = s.id AND c.voided = 0) AS last_scan,
+           (SELECT COUNT(*) FROM recounts r WHERE r.session_id = s.id AND r.status != 'done') AS recounts_open
+      FROM sessions s ${where}
+     ORDER BY s.status = 'closed', s.id DESC`;
   return status ? db.prepare(sql).all(status) : db.prepare(sql).all();
 }
 

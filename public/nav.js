@@ -314,6 +314,147 @@
     el.textContent = n;
   };
 
+
+  /* ----------------------------------------------------- the session picker
+     Which count you are looking at is context for the whole page, not a field
+     in one card, so it lives in the header. A native <select> can only show a
+     line of text; these rows carry the type, the state and how far along each
+     one is, which is what actually tells two counts apart. */
+  const fmtInt = (n) => Number(n || 0).toLocaleString();
+  function ago(iso) {
+    if (!iso) return '';
+    const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins} min ago`;
+    if (mins < 48 * 60) return `${Math.floor(mins / 60)} h ago`;
+    return new Date(iso).toLocaleDateString();
+  }
+
+  api.sessionPicker = function sessionPicker(mountId, onPick) {
+    const mount = document.getElementById(mountId);
+    if (!mount) return { render() {} };
+    mount.classList.add('sesspick');
+    mount.innerHTML = '<button type="button" class="sess-btn"></button><div class="sess-menu" hidden></div>';
+    const btn = mount.querySelector('.sess-btn');
+    const menu = mount.querySelector('.sess-menu');
+    let list = [];
+    let currentId = null;
+
+    const close = () => { menu.hidden = true; btn.classList.remove('open'); };
+    const open = () => { menu.hidden = false; btn.classList.add('open'); };
+    btn.onclick = (e) => { e.stopPropagation(); menu.hidden ? open() : close(); };
+    document.addEventListener('click', (e) => { if (!mount.contains(e.target)) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+
+    const pct = (s) => (s.bins ? Math.round((s.bins_counted / s.bins) * 100) : 0);
+    const kind = (s) => (s.mode === 'cycle' ? 'cycle' : 'full');
+
+    function row(s) {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'sess-row' + (s.id === currentId ? ' current' : '') + (s.status === 'closed' ? ' closed' : '');
+      el.dataset.id = s.id;
+      el.onclick = () => { close(); if (s.id !== currentId) onPick(s.id); };
+
+      const top = document.createElement('div');
+      top.className = 'sr-top';
+      const k = document.createElement('span');
+      k.className = 'sess-kind ' + kind(s);
+      k.textContent = kind(s) === 'cycle' ? 'CYCLE' : 'FULL';
+      const nm = document.createElement('span');
+      nm.className = 'sr-name';
+      nm.textContent = s.name;
+      top.append(k, nm);
+      if (s.status === 'closed') {
+        const c = document.createElement('span');
+        c.className = 'tag off';
+        c.textContent = 'closed';
+        top.appendChild(c);
+      }
+      if (s.recounts_open) {
+        const r = document.createElement('span');
+        r.className = 'tag queued';
+        r.textContent = `${fmtInt(s.recounts_open)} second`;
+        r.title = `${fmtInt(s.recounts_open)} second count(s) still open`;
+        top.appendChild(r);
+      }
+      el.appendChild(top);
+
+      const bar = document.createElement('div');
+      bar.className = 'bar';
+      const fill = document.createElement('i');
+      fill.style.width = pct(s) + '%';
+      bar.appendChild(fill);
+      el.appendChild(bar);
+
+      const meta = document.createElement('div');
+      meta.className = 'sr-meta';
+      meta.textContent = s.bins
+        ? `${fmtInt(s.bins_counted)} of ${fmtInt(s.bins)} bins · ${pct(s)}%`
+        : 'no bin list uploaded yet';
+      const when = document.createElement('span');
+      when.className = 'sr-when';
+      when.textContent = s.last_scan ? `last scan ${ago(s.last_scan)}`
+        : s.created_at ? `made ${new Date(s.created_at).toLocaleDateString()}` : '';
+      meta.appendChild(when);
+      el.appendChild(meta);
+      return el;
+    }
+
+    function render(sessions, id) {
+      list = sessions || [];
+      currentId = id == null ? null : Number(id);
+      const s = list.find((x) => x.id === currentId);
+      btn.innerHTML = '';
+      if (!s) {
+        btn.className = 'sess-btn empty';
+        btn.textContent = list.length ? 'Pick a count' : 'No count session yet';
+        btn.appendChild(Object.assign(document.createElement('span'), { className: 'caret', textContent: '▾' }));
+      } else {
+        btn.className = 'sess-btn';
+        const k = document.createElement('span');
+        k.className = 'sess-kind ' + kind(s);
+        k.textContent = kind(s) === 'cycle' ? 'CYCLE' : 'FULL';
+        const nm = document.createElement('span');
+        nm.className = 'sb-name';
+        nm.textContent = s.name;
+        btn.append(k, nm);
+        if (s.status === 'closed') {
+          const c = document.createElement('span');
+          c.className = 'tag off';
+          c.textContent = 'closed';
+          btn.appendChild(c);
+        } else if (s.bins) {
+          const p = document.createElement('span');
+          p.className = 'sb-pct';
+          p.textContent = pct(s) + '%';
+          btn.appendChild(p);
+        }
+        btn.appendChild(Object.assign(document.createElement('span'), { className: 'caret', textContent: '▾' }));
+        btn.title = `${s.name} — ${kind(s) === 'cycle' ? 'cycle count' : 'full count'}, ${s.status}`;
+      }
+
+      menu.innerHTML = '';
+      const openOnes = list.filter((x) => x.status !== 'closed');
+      const shut = list.filter((x) => x.status === 'closed');
+      if (!list.length) {
+        const e = document.createElement('div');
+        e.className = 'sess-empty';
+        e.textContent = 'No count sessions yet. Create one below.';
+        menu.appendChild(e);
+      }
+      for (const [label, group] of [['Open', openOnes], ['Closed', shut]]) {
+        if (!group.length) continue;
+        const h = document.createElement('div');
+        h.className = 'sess-head';
+        h.textContent = `${label} · ${group.length}`;
+        menu.appendChild(h);
+        for (const x of group) menu.appendChild(row(x));
+      }
+    }
+    return { render, close };
+  };
+
   document.addEventListener('DOMContentLoaded', () => {
     renderTabs();
     renderSubTabs();
