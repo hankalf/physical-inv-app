@@ -404,7 +404,7 @@
       });
       gunCfg.defaults = keep;
       renderGun();
-      msg($('gunMsg'), 'ok', 'Saved.', `Scanners will ask ${gunCfg.order.map((k) => stepInfo(k).what.toLowerCase()).join(' → ')} at their next sign-on.`);
+      msg($('gunMsg'), 'ok', 'Saved.', `Scanners will ask ${gunCfg.order.map((k) => stepInfo(k).what.toLowerCase()).join(' → ')} — within about half a minute, without signing out.`);
     } catch (err) { msg($('gunMsg'), 'err', err.message); }
   };
   $('btnResetGun').onclick = () => {
@@ -480,8 +480,8 @@
       renderPrompts();
       const t = Number(promptState.commentTimeout || 0);
       msg($('promptMsg'), 'ok', 'Saved.', t
-        ? `Scanners pick this up at their next sign-on. The comments step will move on by itself after ${t} second(s).`
-        : 'Scanners pick this up at their next sign-on. The comments step will wait for the counter.');
+        ? `Scanners pick this up within about half a minute. The comments step will move on by itself after ${t} second(s).`
+        : 'Scanners pick this up within about half a minute. The comments step will wait for the counter.');
     } catch (err) { msg($('promptMsg'), 'err', err.message); }
   };
   $('btnResetPrompts').onclick = async () => {

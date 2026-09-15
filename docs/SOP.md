@@ -1,0 +1,593 @@
+# Standard Operating Procedure — Physical Inventory Counting
+
+**Site:** Front Royal, VA cold storage  **Scanners:** Zebra MC9000-series handhelds
+
+This is the working manual. It assumes you have never opened the app before and takes
+you from an empty deployment through to a finished count sent to the ERP. Read Part 1
+and Part 2 once, when the app is first set up. Parts 3 to 5 are what you do for every
+count. Part 6 is the cycle-count programme, Part 7 is what to do when something goes
+wrong.
+
+---
+
+## Contents
+
+- [Part 0 — What the system is](#part-0--what-the-system-is)
+- [Part 1 — First-time setup: getting in](#part-1--first-time-setup-getting-in)
+- [Part 2 — First-time setup: the warehouse](#part-2--first-time-setup-the-warehouse)
+- [Part 3 — Setting up a count](#part-3--setting-up-a-count)
+- [Part 4 — Counting day](#part-4--counting-day)
+- [Part 5 — Finishing a count](#part-5--finishing-a-count)
+- [Part 6 — The cycle-count programme](#part-6--the-cycle-count-programme)
+- [Part 7 — When something goes wrong](#part-7--when-something-goes-wrong)
+- [Part 8 — Capacity: what the system will take](#part-8--capacity-what-the-system-will-take)
+- [Appendix A — File column reference](#appendix-a--file-column-reference)
+- [Appendix B — Server settings reference](#appendix-b--server-settings-reference)
+
+---
+
+## Part 0 — What the system is
+
+One server, four screens. Everything below happens in a browser; nothing is installed
+on a PC.
+
+| Screen | Address | Who uses it | Sign-in |
+|---|---|---|---|
+| **Scanner** | `/` | Counters, on the handhelds | Each scanner has its own link |
+| **Dashboard** | `/admin` | Supervisor running the count | Supervisor login |
+| **Settings** | `/settings` | Whoever sets the count up | Supervisor login |
+| **Office board** | `/board` | Anyone — put it on the office TV | **None.** Read-only |
+| **Cycle counts** | `/cycle` | Whoever runs the daily programme | Supervisor login |
+
+**What the system does.** It holds a list of every bin in the warehouse and a list of
+what the ERP thinks is in them. Counters scan pallets into bins on the handhelds. The
+app compares the two, tells you where they disagree, sends people back to look again
+where it matters, and produces an adjustment file for the ERP.
+
+**What a "count session" is.** One count — a wall-to-wall in October, a spot check of
+the freezer, the year's cycle-count programme. Everything (bin list, inventory report,
+team assignments, every scanned line) belongs to a session. You can have several open
+at once; scanners choose which one they are working on at sign-on.
+
+**Two words you need.**
+- **Aisle** — a rack run, e.g. `F01`. Teams are assigned whole aisles.
+- **Block** — aisles that back onto each other share a **block**, and only one team may
+  be active in a block at a time, so two crews never work opposite faces of the same
+  racking. Pairing aisles into blocks is a one-time job (Part 2, step 7).
+
+**Bin codes.** A code like `F01A001` reads as zone `F`, aisle `01`, level `A`,
+position `001`. Four positions per bay; odd positions are the front face, even are the
+back. The app derives the aisle from the code when your file has no aisle column.
+
+---
+
+## Part 1 — First-time setup: getting in
+
+> Do this once, with whoever administers the server. Allow 20 minutes.
+
+### Step 1 — Deploy the server
+
+**On Railway (how this site runs).** Deploy the repository; `railway.json` builds the
+Dockerfile, and the app listens on the port Railway gives it. Attach a **persistent
+volume** and point `DB_PATH` at it — see step 2 — or the database is wiped on every
+redeploy.
+
+**On a PC inside the warehouse (no internet needed).**
+
+```bash
+ADMIN_PASSWORD='pick-something' docker compose up -d
+```
+
+Then give that PC a static IP or a DHCP reservation, because the handhelds are pointed
+at its address and that address must never change. Scanners reach it at
+`http://<that-ip>:3000/`.
+
+### Step 2 — Set the server settings
+
+On Railway these are **Variables**; on a PC they go in `docker-compose.yml`. Set these
+before anybody signs in:
+
+| Setting | Set it to | Why |
+|---|---|---|
+| `ADMIN_PASSWORD` | A password only supervisors know | The shared way in, used once to create real logins |
+| `DB_PATH` | A path on the persistent volume, e.g. `/data/inventory.db` | Otherwise a redeploy loses the count |
+| `SITE_TIMEZONE` | `America/New_York` | Dates on reports and cycle-count due dates |
+| `SUPERADMIN_USER` | e.g. `sitelead` | Creates one permanent admin login at start-up |
+| `SUPERADMIN_NAME` | That person's name, as it should appear in the log | Shown against everything they do |
+| `SUPERADMIN_PASSWORD` | A strong password, at least 8 characters | If unset it falls back to `ADMIN_PASSWORD` |
+
+The superadmin account is created when the server starts and cannot be deleted from
+inside the app, so you can never lock yourself out. The app refuses to create it if the
+password would be the default `changeme` or is shorter than 8 characters — it will say
+so in the start-up log and carry on without it.
+
+> **Never put a password in the repository.** These are server settings for a reason:
+> anything committed to git is readable by anyone with access to the code, for ever.
+
+### Step 3 — Sign in for the first time
+
+Open `/settings`. Sign in with the shared `ADMIN_PASSWORD` (leave the username box
+empty), or with the superadmin username and password if you set one.
+
+### Step 4 — Create a login for each supervisor
+
+**Settings → Logins → Supervisor logins.**
+
+1. Type the person's **name**, a **username** and choose their **role**:
+   - **Admin** — can do everything, including managing logins.
+   - **Supervisor** — runs counts; cannot add or remove logins.
+2. Press **Add**. The app shows a **starter password** once — something like
+   `winter-4k2p`. Write it down and hand it to them; it is not shown again.
+3. The first time they sign in they are made to choose their own password before they
+   can do anything. Nobody but them knows it after that.
+
+If somebody forgets their password, an admin presses **Reset password** on their row and
+gives them the new starter password. The same forced change happens again.
+
+### Step 5 — Turn the shared password off
+
+Once at least one admin login exists, set `SHARED_PASSWORD_LOGIN=off` in the server
+settings. From then on everybody signs in as themselves and the log names who did what.
+
+The app will not let this lock you out: if there are no admin accounts, the shared
+password keeps working regardless of the setting.
+
+---
+
+## Part 2 — First-time setup: the warehouse
+
+> Also once, though you will come back to steps 6 and 7 whenever the racking changes.
+
+### Step 6 — Upload the bin list
+
+**Settings → Lists & racking → Bin list.**
+
+This is every location in the warehouse. It is what a scanned bin is checked against,
+and it is what defines the aisles teams get assigned to. **Upload this before anything
+else.**
+
+- For this site, press **Load the Front Royal bin list** — the ERP bin export ships with
+  the app: racks F01–F24 and A01–A04 plus WIP, the NIL bin and other areas. Staging
+  lanes and dock doors are counted manually and are deliberately left out.
+- Otherwise choose a CSV or Excel file. Column names are matched loosely — see
+  [Appendix A](#appendix-a--file-column-reference). The only column you must have is the
+  bin location.
+- **Replace what is there** wipes the existing list first. Leave it unticked to add to
+  it.
+
+The card reports what it read: how many bins, how many aisles, and anything it skipped.
+
+### Step 7 — Pair the aisles into racking blocks
+
+**Settings → Lists & racking → Aisles & racking blocks.**
+
+Aisles that back onto each other must share a block so two teams are never working the
+same racking from both sides.
+
+1. Set **Aisles per block** to 2 (most double-deep racking).
+2. **Skip first** is 1 if the first aisle has a wall behind it rather than another aisle.
+3. Press **Auto-pair aisles**, then read the table and correct anything that is wrong by
+   typing a block name straight onto a row.
+
+If you have uploaded a rack drawing, **Pair from drawing** uses it instead — more
+reliable than counting aisles off by hand.
+
+### Step 8 — Register the scanners
+
+**Settings → Scanners → Scanner setup.**
+
+Each handheld gets its own link. Opening that link once is what signs the scanner in;
+after that the server accepts counts from it and stamps its name on every line.
+
+1. Type a **scanner name** — use what is written on the device, e.g. `SCANNER-05`.
+   Add notes (asset tag, "freezer unit") if it helps.
+2. Press **Add scanner**. Repeat for every handheld.
+3. Press **Print setup cards**. You get one card per scanner with its own QR code. Cut
+   them up and tape one inside each cradle.
+
+**On each handheld, once:**
+
+1. Open Chrome, scan the QR code from its card into the address bar (or type the link).
+2. Chrome menu → **Add to Home screen**. It then launches full-screen and starts even
+   with no signal.
+3. Set up **DataWedge** so scans arrive as keystrokes:
+   - the profile associated with Chrome → **Keystroke output: enabled**
+   - **Basic data formatting → Send ENTER key: enabled** *(without this the app never
+     sees the end of a scan)*
+   - **Barcode input** → enable the symbologies your labels use.
+
+**Treat a scanner link like a key.** **Reset link** issues a new one and kills the old —
+use it if a device is lost or a link gets out. Removing a scanner stops it entirely. A
+link used on more than one device is flagged in the table; that is normal after a
+scanner is wiped and worth asking about otherwise.
+
+### Step 9 — Set up the counting screen
+
+**Settings → Scanner screen.**
+
+This is what a counter actually sees. The preview on the right is drawn at the real
+pixel size of the device (MC9090 is 240 × 320; MC9200 is 480 × 640) using the scanner's
+own stylesheet, so it cannot drift from reality.
+
+- **The questions, in order.** Drag to reorder. The default asks for the pallet, then
+  the quantity, then the bin. Counting **location-first** — bin, then what is in it —
+  suits a team working a bay at a time. Lot code and expiry sit in the order too, and
+  only appear on counts that ask for them (Part 3). A question can never be dragged off
+  the list entirely.
+- **Show contents after a pallet scan** — shows the SKU and description the ERP has for
+  that pallet, so the counter can see they are at the right one.
+- **Show the next bin in the aisle** — once a team starts a section, the gun tells them
+  which bin comes next (001 → 002 → 003), so nothing is skipped.
+- **Buzz on a good or bad scan** — useful with ear defenders.
+- **Text size: Large** — for gloves and a freezer.
+- **Re-key a quantity of at least** — anything this big has to be typed twice. 0 never
+  asks twice.
+
+Press **Save**. Scanners pick the change up within about half a minute, between pallets
+— nobody has to sign out.
+
+### Step 10 — Set the one-tap reasons
+
+**Settings → Scanners → What the scanners offer.**
+
+Counters wearing gloves in a freezer will not type. These are the buttons they tap
+instead, and the reasons a site needs are its own — "Blocked by a trailer" means
+something here and nothing anywhere else.
+
+- **Comments** — offered on the last step, after the bin is scanned.
+- **Override reasons** — offered when a pallet ID is not on the list and the counter is
+  allowed to accept it anyway. **Other** is always offered on the gun as well, whatever
+  you configure.
+- **Comments step moves on after N seconds** — the gun counts down and then moves to the
+  next bin by itself. Typing or tapping a chip stops the clock. Set it to 0 to make it
+  wait for the counter.
+
+Press **Save**; again, scanners pick it up within about half a minute.
+
+---
+
+## Part 3 — Setting up a count
+
+> Do this the day before, not on the morning of the count.
+
+### Step 11 — Create the count
+
+**Dashboard → Progress → Count session → Start a new count.**
+
+1. **Name** it something you will recognise later: `Q3 2026 wall-to-wall`.
+2. **Type**:
+   - **Full count** — teams work whole aisles. This is a wall-to-wall.
+   - **Cycle count** — a batch of bins per day or week; see Part 6.
+3. **Bin list** — attach it here, or upload it later in Settings.
+4. **Inventory report** — what the ERP thinks is on hand. **Attach it.** With it you get
+   variances, second counts and an ERP adjustment file. Without it the count still
+   records what is there, but nothing is compared against anything.
+5. Press **Create count**.
+
+The new count inherits the rack drawing the last one used, so the map works immediately.
+
+### Step 12 — Check the guided setup
+
+**Settings → Getting started.**
+
+A checklist worked out from what is actually in the database, not from a box somebody
+ticked. It tells you what is still missing and takes you straight to the screen that
+fixes it. For a full count it wants: the bin list, the inventory report, registered
+scanners, the scanner screen, racking blocks, a crew roster and a team plan.
+
+### Step 13 — Set the count's options
+
+**Dashboard → Progress → Count session.** These apply to the count picked in the header,
+and a scanner that is already counting picks up a change within about half a minute. The
+questions it asks change between pallets, never mid-line.
+
+| Option | What it does | Suggested |
+|---|---|---|
+| **Pallet ID check** | *Validate — allow override with reason*: an unknown pallet can be accepted with a reason. *Validate — no overrides*: it cannot. *Accept any ID*: no checking, though duplicates are still blocked. | Validate with override |
+| **Guided by aisle plan** | Teams are sent to their assigned aisle and warned when they scan a bin outside it. Off means anyone can count anything. | On for a wall-to-wall |
+| **Ask for comments** | Adds the optional comments step at the end of each pallet. | On |
+| **Auto second counts** | Raises a "go back and look again" task automatically when a line disagrees with the report. | On |
+| **Scanners start here** | Every scanner lands on this count at sign-on. They can still pick another. | On, on count day |
+| **Ask for the lot code** | Adds a LOT CODE question, checked against the report. Wrong lot is called out at the pallet. | On only if you track lots |
+| **Ask for the expiry date** | Adds an EXPIRY question and flags anything already out of date. | On for frozen food |
+| **Recount over N units** | A difference smaller than this raises no second count. | 2–5 units |
+| **or over N %** | ...or at least this share of the expected quantity. Either threshold is enough. | 5–10 % |
+| **Cap open** | Stop raising automatic second counts once this many are open, so the list stays walkable. | 50–100 |
+| **Map drawing** | Which rack drawing the map uses. *Schematic* builds one from the bin codes. | Your drawing |
+
+> **Why the thresholds matter.** With both at 0 the app sends somebody back for a
+> one-unit difference, and by mid-morning the second-count list is longer than the count.
+> Set them once and the list stays short enough that people actually walk it.
+
+### Step 14 — Give the teams their aisles
+
+**Dashboard → Team plan.**
+
+Either upload a **counting plan** (Settings → Lists & racking → Counting plan: one row
+per aisle, in the order each team counts it, with the levels their equipment reaches),
+or queue aisles by hand here.
+
+- A team's next aisle starts automatically as soon as the block it belongs to is clear.
+  That is what staggers the crews apart.
+- A team is not sent where its equipment cannot reach: if the roster says a crew is on
+  foot, they will not be queued onto level D. A supervisor can override this.
+- Two teams **can** share one aisle as long as their levels do not overlap — a forklift
+  crew high and a crew on foot low.
+
+---
+
+## Part 4 — Counting day
+
+### Step 15 — The counter's procedure (on the handheld)
+
+**Signing on**
+
+1. Open the app from the home screen. It shows the scanner's own name.
+2. Pick the **count session** (it lands on the default one).
+3. Enter the **team number**.
+4. Scan or type every **clock-in number** on the crew, pressing Enter after each. Tap a
+   number to remove it.
+5. Press **Sign on & load list**. The handheld downloads the bin and pallet lists for
+   that count and can work from then on **with no signal**.
+
+**Counting a pallet**
+
+The gun asks one question per screen, in the order the site configured:
+
+1. **Scan PALLET ID** — it shows what the ERP says is on that pallet.
+2. **Enter QUANTITY** — big numbers may have to be typed twice.
+3. **Scan LOT CODE** / **Enter EXPIRY** — only on counts that ask for them. A lot that
+   disagrees with the report, or a date already past, is called out on the spot.
+4. **Scan BIN LOCATION** — it says where that bin is and which face it is on.
+5. **Comments** — optional. Tap a reason or type a note; leave it and the gun moves on
+   by itself.
+
+The line is saved on the handheld the moment the last question is answered, and pushed
+to the server whenever there is a signal. The header shows `online` / `OFFLINE` and how
+many lines are still queued.
+
+**The other buttons**
+
+| Button | When to use it |
+|---|---|
+| **Back** | Wrong entry — steps back one question |
+| **Skip** | Lot, expiry or comments the pallet does not have |
+| **Bin is EMPTY** | The bin is genuinely empty. Scan the bin; it is recorded as counted and empty |
+| **My aisle** | Back to the assignment screen |
+| **History** | The last 50 lines from this scanner. **Void** removes a wrong line from the totals |
+| **Aisle complete — next aisle** | Only when the aisle is finished. It frees the racking block and releases the team's next aisle |
+
+**When the gun asks for a reason**
+
+An unknown pallet, an unknown bin, a pallet already counted, a bin outside the team's
+aisle or level — the gun stops and asks why before it will take the line. Pick a reason
+from the list (or **Other**), add a note if it helps, and press **Accept and continue**.
+The line is saved and flagged for a supervisor. **Cancel — rescan** if it was simply the
+wrong barcode.
+
+### Step 16 — The supervisor's procedure (on the dashboard)
+
+**Dashboard**, with the count picked in the header. It refreshes itself every 30
+seconds.
+
+- **Progress** — lines, bins counted, pallets, exceptions; and a row per team with what
+  they are counting right now and when they last scanned. A team whose last scan was 40
+  minutes ago is a team with a problem.
+- **Map** — the warehouse from above. Aisles are outlined by state: not started, being
+  counted now (with the team's number), done. Click an aisle for its bins, who counted
+  it and what is flagged.
+- **Team plan** — who is where, queue the next aisles, hand an aisle back.
+- **Second counts** — see step 17.
+- **Reports** — see step 18.
+
+**Watch for, during the count:**
+
+- Exceptions climbing on one team — usually a training problem, worth a radio call.
+- A team stopped for a long time — dead battery, or stuck behind a trailer.
+- An aisle nobody has started by mid-afternoon.
+
+### Step 17 — The office board
+
+Put `/board` on the office TV. It needs no sign-in and is read-only: the percentage
+counted, bins with a count, aisles handed back as complete, a row per team with what they
+are on, and every aisle as a tile coloured by state. It deliberately shows no pallet IDs
+and no clock-in numbers.
+
+It follows the newest open count on its own. To pin it to a particular one, add the
+session to the address: `/board?session=12`.
+
+---
+
+## Part 5 — Finishing a count
+
+### Step 18 — Work the second counts
+
+**Dashboard → Second counts.**
+
+A second count is a bin somebody has to walk back to. They are raised automatically when
+a line disagrees with the inventory report (subject to your thresholds), or by a
+supervisor.
+
+- **Raise from all variances now** goes through everything that currently disagrees and raises the
+  tasks. It deliberately leaves alone pallets in aisles nobody has counted yet — mid-count
+  those are not missing, just not reached — and tells you how many it skipped and why.
+- The tasks appear on the handhelds: a team taps **Start second counts** on the
+  assignment screen, counts the bin again, and presses **Bin done — nothing more here**.
+- A second count that agrees with the first settles the line.
+
+Work these down before you close the count. A count closed with open second counts is a
+count with known-wrong numbers in it.
+
+### Step 19 — Read the reports
+
+**Dashboard → Reports.**
+
+- **Pallet report** — one row per pallet: expected vs counted, which bin the ERP expected
+  and where it was actually found, and a status you can act on: `MATCH`, `QTY VARIANCE`,
+  `WRONG BIN`, `MISSING`, `NOT IN MASTER`, `COUNTED TWICE`. Lot and expiry get their own
+  columns, because the right count of the wrong lot is still wrong. **Only exceptions**
+  narrows it to what needs attention — including a wrong lot or a date about to run out,
+  even when the quantity is right.
+- **Find a lot** — after a recall notice: type part of a lot code and get every case of
+  it, both where it was actually counted and where the report expected it, so a pallet
+  nobody found still shows up.
+- **Count sheets** — printable paper sheets by aisle and level, for a dead battery or an
+  auditor.
+- **Exports** — the full count (every line as scanned), exceptions only, uncounted bins,
+  the pallet report, second counts.
+
+### Step 20 — Send it to the ERP
+
+**Settings → ERP & backups → Send to the ERP.**
+
+1. Choose the **layout** that matches your ERP. Column names and which rows are included
+   are configuration — add a layout rather than editing the file by hand afterwards.
+2. **Preview** and read the first rows.
+3. **Download CSV** and import it into the ERP.
+
+### Step 21 — Close the count
+
+**Dashboard → Progress → Count session → Close session.** A closed count is read-only:
+scanners can no longer post lines to it, and its reports stay available for ever.
+
+**Delete…** is separate and deliberately harder: the count must be closed first, you have
+to type its name, and a backup is taken before anything is removed. Everything counted
+against it goes with it. Close counts; delete only the ones created by mistake.
+
+### Step 22 — Backups and the log
+
+**Settings → ERP & backups → Backups & log.**
+
+- **Back up now** before and after anything large — an ERP import, a bulk re-upload, a
+  deletion. The app also backs itself up daily and keeps the last 14.
+- **The log** records every supervisor action: who signed in, who uploaded what, who
+  overrode what, who raised second counts, who searched for a lot. **Export the log** for
+  an auditor.
+
+---
+
+## Part 6 — The cycle-count programme
+
+A cycle count is the same app with a different rhythm: instead of stopping the warehouse,
+a handful of bins are counted every day.
+
+1. **Create one count session of type "Cycle count"** and keep using it. It runs for the
+   year — do not create a new one each week, or you lose the history of when each bin was
+   last counted.
+2. Upload the bin list and the inventory report. If your ERP export has a
+   *last physical inventory date* column it is read automatically, and the programme
+   picks up where the ERP left off.
+3. Go to **`/cycle` → Today's bins**. Choose:
+   - **how many bins** in the batch,
+   - **which bins**: *longest since it was counted*, *never counted*, or a *random sample*,
+   - optionally a **zone, aisle or levels** to stay inside.
+4. **Preview**, then **Generate**. The bins appear on the handhelds as tasks.
+5. Counters pick **Cycle count** at sign-on and work the list. Each bin is counted as it
+   stands — it is *the* count for that bin, not a second opinion.
+6. **Coverage** shows how much of the warehouse has been counted in the period, and what
+   has not been touched. Export it for the auditors.
+7. A **schedule** generates the batch automatically each day or week so nobody has to
+   remember.
+
+---
+
+## Part 7 — When something goes wrong
+
+| What you see | What it means | What to do |
+|---|---|---|
+| Gun: *"this scanner is no longer authorised"* | Its link was reset or the scanner was removed | Settings → Scanners → **Reset link**, open the new link on the device |
+| Gun: *"Offline and no list cached for this session"* | The handheld has never downloaded this count | Carry it into Wi-Fi once and sign on again |
+| Gun says `OFFLINE` with lines queued | Normal in a dead spot | Nothing. They upload when it gets a signal. Do not wipe the device |
+| A scan does nothing | DataWedge is not sending the Enter key | DataWedge → Basic data formatting → **Send ENTER key** |
+| Gun: *"Team N is counting aisle X"* | Another team holds that racking block | Wait, or hand the other aisle back first |
+| Second-count list is enormous | Thresholds are at 0 | Set **Recount over** and **or over %**, and a **cap** (Part 3, step 13) |
+| The map is a schematic, not your drawing | No rack drawing on this count | Dashboard → Progress → Count session → **Map drawing** |
+| A reason code edit "did not reach" a gun | It takes up to about half a minute, and only lands between pallets | Wait for the counter to finish the pallet they are on |
+| Can nobody sign in? | All logins lost | The shared password turns itself back on when there are no admin accounts; the superadmin login is recreated at start-up |
+| Numbers look wrong after an ERP import | The inventory report moved on | Re-upload it with **Replace what is there**, then re-read the pallet report |
+
+---
+
+## Part 8 — Capacity: what the system will take
+
+Measured against the real Front Royal bin list (13,673 bins), with fifteen teams and
+thirty scanners counting simultaneously while the office board and two dashboards
+refreshed over the top of them:
+
+| | |
+|---|---|
+| Scanners posting at once | 30, no errors, nothing lost, nothing double-counted |
+| Throughput | ~1,200–1,600 count lines per second |
+| A scan, under that full load | 75 ms median, 205 ms at the 95th percentile |
+| Office board / dashboard refresh | ~140 ms median while all thirty guns were writing |
+| Whole master list to a handheld | ~0.4 s each, thirty pulling simultaneously |
+
+Thirty scanners is comfortably inside what the server will take — real counters scan a
+pallet every ten to twenty seconds, which is a small fraction of the load above. The
+constraints that matter in practice are warehouse Wi-Fi coverage and battery life, not
+the server.
+
+This is checked automatically: `node tests/run-all.mjs load-15-teams` runs the whole
+scenario and fails if anything is lost, doubled, mis-attributed, or if two teams ever end
+up in one racking block.
+
+---
+
+## Appendix A — File column reference
+
+Files may be CSV, TSV or Excel (`.xlsx`/`.xlsm`). Column names are matched loosely —
+case, spaces and punctuation are ignored — so most ERP exports load unchanged. Each
+upload card shows exactly which columns it recognised.
+
+**Bin list** — the only required column is the location.
+
+| What | Accepted column names |
+|---|---|
+| Bin (required) | location, loc, bin, bin location, location code, slot, code, warehouse location |
+| Aisle | aisle, row, aisle no, aisle number — *derived from the bin code if absent* |
+| Zone | zone, area, section, region, warehouse |
+| Level | level, levels, tier, shelf — *derived from the bin code if absent* |
+| Description | description, desc, name |
+| Last counted | last phys invt date, last counted, last count date, last inventory date |
+
+**Inventory report** — the only required column is the pallet ID.
+
+| What | Accepted column names |
+|---|---|
+| Pallet (required) | pallet id, pallet, container, container id, LPN, licence plate, pallet no, id, tag |
+| SKU | sku, item, item number, item code, part number, product, material, stock code |
+| Description | description, desc, item description, product name |
+| Quantity | qty, quantity, on hand, on hand qty, expected, expected qty, system qty, cases, units |
+| Unit | uom, unit, unit of measure, um |
+| Location | *same names as the bin list* |
+| Lot | lot, lot code, lot no, lot number, batch, batch code, batch number |
+| Expiry | expiry, expiry date, expiration, expires, best before, use by, shelf life date |
+
+**Counting plan** — one row per aisle, in the order the team counts it.
+
+| What | Accepted column names |
+|---|---|
+| Team | team, team number, crew, group |
+| Aisle | aisle, row, aisle no |
+| Levels | level, levels, tier, shelf — e.g. `A-C`, `D-F`, `A-F` |
+
+Dates are read in either order — `2027-03-15` and `03/15/2027` both work.
+
+---
+
+## Appendix B — Server settings reference
+
+| Setting | Default | What it does |
+|---|---|---|
+| `ADMIN_PASSWORD` | `changeme` | The shared supervisor password. Change it |
+| `SHARED_PASSWORD_LOGIN` | `on` | `off` requires named logins — ignored if no admin account exists, so it cannot lock you out |
+| `SUPERADMIN_USER` | — | Username of the permanent admin, created at start-up |
+| `SUPERADMIN_NAME` | — | That person's name, as it appears in the log |
+| `SUPERADMIN_PASSWORD` | falls back to `ADMIN_PASSWORD` | Must be 8+ characters and not `changeme` |
+| `SCANNER_AUTH` | on | `off` lets anything on the network post counts. Leave it on |
+| `DB_PATH` | `data/inventory.db` | Put this on a persistent volume |
+| `BACKUP_DIR` | `data/backups` | Where the daily backups go |
+| `BACKUP_KEEP` | 14 | How many backups to keep |
+| `SITE_TIMEZONE` | `America/New_York` | Dates on reports and cycle-count due dates |
+| `PORT` / `HOST` | 3000 / 0.0.0.0 | Where the server listens |
+| `MAX_UPLOAD_MB` | 64 | Largest file an upload will accept |

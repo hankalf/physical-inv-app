@@ -876,7 +876,7 @@
         await postJson('/api/admin/default-session', { sessionId: wantDefault ? sessionId : 0 });
         await refreshDefaultSession();
       }
-      msg($('sessionMsg'), 'ok', 'Settings saved. Scanners pick them up at their next sign-on.',
+      msg($('sessionMsg'), 'ok', 'Settings saved. Scanners pick them up within about half a minute.',
         defaultSessionId === sessionId ? 'Every scanner will land on this count at sign-on.' : '');
       await loadSessions();
     } catch (err) { msg($('sessionMsg'), 'err', err.message); }
