@@ -370,6 +370,51 @@ export function createSession({ name, mode = 'full', palletMode = 'warn', guided
 export const lastUsedLayout = () =>
   db.prepare("SELECT layout FROM sessions WHERE layout IS NOT NULL AND layout != '' ORDER BY id DESC LIMIT 1").get()?.layout || '';
 
+/** What a delete would destroy. Shown before, recorded after. */
+export function sessionContents(sessionId) {
+  const id = Number(sessionId);
+  const n = (sql) => db.prepare(sql).get(id).n;
+  return {
+    bins: n('SELECT COUNT(*) n FROM locations WHERE session_id = ?'),
+    pallets: n('SELECT COUNT(*) n FROM pallets WHERE session_id = ?'),
+    counts: n('SELECT COUNT(*) n FROM counts WHERE session_id = ?'),
+    assignments: n('SELECT COUNT(*) n FROM assignments WHERE session_id = ?'),
+    recounts: n('SELECT COUNT(*) n FROM recounts WHERE session_id = ?'),
+    signons: n('SELECT COUNT(*) n FROM signons WHERE session_id = ?'),
+    batches: n('SELECT COUNT(*) n FROM cycle_batches WHERE session_id = ?'),
+  };
+}
+
+/**
+ * Delete a count and everything under it.
+ *
+ * Every child table cascades, so this is one DELETE - but it is the only
+ * irreversible thing in the app, so the guards live here rather than in the
+ * route: an open count cannot be deleted at all, and one that holds counted
+ * lines needs its own name typed back. The audit log keeps no foreign key to
+ * sessions on purpose, so the record of what happened outlives the count.
+ */
+export function checkSessionDeletable(sessionId, { confirmName = '' } = {}) {
+  const s = getSession(sessionId);
+  if (!s) throw Object.assign(new Error('no such count'), { status: 404 });
+  if (s.status !== 'closed') {
+    throw Object.assign(new Error('close the count first - an open one may still have scanners posting to it'), { status: 409 });
+  }
+  const had = sessionContents(s.id);
+  if (had.counts > 0 && String(confirmName).trim() !== String(s.name).trim()) {
+    throw Object.assign(
+      new Error(`this count holds ${had.counts.toLocaleString()} counted lines - type its name exactly to confirm`),
+      { status: 409, needsName: true, name: s.name, contents: had });
+  }
+  return { session: s, had };
+}
+
+export function deleteSession(sessionId, { confirmName = '' } = {}) {
+  const { session: s, had } = checkSessionDeletable(sessionId, { confirmName });
+  db.prepare('DELETE FROM sessions WHERE id = ?').run(s.id);
+  return { id: s.id, name: s.name, mode: s.mode || 'full', had };
+}
+
 export const bumpMasterVersion = (sessionId) =>
   db.prepare('UPDATE sessions SET master_version = master_version + 1 WHERE id = ?').run(Number(sessionId));
 

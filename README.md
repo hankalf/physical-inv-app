@@ -177,6 +177,28 @@ last scanned — a name alone stops telling two counts apart once a site has a f
 arrives with something to validate against. Both are optional at that moment; whatever is
 missing shows up under **Settings → Getting started**.
 
+### Deleting a count
+
+**Delete…** on the Count session card removes a count and everything under it — bins,
+pallets, assignments, sign-ons, counted lines, second counts, cycle batches. It is the one
+thing in the app that cannot be undone, so:
+
+* an **open** count cannot be deleted at all — close it first, since scanners may still be
+  posting to it;
+* the page says exactly what will go — how many counted lines, bins, pallets and second
+  counts — before it asks;
+* a count holding counted lines needs **its own name typed back** to confirm;
+* a **copy of the whole database is taken first**, kept with the other backups, so a
+  mistake is recoverable even though the delete is not;
+* if it was the count scanners start on, that setting is cleared rather than left pointing
+  at nothing;
+* the **audit log keeps the record** — who deleted what, how much was in it, and which
+  backup was taken. The log deliberately holds no foreign key to sessions, so it outlives
+  the count it describes.
+
+A refused delete does none of that work: the guards run before anything expensive, so a
+rejected attempt leaves no backup behind.
+
 ### Getting started — Settings
 
 A checklist for a count that is not running yet, worked out from the database rather than

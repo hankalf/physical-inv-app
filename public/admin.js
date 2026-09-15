@@ -85,6 +85,11 @@
     $('fDefaultSession').disabled = s.status === 'closed';
     $('fLayout').value = s.layout || '';
     $('btnCloseSession').textContent = s.status === 'closed' ? 'Reopen session' : 'Close session';
+    // deleting is only offered once a count is closed: an open one may still have scanners on it
+    $('btnDeleteSession').disabled = s.status !== 'closed';
+    $('btnDeleteSession').title = s.status === 'closed'
+      ? 'Delete this count and everything counted against it. This cannot be undone.'
+      : 'Close the count first — an open one may still have scanners posting to it.';
   }
 
   /* ------------------------------------------------------------ progress */
@@ -762,6 +767,43 @@
   /* Creating a count is also where its lists come from: a count with no
      inventory report to compare against is a count nobody can act on. Both
      files are optional here, and Getting started tracks whatever is left. */
+  /* Deleting a count is the only thing in the app that cannot be undone, so it
+     says what will go before it asks, and asks for the name back when there are
+     counted lines to lose. */
+  $('btnDeleteSession').onclick = async () => {
+    const s = sessions.find((x) => x.id === sessionId);
+    if (!s) return;
+    let had;
+    try { had = (await apiJson(`/api/admin/sessions/${sessionId}`)).contents; }
+    catch (err) { return msg($('sessionMsg'), 'err', err.message); }
+
+    const lines = [
+      `${had.counts.toLocaleString()} counted lines`,
+      `${had.bins.toLocaleString()} bins`,
+      `${had.pallets.toLocaleString()} pallets`,
+      `${had.recounts.toLocaleString()} second counts`,
+      `${had.assignments.toLocaleString()} aisle assignments`,
+    ].join('\n  · ');
+    if (!confirm(`Delete "${s.name}" (#${s.id}) and everything under it?\n\n  · ${lines}\n\nThis cannot be undone. The audit log keeps a record that it happened.`)) return;
+
+    let confirmName = '';
+    if (had.counts > 0) {
+      confirmName = prompt(`This count holds ${had.counts.toLocaleString()} counted lines.\n\nType its name exactly to confirm:\n\n${s.name}`, '');
+      if (confirmName === null) return;
+    }
+    try {
+      msg($('sessionMsg'), 'warn', 'Deleting…');
+      const gone = await apiJson(`/api/admin/sessions/${sessionId}`, {
+        method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirmName }),
+      });
+      sessionId = null;
+      await refreshDefaultSession();
+      await loadSessions();
+      msg($('sessionMsg'), 'ok', `Deleted "${gone.name}".`,
+        gone.backup ? `A copy of the database was taken first as ${gone.backup} — Settings → Backups & log.` : 'It held no counted lines.');
+    } catch (err) { msg($('sessionMsg'), 'err', 'Not deleted', err.message); }
+  };
+
   $('btnCreate').onclick = async () => {
     const files = [['bins', $('fNewBins').files[0]], ['pallets', $('fNewPallets').files[0]]].filter(([, f]) => f);
     try {

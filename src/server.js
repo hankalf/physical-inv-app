@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 
 import {
-  db, listSessions, getSession, createSession, lastUsedLayout, publicSession, masterPayload,
+  db, listSessions, getSession, createSession, deleteSession, checkSessionDeletable, sessionContents, lastUsedLayout, publicSession, masterPayload,
   saveCounts, countedPallets, recordSignon, norm,
   listDevices, getDevice, createDevice, updateDevice, deleteDevice, touchDevice,
   enrollDevice, deviceByToken, resetDevice,
@@ -450,6 +450,41 @@ async function handleAdmin(req, res, url, m) {
     });
     audit(actor, 'created session', `#${created.id} "${created.name}" (${created.mode})`, created.id);
     return sendJson(req, res, 200, created);
+  }
+
+  // what a delete would take with it, so the page can say before it asks
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)$/)) && method === 'GET') {
+    const s = getSession(m[1]);
+    if (!s) throw httpError(404, 'session not found');
+    return sendJson(req, res, 200, { ...s, contents: sessionContents(s.id) });
+  }
+
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)$/)) && method === 'DELETE') {
+    const body = await readJson(req).catch(() => ({}));
+    const s = getSession(m[1]);
+    if (!s) throw httpError(404, 'session not found');
+    /* Check it can go BEFORE doing anything expensive: a refused delete should
+       not leave a backup behind, and there were three ways to be refused. */
+    const { had } = checkSessionDeletable(m[1], { confirmName: body.confirmName });
+    /* A count with lines in it is worth a copy of the database first: the
+       delete cannot be undone, and a backup is cheap next to a lost count. */
+    let backup = null;
+    let backupError = null;
+    if (had.counts > 0) {
+      try {
+        backup = makeBackup('before-delete');
+      } catch (err) {
+        // a failed backup must not be silent: it changes what this delete costs
+        console.warn(`[warn] could not back up before deleting session ${s.id}: ${err.message}`);
+        backupError = err.message;
+      }
+    }
+    const gone = deleteSession(m[1], { confirmName: body.confirmName });
+    if (defaultSessionId() === gone.id) setDefaultSessionId(0);
+    audit(actor, 'DELETED a count', `#${gone.id} "${gone.name}" (${gone.mode}) — `
+      + `${had.counts.toLocaleString()} counted lines, ${had.bins.toLocaleString()} bins, ${had.pallets.toLocaleString()} pallets, `
+      + `${had.recounts} second counts${backup ? ` · backed up first as ${backup.name}` : ''}`);
+    return sendJson(req, res, 200, { ...gone, backup: backup ? backup.name : null, backupError });
   }
 
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/setup$/)) && method === 'GET') {

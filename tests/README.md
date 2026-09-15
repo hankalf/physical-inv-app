@@ -24,6 +24,7 @@ runs the suite in a real Chromium, and exits non-zero if anything fails. Nothing
 | `scanner-prompts.mjs` | the editable one-tap reasons the gun offers, and the comments step moving itself on — including that typing or tapping a reason stops the clock and the note is kept |
 | `gun-guidance.mjs` | the next-bin guide walking an aisle 001, 002, 003 and skipping what is already counted, and the count a supervisor makes scanners start on |
 | `gun-layout.mjs` | the configurable counting screen: that the gun really asks in the order chosen, commits on whichever question is last, and that the admin preview is drawn at the device's real pixel size from the handheld's own stylesheet |
+| `delete-session.mjs` | deleting a count: that an open one is refused, an empty one goes cleanly, one holding counted lines needs its name typed back, a backup is taken first, the scanners' default is cleared, the audit record outlives it, and a refused attempt costs nothing |
 | `lockout.mjs` | turning the shared password off: that it is ignored while no admin exists, bites the moment one does, survives a restart, and can always be switched back on. Starts its own servers, since the thing under test is read at startup |
 | `board.mjs` | the office board — what it shows, what it refuses to leak, that it needs no sign-in and survives the server going away — and the printable scanner setup cards |
 

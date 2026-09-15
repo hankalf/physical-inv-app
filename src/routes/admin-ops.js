@@ -1,6 +1,6 @@
 import { db, norm } from '../db.js';
 import { localDate } from '../util/localtime.js';
-import { mkdirSync, readdirSync, statSync, unlinkSync } from 'node:fs';
+import { mkdirSync, readdirSync, statSync, unlinkSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 /*
@@ -51,8 +51,16 @@ export const backupPath = (name) => {
 export function makeBackup(reason = 'manual') {
   mkdirSync(BACKUP_DIR, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const name = `inventory-${localDate()}-${stamp.slice(11)}-${reason}.db`;
-  const target = join(BACKUP_DIR, name);
+  const base = `inventory-${localDate()}-${stamp.slice(11)}-${reason}`;
+  /* The name is only accurate to the second, and VACUUM INTO refuses to write
+     over a file that is already there - so two backups in the same second used
+     to fail rather than both being kept. */
+  let name = `${base}.db`;
+  let target = join(BACKUP_DIR, name);
+  for (let n = 2; existsSync(target) && n < 100; n++) {
+    name = `${base}-${n}.db`;
+    target = join(BACKUP_DIR, name);
+  }
   db.exec(`VACUUM INTO '${target.replace(/'/g, "''")}'`);
   prune();
   const s = statSync(target);
