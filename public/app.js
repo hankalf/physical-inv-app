@@ -272,7 +272,10 @@
     const kinds = new Set(state.sessions.map((s) => s.mode || 'full'));
     $('btnModeFull').hidden = !kinds.has('full');
     $('btnModeCycle').hidden = !kinds.has('cycle');
-    $('modePick').hidden = kinds.size < 2;
+    $('modeBlock').hidden = kinds.size < 2;
+    $('sessionLabel').textContent = kinds.size < 2
+      ? (state.mode === 'cycle' ? 'Cycle count' : 'Count session')
+      : 'Which one';
     if (!kinds.has(state.mode)) state.mode = kinds.has('full') ? 'full' : [...kinds][0] || '';
     $('btnModeFull').classList.toggle('selected', state.mode === 'full');
     $('btnModeCycle').classList.toggle('selected', state.mode === 'cycle');
@@ -302,7 +305,7 @@
     sel.innerHTML = '';
     try {
       const sessions = await api('/api/sessions');
-      if (!sessions.length) { sel.innerHTML = '<option value="">No open sessions on the server</option>'; $('modePick').hidden = true; return; }
+      if (!sessions.length) { sel.innerHTML = '<option value="">No open sessions on the server</option>'; $('modeBlock').hidden = true; return; }
       state.sessions = sessions;
       await metaSet('sessions', sessions);
       renderSessionChoices();

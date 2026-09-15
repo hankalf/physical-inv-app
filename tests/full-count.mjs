@@ -110,6 +110,15 @@ check('Handheld: with no link, first run asks for a scanner ID', true);
 await shot(t0.p, 'hh-device-setup');
 await t0.p.goto(devLink['SCANNER-99']); await t0.p.waitForSelector('#scrDevice.active'); await t0.p.waitForTimeout(400);
 check('Handheld: a removed scanner link is refused', /removed by a supervisor/.test(await t0.T('#deviceMsg')), await t0.T('#deviceMsg'));
+// the Add button must never crowd out the field it sits beside
+await t0.p.fill('#fDeviceId', 'TEMP-01'); await t0.p.click('#btnSaveDevice'); await t0.p.waitForSelector('#scrSignon.active');
+{
+  const box = await t0.p.$eval('#fEmployee', (el) => el.getBoundingClientRect());
+  const btn = await t0.p.$eval('#btnAddEmployee', (el) => el.getBoundingClientRect());
+  check('Sign-on: the clock-in field is usable and Add fits beside it on a 480px screen',
+    box.width > 200 && btn.width > 40 && btn.right <= 481 && box.right <= btn.left,
+    `field ${Math.round(box.width)}px, Add ${Math.round(btn.width)}px ending at ${Math.round(btn.right)}`);
+}
 await t0.ctx.close();
 
 const t1 = await scanner('scanner-01');

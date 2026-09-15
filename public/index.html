@@ -32,13 +32,15 @@
 
   <!-- ---------------- sign-on ---------------- -->
   <section class="screen" id="scrSignon">
-    <label>What are you doing?</label>
-    <div class="row" id="modePick">
-      <button id="btnModeFull" class="ghost">Full count</button>
-      <button id="btnModeCycle" class="ghost">Cycle count</button>
+    <div id="modeBlock">
+      <label>What are you doing?</label>
+      <div class="row" id="modePick">
+        <button id="btnModeFull" class="ghost">Full count</button>
+        <button id="btnModeCycle" class="ghost">Cycle count</button>
+      </div>
     </div>
 
-    <label for="fSession">Which one</label>
+    <label for="fSession" id="sessionLabel">Count session</label>
     <select id="fSession"><option value="">Loading…</option></select>
 
     <label for="fTeam">Team number</label>
@@ -47,7 +49,7 @@
     <label for="fEmployee">Clock In Numbers — scan or type, then Enter</label>
     <div class="row">
       <input id="fEmployee" autocomplete="off" autocapitalize="characters" placeholder="Clock in number">
-      <button id="btnAddEmployee" style="flex:0 0 auto;margin-top:0">Add</button>
+      <button id="btnAddEmployee" class="fit" style="margin-top:0">Add</button>
     </div>
     <div class="chips" id="employeeChips"></div>
     <div class="hint">Everyone on the crew — tap a number to remove it.</div>
