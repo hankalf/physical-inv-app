@@ -116,6 +116,46 @@ await toSettings();
 const aisleRow = clean(await admin.$eval('#aisleTable tbody tr:nth-child(5)', (tr) => tr.innerText));
 check('Settings: aisle table shows both teams in F01 with their levels', /active team 1 \(ABC\), 4 \(DEF\)/.test(aisleRow), aisleRow);
 await toDashboard();
+/* ---- the map: rings, labels, and clicking an aisle ---- */
+await admin.evaluate(() => window.appApi.showSub('map'));
+await admin.waitForTimeout(1200);
+check('Map: every aisle gets a ring coloured by what state it is in',
+  (await admin.$$('#map .aisle-g')).length === 28
+    && new Set(await admin.$$eval('#map .aisle-g .ring', (r) => r.map((x) => x.getAttribute('stroke')))).size >= 2,
+  JSON.stringify(await admin.$$eval('#map .aisle-g', (gs) => {
+    const o = {}; for (const g of gs) { const c = g.querySelector('.ring').getAttribute('stroke'); o[c] = (o[c] || 0) + 1; } return o;
+  })));
+check('Map: an aisle a team is in is ringed blue, one handed back is green',
+  await admin.$eval('#map .aisle-g[data-aisle="F01"] .ring', (r) => r.getAttribute('stroke')) === '#2f81f7',
+  await admin.$eval('#map .aisle-g[data-aisle="F01"] .ring', (r) => r.getAttribute('stroke')));
+check('Map: each aisle is labelled with its code, zone and percentage',
+  (await admin.textContent('#map .aisle-g[data-aisle="F01"] .aisle-label')) === 'F01'
+    && /Frz · \d+%/.test(await admin.textContent('#map .aisle-g[data-aisle="F01"] .aisle-sub')),
+  await admin.textContent('#map .aisle-g[data-aisle="F01"] .aisle-sub'));
+check('Map: no two aisle labels sit on top of each other',
+  (await admin.evaluate(() => {
+    const pills = [...document.querySelectorAll('#map .aisle-g')].map((g) => ({ a: g.dataset.aisle, r: g.querySelector('.label-pill').getBoundingClientRect() }));
+    const hit = [];
+    for (let i = 0; i < pills.length; i++) for (let k = i + 1; k < pills.length; k++) {
+      const x = pills[i].r, y = pills[k].r;
+      if (x.left < y.right - 1 && y.left < x.right - 1 && x.top < y.bottom - 1 && y.top < x.bottom - 1) hit.push(pills[i].a + '/' + pills[k].a);
+    }
+    return hit;
+  })).length === 0);
+await admin.click('#map .aisle-g[data-aisle="F01"]'); await admin.waitForTimeout(700);
+check('Map: clicking an aisle opens its detail, broken down by level',
+  !(await admin.$eval('#mapPanel', (e) => e.hidden))
+    && /Freezer – Aisle F01/.test(await admin.textContent('#mapPanelTitle'))
+    && (await admin.$$('#mapPanelLevels tbody tr')).length === 6,
+  clean(await admin.textContent('#mapPanelPct')));
+check('Map: the detail says who is on it and which block it shares',
+  /Team 1/.test(await admin.textContent('#mapPanelWho')) && /block/.test(await admin.textContent('#mapPanelWho')),
+  clean(await admin.textContent('#mapPanelWho')).slice(0, 90));
+check('Map: the selected aisle is ringed heavily so you can see which one it is',
+  await admin.$eval('#map .aisle-g.selected .ring', (r) => r.getAttribute('stroke-width')) === '4');
+await admin.keyboard.press('Escape'); await admin.waitForTimeout(400);
+check('Map: Escape closes the detail again', await admin.$eval('#mapPanel', (e) => e.hidden));
+
 check('Admin: map badge for two teams in one aisle reads T1+T4', await admin.$$eval('#map text.team', (t) => t.some((x) => x.textContent === 'T1+T4')), (await admin.$$eval('#map text.team', (t) => t.map((x) => x.textContent))).join(' '));
 
 const api = await enrolScanner('SUITE-API', { 'content-type': 'application/json', authorization: 'Bearer ' + (await admin.evaluate(() => sessionStorage.getItem('admToken'))) });

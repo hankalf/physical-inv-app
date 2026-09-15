@@ -226,8 +226,15 @@ with the same message.
 
 ### 5. Put the map on the real floor plan — Dashboard
 
-The **Warehouse map** card draws every bay as a cell coloured by how much of it has a
-count. Each cell is one **bay** — 4 pallet positions per level, odd in front (001, 003) and even
+The **Map** tab draws every bay as a cell coloured by how much of it has a
+count, and rings each aisle in the colour of its state — grey not started, purple queued
+to a team, blue a team is in it, amber part counted, green handed back as complete. Each
+ring carries a label in the gutter: the aisle code, its zone and how far along it is.
+
+**Click an aisle** and a panel opens under the map: bins counted against bins total, a
+breakdown by level A–F, which team is on it and which racking block it shares, and two
+buttons — print a count sheet for just that aisle, or jump to Team plan with the aisle
+already filled in. Escape or **Close** puts it away. Each cell is one **bay** — 4 pallet positions per level, odd in front (001, 003) and even
 directly behind them (002, 004) — drawn as two cells, the Front face on the aisle side and
 the Back face behind it. Pick a level (A–F) above the map to see one level alone — useful when two crews
 share an aisle on different levels. Hovering a cell names the aisle, the face, the

@@ -201,7 +201,12 @@ export function mapData(sessionId) {
     )
     .all(id);
   return {
-    aisles: aisleOverview(id).map((a) => ({ aisle: a.aisle, block: a.block, activeTeam: a.active_team, queuedTeams: a.queued_teams, done: a.done_count > 0 })),
+    aisles: aisleOverview(id).map((a) => ({
+      aisle: a.aisle, block: a.block, zone: a.zone || '',
+      bins: a.bins, counted: a.bins_counted, lines: a.pallets_counted,
+      activeTeam: a.active_team, activeDetail: a.active_detail,
+      queuedTeams: a.queued_teams, done: a.done_count > 0,
+    })),
     bins: bins.map((b) => [b.code, b.aisle, b.lines, b.flagged]),
   };
 }

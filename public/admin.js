@@ -353,7 +353,9 @@
   function renderBlueprint(svg, data, layout) {
     svg.classList.add('blueprint');
     const W = layout.width, H = layout.height;
-    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    // The drawing runs to its own edge, so labels drawn over it fight the print.
+    // Give them a gutter of their own to the left instead.
+    svg.setAttribute('viewBox', `${-GUTTER} 0 ${W + GUTTER} ${H}`);
     svg.removeAttribute('width'); svg.removeAttribute('height');
     svg.appendChild(svgEl('image', { href: layout.image, x: 0, y: 0, width: W, height: H, opacity: 0.7 }));
 
@@ -415,19 +417,7 @@
           }
         }
       });
-      const [x, y, w, h] = segs[0];
-      const lx = horizontal ? x - 4 : x + w / 2, ly = horizontal ? y + h / 2 + 4 : y - 6;
-      const label = svgEl('text', { x: lx, y: ly, 'text-anchor': horizontal ? 'end' : 'middle', class: 'aisle-label' });
-      label.textContent = a.aisle;
-      svg.appendChild(label);
-      if (a.activeTeam || a.done) {
-        const bw = 26, bh = 14;
-        const bx = horizontal ? x + 2 : x + w / 2 - bw / 2, by = horizontal ? y + h / 2 - bh / 2 : y + 2;
-        svg.appendChild(svgEl('rect', { x: bx, y: by, width: bw, height: bh, rx: 7, fill: a.activeTeam ? '#2f81f7' : '#2ea043' }));
-        const t = svgEl('text', { x: bx + bw / 2, y: by + bh - 3, 'text-anchor': 'middle', class: 'team' });
-        t.textContent = a.activeTeam ? String(a.activeTeam).split(',').map((t) => 'T' + t.trim()).join('+') : '✓';
-        svg.appendChild(t);
-      }
+      drawAisleFurniture(svg, a, spec, segs, horizontal);
     }
     // Areas with no place on the drawing (doors, staging, ...) are summarised, not lost.
     const missing = [...byAisle.entries()].filter(([k]) => !placed.has(k)).map(([k, bays]) => {
@@ -437,6 +427,175 @@
     });
     return { counted, total, missing };
   }
+
+
+  /* --------------------------------------------------- aisle rings and labels
+     A ring round each aisle says at a glance what state it is in, before you
+     read a single cell: green done, blue a team is in it, amber part-counted,
+     grey untouched. The label carries the zone, the code and the percentage,
+     and the whole thing is clickable. */
+  const RING = {
+    done:    { stroke: '#2ea043', label: 'complete' },
+    active:  { stroke: '#2f81f7', label: 'team counting' },
+    partial: { stroke: '#d29922', label: 'part counted' },
+    queued:  { stroke: '#8957e5', label: 'queued to a team' },
+    idle:    { stroke: '#8b949e', label: 'not started' },
+  };
+  const ringState = (a) => (a.done ? 'done' : a.activeTeam ? 'active'
+    : a.counted > 0 ? 'partial' : a.queuedTeams ? 'queued' : 'idle');
+  const GUTTER = 46;   // room to the left of the drawing for the aisle labels
+  const zoneShort = (z) => (/dry/i.test(z) ? 'Dry' : /freez/i.test(z) ? 'Frz' : titleCase(z).slice(0, 4));
+
+  let selectedAisle = '';
+
+  function drawAisleFurniture(svg, a, spec, segs, horizontal) {
+    const state = ringState(a);
+    const ring = RING[state];
+    const pct = a.bins ? Math.round((a.counted / a.bins) * 100) : 0;
+    const g = svgEl('g', { class: 'aisle-g', 'data-aisle': a.aisle });
+
+    // the ring: one rounded outline per segment, so a split aisle reads as one run
+    for (const [x, y, w, h] of segs) {
+      g.appendChild(svgEl('rect', {
+        x: x - 1.5, y: y - 1.5, width: w + 3, height: h + 3, rx: 4,
+        fill: 'none', stroke: ring.stroke, 'stroke-width': 2,
+        class: 'ring', opacity: state === 'idle' ? 0.55 : 0.95,
+      }));
+    }
+    // a soft fill behind the ring marks the selected aisle without hiding the drawing
+    for (const [x, y, w, h] of segs) {
+      g.appendChild(svgEl('rect', {
+        x: x - 1.5, y: y - 1.5, width: w + 3, height: h + 3, rx: 4,
+        fill: ring.stroke, opacity: 0, class: 'ring-fill',
+      }));
+    }
+
+    const [x, y, w, h] = segs[0];
+
+    /* The label block: aisle code, then zone and percentage under it. Horizontal
+       aisles get the left gutter; vertical ones sit above their own head, where
+       there is room. A pill behind it keeps it readable over the print. */
+    // Vertical aisles stand side by side, so their labels are narrower and every
+    // other one is lifted, or A01..A04 would sit on top of each other.
+    const pw = horizontal ? GUTTER - 4 : 34;
+    const lift = horizontal ? 0 : (aisleNumber(a.aisle) % 2 ? 0 : 22);
+    const cx = horizontal ? -GUTTER + 4 : x + w / 2;
+    const cy = (horizontal ? y + h / 2 : y - 20) - lift;
+    const anchor = horizontal ? 'start' : 'middle';
+    const pill = svgEl('rect', {
+      x: horizontal ? -GUTTER + 1 : cx - pw / 2, y: cy - 10, width: pw, height: 21, rx: 4,
+      fill: '#0b0e14', opacity: 0.82, stroke: ring.stroke, 'stroke-width': 1, class: 'label-pill',
+    });
+    g.appendChild(pill);
+    const code = svgEl('text', { x: cx, y: cy + 0.5, 'text-anchor': anchor, class: 'aisle-label' });
+    code.textContent = a.aisle;
+    g.appendChild(code);
+    const sub = svgEl('text', { x: cx, y: cy + 8.5, 'text-anchor': anchor, class: 'aisle-sub', fill: ring.stroke });
+    sub.textContent = a.bins ? `${a.zone ? zoneShort(a.zone) + ' · ' : ''}${pct}%` : (a.zone ? zoneShort(a.zone) : '');
+    g.appendChild(sub);
+
+    // the badge: who is in it, or a tick when it is handed back
+    if (a.activeTeam || a.done || a.queuedTeams) {
+      const teams = a.activeTeam ? String(a.activeTeam).split(',').map((t) => 'T' + t.trim()).join('+')
+        : a.done ? '✓' : String(a.queuedTeams).split(',').map((t) => 'T' + t.trim().split(' ')[0]).join('+');
+      const bw = Math.max(20, teams.length * 7 + 8), bh = 14;
+      const bx = horizontal ? x + 3 : x + w / 2 - bw / 2;
+      const by = horizontal ? y + h / 2 - bh / 2 : y + 3;
+      g.appendChild(svgEl('rect', {
+        x: bx, y: by, width: bw, height: bh, rx: 7,
+        fill: a.activeTeam ? '#2f81f7' : a.done ? '#2ea043' : '#30363d',
+        stroke: a.queuedTeams && !a.activeTeam && !a.done ? '#8957e5' : 'none', 'stroke-width': 1,
+      }));
+      const t = svgEl('text', { x: bx + bw / 2, y: by + bh - 3.5, 'text-anchor': 'middle', class: 'team' });
+      t.textContent = teams;
+      g.appendChild(t);
+    }
+
+    const tip = svgEl('title');
+    tip.textContent = `${aisleLabel(a.aisle, a.zone)} — ${ring.label}\n`
+      + `${a.counted.toLocaleString()} of ${a.bins.toLocaleString()} bins counted (${pct}%)\n`
+      + (a.activeTeam ? `Team ${a.activeDetail} counting now\n` : '')
+      + (a.queuedTeams ? `Queued: team ${a.queuedTeams}\n` : '')
+      + 'Click for the detail';
+    g.appendChild(tip);
+    g.addEventListener('click', () => selectAisle(a.aisle === selectedAisle ? '' : a.aisle));
+    svg.appendChild(g);
+  }
+
+  /** Clicking an aisle opens the panel under the map and rings it heavily. */
+  function selectAisle(aisle) {
+    selectedAisle = aisle;
+    for (const g of document.querySelectorAll('#map .aisle-g')) {
+      const on = !!aisle && g.dataset.aisle === aisle;
+      g.classList.toggle('selected', on);
+      for (const f of g.querySelectorAll('.ring-fill')) f.setAttribute('opacity', on ? 0.18 : 0);
+      for (const r of g.querySelectorAll('.ring')) r.setAttribute('stroke-width', on ? 4 : 2);
+    }
+    renderAislePanel();
+  }
+
+  function renderAislePanel() {
+    const box = $('mapPanel');
+    if (!selectedAisle) { box.hidden = true; return; }
+    const a = (lastMap.aisles || []).find((x) => x.aisle === selectedAisle);
+    if (!a) { box.hidden = true; return; }
+    box.hidden = false;
+    const pct = a.bins ? Math.round((a.counted / a.bins) * 100) : 0;
+    const state = ringState(a);
+
+    $('mapPanelTitle').textContent = aisleLabel(a.aisle, a.zone);
+    const chip = $('mapPanelState');
+    chip.textContent = RING[state].label;
+    chip.style.color = RING[state].stroke;
+    chip.style.borderColor = RING[state].stroke;
+
+    $('mapPanelBar').style.width = pct + '%';
+    $('mapPanelBar').style.background = RING[state].stroke;
+    $('mapPanelPct').textContent = `${a.counted.toLocaleString()} of ${a.bins.toLocaleString()} bins · ${pct}%`;
+
+    // per level, from the bins the map already has
+    const levels = new Map();
+    for (const [code, ais, lines] of lastMap.bins) {
+      if (ais !== a.aisle) continue;
+      const lv = parseBinCode(code).level || '—';
+      const row = levels.get(lv) || { total: 0, counted: 0 };
+      row.total += 1;
+      if (lines > 0) row.counted += 1;
+      levels.set(lv, row);
+    }
+    table($('mapPanelLevels'),
+      [{ label: 'Level' }, { label: 'Bins', num: true }, { label: 'Counted', num: true }, { label: '' }],
+      [...levels.entries()].sort((x, y) => natural(x[0], y[0])),
+      ([lv, r]) => {
+        const tr = document.createElement('tr');
+        tr.append(cell(lv), cell(r.total, 'num'), cell(r.counted, 'num'));
+        const td = document.createElement('td');
+        const bar = document.createElement('div'); bar.className = 'bar';
+        const i = document.createElement('i'); i.style.width = (r.total ? Math.round((r.counted / r.total) * 100) : 0) + '%';
+        bar.appendChild(i); td.appendChild(bar); tr.appendChild(td);
+        return tr;
+      }, 'No bins in this aisle.');
+
+    const who = [];
+    if (a.activeTeam) who.push(`Team ${a.activeDetail} is counting it now.`);
+    if (a.queuedTeams) who.push(`Queued for team ${a.queuedTeams}.`);
+    if (a.done) who.push('Handed back as complete.');
+    if (!who.length) who.push('No team has been queued onto this aisle yet.');
+    who.push(`Racking block ${a.block || a.aisle} — only one team works a block at a time.`);
+    $('mapPanelWho').textContent = who.join(' ');
+
+    $('mapPanelSheet').onclick = () => {
+      const q = new URLSearchParams({ aisle: a.aisle, t: api.token });
+      window.open(`/api/admin/sessions/${sessionId}/print/count-sheet?${q}`, '_blank');
+    };
+    $('mapPanelQueue').onclick = () => {
+      api.showSub('teams');
+      $('fAssignAisles').value = a.aisle;
+      $('fAssignTeam').focus();
+    };
+  }
+  $('mapPanelClose').onclick = () => selectAisle('');
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && selectedAisle) selectAisle(''); });
 
   /** Fallback when no drawing is chosen: aisles as columns, blocks touching. */
   function renderSchematic(svg, data) {
@@ -527,8 +686,11 @@
     }
   }
 
+  let lastMap = { aisles: [], bins: [] };
+
   async function refreshMap() {
     const data = await apiJson(`/api/admin/sessions/${sessionId}/map`);
+    lastMap = data;
     const svg = $('map');
     svg.innerHTML = '';
     const levels = [...new Set(data.bins.map(([code]) => parseBinCode(code).level).filter(Boolean))].sort();
@@ -543,6 +705,8 @@
       return;
     }
     const r = data.layout ? renderBlueprint(svg, data, data.layout) : renderSchematic(svg, data);
+    if (selectedAisle && !data.aisles.some((a) => a.aisle === selectedAisle)) selectedAisle = '';
+    selectAisle(selectedAisle);   // redraw keeps the selection
     $('mapNote').textContent = `${mapLevel ? 'Level ' + mapLevel + ': ' : ''}${r.counted.toLocaleString()} of ${r.total.toLocaleString()} bins have a count. Each cell is a bay; hover for the bins in it.` +
       (r.missing.length ? ` Not on the drawing — ${r.missing.join(' · ')}.` : '');
   }
