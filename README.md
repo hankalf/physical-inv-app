@@ -142,7 +142,9 @@ with the same message.
 ### 5. Put the map on the real floor plan
 
 The **Warehouse map** card draws every bay as a cell coloured by how much of it has a
-count. Pick a level (A–F) above the map to see one level alone — useful when two crews
+count. Each cell is one **bay** — 4 pallet positions per level, odd in front (001, 003) and even
+directly behind them (002, 004) — drawn as two cells, the Front face on the aisle side and
+the Back face behind it. Pick a level (A–F) above the map to see one level alone — useful when two crews
 share an aisle on different levels. Hovering a cell names the aisle, the face, the
 position numbers and levels in it, and lists which bins are counted and which are still
 open. With no drawing chosen it lays aisles out schematically. Pick a **Map drawing**
@@ -157,7 +159,26 @@ left to right from 001, each bay split into its Front and Back face); **Pair fro
 racking blocks. To move an aisle, edit its box in the JSON; to add a site, add a pair
 of files.
 
-### 6. Watch, then export
+### 6. Second counts
+
+The pallet list *is* the inventory report, and the app compares every first count against
+it as it lands. When a line disagrees — quantity differs, pallet in an unexpected bin, not
+on the report, counted twice — a **second count** of that bin is raised automatically; when
+an aisle is handed back, expected pallets nobody saw raise one too. A supervisor can also
+request one by bin or pallet ID, from the form or the **Recount** button on a pallet-report
+row, and **Raise from all variances now** sweeps the whole report. *Auto second counts* can
+be switched off per session.
+
+Rules: the team that did the first count is never offered the second; the counter is told
+the bin and the reason type but not the numbers (the second count is blind); and lines from
+a second count replace the first for that bin in the report, which shows both figures
+("1st count 30, counted 48") and marks the row *2nd count*.
+
+On the gun, second counts appear on the assignment screen ("5 bins to go back to"). Each
+one shows the bin, where it is, and the reason; the counter scans every pallet in that bin
+(or marks it empty) and taps **Bin done**. Completions queue offline like everything else.
+
+### 7. Watch, then export
 
 Progress by team (scanner, employees, active aisle, last scan), by aisle, and a pallet
 report with these statuses:
@@ -176,7 +197,7 @@ flags, comments), exceptions only, and uncounted bins.
 
 ---
 
-### 7. Register the scanners
+### 8. Register the scanners
 
 The **Scanners** card lists every handheld. Add one by name (`SCANNER-05`) and it gets a
 unique link, `https://<server>/?d=<id>`. On the device, open that link in Chrome once —
@@ -255,6 +276,8 @@ Handheld (no auth — the team and scanner ID identify the counter):
 | `GET` | `/api/sessions/:id/team-status?team=` | Current aisle, bins, queue, or who the team is waiting on |
 | `POST` | `/api/sessions/:id/assignments/:aid/complete` | Team finishes an aisle |
 | `GET` | `/api/sessions/:id/counted-pallets?since=` | Pallets counted so far, for cross-device duplicate checks |
+| `GET` | `/api/sessions/:id/recounts?team=` | Second counts a team may do |
+| `POST` | `/api/sessions/:id/recounts/:rid/take` · `/done` | Take / finish one |
 | `POST` | `/api/sessions/:id/counts` | Batch upload; idempotent on `clientId` |
 | `POST` | `/api/sessions/:id/void` | Void a line |
 
@@ -274,9 +297,12 @@ Supervisor (`Authorization: Bearer <token>` from `POST /api/admin/login`):
 | `POST` | `/api/admin/sessions/:id/aisles/auto-block` | Pair aisles |
 | `GET`/`POST` | `/api/admin/sessions/:id/assignments` | List / queue aisles for a team |
 | `POST`/`DELETE` | `/api/admin/sessions/:id/assignments/:aid` | Start, complete, release, remove |
+| `GET`/`POST` | `/api/admin/sessions/:id/recounts` | List / request second counts |
+| `POST` | `/api/admin/sessions/:id/recounts/generate` | Raise from every current variance |
+| `POST`/`DELETE` | `/api/admin/sessions/:id/recounts/:rid` | Assign, finish, reopen, remove |
 | `GET` | `/api/admin/sessions/:id/pallets?only=exceptions` | Pallet report |
 | `GET` | `/api/admin/sessions/:id/uncounted` | Bins with no count |
-| `GET` | `/api/admin/sessions/:id/export/{pallets,counts,exceptions,uncounted}.csv` | Exports |
+| `GET` | `/api/admin/sessions/:id/export/{pallets,counts,exceptions,uncounted,recounts}.csv` | Exports |
 
 ---
 
@@ -291,7 +317,6 @@ exposed publicly, put it behind a VPN or an authenticating proxy, and set a real
 
 ## Not built yet
 
-* recount pass (re-sending flagged pallets to a team as a second count)
 * `.xlsx` upload (save as CSV for now)
 * live ERP/WMS integration (v1 is CSV in, CSV out)
 * multi-warehouse support in one instance

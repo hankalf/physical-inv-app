@@ -1,4 +1,4 @@
-import { db } from '../db.js';
+import { db, LIVE } from '../db.js';
 import { aisleOverview } from './assignments.js';
 
 export function progress(sessionId) {
@@ -56,8 +56,13 @@ export function progress(sessionId) {
     )
     .all(id);
 
+  const recounts = db.prepare(`SELECT
+      SUM(CASE WHEN status != 'done' THEN 1 ELSE 0 END) AS open, SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) AS done
+      FROM recounts WHERE session_id = ?`).get(id);
   return {
     ...totals,
+    recounts_open: recounts.open || 0,
+    recounts_done: recounts.done || 0,
     bins_total: binsTotal,
     pallets_total: palletsTotal,
     exceptions,
@@ -73,16 +78,21 @@ export function palletReport(sessionId) {
   const rows = db
     .prepare(
       `WITH counted AS (
-         SELECT pallet_id,
+         SELECT c.pallet_id,
                 COUNT(*) AS times_counted,
-                SUM(qty) AS counted_qty,
-                GROUP_CONCAT(DISTINCT location_code) AS found_locations,
-                GROUP_CONCAT(DISTINCT team) AS teams,
-                MAX(scanned_at) AS last_scan,
-                GROUP_CONCAT(comments, ' | ') AS comments
-           FROM counts
-          WHERE session_id = ? AND voided = 0 AND empty_bin = 0
-          GROUP BY pallet_id
+                SUM(c.qty) AS counted_qty,
+                GROUP_CONCAT(DISTINCT c.location_code) AS found_locations,
+                GROUP_CONCAT(DISTINCT c.team) AS teams,
+                MAX(c.scanned_at) AS last_scan,
+                GROUP_CONCAT(c.comments, ' | ') AS comments,
+                MAX(c.pass) AS max_pass
+           FROM counts c
+          WHERE c.session_id = ? AND ${LIVE('c')} AND c.empty_bin = 0
+          GROUP BY c.pallet_id
+       ),
+       firstpass AS (
+         SELECT pallet_id, SUM(qty) AS first_qty, GROUP_CONCAT(DISTINCT location_code) AS first_locations
+           FROM counts WHERE session_id = ? AND voided = 0 AND pass = 1 AND empty_bin = 0 GROUP BY pallet_id
        ),
        keys AS (
          SELECT pallet_id FROM pallets WHERE session_id = ?
@@ -92,14 +102,17 @@ export function palletReport(sessionId) {
        SELECT k.pallet_id,
               p.sku, p.description, p.uom,
               p.expected_qty, p.expected_location,
-              c.times_counted, c.counted_qty, c.found_locations, c.teams, c.last_scan, c.comments,
+              c.times_counted, c.counted_qty, c.found_locations, c.teams, c.last_scan, c.comments, c.max_pass,
+              f.first_qty, f.first_locations,
+              (SELECT COUNT(*) FROM recounts r WHERE r.session_id = ? AND r.pallet_id = k.pallet_id AND r.status != 'done') AS open_recounts,
               CASE WHEN p.pallet_id IS NULL THEN 1 ELSE 0 END AS not_in_master
          FROM keys k
          LEFT JOIN pallets p ON p.session_id = ? AND p.pallet_id = k.pallet_id
          LEFT JOIN counted c ON c.pallet_id = k.pallet_id
+         LEFT JOIN firstpass f ON f.pallet_id = k.pallet_id
         ORDER BY k.pallet_id`
     )
-    .all(id, id, id);
+    .all(id, id, id, id, id);
 
   return rows.map((r) => {
     const counted = r.times_counted > 0;
@@ -130,6 +143,9 @@ export function palletReport(sessionId) {
       teams: r.teams || '',
       comments: r.comments || '',
       last_scan: r.last_scan || '',
+      recounted: r.max_pass === 2 ? 1 : 0,
+      first_count_qty: r.max_pass === 2 ? (r.first_qty ?? '') : '',
+      open_recounts: r.open_recounts || 0,
       status,
     };
   });
@@ -157,7 +173,7 @@ export function rawCounts(sessionId) {
               COALESCE(p.description, '') AS description,
               c.comments, c.team, c.employees, c.device_id,
               c.unknown_pallet, c.unknown_location, c.off_assignment, c.duplicate_pallet, c.empty_bin,
-              c.override_reason, c.voided, c.scanned_at, c.received_at
+              c.pass, c.recount_id, c.override_reason, c.voided, c.scanned_at, c.received_at
          FROM counts c
          LEFT JOIN pallets p ON p.session_id = c.session_id AND p.pallet_id = c.pallet_id
         WHERE c.session_id = ?

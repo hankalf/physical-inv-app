@@ -232,6 +232,7 @@
     $('fPalletMode').value = s.pallet_mode;
     $('fGuided').checked = !!s.guided;
     $('fAskComments').checked = !!s.ask_comments;
+    $('fAutoRecount').checked = !!s.auto_recount;
     $('fLayout').value = s.layout || '';
     $('btnCloseSession').textContent = s.status === 'closed' ? 'Reopen session' : 'Close session';
   }
@@ -259,6 +260,7 @@
       [p.teams, 'Teams counting'],
       [p.devices, 'Scanners'],
       [p.exceptions, 'Flagged lines'],
+      [`${p.recounts_open} open / ${p.recounts_done} done`, 'Second counts'],
     ]) {
       const d = document.createElement('div');
       d.className = 'stat';
@@ -384,19 +386,80 @@
     }
   }
 
+  /* ------------------------------------------------------------ second counts */
+  async function refreshRecounts() {
+    const rows = await apiJson(`/api/admin/sessions/${sessionId}/recounts`);
+    const open = rows.filter((r) => r.status !== 'done').length;
+    $('recountSub').textContent = rows.length ? `${open} open · ${rows.length - open} done` : '';
+    table($('recountTable'),
+      [{ label: 'Bin' }, { label: 'Pallet' }, { label: 'Reason' }, { label: 'Detail' }, { label: 'Source' }, { label: '1st team' },
+       { label: 'Team' }, { label: 'Status' }, { label: '1st count' }, { label: '2nd count' }, { label: '' }],
+      rows,
+      (r) => {
+        const tr = document.createElement('tr');
+        tr.append(cell(r.bin), cell(r.pallet_id || '—'), cell(r.reason), cell(r.detail || '', 'wrap'), cell(r.source), cell(r.first_team || '—'));
+        const tdTeam = document.createElement('td');
+        const inp = document.createElement('input'); inp.className = 'sm'; inp.style.width = '60px'; inp.value = r.team || ''; inp.placeholder = 'any';
+        inp.title = 'Assign to a team and press Enter; blank = any team (except the first-count team)';
+        inp.onkeydown = async (e) => { if (e.key !== 'Enter') return; try { await postJson(`/api/admin/sessions/${sessionId}/recounts/${r.id}`, { team: inp.value }); await refreshRecounts(); } catch (err) { msg($('recountMsg'), 'err', err.message); } };
+        tdTeam.appendChild(inp); tr.appendChild(tdTeam);
+        const tdSt = document.createElement('td'); tdSt.appendChild(tag(r.status)); tr.appendChild(tdSt);
+        tr.append(cell(r.first_result || (r.first_lines ? '' : 'nothing'), 'wrap'), cell(r.second_result || '', 'wrap'));
+        const tdBtn = document.createElement('td');
+        const act = (label, body, method = 'POST') => {
+          const b = document.createElement('button'); b.className = 'sm ghost'; b.textContent = label; b.style.marginRight = '4px';
+          b.onclick = async () => { try { await apiJson(`/api/admin/sessions/${sessionId}/recounts/${r.id}`, { method, headers: { 'content-type': 'application/json' }, body: body && JSON.stringify(body) }); await refreshAll(); } catch (err) { msg($('recountMsg'), 'err', err.message); } };
+          return b;
+        };
+        if (r.status !== 'done') tdBtn.appendChild(act('done', { status: 'done' }));
+        else tdBtn.appendChild(act('reopen', { status: 'open' }));
+        tdBtn.appendChild(act('✕', null, 'DELETE'));
+        tr.appendChild(tdBtn);
+        return tr;
+      }, 'No second counts yet.');
+  }
+
+  $('btnRecAdd').onclick = async () => {
+    if (!needSession($('recountMsg'))) return;
+    try {
+      const r = await postJson(`/api/admin/sessions/${sessionId}/recounts`, { bin: $('fRecBin').value, palletId: $('fRecPallet').value, note: $('fRecNote').value, team: $('fRecTeam').value });
+      msg($('recountMsg'), r.created ? 'ok' : 'warn', r.created ? 'Second count requested.' : 'That bin already has an open second count.');
+      $('fRecBin').value = ''; $('fRecPallet').value = ''; $('fRecNote').value = '';
+      await refreshAll();
+    } catch (err) { msg($('recountMsg'), 'err', err.message); }
+  };
+  $('btnRecGenerate').onclick = async () => {
+    if (!needSession($('recountMsg'))) return;
+    try {
+      const r = await postJson(`/api/admin/sessions/${sessionId}/recounts/generate`, {});
+      msg($('recountMsg'), 'ok', `Raised ${r.created} second count(s) from ${r.considered} pallet(s) that disagree with the report.`);
+      await refreshAll();
+    } catch (err) { msg($('recountMsg'), 'err', err.message); }
+  };
+  $('btnExportRecounts').onclick = () => download(`/api/admin/sessions/${sessionId}/export/recounts.csv`, `second-counts-session-${sessionId}.csv`);
+
   /* ------------------------------------------------------------ pallet report */
   async function refreshPallets() {
     const only = $('fOnlyExceptions').checked ? '&only=exceptions' : '';
     const data = await apiJson(`/api/admin/sessions/${sessionId}/pallets?limit=500${only}`);
     table($('palletTable'),
-      [{ label: 'Pallet' }, { label: 'SKU' }, { label: 'Description' }, { label: 'Expected', num: true }, { label: 'Counted', num: true },
-       { label: 'Expected bin' }, { label: 'Found in' }, { label: 'Team' }, { label: 'Comments' }, { label: 'Status' }],
+      [{ label: 'Pallet' }, { label: 'SKU' }, { label: 'Description' }, { label: 'Expected', num: true }, { label: '1st count', num: true }, { label: 'Counted', num: true },
+       { label: 'Expected bin' }, { label: 'Found in' }, { label: 'Team' }, { label: 'Comments' }, { label: 'Status' }, { label: '' }],
       data.rows,
       (r) => {
         const tr = document.createElement('tr');
-        tr.append(cell(r.pallet_id), cell(r.sku), cell(r.description, 'wrap'), cell(r.expected_qty, 'num'), cell(r.counted_qty, 'num'),
+        tr.append(cell(r.pallet_id), cell(r.sku), cell(r.description, 'wrap'), cell(r.expected_qty, 'num'), cell(r.recounted ? r.first_count_qty : '', 'num'), cell(r.counted_qty, 'num'),
           cell(r.expected_location), cell(r.found_location), cell(r.teams), cell(r.comments, 'wrap'));
-        const td = document.createElement('td'); td.appendChild(tag(r.status)); tr.appendChild(td);
+        const td = document.createElement('td'); td.appendChild(tag(r.status));
+        if (r.recounted) { td.append(' '); const t2 = tag('2nd'); t2.className = 'tag MATCH'; t2.textContent = '2nd count'; td.appendChild(t2); }
+        tr.appendChild(td);
+        const tdBtn = document.createElement('td');
+        if (r.status !== 'MATCH' && !r.open_recounts) {
+          const b = document.createElement('button'); b.className = 'sm ghost'; b.textContent = 'Recount';
+          b.onclick = async () => { try { await postJson(`/api/admin/sessions/${sessionId}/recounts`, { palletId: r.pallet_id, note: `from pallet report: ${r.status}` }); await refreshAll(); } catch (err) { alert(err.message); } };
+          tdBtn.appendChild(b);
+        } else if (r.open_recounts) tdBtn.append('recount pending');
+        tr.appendChild(tdBtn);
         return tr;
       }, 'No pallets to show.');
     $('palletNote').textContent = data.total > data.rows.length
@@ -461,7 +524,8 @@
     const done = parsed.filter((x) => x.counted).map((x) => x.code).sort(natural);
     const open = parsed.filter((x) => !x.counted).map((x) => x.code).sort(natural);
     return [
-      `${aisleLabel(aisle, zoneByAisle.get(aisle))}${face ? ` — ${face === 'front' ? 'Front' : 'Back'} face` : ''}, bins ${positions.join(' & ')}${lv ? ' · ' + lv : ''}`,
+      `${aisleLabel(aisle, zoneByAisle.get(aisle))} · Bay ${bay}${face ? ` · ${face === 'front' ? 'FRONT' : 'BACK'}` : ''}${lv ? ' · ' + lv : ''}`,
+      `Position${positions.length > 1 ? 's' : ''} ${positions.join(', ')}`,
       `${b.counted} of ${b.bins.length} counted${b.flagged ? ` · ${b.flagged} flagged` : ''}`,
       `Counted: ${list(done)}`,
       `Still to count: ${list(open)}`,
@@ -643,7 +707,7 @@
 
   async function refreshAll() {
     if (!sessionId) return;
-    await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap()]);
+    await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts()]);
   }
 
   async function download(path, filename) {
@@ -677,7 +741,7 @@
     try {
       await postJson(`/api/admin/sessions/${sessionId}/settings`, {
         palletMode: $('fPalletMode').value, guided: $('fGuided').checked, askComments: $('fAskComments').checked,
-        layout: $('fLayout').value,
+        autoRecount: $('fAutoRecount').checked, layout: $('fLayout').value,
       });
       msg($('sessionMsg'), 'ok', 'Settings saved. Scanners pick them up at their next sign-on.');
       await loadSessions();

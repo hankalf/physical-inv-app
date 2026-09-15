@@ -16,6 +16,10 @@ import {
   setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks,
 } from './routes/assignments.js';
 import { progress, palletReport, uncountedBins, rawCounts, exceptions, mapData } from './routes/reports.js';
+import {
+  listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
+  tasksForTeam, takeRecount, finishRecount, updateRecount, deleteRecount,
+} from './routes/recounts.js';
 import { toCsv } from './util/csv.js';
 import { listLayouts, loadLayout } from './util/layouts.js';
 
@@ -195,6 +199,7 @@ async function handleHandheld(req, res, url, m) {
     if (!row) throw httpError(404, 'assignment not found');
     if (row.team !== norm(body.team)) throw httpError(403, 'that aisle belongs to another team');
     setAssignmentStatus(m[1], m[2], 'done');
+    autoAfterAisle(m[1], row.aisle, row.levels, row.team);
     return sendJson(req, res, 200, teamStatus(m[1], body.team));
   }
 
@@ -208,7 +213,25 @@ async function handleHandheld(req, res, url, m) {
     const body = await readJson(req);
     const rows = Array.isArray(body) ? body : body.counts;
     if (!Array.isArray(rows)) throw httpError(400, 'expected an array of counts');
-    return sendJson(req, res, 200, saveCounts(m[1], rows));
+    const result = saveCounts(m[1], rows);
+    if (result.firstCountPallets.length) result.recounts = autoAfterCounts(m[1], result.firstCountPallets);
+    return sendJson(req, res, 200, result);
+  }
+
+  // --- second counts, from the gun
+  if ((m = p.match(/^\/api\/sessions\/(\d+)\/recounts$/)) && method === 'GET') {
+    if (!getSession(m[1])) throw httpError(404, 'session not found');
+    return sendJson(req, res, 200, { tasks: tasksForTeam(m[1], url.searchParams.get('team') || '') });
+  }
+  if ((m = p.match(/^\/api\/sessions\/(\d+)\/recounts\/(\d+)\/take$/)) && method === 'POST') {
+    openSession(m[1]);
+    const body = await readJson(req);
+    return sendJson(req, res, 200, takeRecount(m[1], m[2], body.team));
+  }
+  if ((m = p.match(/^\/api\/sessions\/(\d+)\/recounts\/(\d+)\/done$/)) && method === 'POST') {
+    openSession(m[1]);
+    const body = await readJson(req);
+    return sendJson(req, res, 200, finishRecount(m[1], m[2], body.team));
   }
 
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/void$/)) && method === 'POST') {
@@ -270,9 +293,10 @@ async function handleAdmin(req, res, url, m) {
     if (!s) throw httpError(404, 'session not found');
     const mode = ['off', 'warn', 'strict'].includes(body.palletMode) ? body.palletMode : s.pallet_mode;
     const layout = body.layout === undefined ? s.layout : (body.layout && loadLayout(body.layout) ? body.layout : null);
-    db.prepare('UPDATE sessions SET pallet_mode = ?, guided = ?, ask_comments = ?, layout = ?, master_version = master_version + 1 WHERE id = ?')
+    db.prepare('UPDATE sessions SET pallet_mode = ?, guided = ?, ask_comments = ?, layout = ?, auto_recount = ?, master_version = master_version + 1 WHERE id = ?')
       .run(mode, body.guided == null ? s.guided : (body.guided ? 1 : 0),
-           body.askComments == null ? s.ask_comments : (body.askComments ? 1 : 0), layout, s.id);
+           body.askComments == null ? s.ask_comments : (body.askComments ? 1 : 0), layout,
+           body.autoRecount == null ? s.auto_recount : (body.autoRecount ? 1 : 0), s.id);
     return sendJson(req, res, 200, getSession(m[1]));
   }
 
@@ -329,6 +353,40 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, deleteAssignment(m[1], m[2]));
   }
 
+  // --- second counts
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts$/)) && method === 'GET') {
+    return sendJson(req, res, 200, listRecounts(m[1]));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts$/)) && method === 'POST') {
+    const body = await readJson(req);
+    // a manual task names a bin, or a pallet (-> its expected bin, or where it was found)
+    let bin = norm(body.bin);
+    let palletId = norm(body.palletId) || null;
+    if (!bin && palletId) {
+      const row = palletReport(m[1]).find((r) => r.pallet_id === palletId);
+      bin = row ? (String(row.found_location || '').split(',')[0] || row.expected_location) : '';
+      if (!bin) throw httpError(400, `no bin known for pallet ${palletId}`);
+    }
+    if (!bin) throw httpError(400, 'bin or pallet id required');
+    if (!db.prepare('SELECT 1 FROM locations WHERE session_id = ? AND code = ?').get(Number(m[1]), bin)) throw httpError(400, `${bin} is not a bin in this session`);
+    return sendJson(req, res, 200, createRecount(m[1], { bin, palletId, reason: 'MANUAL', detail: body.note || '', source: 'manual', team: body.team || null }));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts\/generate$/)) && method === 'POST') {
+    return sendJson(req, res, 200, generateFromVariances(m[1]));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts\/(\d+)$/)) && method === 'POST') {
+    const body = await readJson(req);
+    return sendJson(req, res, 200, updateRecount(m[1], m[2], body));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts\/(\d+)$/)) && method === 'DELETE') {
+    return sendJson(req, res, 200, { deleted: deleteRecount(m[1], m[2]) });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/recounts\.csv$/))) {
+    return sendCsv(req, res, `second-counts-session-${m[1]}.csv`, toCsv(listRecounts(m[1]), [
+      'id', 'bin', 'pallet_id', 'reason', 'detail', 'source', 'first_team', 'team', 'status', 'first_result', 'second_result', 'created_at', 'done_at',
+    ]));
+  }
+
   // --- reports
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/pallets$/)) && method === 'GET') {
     let rows = palletReport(m[1]);
@@ -359,11 +417,12 @@ async function handleAdmin(req, res, url, m) {
   const COUNT_COLS = [
     'id', 'pallet_id', 'qty', 'location_code', 'aisle', 'sku', 'description', 'comments',
     'team', 'employees', 'device_id', 'unknown_pallet', 'unknown_location', 'off_assignment',
-    'duplicate_pallet', 'empty_bin', 'override_reason', 'voided', 'scanned_at', 'received_at',
+    'duplicate_pallet', 'empty_bin', 'pass', 'recount_id', 'override_reason', 'voided', 'scanned_at', 'received_at',
   ];
   const PALLET_COLS = [
     'pallet_id', 'sku', 'description', 'uom', 'expected_qty', 'counted_qty', 'variance_qty',
     'expected_location', 'found_location', 'times_counted', 'teams', 'comments', 'last_scan', 'status',
+    'recounted', 'first_count_qty', 'open_recounts',
   ];
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/counts\.csv$/))) {
     return sendCsv(req, res, `counts-session-${m[1]}.csv`, toCsv(rawCounts(m[1]), COUNT_COLS));

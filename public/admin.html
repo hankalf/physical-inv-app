@@ -36,6 +36,8 @@
   .tag.QTY.VARIANCE, .tag.WRONG.BIN, .tag.queued { color: var(--warn); border-color: #5c4813; }
   .tag.MISSING, .tag.COUNTED.TWICE { color: var(--err); border-color: #6e2c2f; }
   .tag.NOT.IN.MASTER { color: var(--accent); border-color: #1f4d8f; }
+  .tag.open { color: var(--warn); border-color: #5c4813; }
+  .tag.taken { color: #fff; background: #1f4d8f; border-color: var(--accent); }
   .tag.active { color: #fff; background: #1f4d8f; border-color: var(--accent); }
   .tag.blocked { color: var(--warn); border-color: #5c4813; }
   .scroll { overflow-x: auto; }
@@ -145,6 +147,7 @@
         </div>
         <div class="auto"><label class="cb"><input type="checkbox" id="fGuided"> Guided by aisle plan</label></div>
         <div class="auto"><label class="cb"><input type="checkbox" id="fAskComments"> Ask for comments</label></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fAutoRecount"> Auto second counts</label></div>
         <div class="auto">
           <label for="fLayout">Map drawing</label>
           <select id="fLayout"><option value="">Schematic (auto from bin codes)</option></select>
@@ -212,6 +215,10 @@
         <div class="auto"><span class="muted" style="font-size:13px">Show level:</span></div>
         <div class="auto"><div class="chips" id="mapLevels" style="margin:0"></div></div>
       </div>
+      <div class="hint" style="margin:0 0 8px">
+        Each cell is one <b>bay</b>: 4 pallet positions per level, odd in front (001, 003) and even behind them (002, 004).
+        A bay is drawn as two cells — the Front face on the aisle side, the Back face behind it. Hover for the positions and bins in one.
+      </div>
       <div class="legend">
         <span><i style="background:#8b949e"></i> not counted</span>
         <span><i style="background:#d29922"></i> partly counted</span>
@@ -252,6 +259,29 @@
         <div class="feedback" id="assignMsg"></div>
         <div class="team-list" id="teamList" style="margin-top:10px"></div>
       </div>
+    </div>
+
+    <!-- ============ second counts ============ -->
+    <div class="card">
+      <h2>Second counts <span class="muted" id="recountSub"></span></h2>
+      <div class="hint">
+        A second count is a bin somebody goes back to. They are raised automatically when a first count disagrees with the
+        inventory report (quantity differs, wrong bin, not on the report, counted twice), when an aisle is handed back with
+        expected pallets nobody saw, or by hand here. The counter is told the bin and the reason type, never the numbers,
+        and the team that did the first count is never offered the second. Lines from a second count replace the first for that bin.
+      </div>
+      <div class="inline" style="margin-top:10px">
+        <div class="auto"><label for="fRecBin">Bin</label><input id="fRecBin" class="sm" placeholder="F03B012"></div>
+        <div class="auto"><span class="muted" style="font-size:13px">or</span></div>
+        <div class="auto"><label for="fRecPallet">Pallet ID</label><input id="fRecPallet" class="sm" placeholder="PLT03012B"></div>
+        <div><label for="fRecNote">Note</label><input id="fRecNote" placeholder="why"></div>
+        <div class="auto"><label for="fRecTeam">Team (optional)</label><input id="fRecTeam" class="sm" style="width:70px" placeholder="any"></div>
+        <div class="auto"><button class="primary" id="btnRecAdd">Request second count</button></div>
+        <div class="auto"><button id="btnRecGenerate">Raise from all variances now</button></div>
+        <div class="auto"><button id="btnExportRecounts">Export CSV</button></div>
+      </div>
+      <div class="feedback" id="recountMsg"></div>
+      <div class="scroll" style="margin-top:10px"><table id="recountTable"></table></div>
     </div>
 
     <!-- ============ pallet report ============ -->

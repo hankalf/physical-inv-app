@@ -74,6 +74,8 @@
     stepIndex: 0,
     draft: {},
     override: null,    // { title, why, rows, apply(reasonText) }
+    recounts: [],      // second-count tasks offered to this team
+    recount: null,     // the task being worked, if any
     qtyConfirm: null,
     syncing: false,
     keyboardOn: false,
@@ -212,7 +214,7 @@
             comments: l.comments, sku: l.sku, team: l.team, employees: l.employees,
             deviceId: l.deviceId, aisle: l.aisle, unknownPallet: l.unknownPallet,
             unknownLocation: l.unknownLocation, offAssignment: l.offAssignment,
-            duplicatePallet: l.duplicatePallet, emptyBin: l.emptyBin || 0, overrideReason: l.overrideReason, scannedAt: l.ts,
+            duplicatePallet: l.duplicatePallet, emptyBin: l.emptyBin || 0, pass: l.pass || 1, recountId: l.recountId || null, overrideReason: l.overrideReason, scannedAt: l.ts,
           }))),
         });
         const ok = new Set(result.accepted || []);
@@ -228,6 +230,7 @@
         await wrap(tx('lines', 'readwrite').put({ ...l, voidSynced: true }));
       }
       await pullCountedPallets();
+      await flushRecountsDone();
     } catch (err) {
       console.warn('sync deferred:', err.message);
     } finally {
@@ -385,12 +388,15 @@
             body: JSON.stringify({ deviceId: state.deviceId, deviceUid: state.deviceUid || null, team, employees: state.employees }),
           });
           await metaSet('assignment', state.assignment);
+          await refreshRecounts();
         } catch (err) {
           feedback($('signonMsg'), 'warn', 'Signed on locally only', err.message);
         }
       } else {
         state.assignment = (await metaGet('assignment')) || null;
+        state.recounts = (await metaGet('recounts')) || [];
       }
+      state.recountsDoneLocal = (await metaGet('recountsDoneLocal')) || [];
 
       if (session.guided) { renderAssignment(); showScreen('scrAssign'); }
       else { showScreen('scrScan'); renderStep(); }
@@ -405,11 +411,21 @@
   }
 
   /* ------------------------------------------------------------ assignment */
+  async function refreshRecounts() {
+    if (!state.session || !online()) return;
+    try {
+      const r = await api(`/api/sessions/${state.session.id}/recounts?team=${encodeURIComponent(state.team)}`);
+      state.recounts = r.tasks || [];
+      await metaSet('recounts', state.recounts);
+    } catch { /* keep the cached list */ }
+  }
+
   async function refreshAssignment(silent) {
     if (!state.session || !online()) return;
     try {
       state.assignment = await api(`/api/sessions/${state.session.id}/team-status?team=${encodeURIComponent(state.team)}`);
       await metaSet('assignment', state.assignment);
+      await refreshRecounts();
       renderAssignment();
     } catch (err) {
       if (!silent) feedback($('assignMsg'), 'warn', 'Could not refresh', err.message);
@@ -427,6 +443,10 @@
     const card = $('assignCard');
     clearFeedback($('assignMsg'));
     $('btnAisleDone').hidden = !(a && a.active);
+    const tasks = (state.recounts || []).filter((t) => !(state.recountsDoneLocal || []).includes(t.id));
+    $('recountCard').hidden = !tasks.length;
+    $('btnRecounts').hidden = !tasks.length;
+    $('recountCount').textContent = tasks.length;
 
     if (!a) {
       card.innerHTML = '<div class="assign waiting"><div class="aisle">No plan</div><div class="sub">No assignment loaded for this team. Refresh once Wi-Fi is back, or count freely.</div></div>';
@@ -502,6 +522,82 @@
     }
   }
 
+  /* ------------------------------------------------------------ second counts */
+  function nextRecountTask() {
+    const done = new Set(state.recountsDoneLocal || []);
+    const skipped = new Set(state.recountsSkipped || []);
+    return (state.recounts || []).find((t) => !done.has(t.id) && !skipped.has(t.id)) || null;
+  }
+
+  async function startRecount(task) {
+    state.recount = task;
+    if (online()) {
+      try { await api(`/api/sessions/${state.session.id}/recounts/${task.id}/take`, { method: 'POST', body: JSON.stringify({ team: state.team }) }); }
+      catch (err) {
+        // somebody else took it, or it is ours to begin with - only a hard refusal stops us
+        if (/already has|different team|already done/.test(err.message)) {
+          state.recountsSkipped = [...(state.recountsSkipped || []), task.id];
+          feedback($('assignMsg'), 'warn', 'That bin was taken by another team', err.message);
+          const next = nextRecountTask();
+          if (next) return startRecount(next);
+          state.recount = null; renderAssignment(); return;
+        }
+      }
+    }
+    state.draft = {};
+    state.stepIndex = 0;
+    showScreen('scrScan');
+    renderStep();
+  }
+
+  function renderRecountBanner() {
+    const t = state.recount;
+    $('recountBanner').hidden = !t;
+    $('recountRow').hidden = !t;
+    if (!t) return;
+    $('recountBanner').innerHTML = '';
+    $('recountBanner').appendChild(document.createTextNode(`SECOND COUNT · bin ${t.bin}`));
+    const d = document.createElement('div'); d.className = 'detail';
+    d.textContent = `${describeBin(t.bin)} — ${t.reason}. Scan every pallet in this bin, then tap Bin done.`;
+    $('recountBanner').appendChild(d);
+  }
+
+  async function finishRecount(emptyLine) {
+    const t = state.recount;
+    if (!t) return;
+    state.recountsDoneLocal = [...(state.recountsDoneLocal || []), t.id];
+    await metaSet('recountsDoneLocal', state.recountsDoneLocal);
+    state.recount = null;
+    await flushRecountsDone();
+    const next = nextRecountTask();
+    if (next) {
+      feedback($('scanMsg'), 'ok', `Bin ${t.bin} second count done`, `Next: bin ${next.bin}`);
+      await startRecount(next);
+      feedback($('scanMsg'), 'ok', `Bin ${t.bin} done`, `Now bin ${next.bin} — ${describeBin(next.bin)}`);
+    } else {
+      renderAssignment();
+      showScreen('scrAssign');
+      feedback($('assignMsg'), 'ok', 'All second counts done', 'Nothing more to go back to right now.');
+    }
+  }
+
+  // completions are queued like count lines, so a recount finished in a dead zone still lands
+  async function flushRecountsDone() {
+    if (!online() || !state.session) return;
+    const pending = [...(state.recountsDoneLocal || [])];
+    for (const id of pending) {
+      try {
+        await api(`/api/sessions/${state.session.id}/recounts/${id}/done`, { method: 'POST', body: JSON.stringify({ team: state.team }) });
+        state.recountsDoneLocal = state.recountsDoneLocal.filter((x) => x !== id);
+        state.recounts = state.recounts.filter((x) => x.id !== id);
+      } catch (err) {
+        if (/not found/.test(err.message)) state.recountsDoneLocal = state.recountsDoneLocal.filter((x) => x !== id);
+      }
+    }
+    await metaSet('recountsDoneLocal', state.recountsDoneLocal);
+    await metaSet('recounts', state.recounts);
+  }
+
   /* ------------------------------------------------------------ lookups */
   const lookupLocation = (code) => wrap(tx('loc', 'readonly').get(code));
   const lookupPallet = (id) => wrap(tx('pal', 'readonly').get(id));
@@ -522,6 +618,7 @@
 
   function renderStep() {
     state.qtyConfirm = null;
+    renderRecountBanner();
     const step = state.steps[state.stepIndex];
     $('stepLabel').textContent = `Step ${state.stepIndex + 1} of ${state.steps.length}`;
     $('prompt').textContent = { pallet: 'Scan PALLET ID', qty: 'Enter QUANTITY', bin: 'Scan BIN LOCATION', comments: 'Comments (optional)' }[step];
@@ -576,7 +673,7 @@
         if (!pal) state.draft.unknownPallet = 1;
       };
 
-      if (dup) {
+      if (dup && !(state.recount && dup.loc === state.recount.bin)) {
         return askOverride({
           title: 'Pallet already counted',
           why: `${value} was already counted in bin ${dup.loc}${dup.here ? ' on this scanner' : ` by team ${dup.team}`}.`,
@@ -644,7 +741,11 @@
           feedbackText: 'Unknown bin accepted',
         });
       }
-      const myLevels = state.session.guided ? (state.assignment?.active?.levels || '') : '';
+      if (state.recount && value !== state.recount.bin) {
+        feedback($('scanMsg'), 'err', `This second count is for bin ${state.recount.bin}`, `You scanned ${value}. Scan ${state.recount.bin}, or tap Bin done.`);
+        $('fScan').value = ''; focusScan(); return;
+      }
+      const myLevels = state.recount ? '' : (state.session.guided ? (state.assignment?.active?.levels || '') : '');
       if (state.session.guided && loc.aisle === active && myLevels && loc.level && !myLevels.includes(loc.level)) {
         return askOverride({
           title: 'Not your level',
@@ -654,7 +755,7 @@
           feedbackText: 'Off-level bin accepted',
         });
       }
-      if (state.session.guided && loc.aisle !== active) {
+      if (!state.recount && state.session.guided && loc.aisle !== active) {
         return askOverride({
           title: 'Not your aisle',
           why: active
@@ -735,6 +836,8 @@
       palletId: d.emptyBin ? 'EMPTY' : d.palletId,
       qty: d.emptyBin ? 0 : d.qty,
       emptyBin: d.emptyBin ? 1 : 0,
+      pass: state.recount ? 2 : 1,
+      recountId: state.recount ? state.recount.id : null,
       location: d.location,
       comments: d.comments || null,
       sku: d.sku || null,
@@ -759,6 +862,7 @@
     state.draft = {};
     state.stepIndex = 0;
     renderStep();
+    if (state.recount && line.emptyBin) { await finishRecount(true); return; }
     if (line.emptyBin) feedback($('scanMsg'), 'ok', `Bin ${line.location} recorded as EMPTY`, [describeBin(line.location), line.overrideReason ? 'flagged' : ''].filter(Boolean).join(' — '));
     else feedback($('scanMsg'), 'ok', `Counted ${line.palletId}`,
       `${line.qty}${d.description ? ' × ' + d.description : ''} @ ${line.location}${line.overrideReason ? ' · flagged' : ''}`);
@@ -793,7 +897,7 @@
       top.append(left, right);
       const sub = document.createElement('div');
       sub.className = 'sub';
-      sub.textContent = `${new Date(l.ts).toLocaleTimeString()} · ${l.synced ? 'synced' : 'queued'}` +
+      sub.textContent = `${new Date(l.ts).toLocaleTimeString()} · ${l.synced ? 'synced' : 'queued'}${l.pass === 2 ? ' · 2nd count' : ''}` +
         (l.comments ? ` · ${l.comments}` : '') + (l.overrideReason ? ` · flagged: ${l.overrideReason}` : '');
       div.append(top, sub);
       if (!l.voidedLocal) {
@@ -830,7 +934,15 @@
   $('fEmployee').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addEmployee(); } });
   $('fTeam').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('fEmployee').focus(); } });
 
-  $('btnCount').onclick = () => { showScreen('scrScan'); renderStep(); };
+  $('btnCount').onclick = () => { state.recount = null; showScreen('scrScan'); renderStep(); };
+  $('btnRecounts').onclick = async () => { const t = nextRecountTask(); if (t) await startRecount(t); };
+  $('btnRecountDone').onclick = () => finishRecount(false);
+  $('btnRecountSkip').onclick = () => {
+    if (!state.recount) return;
+    state.recountsSkipped = [...(state.recountsSkipped || []), state.recount.id];
+    state.recount = null;
+    renderAssignment(); showScreen('scrAssign');
+  };
   $('btnAisleDone').onclick = completeAisle;
   $('btnAssignRefresh').onclick = () => refreshAssignment(false);
   $('btnAssignHistory').onclick = () => { renderHistory(); state.historyReturn = 'scrAssign'; showScreen('scrHistory'); };
@@ -855,7 +967,7 @@
     feedback($('scanMsg'), 'warn', 'Empty bin', 'Scan the location of the empty bin.');
   };
   $('btnSkip').onclick = () => { $('fScan').value = ''; handleEntry(''); };
-  $('btnToAssign').onclick = async () => { await refreshAssignment(true); renderAssignment(); showScreen('scrAssign'); };
+  $('btnToAssign').onclick = async () => { state.recount = null; await refreshAssignment(true); renderAssignment(); showScreen('scrAssign'); };
   $('btnHistory').onclick = () => { renderHistory(); state.historyReturn = 'scrScan'; showScreen('scrHistory'); };
   $('btnHistoryBack').onclick = () => {
     if (state.historyReturn === 'scrAssign') { renderAssignment(); showScreen('scrAssign'); }

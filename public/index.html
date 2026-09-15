@@ -61,6 +61,12 @@
     <div id="assignCard"></div>
     <button class="primary" id="btnCount">Start counting</button>
     <button id="btnAisleDone">Aisle complete — next aisle</button>
+    <div class="assign" id="recountCard" hidden>
+      <div class="sub">Second counts available</div>
+      <div class="aisle" id="recountCount">0</div>
+      <div class="sub">bins to go back to — the first count didn't agree with the inventory report, or a supervisor asked.</div>
+    </div>
+    <button id="btnRecounts" hidden>Start second counts</button>
     <div class="row">
       <button class="ghost" id="btnAssignRefresh">Refresh</button>
       <button class="ghost" id="btnAssignHistory">History</button>
@@ -71,6 +77,7 @@
 
   <!-- ---------------- counting ---------------- -->
   <section class="screen" id="scrScan">
+    <div class="feedback show warn" id="recountBanner" hidden></div>
     <div class="context" id="ctx"></div>
 
     <div class="step" id="stepLabel">Step 1 of 4</div>
@@ -87,6 +94,10 @@
       <button id="btnSkip" class="primary" hidden>Skip</button>
     </div>
     <button id="btnEmpty" class="ghost" hidden>Bin is EMPTY — scan the bin</button>
+    <div class="row" id="recountRow" hidden>
+      <button id="btnRecountDone" class="primary">Bin done — nothing more here</button>
+      <button id="btnRecountSkip" class="ghost">Leave for another team</button>
+    </div>
 
     <div class="feedback" id="scanMsg"></div>
 

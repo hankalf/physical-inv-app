@@ -149,6 +149,8 @@ CREATE TABLE IF NOT EXISTS counts (
   off_assignment   INTEGER NOT NULL DEFAULT 0,
   duplicate_pallet INTEGER NOT NULL DEFAULT 0,
   empty_bin        INTEGER NOT NULL DEFAULT 0,   -- bin checked and found empty (no pallet)
+  pass             INTEGER NOT NULL DEFAULT 1,   -- 1 = first count, 2 = second count
+  recount_id       INTEGER,
   override_reason  TEXT,
   voided           INTEGER NOT NULL DEFAULT 0,
   scanned_at       TEXT    NOT NULL,
@@ -167,6 +169,25 @@ CREATE TABLE IF NOT EXISTS devices (
   last_session INTEGER
 );
 
+-- Second-count tasks: a bin to go back to, why, and who may do it.
+CREATE TABLE IF NOT EXISTS recounts (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id   INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  bin          TEXT    NOT NULL,
+  pallet_id    TEXT,
+  reason       TEXT    NOT NULL,          -- QTY VARIANCE | WRONG BIN | NOT IN MASTER | COUNTED TWICE | MISSING | MANUAL
+  detail       TEXT,                      -- supervisor-only numbers
+  source       TEXT    NOT NULL DEFAULT 'manual',   -- auto | manual
+  first_team   TEXT,                      -- who did the first count; they may not do the second
+  team         TEXT,                      -- assigned to / taken by
+  status       TEXT    NOT NULL DEFAULT 'open',     -- open | taken | done
+  created_at   TEXT    NOT NULL,
+  taken_at     TEXT,
+  done_at      TEXT,
+  done_by_team TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_recounts_session ON recounts(session_id, status);
+
 CREATE INDEX IF NOT EXISTS idx_counts_session ON counts(session_id, voided);
 CREATE INDEX IF NOT EXISTS idx_counts_pallet  ON counts(session_id, pallet_id);
 CREATE INDEX IF NOT EXISTS idx_counts_loc     ON counts(session_id, location_code);
@@ -179,6 +200,9 @@ const hasCol = (t, c) => db.prepare(`PRAGMA table_info('${t}')`).all().some((x) 
 if (!hasCol('sessions', 'layout')) db.exec('ALTER TABLE sessions ADD COLUMN layout TEXT');
 if (!hasCol('locations', 'level')) db.exec('ALTER TABLE locations ADD COLUMN level TEXT');
 if (!hasCol('counts', 'empty_bin')) db.exec('ALTER TABLE counts ADD COLUMN empty_bin INTEGER NOT NULL DEFAULT 0');
+if (!hasCol('counts', 'pass')) db.exec('ALTER TABLE counts ADD COLUMN pass INTEGER NOT NULL DEFAULT 1');
+if (!hasCol('counts', 'recount_id')) db.exec('ALTER TABLE counts ADD COLUMN recount_id INTEGER');
+if (!hasCol('sessions', 'auto_recount')) db.exec('ALTER TABLE sessions ADD COLUMN auto_recount INTEGER NOT NULL DEFAULT 1');
 if (!hasCol('assignments', 'levels')) {
   // a team is assigned an aisle AND the levels it has the equipment for
   db.exec("ALTER TABLE assignments ADD COLUMN levels TEXT NOT NULL DEFAULT ''");
@@ -187,6 +211,12 @@ if (!hasCol('assignments', 'levels')) {
 }
 
 export const norm = (v) => (v == null ? '' : String(v).trim().toUpperCase());
+
+// A count line that still stands: not voided, and not a first-count line in a
+// bin that has since been second-counted. `c` is the counts alias.
+export const LIVE = (c = 'c') =>
+  `${c}.voided = 0 AND NOT (${c}.pass = 1 AND EXISTS (
+     SELECT 1 FROM counts s WHERE s.session_id = ${c}.session_id AND s.location_code = ${c}.location_code AND s.pass = 2 AND s.voided = 0))`;
 
 /**
  * Find a session aisle from what a person typed: exact match first, then by
@@ -237,6 +267,7 @@ export const publicSession = (s) => ({
   palletMode: s.pallet_mode,
   guided: !!s.guided,
   askComments: !!s.ask_comments,
+  autoRecount: !!s.auto_recount,
   masterVersion: s.master_version,
   layout: s.layout || null,
   // odd/even position -> Front/Back, so the gun can tell the counter which face a bin is on
@@ -276,8 +307,8 @@ export function recordSignon(sessionId, { deviceId, team, employees }) {
 const insertCount = db.prepare(`
 INSERT INTO counts (client_id, session_id, pallet_id, qty, location_code, comments, sku,
                     team, employees, device_id, aisle, unknown_pallet, unknown_location,
-                    off_assignment, duplicate_pallet, empty_bin, override_reason, scanned_at, received_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    off_assignment, duplicate_pallet, empty_bin, pass, recount_id, override_reason, scanned_at, received_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(client_id) DO NOTHING
 `);
 
@@ -288,6 +319,7 @@ export function saveCounts(sessionId, rows) {
   const now = new Date().toISOString();
   const accepted = [];
   const rejected = [];
+  const firstCountPallets = new Set();
   db.exec('BEGIN');
   try {
     for (const r of rows) {
@@ -307,17 +339,19 @@ export function saveCounts(sessionId, rows) {
         r.aisle ? norm(r.aisle) : null,
         r.unknownPallet ? 1 : 0, r.unknownLocation ? 1 : 0,
         r.offAssignment ? 1 : 0, r.duplicatePallet ? 1 : 0, empty ? 1 : 0,
+        Number(r.pass) === 2 ? 2 : 1, r.recountId ? Number(r.recountId) : null,
         r.overrideReason ? String(r.overrideReason) : null,
         r.scannedAt || now, now
       );
       accepted.push(r.clientId);
+      if (!empty && Number(r.pass) !== 2) firstCountPallets.add(norm(r.palletId));
     }
     db.exec('COMMIT');
   } catch (err) {
     db.exec('ROLLBACK');
     throw err;
   }
-  return { accepted, rejected };
+  return { accepted, rejected, firstCountPallets: [...firstCountPallets] };
 }
 
 // Pallets already counted, so a device can warn before the same pallet is
@@ -326,11 +360,11 @@ export function countedPallets(sessionId, since) {
   const rows = since
     ? db.prepare(
         `SELECT pallet_id, location_code, team, scanned_at FROM counts
-          WHERE session_id = ? AND voided = 0 AND empty_bin = 0 AND received_at > ? ORDER BY received_at`
+          WHERE session_id = ? AND voided = 0 AND empty_bin = 0 AND pass = 1 AND received_at > ? ORDER BY received_at`
       ).all(Number(sessionId), since)
     : db.prepare(
         `SELECT pallet_id, location_code, team, scanned_at FROM counts
-          WHERE session_id = ? AND voided = 0 AND empty_bin = 0 ORDER BY received_at`
+          WHERE session_id = ? AND voided = 0 AND empty_bin = 0 AND pass = 1 ORDER BY received_at`
       ).all(Number(sessionId));
   const latest = db.prepare('SELECT MAX(received_at) AS m FROM counts WHERE session_id = ?').get(Number(sessionId)).m;
   return { pallets: rows.map((r) => [r.pallet_id, r.location_code, r.team]), watermark: latest };
