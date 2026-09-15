@@ -199,6 +199,8 @@ coloured as they get a count, and what comes next. **Aisle complete** hands the 
 back and pulls the next one.
 
 **Counting:** Pallet → Qty → Bin → Comments, then straight back to Pallet.
+After the bin scan the gun says where that bin is — *Level A · Position 009 · FRONT* —
+with Front/Back from the position number (odd = Front, even = Back, set in the layout).
 
 **Empty bins count too.** Every bin gets a line, empty or not: on the pallet prompt tap
 **Bin is EMPTY — scan the bin**, scan the location, done. The bin turns green on the map and

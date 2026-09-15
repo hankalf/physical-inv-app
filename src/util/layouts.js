@@ -20,9 +20,14 @@ export function listLayouts() {
   return out;
 }
 
+const cache = new Map();
 export function loadLayout(id) {
   if (!id || !/^[a-z0-9_-]+$/i.test(id)) return null;
-  try { return JSON.parse(readFileSync(join(DIR, id + '.json'), 'utf8')); } catch { return null; }
+  if (cache.has(id)) return cache.get(id);
+  let layout = null;
+  try { layout = JSON.parse(readFileSync(join(DIR, id + '.json'), 'utf8')); } catch { /* unknown layout */ }
+  cache.set(id, layout);
+  return layout;
 }
 
 /**

@@ -1,5 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import { randomBytes } from 'node:crypto';
+import { loadLayout } from './util/layouts.js';
 import { mkdirSync, accessSync, constants } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
@@ -238,6 +239,8 @@ export const publicSession = (s) => ({
   askComments: !!s.ask_comments,
   masterVersion: s.master_version,
   layout: s.layout || null,
+  // odd/even position -> Front/Back, so the gun can tell the counter which face a bin is on
+  faces: loadLayout(s.layout)?.faces || null,
 });
 
 /* ------------------------------------------------------- handheld master data */

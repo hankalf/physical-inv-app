@@ -544,7 +544,7 @@
         const bx = horizontal ? x + 2 : x + w / 2 - bw / 2, by = horizontal ? y + h / 2 - bh / 2 : y + 2;
         svg.appendChild(svgEl('rect', { x: bx, y: by, width: bw, height: bh, rx: 7, fill: a.activeTeam ? '#2f81f7' : '#2ea043' }));
         const t = svgEl('text', { x: bx + bw / 2, y: by + bh - 3, 'text-anchor': 'middle', class: 'team' });
-        t.textContent = a.activeTeam ? 'T' + String(a.activeTeam).split(',').join('+') : '✓';
+        t.textContent = a.activeTeam ? String(a.activeTeam).split(',').map((t) => 'T' + t.trim()).join('+') : '✓';
         svg.appendChild(t);
       }
     }
@@ -595,7 +595,7 @@
       if (a.activeTeam || a.done || a.queuedTeams) {
         svg.appendChild(svgEl('rect', { x: cx + 2, y: 20, width: CW - 4, height: 16, rx: 8, fill: a.activeTeam ? '#2f81f7' : a.done ? '#2ea043' : '#30363d' }));
         const t = svgEl('text', { x: cx + CW / 2, y: 32, 'text-anchor': 'middle', class: 'team' });
-        t.textContent = a.activeTeam ? 'T' + String(a.activeTeam).split(',').join('+') : a.done ? '✓' : 'T' + String(a.queuedTeams).split(',')[0].trim().replace(/ .*/, '');
+        t.textContent = a.activeTeam ? String(a.activeTeam).split(',').map((t) => 'T' + t.trim()).join('+') : a.done ? '✓' : 'T' + String(a.queuedTeams).split(',')[0].trim().replace(/ .*/, '');
         svg.appendChild(t);
       }
       keys.forEach((bay, i) => {

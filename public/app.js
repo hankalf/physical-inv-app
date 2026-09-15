@@ -90,6 +90,26 @@
     const contiguous = [...l].every((c, i) => i === 0 || c.charCodeAt(0) === l.charCodeAt(i - 1) + 1);
     return contiguous ? `levels ${l[0]}–${l[l.length - 1]}` : `levels ${[...l].join(', ')}`;
   };
+  // Same code rules as the server: "F01A009" -> aisle F01, level A, position 009.
+  function parseBinCode(raw) {
+    const code = String(raw || '').trim().toUpperCase();
+    const parts = code.split(/[-_./\\ ]/).filter(Boolean);
+    if (parts.length >= 2) return { aisle: parts[0], bay: parts[1], level: parts[2] || '' };
+    const m = /^([A-Z]+\d+)([A-Z])(\d+)$/.exec(code);
+    if (m) return { aisle: m[1], level: m[2], bay: m[3] };
+    return { aisle: code, bay: '', level: '' };
+  }
+  // "Level A · Position 009 · FRONT" - what the counter sees after scanning a bin
+  function describeBin(code) {
+    const p = parseBinCode(code);
+    const bits = [];
+    if (p.level) bits.push(`Level ${p.level}`);
+    if (p.bay) bits.push(`Position ${p.bay}`);
+    const faces = state.session && state.session.faces;
+    const pos = Number(p.bay);
+    if (faces && p.bay && Number.isFinite(pos)) bits.push((pos % 2 === 1 ? faces.odd : faces.even).toUpperCase());
+    return bits.join(' · ');
+  }
   const levelsFor = (aisle) => { const q = (state.assignment?.queuedDetail || []).find((x) => x.aisle === aisle); return q ? q.levels : ''; };
   const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
     : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -533,7 +553,7 @@
     if (d.palletId) rows.push(['Pallet', d.palletId]);
     if (d.description || d.sku) rows.push(['Contents', [d.sku, d.description].filter(Boolean).join(' — ')]);
     if (d.qty != null) rows.push(['Qty', String(d.qty)]);
-    if (d.location) rows.push(['Bin', d.location]);
+    if (d.location) rows.push(['Bin', `${d.location}${describeBin(d.location) ? ' — ' + describeBin(d.location) : ''}`]);
     kv($('ctx'), rows);
   }
 
@@ -629,7 +649,7 @@
         return askOverride({
           title: 'Not your level',
           why: `Bin ${value} is on level ${loc.level}. Your team is assigned ${levelsLabel(myLevels)} of this aisle.`,
-          rows: [['Bin', value], ['Its level', loc.level], ['Your levels', levelsLabel(myLevels)]],
+          rows: [['Bin', value], ['Where', describeBin(value)], ['Your levels', levelsLabel(myLevels)]],
           apply: (reason) => { applyBin(); state.draft.offAssignment = 1; addReason(reason); },
           feedbackText: 'Off-level bin accepted',
         });
@@ -640,16 +660,17 @@
           why: active
             ? `Bin ${value} is in aisle ${loc.aisle}. Your team is assigned to aisle ${active}.`
             : `Bin ${value} is in aisle ${loc.aisle}, but your team has no active aisle right now.`,
-          rows: [['Bin', value], ['Its aisle', loc.aisle], ['Your aisle', active || '—']],
+          rows: [['Bin', value], ['Its aisle', loc.aisle], ['Where', describeBin(value)], ['Your aisle', active || '—']],
           apply: (reason) => { applyBin(); state.draft.offAssignment = 1; addReason(reason); },
           feedbackText: 'Off-aisle bin accepted',
         });
       }
       applyBin();
       if (state.draft.emptyBin) { await commitLine(); return; }
-      const detail = state.draft.expectedLocation && state.draft.expectedLocation !== value
-        ? `System expected this pallet in ${state.draft.expectedLocation}` : (loc.zone ? `Zone ${loc.zone}` : '');
-      advance(detail.startsWith('System') ? 'warn' : 'ok', `Bin ${value}`, detail);
+      const where = describeBin(value);
+      const misplaced = state.draft.expectedLocation && state.draft.expectedLocation !== value;
+      const detail = [where, misplaced ? `System expected this pallet in ${state.draft.expectedLocation}` : ''].filter(Boolean).join(' — ');
+      advance(misplaced ? 'warn' : 'ok', `Bin ${value}`, detail);
       if (state.stepIndex >= state.steps.length) await commitLine();
       return;
     }
@@ -738,7 +759,7 @@
     state.draft = {};
     state.stepIndex = 0;
     renderStep();
-    if (line.emptyBin) feedback($('scanMsg'), 'ok', `Bin ${line.location} recorded as EMPTY`, line.overrideReason ? 'flagged' : '');
+    if (line.emptyBin) feedback($('scanMsg'), 'ok', `Bin ${line.location} recorded as EMPTY`, [describeBin(line.location), line.overrideReason ? 'flagged' : ''].filter(Boolean).join(' — '));
     else feedback($('scanMsg'), 'ok', `Counted ${line.palletId}`,
       `${line.qty}${d.description ? ' × ' + d.description : ''} @ ${line.location}${line.overrideReason ? ' · flagged' : ''}`);
   }
