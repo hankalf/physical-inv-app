@@ -10,7 +10,7 @@ import {
   saveCounts, countedPallets, recordSignon, norm,
   listDevices, getDevice, createDevice, updateDevice, deleteDevice, touchDevice,
 } from './db.js';
-import { importMaster } from './routes/master.js';
+import { importMaster, pruneAreaAisles } from './routes/master.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks,
@@ -343,7 +343,8 @@ async function handleAdmin(req, res, url, m) {
     if (!s) throw httpError(404, 'session not found');
     const layout = loadLayout(s.layout);
     if (!layout) throw httpError(400, 'pick a layout drawing in the session settings first');
-    return sendJson(req, res, 200, applyLayoutBlocks(m[1], layout));
+    const pruned = pruneAreaAisles(m[1], layout);
+    return sendJson(req, res, 200, { ...applyLayoutBlocks(m[1], layout), pruned });
   }
 
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/map$/)) && method === 'GET') {

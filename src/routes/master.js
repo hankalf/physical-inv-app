@@ -62,6 +62,7 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
   const stats = { kind, rows: records.length, bins: 0, aisles: 0, pallets: 0, planned: 0, skipped: 0, headers };
   const newAisles = new Set();
   const layout = loadLayout(session.layout);
+  const areas = new Set(((layout && layout.areas) || []).map(norm));
   const RACK = /^[A-Z]+\d+[A-Z]\d+$/;
 
   db.exec('BEGIN');
@@ -91,8 +92,8 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
           if (!zone && layout && layout.zones) zone = norm(layout.zones[/^[A-Z]+/.exec(code)?.[0]] || '');
         }
         upLocation.run(id, code, zone, aisle, desc);
-        upAisle.run(id, aisle, aisle);
-        newAisles.add(aisle);
+        // areas (doors, staging, ...) are countable bins but not aisles
+        if (!areas.has(aisle)) { upAisle.run(id, aisle, aisle); newAisles.add(aisle); }
         stats.bins++;
         continue;
       }
@@ -139,6 +140,7 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
   }
 
   stats.aisles = newAisles.size;
+  if (kind === 'bins') pruneAreaAisles(id, layout);
   if (kind === 'plan') stats.activated = autoActivate(id);
   bumpMasterVersion(id);
   stats.totals = {
@@ -148,4 +150,17 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
     assignments: db.prepare('SELECT COUNT(*) n FROM assignments WHERE session_id = ?').get(id).n,
   };
   return stats;
+}
+
+/** Drop aisle rows (and their assignments) for groups the layout says are areas, not aisles. */
+export function pruneAreaAisles(sessionId, layout) {
+  const areas = ((layout && layout.areas) || []).map(norm);
+  if (!areas.length) return 0;
+  const id = Number(sessionId);
+  let removed = 0;
+  for (const a of areas) {
+    db.prepare('DELETE FROM assignments WHERE session_id = ? AND aisle = ?').run(id, a);
+    removed += db.prepare('DELETE FROM aisles WHERE session_id = ? AND aisle = ?').run(id, a).changes;
+  }
+  return removed;
 }

@@ -114,8 +114,10 @@ first sheet is converted in the browser.
 
 **Front Royal:** the full ERP bin list ships in the app — **Load Front Royal bin list**
 in the upload card loads all 13,734 bins: racks `F01`–`F24` and `A01`–`A04`, and the
-non-rack bins grouped into aisles `DOORS`, `STAGING`, `WIP`, `AREAS` and `SYSTEM` (which
-holds `NIL`, the not-in-location bin). Odd positions are the Front face of a double-deep
+non-rack bins grouped as `DOORS`, `STAGING`, `WIP`, `AREAS` and `SYSTEM` (which holds
+`NIL`, the not-in-location bin). Those five are *areas*: their bins validate and count
+like any other, but they are not aisles — they don't appear with the racking blocks and
+can't be assigned to a team. Odd positions are the Front face of a double-deep
 rack, even positions the Back; the map shows both.
 
 ### 3. Pair aisles that share racking

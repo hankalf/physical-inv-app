@@ -697,7 +697,7 @@
     try {
       const r = await postJson(`/api/admin/sessions/${sessionId}/aisles/apply-layout`, {});
       renderAisles(r.aisles);
-      msg($('assignMsg'), 'ok', `Paired ${r.applied} aisle(s) the way the drawing shows them.`);
+      msg($('assignMsg'), 'ok', `Paired ${r.applied} aisle(s) the way the drawing shows them.` + (r.pruned ? ` Removed ${r.pruned} non-aisle group(s) from the list.` : ''));
       await refreshAssignments();
     } catch (err) { alert(err.message); }
   };
