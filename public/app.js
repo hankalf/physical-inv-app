@@ -84,6 +84,13 @@
   const titleCase = (z) => String(z || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
   const aisleLabel = (aisle, zone) => (zone ? `${titleCase(zone)} – Aisle ${aisle}` : `Aisle ${aisle}`);
   const zoneFor = (aisle) => (state.assignment && state.assignment.zones && state.assignment.zones[aisle]) || '';
+  const levelsLabel = (l) => {
+    if (!l) return 'all levels';
+    if (l.length === 1) return `level ${l}`;
+    const contiguous = [...l].every((c, i) => i === 0 || c.charCodeAt(0) === l.charCodeAt(i - 1) + 1);
+    return contiguous ? `levels ${l[0]}–${l[l.length - 1]}` : `levels ${[...l].join(', ')}`;
+  };
+  const levelsFor = (aisle) => { const q = (state.assignment?.queuedDetail || []).find((x) => x.aisle === aisle); return q ? q.levels : ''; };
   const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
     : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
         const r = (Math.random() * 16) | 0; return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
@@ -185,7 +192,7 @@
             comments: l.comments, sku: l.sku, team: l.team, employees: l.employees,
             deviceId: l.deviceId, aisle: l.aisle, unknownPallet: l.unknownPallet,
             unknownLocation: l.unknownLocation, offAssignment: l.offAssignment,
-            duplicatePallet: l.duplicatePallet, overrideReason: l.overrideReason, scannedAt: l.ts,
+            duplicatePallet: l.duplicatePallet, emptyBin: l.emptyBin || 0, overrideReason: l.overrideReason, scannedAt: l.ts,
           }))),
         });
         const ok = new Set(result.accepted || []);
@@ -303,7 +310,7 @@
     if (data.unchanged) return { unchanged: true, session: data };
     await clearStores(['loc', 'pal', 'dup']);
     await metaSet('dupWatermark', '');
-    await bulkPut('loc', data.locations, ([c, zone, aisle]) => ({ c, zone, aisle }));
+    await bulkPut('loc', data.locations, ([c, zone, aisle, level]) => ({ c, zone, aisle, level: level || '' }));
     await bulkPut('pal', data.pallets, ([p, sku, desc, expLoc]) => ({ p, sku, desc, expLoc }));
     await metaSet('masterVersion', data.masterVersion);
     await metaSet('cachedAt', Date.now());
@@ -391,7 +398,8 @@
 
   async function localCountedBins(aisle) {
     const all = await wrap(tx('lines', 'readonly').getAll());
-    return new Set(all.filter((l) => l.sessionId === state.session.id && !l.voidedLocal && l.aisle === aisle).map((l) => l.location));
+    const bins = new Set(state.assignment?.bins || []);
+    return new Set(all.filter((l) => l.sessionId === state.session.id && !l.voidedLocal && l.aisle === aisle && (!bins.size || bins.has(l.location))).map((l) => l.location));
   }
 
   async function renderAssignment() {
@@ -413,9 +421,9 @@
       box.className = 'assign';
       box.innerHTML = `<div class="sub">Team ${a.team} — your aisle</div><div class="aisle"></div><div class="sub zone-sub"></div><div class="sub bins-sub"></div><div class="bins"></div>`;
       box.querySelector('.aisle').textContent = a.active.aisle;
-      box.querySelector('.zone-sub').textContent = aisleLabel(a.active.aisle, a.active.zone);
+      box.querySelector('.zone-sub').textContent = `${aisleLabel(a.active.aisle, a.active.zone)} · ${levelsLabel(a.active.levels)}`;
       box.querySelector('.bins-sub').textContent = `${counted.size} of ${total} bins have a count` +
-        (a.queued.length ? ` · next: ${a.queued.map((q) => aisleLabel(q, zoneFor(q))).join(', ')}` : ' · last aisle in your plan');
+        (a.queued.length ? ` · next: ${a.queued.map((q) => aisleLabel(q, zoneFor(q)) + (levelsFor(q) ? ' ' + levelsFor(q) : '')).join(', ')}` : ' · last aisle in your plan');
       const grid = box.querySelector('.bins');
       for (const b of a.bins) {
         const s = document.createElement('span');
@@ -424,7 +432,7 @@
         grid.appendChild(s);
       }
       card.appendChild(box);
-      $('btnCount').textContent = `Count ${aisleLabel(a.active.aisle, a.active.zone)}`;
+      $('btnCount').textContent = `Count ${aisleLabel(a.active.aisle, a.active.zone)} (${levelsLabel(a.active.levels)})`;
       return;
     }
     if (a.waitingOn) {
@@ -434,9 +442,10 @@
       box.className = 'assign waiting';
       box.innerHTML = `<div class="sub">Team ${a.team} — next aisle</div><div class="aisle"></div><div class="sub zone-sub"></div><div class="sub why"></div>`;
       box.querySelector('.aisle').textContent = w.aisle;
-      box.querySelector('.zone-sub').textContent = aisleLabel(w.aisle, zoneFor(w.aisle));
+      box.querySelector('.zone-sub').textContent = `${aisleLabel(w.aisle, zoneFor(w.aisle))} · ${levelsLabel(w.levels)}`;
       box.querySelector('.why').textContent = w.blockedByTeam
-        ? `Waiting: team ${w.blockedByTeam} is still in ${aisleLabel(w.blockedByAisle, zoneFor(w.blockedByAisle))}, which shares racking with ${w.aisle}. Refresh when they finish.`
+        ? `Waiting: team ${w.blockedByTeam} is still in ${aisleLabel(w.blockedByAisle, zoneFor(w.blockedByAisle))}${w.blockedByLevels ? ' (' + levelsLabel(w.blockedByLevels) + ')' : ''}` +
+          `${w.blockedByAisle === w.aisle ? '' : ', which shares racking with ' + w.aisle}. Refresh when they finish.`
         : 'Waiting for a supervisor to release this aisle.';
       card.appendChild(box);
       $('btnCount').textContent = 'Count anyway (flagged)';
@@ -501,7 +510,9 @@
     f.placeholder = step === 'comments' ? 'Type a note or tap one below' : '';
     f.inputMode = step === 'qty' ? 'decimal' : step === 'comments' ? 'text' : (state.keyboardOn ? 'text' : 'none');
     $('btnSkip').hidden = step !== 'comments';
+    $('btnEmpty').hidden = step !== 'pallet';
     $('commentChips').hidden = step !== 'comments';
+    if (state.draft.emptyBin && step === 'bin') $('prompt').textContent = 'EMPTY bin — scan its LOCATION';
     if (step === 'comments' && !$('commentChips').childElementCount) {
       for (const c of QUICK_COMMENTS) {
         const b = document.createElement('button');
@@ -518,7 +529,7 @@
   function renderContext() {
     const d = state.draft;
     const rows = [];
-    if (state.session?.guided && state.assignment?.active) rows.push(['Your aisle', aisleLabel(state.assignment.active.aisle, state.assignment.active.zone)]);
+    if (state.session?.guided && state.assignment?.active) rows.push(['Your aisle', `${aisleLabel(state.assignment.active.aisle, state.assignment.active.zone)} · ${levelsLabel(state.assignment.active.levels)}`]);
     if (d.palletId) rows.push(['Pallet', d.palletId]);
     if (d.description || d.sku) rows.push(['Contents', [d.sku, d.description].filter(Boolean).join(' — ')]);
     if (d.qty != null) rows.push(['Qty', String(d.qty)]);
@@ -613,6 +624,16 @@
           feedbackText: 'Unknown bin accepted',
         });
       }
+      const myLevels = state.session.guided ? (state.assignment?.active?.levels || '') : '';
+      if (state.session.guided && loc.aisle === active && myLevels && loc.level && !myLevels.includes(loc.level)) {
+        return askOverride({
+          title: 'Not your level',
+          why: `Bin ${value} is on level ${loc.level}. Your team is assigned ${levelsLabel(myLevels)} of this aisle.`,
+          rows: [['Bin', value], ['Its level', loc.level], ['Your levels', levelsLabel(myLevels)]],
+          apply: (reason) => { applyBin(); state.draft.offAssignment = 1; addReason(reason); },
+          feedbackText: 'Off-level bin accepted',
+        });
+      }
       if (state.session.guided && loc.aisle !== active) {
         return askOverride({
           title: 'Not your aisle',
@@ -625,6 +646,7 @@
         });
       }
       applyBin();
+      if (state.draft.emptyBin) { await commitLine(); return; }
       const detail = state.draft.expectedLocation && state.draft.expectedLocation !== value
         ? `System expected this pallet in ${state.draft.expectedLocation}` : (loc.zone ? `Zone ${loc.zone}` : '');
       advance(detail.startsWith('System') ? 'warn' : 'ok', `Bin ${value}`, detail);
@@ -675,6 +697,7 @@
     spec.apply(full);
     state.stepIndex++;
     showScreen('scrScan');
+    if (state.draft.emptyBin && state.draft.location) { await commitLine(); return; }
     if (state.stepIndex < state.steps.length) {
       renderStep();
       feedback($('scanMsg'), 'warn', spec.feedbackText, full);
@@ -688,8 +711,9 @@
     const line = {
       clientId: uuid(),
       sessionId: state.session.id,
-      palletId: d.palletId,
-      qty: d.qty,
+      palletId: d.emptyBin ? 'EMPTY' : d.palletId,
+      qty: d.emptyBin ? 0 : d.qty,
+      emptyBin: d.emptyBin ? 1 : 0,
       location: d.location,
       comments: d.comments || null,
       sku: d.sku || null,
@@ -707,18 +731,20 @@
       voidedLocal: false,
     };
     await wrap(tx('lines', 'readwrite').put(line));
-    await wrap(tx('dup', 'readwrite').put({ p: line.palletId, loc: line.location, team: line.team }));
+    if (!line.emptyBin) await wrap(tx('dup', 'readwrite').put({ p: line.palletId, loc: line.location, team: line.team }));
     updateChips();
     syncQueue();
 
     state.draft = {};
     state.stepIndex = 0;
     renderStep();
-    feedback($('scanMsg'), 'ok', `Counted ${line.palletId}`,
+    if (line.emptyBin) feedback($('scanMsg'), 'ok', `Bin ${line.location} recorded as EMPTY`, line.overrideReason ? 'flagged' : '');
+    else feedback($('scanMsg'), 'ok', `Counted ${line.palletId}`,
       `${line.qty}${d.description ? ' × ' + d.description : ''} @ ${line.location}${line.overrideReason ? ' · flagged' : ''}`);
   }
 
   function stepBack() {
+    if (state.draft.emptyBin) { state.draft = {}; state.stepIndex = 0; clearFeedback($('scanMsg')); renderStep(); return; }
     if (state.stepIndex === 0) return;
     state.stepIndex--;
     const step = state.steps[state.stepIndex];
@@ -741,8 +767,8 @@
       div.className = 'item' + (l.voidedLocal ? ' voided' : '');
       const top = document.createElement('div');
       top.className = 'top';
-      const left = document.createElement('span'); left.textContent = `${l.palletId} @ ${l.location}`;
-      const right = document.createElement('span'); right.textContent = l.qty;
+      const left = document.createElement('span'); left.textContent = l.emptyBin ? `${l.location} — empty` : `${l.palletId} @ ${l.location}`;
+      const right = document.createElement('span'); right.textContent = l.emptyBin ? '0' : l.qty;
       top.append(left, right);
       const sub = document.createElement('div');
       sub.className = 'sub';
@@ -800,6 +826,13 @@
   };
 
   $('btnBack').onclick = stepBack;
+  $('btnEmpty').onclick = () => {
+    // jump straight to the bin scan; the line is saved with no pallet and qty 0
+    state.draft = { emptyBin: 1 };
+    state.stepIndex = state.steps.indexOf('bin');
+    renderStep();
+    feedback($('scanMsg'), 'warn', 'Empty bin', 'Scan the location of the empty bin.');
+  };
   $('btnSkip').onclick = () => { $('fScan').value = ''; handleEntry(''); };
   $('btnToAssign').onclick = async () => { await refreshAssignment(true); renderAssignment(); showScreen('scrAssign'); };
   $('btnHistory').onclick = () => { renderHistory(); state.historyReturn = 'scrScan'; showScreen('scrHistory'); };

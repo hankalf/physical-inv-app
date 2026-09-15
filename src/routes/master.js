@@ -1,5 +1,5 @@
 import { db, norm, bumpMasterVersion, getSession, resolveAisle } from '../db.js';
-import { parseBinCode } from '../util/bincode.js';
+import { parseBinCode, normLevels } from '../util/bincode.js';
 import { autoActivate } from './assignments.js';
 import { loadLayout, classifyByRules } from '../util/layouts.js';
 import { parseRecords, pick } from '../util/csv.js';
@@ -13,6 +13,7 @@ const SKU_ALIASES = ['sku', 'item', 'itemnumber', 'itemcode', 'partnumber', 'par
 const UOM_ALIASES = ['uom', 'unit', 'unitofmeasure', 'um'];
 const QTY_ALIASES = ['qty', 'quantity', 'onhand', 'onhandqty', 'expected', 'expectedqty', 'systemqty', 'qtyonhand', 'cases', 'units'];
 const TEAM_ALIASES = ['team', 'teamnumber', 'teamno', 'crew', 'group'];
+const LEVEL_ALIASES = ['level', 'levels', 'tier', 'shelf'];
 
 /**
  * Which aisle a bin belongs to when the file has no aisle column - see
@@ -22,10 +23,11 @@ const TEAM_ALIASES = ['team', 'teamnumber', 'teamno', 'crew', 'group'];
 export const deriveAisle = (code) => parseBinCode(code).aisle;
 
 const upLocation = db.prepare(
-  `INSERT INTO locations (session_id, code, zone, aisle, description) VALUES (?, ?, ?, ?, ?)
+  `INSERT INTO locations (session_id, code, zone, aisle, level, description) VALUES (?, ?, ?, ?, ?, ?)
    ON CONFLICT(session_id, code) DO UPDATE SET
      zone = COALESCE(NULLIF(excluded.zone, ''), locations.zone),
      aisle = COALESCE(NULLIF(excluded.aisle, ''), locations.aisle),
+     level = COALESCE(NULLIF(excluded.level, ''), locations.level),
      description = COALESCE(NULLIF(excluded.description, ''), locations.description)`
 );
 const upAisle = db.prepare(
@@ -96,7 +98,8 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
         }
         // groups counted by hand stay out of the app entirely
         if (excluded.has(aisle)) { stats.excluded++; continue; }
-        upLocation.run(id, code, zone, aisle, desc);
+        const level = norm(pick(rec, LEVEL_ALIASES)) || parseBinCode(code).level || '';
+        upLocation.run(id, code, zone, aisle, level, desc);
         // areas (WIP, system bins, ...) are countable bins but not aisles
         if (!areas.has(aisle)) { upAisle.run(id, aisle, aisle); newAisles.add(aisle); }
         stats.bins++;
@@ -124,14 +127,15 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
         const team = norm(pick(rec, TEAM_ALIASES));
         const aisle = resolveAisle(id, pick(rec, AISLE_ALIASES));
         if (!team || !aisle) { stats.skipped++; continue; }
+        const levels = normLevels(pick(rec, LEVEL_ALIASES));
         const pos = db
           .prepare('SELECT COALESCE(MAX(position), -1) + 1 AS p FROM assignments WHERE session_id = ? AND team = ?')
           .get(id, team).p;
         db.prepare(
-          `INSERT INTO assignments (session_id, team, aisle, position, status, created_at)
-           VALUES (?, ?, ?, ?, 'queued', ?)
-           ON CONFLICT(session_id, team, aisle) DO NOTHING`
-        ).run(id, team, aisle, pos, new Date().toISOString());
+          `INSERT INTO assignments (session_id, team, aisle, levels, position, status, created_at)
+           VALUES (?, ?, ?, ?, ?, 'queued', ?)
+           ON CONFLICT(session_id, team, aisle, levels) DO NOTHING`
+        ).run(id, team, aisle, levels, pos, new Date().toISOString());
         stats.planned++;
         continue;
       }

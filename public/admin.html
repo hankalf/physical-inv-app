@@ -237,10 +237,11 @@
 
       <div class="card">
         <h2>Team assignments</h2>
-        <div class="hint">Queue aisles per team in counting order. A team's next aisle waits automatically while another team holds its block — that is what staggers them.</div>
+        <div class="hint">Queue aisles per team in counting order, with the <b>levels</b> that team's equipment covers (A–C on foot, D–F with the lift…). Two teams can share an aisle on different levels. A team's next aisle waits while another team holds those levels in its racking block — that is what staggers them.</div>
         <div class="inline" style="margin-top:8px">
-          <div class="auto"><label for="fAssignTeam">Team</label><input id="fAssignTeam" class="sm" placeholder="3"></div>
-          <div><label for="fAssignAisles">Aisles, in order</label><input id="fAssignAisles" placeholder="A01, A03, A05"></div>
+          <div class="auto"><label for="fAssignTeam">Team</label><input id="fAssignTeam" class="sm" style="width:70px" placeholder="3"></div>
+          <div><label for="fAssignAisles">Aisles, in order</label><input id="fAssignAisles" placeholder="F01, F03, F05"></div>
+          <div class="auto"><label for="fAssignLevels">Levels</label><input id="fAssignLevels" class="sm" placeholder="A-C or all" title="Which levels this team counts, by equipment: A-C on foot, D-F with the lift. Blank = every level."></div>
           <div class="auto"><button class="primary" id="btnAssign">Queue</button></div>
         </div>
         <div class="feedback" id="assignMsg"></div>

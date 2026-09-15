@@ -1,4 +1,5 @@
-Team,Aisle
-1,A01
-1,B01
-2,A02
+Team,Aisle,Levels
+1,A01,
+1,B01,
+2,A02,A-C
+3,A02,D-F

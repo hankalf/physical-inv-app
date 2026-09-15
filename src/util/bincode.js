@@ -22,3 +22,31 @@ export const aisleNumber = (aisle) => {
   const m = /(\d+)\s*$/.exec(String(aisle || ''));
   return m ? String(Number(m[1])) : String(aisle || '').toUpperCase();
 };
+
+// "A-C", "a,b,c", "ABC", "A C" -> "ABC"; "" or "all" -> "" (every level)
+export function normLevels(raw) {
+  const t = String(raw == null ? '' : raw).trim().toUpperCase();
+  if (!t || t === 'ALL' || t === '*') return '';
+  const out = new Set();
+  for (const part of t.split(/[,\s;]+/).filter(Boolean)) {
+    const range = /^([A-Z])\s*[-–]\s*([A-Z])$/.exec(part);
+    if (range) {
+      for (let c = range[1].charCodeAt(0); c <= range[2].charCodeAt(0); c++) out.add(String.fromCharCode(c));
+    } else {
+      for (const ch of part.replace(/[^A-Z]/g, '')) out.add(ch);
+    }
+  }
+  return [...out].sort().join('');
+}
+
+// "ABC" -> "A–C", "ACE" -> "A, C, E", "" -> "all levels"
+export function levelsLabel(levels) {
+  const l = String(levels || '');
+  if (!l) return 'all levels';
+  if (l.length === 1) return `level ${l}`;
+  const contiguous = [...l].every((c, i) => i === 0 || c.charCodeAt(0) === l.charCodeAt(i - 1) + 1);
+  return contiguous ? `levels ${l[0]}–${l[l.length - 1]}` : `levels ${[...l].join(', ')}`;
+}
+
+// do two level sets overlap? '' means every level
+export const levelsOverlap = (a, b) => !a || !b || [...a].some((c) => b.includes(c));

@@ -96,7 +96,7 @@ Columns are matched by name, so most ERP exports work unchanged.
 |---|---|---|
 | **Bin list** | location/bin, zone, aisle, description | The validation list for question 3. Also defines the aisles. |
 | **Pallet list** | pallet id/container/LPN, sku, description, uom, qty, location | The validation list for question 1, plus what is on each pallet and where the system thinks it is. |
-| **Counting plan** | team, aisle | One row per aisle, in the order each team should count. Optional — aisles can also be queued in the dashboard. |
+| **Counting plan** | team, aisle, levels | One row per aisle, in the order each team should count, with the levels that team covers (blank = all). Optional — aisles can also be queued in the dashboard. |
 
 Without an `Aisle` column, the aisle is read from the bin code. Two shapes are understood:
 
@@ -127,11 +127,13 @@ In **Aisles & racking blocks**, click **Auto-pair aisles** to group them in twos
 (A01+A02, A03+A04, …), or type a block name on any row. Set *Skip first* to 1 if the
 first aisle has a wall behind it. Only one team can be active in a block at a time.
 
-### 4. Assign teams
+### 4. Assign teams — aisle and levels
 
-Queue aisles per team in counting order. The first aisle for each team starts
-immediately if its block is free. When a team marks an aisle complete, its next aisle
-starts automatically — unless another team holds that block, in which case it waits
+Queue aisles per team in counting order, each with the **levels** that team's equipment
+covers: `A-C` for a crew on foot, `D-F` for the one with the lift, blank for every level.
+Two teams can work the same aisle on different levels at the same time. The first aisle
+for each team starts immediately if its block is free on those levels. When a team marks an aisle complete, its next aisle
+starts automatically — unless another team holds that block on overlapping levels, in which case it waits
 and the handheld shows *"Waiting: team 1 is still in aisle A03, which shares racking
 with A04"*. Trying to force-start a conflicting aisle from the dashboard is refused
 with the same message.
@@ -194,6 +196,10 @@ back and pulls the next one.
 
 **Counting:** Pallet → Qty → Bin → Comments, then straight back to Pallet.
 
+**Empty bins count too.** Every bin gets a line, empty or not: on the pallet prompt tap
+**Bin is EMPTY — scan the bin**, scan the location, done. The bin turns green on the map and
+the progress percentage can reach 100%. Empty lines never appear as pallets in the report.
+
 What the app refuses or flags:
 
 * **Pallet already counted** — anywhere, by anyone: error tone, and a reason is required
@@ -201,7 +207,8 @@ What the app refuses or flags:
 * **Pallet not on the list** — depends on the session setting (override / hard block /
   accept). Reported as `NOT IN MASTER`.
 * **Bin not on the list** — reason required.
-* **Bin outside the team's aisle** — reason required, flagged `off_assignment`.
+* **Bin outside the team's aisle, or on a level the team wasn't given** — reason required,
+  flagged `off_assignment`.
 * **Pallet in a different bin than the system expects** — accepted, but shown on screen
   and reported as `WRONG BIN`.
 * **Junk in the quantity field** — refused, never counted as zero.

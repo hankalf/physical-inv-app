@@ -1,5 +1,5 @@
 import { db, norm, resolveAisle } from '../db.js';
-import { aisleNumber } from '../util/bincode.js';
+import { aisleNumber, normLevels, levelsOverlap } from '../util/bincode.js';
 
 /*
  * Guided counting.
@@ -29,9 +29,11 @@ export function aisleOverview(sessionId) {
               (SELECT COUNT(*) FROM counts c JOIN locations l
                    ON l.session_id = c.session_id AND l.code = c.location_code
                 WHERE c.session_id = a.session_id AND c.voided = 0 AND l.aisle = a.aisle) AS pallets_counted,
-              (SELECT team FROM assignments s
+              (SELECT GROUP_CONCAT(team, ',') FROM assignments s
                 WHERE s.session_id = a.session_id AND s.aisle = a.aisle AND s.status = 'active') AS active_team,
-              (SELECT GROUP_CONCAT(team, ', ') FROM assignments s
+              (SELECT GROUP_CONCAT(team || CASE WHEN levels = '' THEN '' ELSE ' (' || levels || ')' END, ', ') FROM assignments s
+                WHERE s.session_id = a.session_id AND s.aisle = a.aisle AND s.status = 'active') AS active_detail,
+              (SELECT GROUP_CONCAT(team || CASE WHEN levels = '' THEN '' ELSE ' (' || levels || ')' END, ', ') FROM assignments s
                 WHERE s.session_id = a.session_id AND s.aisle = a.aisle AND s.status = 'queued') AS queued_teams,
               (SELECT COUNT(*) FROM assignments s
                 WHERE s.session_id = a.session_id AND s.aisle = a.aisle AND s.status = 'done') AS done_count
@@ -57,19 +59,21 @@ export const blockOf = (sessionId, aisle) =>
   db.prepare('SELECT block FROM aisles WHERE session_id = ? AND aisle = ?').get(Number(sessionId), norm(aisle))
     ?.block ?? norm(aisle);
 
-// Which team, if any, currently holds the block this aisle belongs to.
-export function blockHolder(sessionId, aisle, exceptTeam) {
+// Which other team, if any, holds this aisle's block on levels that overlap `levels`.
+// Two teams may share a block (even an aisle) as long as their levels don't overlap -
+// that is how a forklift crew and a crew on foot work the same racking.
+export function blockHolder(sessionId, aisle, exceptTeam, levels = '') {
   const block = blockOf(sessionId, aisle);
   const rows = db
     .prepare(
-      `SELECT s.team, s.aisle
+      `SELECT s.team, s.aisle, s.levels
          FROM assignments s
          LEFT JOIN aisles a ON a.session_id = s.session_id AND a.aisle = s.aisle
         WHERE s.session_id = ? AND s.status = 'active'
           AND COALESCE(a.block, s.aisle) = ?`
     )
     .all(Number(sessionId), block);
-  return rows.find((r) => r.team !== norm(exceptTeam)) || null;
+  return rows.find((r) => r.team !== norm(exceptTeam) && levelsOverlap(r.levels, levels)) || null;
 }
 
 export function setBlock(sessionId, aisle, block) {
@@ -115,9 +119,10 @@ export function autoBlock(sessionId, size = 2, offset = 0) {
   return aisleOverview(id);
 }
 
-export function queueAssignments(sessionId, team, aisles) {
+export function queueAssignments(sessionId, team, aisles, levelsRaw = '') {
   const id = Number(sessionId);
   const t = norm(team);
+  const levels = normLevels(levelsRaw);
   if (!t) throw Object.assign(new Error('team required'), { status: 400 });
   const maxPos = db
     .prepare('SELECT COALESCE(MAX(position), -1) AS p FROM assignments WHERE session_id = ? AND team = ?')
@@ -138,15 +143,15 @@ export function queueAssignments(sessionId, team, aisles) {
         continue;
       }
       const existing = db
-        .prepare('SELECT status FROM assignments WHERE session_id = ? AND team = ? AND aisle = ?')
-        .get(id, t, aisle);
+        .prepare('SELECT status FROM assignments WHERE session_id = ? AND team = ? AND aisle = ? AND levels = ?')
+        .get(id, t, aisle, levels);
       if (existing) { skipped.push({ aisle, reason: `already ${existing.status} for team ${t}` }); continue; }
       pos += 1;
       db.prepare(
-        `INSERT INTO assignments (session_id, team, aisle, position, status, created_at)
-         VALUES (?, ?, ?, ?, 'queued', ?)`
-      ).run(id, t, aisle, pos, now());
-      added.push(aisle);
+        `INSERT INTO assignments (session_id, team, aisle, levels, position, status, created_at)
+         VALUES (?, ?, ?, ?, ?, 'queued', ?)`
+      ).run(id, t, aisle, levels, pos, now());
+      added.push(levels ? `${aisle} (${levels})` : aisle);
     }
     db.exec('COMMIT');
   } catch (err) {
@@ -180,9 +185,9 @@ export function autoActivate(sessionId) {
       )
       .get(id, team);
     if (!next) continue;
-    if (blockHolder(id, next.aisle, team)) continue; // another team holds the racking
+    if (blockHolder(id, next.aisle, team, next.levels)) continue; // another team holds those levels of the racking
     db.prepare("UPDATE assignments SET status = 'active', started_at = ? WHERE id = ?").run(now(), next.id);
-    activated.push({ team, aisle: next.aisle });
+    activated.push({ team, aisle: next.aisle, levels: next.levels });
   }
   return activated;
 }
@@ -197,12 +202,11 @@ export function setAssignmentStatus(sessionId, assignmentId, status) {
   } else if (status === 'queued') {
     db.prepare("UPDATE assignments SET status = 'queued', started_at = NULL WHERE id = ?").run(row.id);
   } else if (status === 'active') {
-    const holder = blockHolder(id, row.aisle, row.team);
+    const holder = blockHolder(id, row.aisle, row.team, row.levels);
     if (holder) {
-      throw Object.assign(
-        new Error(`Aisle ${row.aisle} shares racking with aisle ${holder.aisle}, which team ${holder.team} is counting`),
-        { status: 409 }
-      );
+      const where = holder.aisle === row.aisle ? `aisle ${row.aisle}` : `aisle ${holder.aisle}, which shares racking with ${row.aisle}`;
+      const lv = holder.levels ? ` on levels ${holder.levels}` : '';
+      throw Object.assign(new Error(`Team ${holder.team} is counting ${where}${lv}`), { status: 409 });
     }
     db.prepare("UPDATE assignments SET status = 'active', started_at = ? WHERE id = ?").run(now(), row.id);
   } else {
@@ -236,28 +240,29 @@ export function teamStatus(sessionId, team) {
   let bins = [];
   let progress = null;
   if (active) {
+    const inLevels = (l) => !active.levels || active.levels.includes(l || '');
     bins = db
-      .prepare('SELECT code FROM locations WHERE session_id = ? AND aisle = ? ORDER BY code')
-      .all(id, active.aisle).map((r) => r.code);
+      .prepare('SELECT code, level FROM locations WHERE session_id = ? AND aisle = ? ORDER BY code')
+      .all(id, active.aisle).filter((r) => inLevels(r.level)).map((r) => r.code);
     // Which bins already have a count, from any scanner, so a second device on
     // the same team sees the same picture.
     const countedBins = db
       .prepare(
-        `SELECT DISTINCT c.location_code AS code
+        `SELECT DISTINCT c.location_code AS code, l.level
            FROM counts c JOIN locations l ON l.session_id = c.session_id AND l.code = c.location_code
           WHERE c.session_id = ? AND c.voided = 0 AND l.aisle = ?`
       )
-      .all(id, active.aisle).map((r) => r.code);
+      .all(id, active.aisle).filter((r) => inLevels(r.level)).map((r) => r.code);
     progress = { bins: bins.length, counted: countedBins.length, countedBins };
   }
 
   // If nothing is active, say who the team is waiting on rather than just "none".
   let waitingOn = null;
   if (!active && queued.length) {
-    const holder = blockHolder(id, queued[0].aisle, t);
+    const holder = blockHolder(id, queued[0].aisle, t, queued[0].levels);
     waitingOn = holder
-      ? { aisle: queued[0].aisle, blockedByTeam: holder.team, blockedByAisle: holder.aisle }
-      : { aisle: queued[0].aisle, blockedByTeam: null, blockedByAisle: null };
+      ? { aisle: queued[0].aisle, levels: queued[0].levels, blockedByTeam: holder.team, blockedByAisle: holder.aisle, blockedByLevels: holder.levels }
+      : { aisle: queued[0].aisle, levels: queued[0].levels, blockedByTeam: null, blockedByAisle: null };
   }
 
   const zoneOf = (aisle) => db.prepare(
@@ -269,10 +274,11 @@ export function teamStatus(sessionId, team) {
   return {
     team: t,
     zones,
-    active: active ? { id: active.id, aisle: active.aisle, zone: zoneOf(active.aisle), startedAt: active.started_at } : null,
+    active: active ? { id: active.id, aisle: active.aisle, levels: active.levels, zone: zoneOf(active.aisle), startedAt: active.started_at } : null,
     bins,
     progress,
     queued: queued.map((q) => q.aisle),
+    queuedDetail: queued.map((q) => ({ aisle: q.aisle, levels: q.levels })),
     done,
     waitingOn,
   };

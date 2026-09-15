@@ -7,7 +7,8 @@ export function progress(sessionId) {
     .prepare(
       `SELECT COUNT(*) AS lines,
               COUNT(DISTINCT CASE WHEN p.pallet_id IS NOT NULL THEN c.pallet_id END) AS pallets_counted,
-              COUNT(DISTINCT CASE WHEN p.pallet_id IS NULL THEN c.pallet_id END) AS pallets_unknown,
+              COUNT(DISTINCT CASE WHEN p.pallet_id IS NULL AND c.empty_bin = 0 THEN c.pallet_id END) AS pallets_unknown,
+              SUM(c.empty_bin) AS empty_bins,
               COUNT(DISTINCT c.location_code) AS bins_counted,
               COUNT(DISTINCT c.team) AS teams,
               COUNT(DISTINCT c.device_id) AS devices
@@ -80,7 +81,7 @@ export function palletReport(sessionId) {
                 MAX(scanned_at) AS last_scan,
                 GROUP_CONCAT(comments, ' | ') AS comments
            FROM counts
-          WHERE session_id = ? AND voided = 0
+          WHERE session_id = ? AND voided = 0 AND empty_bin = 0
           GROUP BY pallet_id
        ),
        keys AS (
@@ -155,7 +156,7 @@ export function rawCounts(sessionId) {
       `SELECT c.id, c.pallet_id, c.qty, c.location_code, c.aisle, c.sku,
               COALESCE(p.description, '') AS description,
               c.comments, c.team, c.employees, c.device_id,
-              c.unknown_pallet, c.unknown_location, c.off_assignment, c.duplicate_pallet,
+              c.unknown_pallet, c.unknown_location, c.off_assignment, c.duplicate_pallet, c.empty_bin,
               c.override_reason, c.voided, c.scanned_at, c.received_at
          FROM counts c
          LEFT JOIN pallets p ON p.session_id = c.session_id AND p.pallet_id = c.pallet_id

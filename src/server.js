@@ -319,7 +319,7 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments$/)) && method === 'POST') {
     const body = await readJson(req);
     const aisles = Array.isArray(body.aisles) ? body.aisles : String(body.aisles || '').split(/[,\s]+/);
-    return sendJson(req, res, 200, queueAssignments(m[1], body.team, aisles));
+    return sendJson(req, res, 200, queueAssignments(m[1], body.team, aisles, body.levels || ''));
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments\/(\d+)$/)) && method === 'POST') {
     const body = await readJson(req);
@@ -359,7 +359,7 @@ async function handleAdmin(req, res, url, m) {
   const COUNT_COLS = [
     'id', 'pallet_id', 'qty', 'location_code', 'aisle', 'sku', 'description', 'comments',
     'team', 'employees', 'device_id', 'unknown_pallet', 'unknown_location', 'off_assignment',
-    'duplicate_pallet', 'override_reason', 'voided', 'scanned_at', 'received_at',
+    'duplicate_pallet', 'empty_bin', 'override_reason', 'voided', 'scanned_at', 'received_at',
   ];
   const PALLET_COLS = [
     'pallet_id', 'sku', 'description', 'uom', 'expected_qty', 'counted_qty', 'variance_qty',

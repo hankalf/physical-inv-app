@@ -71,6 +71,12 @@
   // "Freezer – Aisle F01": the zone comes from the bins in the aisle
   const titleCase = (z) => String(z || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
   const aisleLabel = (aisle, zone) => (zone ? `${titleCase(zone)} – Aisle ${aisle}` : `Aisle ${aisle}`);
+  const levelsLabel = (l) => {
+    if (!l) return 'all levels';
+    if (l.length === 1) return `level ${l}`;
+    const contiguous = [...l].every((c, i) => i === 0 || c.charCodeAt(0) === l.charCodeAt(i - 1) + 1);
+    return contiguous ? `levels ${l[0]}–${l[l.length - 1]}` : `levels ${[...l].join(', ')}`;
+  };
   let zoneByAisle = new Map();
 
   /* ------------------------------------------------------------ table helpers */
@@ -108,7 +114,7 @@
     plan: {
       file: 'plan-template.csv',
       required: [['Team', 'team number'], ['Aisle', 'the full aisle code from the bin list, e.g. F01 - a bare number is refused when it could mean two aisles (A01 / F01)']],
-      optional: [],
+      optional: [['Levels', 'which levels the team counts, e.g. A-C or D-F; blank = every level']],
       note: 'One row per aisle, in the order each team should count. Upload the bin list first. Aisles can also be queued by hand in Team assignments below.',
     },
   };
@@ -243,7 +249,8 @@
     $('heroBins').textContent = `${p.bins_counted.toLocaleString()} of ${p.bins_total.toLocaleString()}`;
     $('aisleBar').style.width = aislePct + '%';
     $('heroAisles').textContent = `${aislesDone} of ${p.byAisle.length} (${aislePct}%)`;
-    $('heroSub').textContent = `${p.pallets_counted.toLocaleString()} of ${p.pallets_total.toLocaleString()} listed pallets found` + (p.exceptions ? ` · ${p.exceptions} flagged` : '');
+    $('heroSub').textContent = `${p.pallets_counted.toLocaleString()} of ${p.pallets_total.toLocaleString()} listed pallets found` +
+      (p.empty_bins ? ` · ${Number(p.empty_bins).toLocaleString()} bins checked empty` : '') + (p.exceptions ? ` · ${p.exceptions} flagged` : '');
     $('stats').innerHTML = '';
     for (const [n, l] of [
       [p.lines.toLocaleString(), 'Count lines'],
@@ -304,7 +311,7 @@
         const i = document.createElement('i'); i.style.width = (a.bins ? Math.round((a.bins_counted / a.bins) * 100) : 0) + '%';
         bar.appendChild(i); td.appendChild(bar); tr.appendChild(td);
         const st = document.createElement('td');
-        if (a.active_team) st.appendChild(tag('active')), st.append(` team ${a.active_team}`);
+        if (a.active_team) st.appendChild(tag('active')), st.append(` team ${a.active_detail}`);
         else if (a.done_count) st.appendChild(tag('done'));
         else if (a.queued_teams) st.appendChild(tag('queued')), st.append(` team ${a.queued_teams}`);
         else st.append('—');
@@ -320,8 +327,9 @@
       apiJson(`/api/admin/sessions/${sessionId}/aisles`),
     ]);
     const blockOf = new Map(aisles.map((a) => [a.aisle, a.block]));
-    const activeHolders = new Map(); // block -> team
-    for (const r of rows) if (r.status === 'active') activeHolders.set(blockOf.get(r.aisle) || r.aisle, r.team);
+    const activeInBlock = new Map(); // block -> [{team, levels}]
+    const overlap = (a, b) => !a || !b || [...a].some((c) => b.includes(c));
+    for (const r of rows) if (r.status === 'active') { const k = blockOf.get(r.aisle) || r.aisle; if (!activeInBlock.has(k)) activeInBlock.set(k, []); activeInBlock.get(k).push(r); }
 
     const teams = new Map();
     for (const r of rows) { if (!teams.has(r.team)) teams.set(r.team, []); teams.get(r.team).push(r); }
@@ -337,7 +345,7 @@
       const active = items.find((i) => i.status === 'active');
       head.innerHTML = `<span>Team <b></b></span><span class="muted"></span>`;
       head.querySelector('b').textContent = team;
-      head.querySelector('.muted').textContent = active ? `in ${aisleLabel(active.aisle, zoneByAisle.get(active.aisle))}` : (items.every((i) => i.status === 'done') ? 'finished' : 'waiting');
+      head.querySelector('.muted').textContent = active ? `in ${aisleLabel(active.aisle, zoneByAisle.get(active.aisle))}, ${levelsLabel(active.levels)}` : (items.every((i) => i.status === 'done') ? 'finished' : 'waiting');
       box.appendChild(head);
 
       const seq = document.createElement('div');
@@ -345,11 +353,11 @@
       for (const it of items.sort((a, b) => a.position - b.position || a.id - b.id)) {
         const a = document.createElement('span');
         a.className = 'a ' + it.status;
-        const holder = activeHolders.get(blockOf.get(it.aisle) || it.aisle);
-        const blocked = it.status === 'queued' && holder && holder !== team;
+        const holder = (activeInBlock.get(blockOf.get(it.aisle) || it.aisle) || []).find((h) => h.team !== team && overlap(h.levels, it.levels));
+        const blocked = it.status === 'queued' && !!holder;
         if (blocked) a.classList.add('blocked');
-        a.title = blocked ? `Held: team ${holder} is active in this block` : it.status;
-        a.append(aisleLabel(it.aisle, zoneByAisle.get(it.aisle)));
+        a.title = blocked ? `Held: team ${holder.team} is active in this block on ${levelsLabel(holder.levels)}` : it.status;
+        a.append(`${aisleLabel(it.aisle, zoneByAisle.get(it.aisle))} · ${levelsLabel(it.levels)}`);
         if (blocked) a.append(' ⏳');
         const act = (label, status) => {
           const b = document.createElement('button');
@@ -730,10 +738,10 @@
   $('btnAssign').onclick = async () => {
     if (!needSession($('assignMsg'))) return;
     try {
-      const r = await postJson(`/api/admin/sessions/${sessionId}/assignments`, { team: $('fAssignTeam').value, aisles: $('fAssignAisles').value });
+      const r = await postJson(`/api/admin/sessions/${sessionId}/assignments`, { team: $('fAssignTeam').value, aisles: $('fAssignAisles').value, levels: $('fAssignLevels').value });
       const parts = [];
       if (r.added.length) parts.push(`queued ${r.added.join(', ')}`);
-      if (r.activated.length) parts.push(`started ${r.activated.map((a) => `team ${a.team} in ${a.aisle}`).join('; ')}`);
+      if (r.activated.length) parts.push(`started ${r.activated.map((a) => `team ${a.team} in ${a.aisle}${a.levels ? ' (' + a.levels + ')' : ''}`).join('; ')}`);
       msg($('assignMsg'), r.skipped.length ? 'warn' : 'ok', parts.join(' · ') || 'Nothing to queue',
         r.skipped.map((s) => `${s.aisle}: ${s.reason}`).join(' · '));
       $('fAssignAisles').value = '';

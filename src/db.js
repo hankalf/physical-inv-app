@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS locations (
   code        TEXT    NOT NULL,
   zone        TEXT,
   aisle       TEXT,
+  level       TEXT,
   description TEXT,
   PRIMARY KEY (session_id, code)
 );
@@ -109,12 +110,13 @@ CREATE TABLE IF NOT EXISTS assignments (
   team         TEXT    NOT NULL,
   aisle        TEXT    NOT NULL,
   position     INTEGER NOT NULL DEFAULT 0,
+  levels       TEXT    NOT NULL DEFAULT '',          -- e.g. 'ABC'; '' = every level
   status       TEXT    NOT NULL DEFAULT 'queued',   -- queued | active | done
   created_at   TEXT    NOT NULL,
   started_at   TEXT,
   completed_at TEXT
 );
-CREATE UNIQUE INDEX IF NOT EXISTS idx_assign_unique ON assignments(session_id, team, aisle);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_assign_unique ON assignments(session_id, team, aisle, levels);
 CREATE INDEX IF NOT EXISTS idx_assign_team ON assignments(session_id, team, status);
 
 -- Audit of which employees were on which scanner, and when.
@@ -145,6 +147,7 @@ CREATE TABLE IF NOT EXISTS counts (
   unknown_location INTEGER NOT NULL DEFAULT 0,
   off_assignment   INTEGER NOT NULL DEFAULT 0,
   duplicate_pallet INTEGER NOT NULL DEFAULT 0,
+  empty_bin        INTEGER NOT NULL DEFAULT 0,   -- bin checked and found empty (no pallet)
   override_reason  TEXT,
   voided           INTEGER NOT NULL DEFAULT 0,
   scanned_at       TEXT    NOT NULL,
@@ -170,9 +173,16 @@ CREATE INDEX IF NOT EXISTS idx_counts_team    ON counts(session_id, team);
 CREATE INDEX IF NOT EXISTS idx_counts_device  ON counts(session_id, device_id);
 `);
 
-// Added after the first schema: a drawing the map is laid over, per session.
-if (!db.prepare("PRAGMA table_info('sessions')").all().some((c) => c.name === 'layout')) {
-  db.exec("ALTER TABLE sessions ADD COLUMN layout TEXT");
+// Columns added after the first schema.
+const hasCol = (t, c) => db.prepare(`PRAGMA table_info('${t}')`).all().some((x) => x.name === c);
+if (!hasCol('sessions', 'layout')) db.exec('ALTER TABLE sessions ADD COLUMN layout TEXT');
+if (!hasCol('locations', 'level')) db.exec('ALTER TABLE locations ADD COLUMN level TEXT');
+if (!hasCol('counts', 'empty_bin')) db.exec('ALTER TABLE counts ADD COLUMN empty_bin INTEGER NOT NULL DEFAULT 0');
+if (!hasCol('assignments', 'levels')) {
+  // a team is assigned an aisle AND the levels it has the equipment for
+  db.exec("ALTER TABLE assignments ADD COLUMN levels TEXT NOT NULL DEFAULT ''");
+  db.exec('DROP INDEX IF EXISTS idx_assign_unique');
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_assign_unique ON assignments(session_id, team, aisle, levels)');
 }
 
 export const norm = (v) => (v == null ? '' : String(v).trim().toUpperCase());
@@ -236,7 +246,7 @@ export function masterPayload(sessionId) {
   const id = Number(sessionId);
   const s = getSession(id);
   const locations = db
-    .prepare('SELECT code, zone, aisle FROM locations WHERE session_id = ? ORDER BY code')
+    .prepare('SELECT code, zone, aisle, level FROM locations WHERE session_id = ? ORDER BY code')
     .all(id);
   const pallets = db
     .prepare('SELECT pallet_id, sku, description, expected_qty, expected_location FROM pallets WHERE session_id = ?')
@@ -245,7 +255,7 @@ export function masterPayload(sessionId) {
     ...publicSession(s),
     sessionId: id,
     // Compact tuples: these lists can run to six figures of rows.
-    locations: locations.map((l) => [l.code, l.zone || '', l.aisle || '']),
+    locations: locations.map((l) => [l.code, l.zone || '', l.aisle || '', l.level || '']),
     pallets: pallets.map((p) => [p.pallet_id, p.sku || '', p.description || '', p.expected_location || '']),
   };
 }
@@ -263,8 +273,8 @@ export function recordSignon(sessionId, { deviceId, team, employees }) {
 const insertCount = db.prepare(`
 INSERT INTO counts (client_id, session_id, pallet_id, qty, location_code, comments, sku,
                     team, employees, device_id, aisle, unknown_pallet, unknown_location,
-                    off_assignment, duplicate_pallet, override_reason, scanned_at, received_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    off_assignment, duplicate_pallet, empty_bin, override_reason, scanned_at, received_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(client_id) DO NOTHING
 `);
 
@@ -279,12 +289,13 @@ export function saveCounts(sessionId, rows) {
   try {
     for (const r of rows) {
       if (!r || !r.clientId) { rejected.push({ clientId: r?.clientId ?? null, reason: 'missing clientId' }); continue; }
-      const qty = Number(r.qty);
+      const empty = !!r.emptyBin;
+      const qty = empty ? 0 : Number(r.qty);
       if (!Number.isFinite(qty)) { rejected.push({ clientId: r.clientId, reason: 'invalid qty' }); continue; }
-      if (!norm(r.palletId)) { rejected.push({ clientId: r.clientId, reason: 'missing pallet id' }); continue; }
+      if (!empty && !norm(r.palletId)) { rejected.push({ clientId: r.clientId, reason: 'missing pallet id' }); continue; }
       if (!norm(r.location)) { rejected.push({ clientId: r.clientId, reason: 'missing location' }); continue; }
       insertCount.run(
-        String(r.clientId), id, norm(r.palletId), qty, norm(r.location),
+        String(r.clientId), id, empty ? 'EMPTY' : norm(r.palletId), qty, norm(r.location),
         r.comments ? String(r.comments).slice(0, 500) : null,
         r.sku ? norm(r.sku) : null,
         norm(r.team) || 'UNKNOWN',
@@ -292,7 +303,7 @@ export function saveCounts(sessionId, rows) {
         norm(r.deviceId) || 'UNKNOWN',
         r.aisle ? norm(r.aisle) : null,
         r.unknownPallet ? 1 : 0, r.unknownLocation ? 1 : 0,
-        r.offAssignment ? 1 : 0, r.duplicatePallet ? 1 : 0,
+        r.offAssignment ? 1 : 0, r.duplicatePallet ? 1 : 0, empty ? 1 : 0,
         r.overrideReason ? String(r.overrideReason) : null,
         r.scannedAt || now, now
       );
@@ -312,11 +323,11 @@ export function countedPallets(sessionId, since) {
   const rows = since
     ? db.prepare(
         `SELECT pallet_id, location_code, team, scanned_at FROM counts
-          WHERE session_id = ? AND voided = 0 AND received_at > ? ORDER BY received_at`
+          WHERE session_id = ? AND voided = 0 AND empty_bin = 0 AND received_at > ? ORDER BY received_at`
       ).all(Number(sessionId), since)
     : db.prepare(
         `SELECT pallet_id, location_code, team, scanned_at FROM counts
-          WHERE session_id = ? AND voided = 0 ORDER BY received_at`
+          WHERE session_id = ? AND voided = 0 AND empty_bin = 0 ORDER BY received_at`
       ).all(Number(sessionId));
   const latest = db.prepare('SELECT MAX(received_at) AS m FROM counts WHERE session_id = ?').get(Number(sessionId)).m;
   return { pallets: rows.map((r) => [r.pallet_id, r.location_code, r.team]), watermark: latest };
