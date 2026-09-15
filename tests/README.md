@@ -1,7 +1,7 @@
 # Tests
 
 ```bash
-npm test                 # all three suites against a scratch database
+npm test                 # every suite, each against its own scratch database
 npm test cycle-count     # one suite
 ```
 
@@ -17,6 +17,7 @@ runs the suite in a real Chromium, and exits non-zero if anything fails. Nothing
 | `roster.mjs` | crew import, teams, drag and drop, equipment reach rules, assignment enforcement, the sign-on check |
 | `ops.mjs` | the audit log, backups, ERP layouts and exports, printable count sheets |
 | `scanner-auth.mjs` | enrolment, refusing untokened and forged calls, link reset and removal, and what a cut-off scanner does mid-count |
+| `settings.mjs` | supervisor logins: accounts, roles, the last-admin guard, deactivation, the shared-password fallback, and that the setup cards live on `/settings` and not the dashboard |
 
 Screenshots land in `tests/screenshots/` (gitignored) — useful when a check fails.
 

@@ -33,6 +33,9 @@ import { listLayouts, loadLayout } from './util/layouts.js';
 import { siteTimezone, localDate, localHour } from './util/localtime.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet } from './routes/printing.js';
+import {
+  countUsers, listUsers, createUser, updateUser, deleteUser, authenticate, changeOwnPassword, getUser,
+} from './routes/users.js';
 import { listFormats, saveFormat, buildExport, availableFields } from './routes/erp.js';
 
 // people.js parses uploaded rosters with the shared CSV helpers
@@ -124,7 +127,12 @@ const httpError = (status, message) => Object.assign(new Error(message), { statu
 
 /* ------------------------------------------------------------ admin auth */
 
-const adminTokens = new Map();   // token -> supervisor name
+// token -> { name, username, role }
+const adminTokens = new Map();
+
+// The shared password is the way in before anyone has an account, and the way
+// back in when everyone has forgotten theirs. Its use is always logged as such.
+const SHARED_LOGIN = String(process.env.SHARED_PASSWORD_LOGIN || 'on').toLowerCase() !== 'off';
 
 function passwordMatches(candidate) {
   const a = Buffer.from(String(candidate || ''));
@@ -132,13 +140,26 @@ function passwordMatches(candidate) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-function requireAdmin(req, url) {
+function currentUser(req, url) {
   const auth = String(req.headers.authorization || '');
   let token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
   // a count sheet is opened in a new tab, which cannot carry a header
   if (!token && url && /\/print\//.test(url.pathname)) token = url.searchParams.get('t') || '';
-  if (!adminTokens.has(token)) throw httpError(401, 'unauthorized');
-  return adminTokens.get(token) || 'supervisor';
+  return adminTokens.get(token) || null;
+}
+
+function requireAdmin(req, url) {
+  const who = currentUser(req, url);
+  if (!who) throw httpError(401, 'unauthorized');
+  return who.name;
+}
+
+/** Managing accounts is the one thing a plain supervisor cannot do. */
+function requireAccountAdmin(req, url) {
+  const who = currentUser(req, url);
+  if (!who) throw httpError(401, 'unauthorized');
+  if (who.role !== 'admin') throw httpError(403, 'only an admin can manage accounts');
+  return who;
 }
 
 /* ------------------------------------------------------- scanner auth */
@@ -164,6 +185,7 @@ async function serveStatic(req, res, pathname) {
     : /^\/admin\/?$/.test(pathname) ? '/admin.html'
     : /^\/teams\/?$/.test(pathname) ? '/teams.html'
     : /^\/cycle\/?$/.test(pathname) ? '/cycle.html'
+    : /^\/settings\/?$/.test(pathname) ? '/settings.html'
     : pathname;
   const filePath = join(PUBLIC_DIR, normalize(rel).replace(/^(\.\.[/\\])+/, ''));
   if (!filePath.startsWith(PUBLIC_DIR)) return send(req, res, 403, 'forbidden');
@@ -330,12 +352,29 @@ async function handleAdmin(req, res, url, m) {
 
   if (p === '/api/admin/login' && method === 'POST') {
     const body = await readJson(req);
-    if (!passwordMatches(body.password)) throw httpError(401, 'bad password');
     const token = randomUUID();
-    const who = String(body.name || '').trim().slice(0, 40) || 'supervisor';
-    adminTokens.set(token, who);
-    audit(who, 'signed in');
-    return sendJson(req, res, 200, { token, name: who });
+    const username = String(body.username || '').trim();
+
+    // A real account first. What was typed can be either a username or, at a site
+    // still on the shared password, just a name - so an unknown name falls
+    // through, while a name that IS an account must get that account's password.
+    if (username) {
+      const user = authenticate(username, body.password);
+      if (user) {
+        adminTokens.set(token, { name: user.name, username: user.username, role: user.role });
+        audit(user.name, 'signed in', `as ${user.username} (${user.role})`);
+        return sendJson(req, res, 200, { token, name: user.name, username: user.username, role: user.role, accounts: countUsers() });
+      }
+      if (getUser(username)) throw httpError(401, 'that username and password do not match');
+    }
+
+    // otherwise the shared password, which is recorded for what it is
+    if (!SHARED_LOGIN) throw httpError(401, 'sign in with your username and password');
+    if (!passwordMatches(body.password)) throw httpError(401, 'bad password');
+    const who = String(body.name || username || '').trim().slice(0, 40) || 'shared password';
+    adminTokens.set(token, { name: who, username: '', role: 'admin' });
+    audit(who, 'signed in with the shared password', countUsers() ? 'accounts exist - this should be rare' : 'no accounts yet');
+    return sendJson(req, res, 200, { token, name: who, username: '', role: 'admin', shared: true, accounts: countUsers() });
   }
 
   const actor = requireAdmin(req, url);
@@ -452,6 +491,44 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments\/(\d+)$/)) && method === 'DELETE') {
     audit(actor, 'removed an assignment', `assignment ${m[2]}`, m[1]);
     return sendJson(req, res, 200, deleteAssignment(m[1], m[2]));
+  }
+
+  // --- accounts
+  if (p === '/api/admin/me' && method === 'GET') {
+    const who = currentUser(req, url);
+    if (!who) throw httpError(401, 'unauthorized');
+    return sendJson(req, res, 200, { ...who, accounts: countUsers(), sharedLogin: SHARED_LOGIN });
+  }
+  if (p === '/api/admin/users' && method === 'GET') {
+    requireAccountAdmin(req, url);
+    return sendJson(req, res, 200, { users: listUsers(), sharedLogin: SHARED_LOGIN });
+  }
+  if (p === '/api/admin/users' && method === 'POST') {
+    const me = requireAccountAdmin(req, url);
+    const body = await readJson(req);
+    const u = createUser(body, me.username || me.name);
+    audit(actor, 'created an account', `${u.username} (${u.role})`);
+    return sendJson(req, res, 200, u);
+  }
+  if ((m = p.match(/^\/api\/admin\/users\/([A-Za-z0-9._-]+)$/)) && method === 'POST') {
+    requireAccountAdmin(req, url);
+    const body = await readJson(req);
+    const u = updateUser(m[1], body);
+    audit(actor, 'changed an account', `${u.username}: ${Object.keys(body).filter((k) => k !== 'password').join(', ') || 'password'}`);
+    return sendJson(req, res, 200, u);
+  }
+  if ((m = p.match(/^\/api\/admin\/users\/([A-Za-z0-9._-]+)$/)) && method === 'DELETE') {
+    requireAccountAdmin(req, url);
+    audit(actor, 'deleted an account', m[1]);
+    return sendJson(req, res, 200, { deleted: deleteUser(m[1]) });
+  }
+  if (p === '/api/admin/me/password' && method === 'POST') {
+    const who = currentUser(req, url);
+    if (!who || !who.username) throw httpError(400, 'sign in with an account to change its password');
+    const body = await readJson(req);
+    changeOwnPassword(who.username, body.current, body.next);
+    audit(actor, 'changed their own password', who.username);
+    return sendJson(req, res, 200, { ok: true });
   }
 
   // --- roster: employees, teams, equipment

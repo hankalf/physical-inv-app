@@ -1,69 +1,26 @@
-/* Cycle counts: the programme, its coverage, and the bins going out today. */
+/* Cycle counts: the program, its coverage, and the bins going out today. */
 (() => {
   'use strict';
 
-  const $ = (id) => document.getElementById(id);
-  let token = sessionStorage.getItem('admToken') || '';
+  const api = window.appApi;
+  const { $, msg, table, cell } = window.appUi;
+  const apiJson = (p, o) => api.json(p, o);
+  const postJson = (p, body, method) => api.post(p, body, method);
+
   let sessions = [];
   let sessionId = null;
 
-  async function api(path, options = {}) {
-    const res = await fetch(path, { ...options, headers: { authorization: 'Bearer ' + token, ...(options.headers || {}) }, cache: 'no-store' });
-    if (res.status === 401) { logout(); throw new Error('Session expired — sign in again'); }
-    if (!res.ok) {
-      let m = res.status + ' ' + res.statusText;
-      try { m = (await res.json()).error || m; } catch { /* keep status text */ }
-      throw new Error(m);
-    }
-    return res;
-  }
-  const apiJson = (p, o) => api(p, o).then((r) => r.json());
-  const postJson = (p, body, method = 'POST') =>
-    apiJson(p, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-
-  function msg(el, kind, text, detail) {
-    el.className = 'feedback show ' + kind;
-    el.textContent = text;
-    if (detail) { const d = document.createElement('div'); d.className = 'detail'; d.textContent = detail; el.appendChild(d); }
-  }
   function show(which) {
     $('scrLogin').classList.toggle('active', which === 'login');
     $('scrMain').classList.toggle('active', which === 'main');
-    $('btnLogout').hidden = which !== 'main';
     $('clockChip').hidden = which !== 'main';
   }
-  function logout() { token = ''; sessionStorage.removeItem('admToken'); show('login'); }
   const needSession = (el) => {
     if (sessionId) return true;
-    msg(el, 'err', 'Create a cycle-count programme first', 'One programme runs for the year — you generate a batch out of it each day.');
+    msg(el, 'err', 'Create a cycle-count program first', 'One program runs for the year — you generate a batch out of it each day.');
     return false;
   };
 
-  async function login() {
-    try {
-      const res = await fetch('/api/admin/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: $('fPassword').value, name: $('fWho').value }) });
-      if (!res.ok) throw new Error('Wrong password');
-      token = (await res.json()).token;
-      sessionStorage.setItem('admToken', token);
-      $('fPassword').value = '';
-      show('main');
-      await loadSessions();
-    } catch (err) { msg($('loginMsg'), 'err', err.message); }
-  }
-
-  /* ------------------------------------------------------------ table helper */
-  const cell = (text, cls) => { const td = document.createElement('td'); if (cls) td.className = cls; td.textContent = text ?? ''; return td; };
-  function table(el, columns, rows, renderRow, empty) {
-    el.innerHTML = '';
-    const thead = document.createElement('thead');
-    const hr = document.createElement('tr');
-    for (const c of columns) { const th = document.createElement('th'); th.textContent = c.label; if (c.num) th.className = 'num'; hr.appendChild(th); }
-    thead.appendChild(hr);
-    const tbody = document.createElement('tbody');
-    if (!rows.length) { const tr = document.createElement('tr'); const td = cell(empty); td.colSpan = columns.length; td.className = 'hint'; tr.appendChild(td); tbody.appendChild(tr); }
-    for (const r of rows) tbody.appendChild(renderRow(r));
-    el.append(thead, tbody);
-  }
 
   /* ------------------------------------------------------------ sessions */
   async function loadSessions() {
@@ -81,7 +38,7 @@
     const has = sessions.length > 0;
     $('noSessions').hidden = has;
     for (const id of ['dataCard', 'coverageCard', 'generateCard', 'batchCard', 'openCard']) $(id).hidden = !has;
-    if (!has) { sessionId = null; sel.innerHTML = '<option value="">No cycle-count programme yet</option>'; return; }
+    if (!has) { sessionId = null; sel.innerHTML = '<option value="">No cycle-count program yet</option>'; return; }
     sessionId = sessions.some((s) => s.id === prior) ? prior : sessions[0].id;
     sel.value = String(sessionId);
     const s = sessions.find((x) => x.id === sessionId);
@@ -202,9 +159,6 @@
     } catch (err) { msg($('uploadMsg'), 'err', 'Upload failed', err.message); }
   }
 
-  $('btnLogin').onclick = login;
-  $('fPassword').addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
-  $('btnLogout').onclick = logout;
   $('fSessionPick').onchange = (e) => { sessionId = Number(e.target.value) || null; refresh(); };
   $('fCovDays').onchange = refresh;
 
@@ -221,7 +175,7 @@
     const s = sessions.find((x) => x.id === sessionId);
     if (!s) return;
     const next = s.status === 'closed' ? 'open' : 'closed';
-    if (next === 'closed' && !confirm('Close this programme? Scanners will stop being able to send counts.')) return;
+    if (next === 'closed' && !confirm('Close this program? Scanners will stop being able to send counts.')) return;
     try { await postJson(`/api/admin/sessions/${sessionId}/status`, { status: next }); await loadSessions(); }
     catch (err) { msg($('sessionMsg'), 'err', err.message); }
   };
@@ -271,18 +225,17 @@
       await loadSessions();
     } catch (err) { msg($('cycleMsg'), 'err', err.message); }
   };
-  $('btnExportCoverage').onclick = async () => {
-    const res = await api(`/api/admin/sessions/${sessionId}/export/coverage.csv`);
-    const url = URL.createObjectURL(await res.blob());
-    const a = document.createElement('a'); a.href = url; a.download = `bin-coverage-${sessionId}.csv`;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  $('btnExportCoverage').onclick = () => {
+    if (!needSession($('cycleMsg'))) return;
+    api.download(`/api/admin/sessions/${sessionId}/export/coverage.csv`, `bin-coverage-${sessionId}.csv`)
+      .catch((err) => msg($('cycleMsg'), 'err', err.message));
   };
 
-  (async () => {
-    if (!token) return show('login');
-    try { await apiJson('/api/admin/sessions'); show('main'); await loadSessions(); }
-    catch { show('login'); }
-  })();
-  setInterval(() => { if (token && sessionId) refresh().catch(() => {}); }, 30000);
+  document.addEventListener('auth', (e) => {
+    if (!e.detail) return show('login');
+    show('main');
+    loadSessions().catch(() => show('login'));
+  });
+  document.addEventListener('DOMContentLoaded', () => { api.start().catch(() => show('login')); });
+  setInterval(() => { if (api.token && sessionId) refresh().catch(() => {}); }, 30000);
 })();

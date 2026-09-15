@@ -29,33 +29,13 @@ const A = (sel) => admin.$(sel);
 const card = async (sel) => (await admin.$(sel)).evaluateHandle((el) => el.closest('.card'));
 await admin.goto(BASE + '/admin');
 await admin.fill('#fPassword', 'wrong'); await admin.click('#btnLogin'); await admin.waitForTimeout(300);
-check('Admin: wrong password rejected', clean(await admin.textContent('#loginMsg')) === 'Wrong password');
+check('Admin: wrong password rejected', clean(await admin.textContent('#loginMsg')) === 'bad password', clean(await admin.textContent('#loginMsg')));
 await shot(admin, 'admin-login');
 await admin.fill('#fPassword', 'changeme'); await admin.click('#btnLogin');
 await admin.waitForSelector('#scrMain.active'); await admin.waitForTimeout(500);
 check('Admin: login', true);
-
-// scanners: register two, check links, remove one later
-for (const [n, notes] of [['scanner-01', 'freezer unit A'], ['SCANNER-02', ''], ['SCANNER-99', 'to be removed']]) {
-  await admin.fill('#fDevName', n); await admin.fill('#fDevNotes', notes); await admin.click('#btnAddDevice'); await admin.waitForTimeout(300);
-}
-await admin.fill('#fDevName', 'SCANNER-01'); await admin.click('#btnAddDevice'); await admin.waitForTimeout(300);
-check('Admin: duplicate scanner name refused', /already exists/.test(clean(await admin.textContent('#deviceMsg'))), clean(await admin.textContent('#deviceMsg')));
-const devices = (await (await fetch(`${BASE}/api/admin/devices`, { headers: { authorization: 'Bearer ' + (await admin.evaluate(() => sessionStorage.getItem('admToken'))) } })).json()).devices;
-const devLink = Object.fromEntries(devices.map((d) => [d.name, `${BASE}/?d=${d.uid}`]));
-check('Admin: three scanners registered with unique links', devices.length === 3 && new Set(devices.map((d) => d.uid)).size === 3, devices.map((d) => `${d.name}=${d.uid}`).join(' '));
-await admin.click('#deviceTable tbody tr:nth-child(1) button:nth-child(2)'); await admin.waitForTimeout(1500);
-check('Admin: QR code shown for a scanner link', (await admin.$('#qrBox img, #qrBox canvas')) !== null || /QR unavailable/.test(clean(await admin.textContent('#qrBox'))), clean(await admin.textContent('#qrBox')).slice(0, 60) || 'rendered');
-await (await card('#deviceTable')).asElement().screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-scanners.png` });
-await admin.click('#btnQrClose');
-const del99 = (await admin.$$('#deviceTable tbody tr')).length;
-
-await admin.click('#deviceTable tbody tr:nth-child(3) button:text-is("Remove")'); await admin.waitForTimeout(400);
-check('Admin: remove a scanner', (await admin.$$('#deviceTable tbody tr')).length === del99 - 1);
-check('Admin: every scanner can have its link reset without being removed',
-  (await admin.$$('#deviceTable tbody tr button:text-is("Reset link")')).length === (await admin.$$('#deviceTable tbody tr')).length);
-const gone = await fetch(devLink['SCANNER-99'].replace('/?d=', '/api/devices/'));
-check('API: removed scanner link no longer resolves (404)', gone.status === 404);
+check('Admin: the tab bar links the four supervisor pages',
+  (await admin.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/cycle,/teams,/settings');
 
 await admin.fill('#fNewName', 'Front Royal Q3 physical'); await admin.click('#btnCreate'); await admin.waitForTimeout(600);
 check('Admin: create session', /Created full count session #\d+/.test(clean(await admin.textContent('#sessionMsg'))), clean(await admin.textContent('#sessionMsg')).slice(0, 60));
@@ -64,43 +44,77 @@ await admin.click('#btnSaveSettings'); await admin.waitForTimeout(500);
 check('Admin: save settings (Front Royal drawing, validate w/ override, guided, comments)', /Settings saved/.test(clean(await admin.textContent('#sessionMsg'))));
 await (await card('#fSessionPick')).asElement().screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-session.png` });
 
+/* ---- setup lives under Settings: scanners, list uploads, racking blocks ---- */
+const toSettings = async () => { await admin.goto(BASE + '/settings'); await admin.waitForSelector('#scrMain.active'); await admin.waitForTimeout(700); };
+await toSettings();
+check('Settings: the sign-in carried over from the dashboard, no second password',
+  (await admin.$('#scrLogin.active')) === null && /Dashboard/.test(await admin.textContent('#navTabs')));
+
+// scanners: register two, check links, remove one later
+for (const [n, notes] of [['scanner-01', 'freezer unit A'], ['SCANNER-02', ''], ['SCANNER-99', 'to be removed']]) {
+  await admin.fill('#fDevName', n); await admin.fill('#fDevNotes', notes); await admin.click('#btnAddDevice'); await admin.waitForTimeout(300);
+}
+await admin.fill('#fDevName', 'SCANNER-01'); await admin.click('#btnAddDevice'); await admin.waitForTimeout(300);
+check('Settings: duplicate scanner name refused', /already exists/.test(clean(await admin.textContent('#deviceMsg'))), clean(await admin.textContent('#deviceMsg')));
+const devices = (await (await fetch(`${BASE}/api/admin/devices`, { headers: { authorization: 'Bearer ' + (await admin.evaluate(() => sessionStorage.getItem('admToken'))) } })).json()).devices;
+const devLink = Object.fromEntries(devices.map((d) => [d.name, `${BASE}/?d=${d.uid}`]));
+check('Settings: three scanners registered with unique links', devices.length === 3 && new Set(devices.map((d) => d.uid)).size === 3, devices.map((d) => `${d.name}=${d.uid}`).join(' '));
+await admin.click('#deviceTable tbody tr:nth-child(1) button:nth-child(2)'); await admin.waitForTimeout(1500);
+check('Settings: QR code shown for a scanner link', (await admin.$('#qrBox img, #qrBox canvas')) !== null || /QR unavailable/.test(clean(await admin.textContent('#qrBox'))), clean(await admin.textContent('#qrBox')).slice(0, 60) || 'rendered');
+await (await card('#deviceTable')).asElement().screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-scanners.png` });
+await admin.click('#btnQrClose');
+const del99 = (await admin.$$('#deviceTable tbody tr')).length;
+
+await admin.click('#deviceTable tbody tr:nth-child(3) button:text-is("Remove")'); await admin.waitForTimeout(400);
+check('Settings: remove a scanner', (await admin.$$('#deviceTable tbody tr')).length === del99 - 1);
+check('Settings: every scanner can have its link reset without being removed',
+  (await admin.$$('#deviceTable tbody tr button:text-is("Reset link")')).length === (await admin.$$('#deviceTable tbody tr')).length);
+const gone = await fetch(devLink['SCANNER-99'].replace('/?d=', '/api/devices/'));
+check('API: removed scanner link no longer resolves (404)', gone.status === 404);
+
 await admin.click('#btnLoadSiteBins'); await admin.waitForTimeout(6000);
 {
   const m = clean(await admin.textContent('#uploadMsg'));
-  check('Admin: one-click Front Royal bin list: 13,673 bins in 28 aisles, 61 staging/door bins left out', /Imported 13,734 rows/.test(m) && /13,673 bins in 28 aisles/.test(m) && /61 bins left out \(counted manually: STAGING, DOORS\)/.test(m), m.slice(0, 200));
+  check('Settings: one-click Front Royal bin list: 13,673 bins in 28 aisles, 61 staging/door bins left out', /Imported 13,734 rows/.test(m) && /13,673 bins in 28 aisles/.test(m) && /61 bins left out \(counted manually: STAGING, DOORS\)/.test(m), m.slice(0, 200));
 }
 for (const [kind, file] of [['pallets', 'pallets.csv'], ['plan', 'plan.csv']]) {
   await admin.selectOption('#fKind', kind);
   await admin.setInputFiles('#fFile', `${S}fixtures/${file}`);
   await admin.click('#btnUpload'); await admin.waitForTimeout(kind === 'bins' ? 2500 : 900);
   const m = clean(await admin.textContent('#uploadMsg'));
-  check(`Admin: upload ${kind}`, /Imported \d/.test(m), m.slice(0, 120));
+  check(`Settings: upload ${kind}`, /Imported \d/.test(m), m.slice(0, 120));
   if (kind === 'pallets') await (await card('#fKind')).asElement().screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-upload.png` });
 }
 await admin.selectOption('#fKind', 'plan');
 const [dl0] = await Promise.all([admin.waitForEvent('download'), admin.click('#colGuide a')]);
-check('Admin: sample CSV download', dl0.suggestedFilename() === 'plan-template.csv', dl0.suggestedFilename());
+check('Settings: sample CSV download', dl0.suggestedFilename() === 'plan-template.csv', dl0.suggestedFilename());
 
 await admin.click('#btnLayoutBlocks'); await admin.waitForTimeout(700);
-check('Admin: pair from drawing (F01-F24 + A01-A04)', /Paired 28/.test(clean(await admin.textContent('#assignMsg'))), clean(await admin.textContent('#assignMsg')));
+check('Settings: pair from drawing (F01-F24 + A01-A04)', /Paired 28/.test(clean(await admin.textContent('#aisleMsg'))), clean(await admin.textContent('#aisleMsg')));
 const blocks = await admin.$$eval('#aisleTable tbody tr', (trs) => trs.map((tr) => tr.querySelector('input').value));
-check('Admin: blocks A01 | A02+A03 | A04 | F01 | F02+F03 ... and no area groups', blocks.slice(0, 6).join(',') === 'A01,A02+A03,A02+A03,A04,F01,F02+F03' && blocks.length === 28, blocks.slice(0, 7).join(', ') + ` (${blocks.length})`);
+check('Settings: blocks A01 | A02+A03 | A04 | F01 | F02+F03 ... and no area groups', blocks.slice(0, 6).join(',') === 'A01,A02+A03,A02+A03,A04,F01,F02+F03' && blocks.length === 28, blocks.slice(0, 7).join(', ') + ` (${blocks.length})`);
+
+/* ---- back to the dashboard for the counting plan ---- */
+const toDashboard = async () => { await admin.goto(BASE + '/admin'); await admin.waitForSelector('#scrMain.active'); await admin.waitForTimeout(1200); };
+await toDashboard();
 await admin.fill('#fAssignTeam', '5'); await admin.fill('#fAssignAisles', '1'); await admin.fill('#fAssignLevels', ''); await admin.click('#btnAssign'); await admin.waitForTimeout(300);
 check('Admin: queueing without levels is refused', /Levels are required/.test(clean(await admin.textContent('#assignMsg'))), clean(await admin.textContent('#assignMsg')));
 { const r = await fetch(`${BASE}/api/admin/sessions/1/assignments`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + (await admin.evaluate(() => sessionStorage.getItem('admToken'))) }, body: JSON.stringify({ team: '5', aisles: 'F09' }) });
   check('API: assignment without levels rejected (400)', r.status === 400); }
 await admin.fill('#fAssignLevels', 'A-F'); await admin.click('#btnAssign'); await admin.waitForTimeout(400);
 check('Admin: bare "1" is ambiguous now (A01 or F01) and says so', /ambiguous - did you mean A01 or F01/.test(clean(await admin.textContent('#assignMsg'))), clean(await admin.textContent('#assignMsg')));
-await admin.$eval('.two', (el) => el.scrollIntoView());
-await (await admin.$('.two')).screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-aisles-and-plan.png` });
+await admin.$eval('#teamPlanCard', (el) => el.scrollIntoView());
+await (await admin.$('#teamPlanCard')).screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-aisles-and-plan.png` });
 const teamList = clean(await admin.textContent('#teamList'));
 check('Admin: plan queued — T1 in F01 (A–C), T4 in F01 (D–F) at the same time, T2 in F02, T3 in F07', /Team 1in Freezer – Aisle F01, levels A–C/.test(teamList) && /Team 4in Freezer – Aisle F01, levels D–F/.test(teamList) && /Team 2in Freezer – Aisle F02/.test(teamList) && /Team 3in Freezer – Aisle F07/.test(teamList), teamList.slice(0, 200));
 check('Admin: T5 wanting F01 levels C–D is held (overlaps both teams)', /Team 5waiting/.test(teamList) && /levels C–D ⏳/.test(teamList), teamList.slice(teamList.indexOf('Team 5'), teamList.indexOf('Team 5') + 80));
 { const held = await admin.$('#teamList .team:has(.head b:text-is("5")) .a.blocked button'); await held.click(); await admin.waitForTimeout(400);
   const m = clean(await admin.textContent('#assignMsg'));
   check('Admin: force-starting T5 refused, naming the team and levels', /Team [14] is counting aisle F01 on levels (ABC|DEF)/.test(m), m); }
+await toSettings();
 const aisleRow = clean(await admin.$eval('#aisleTable tbody tr:nth-child(5)', (tr) => tr.innerText));
-check('Admin: aisle table shows both teams in F01 with their levels', /active team 1 \(ABC\), 4 \(DEF\)/.test(aisleRow), aisleRow);
+check('Settings: aisle table shows both teams in F01 with their levels', /active team 1 \(ABC\), 4 \(DEF\)/.test(aisleRow), aisleRow);
+await toDashboard();
 check('Admin: map badge for two teams in one aisle reads T1+T4', await admin.$$eval('#map text.team', (t) => t.some((x) => x.textContent === 'T1+T4')), (await admin.$$eval('#map text.team', (t) => t.map((x) => x.textContent))).join(' '));
 
 const api = await enrolScanner('SUITE-API', { 'content-type': 'application/json', authorization: 'Bearer ' + (await admin.evaluate(() => sessionStorage.getItem('admToken'))) });
@@ -319,8 +333,8 @@ check('Admin: team 1\'s F03 shown as held (⏳) while team 2 is in F02', !!block
 if (blockedBtn) { await blockedBtn.click(); await admin.waitForTimeout(500); }
 const conflict = clean(await admin.textContent('#assignMsg'));
 check('Admin: force-starting F03 refused with racking conflict', /Team 2 is counting aisle F02, which shares racking with F03/.test(conflict), conflict);
-await admin.$eval('.two', (el) => el.scrollIntoView());
-await (await admin.$('.two')).screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-conflict.png` });
+await admin.$eval('#teamPlanCard', (el) => el.scrollIntoView());
+await (await admin.$('#teamPlanCard')).screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-conflict.png` });
 
 await t1.p.click('#btnToAssign'); await t1.p.waitForSelector('#scrAssign.active'); await t1.p.waitForTimeout(300);
 await t1.p.click('#btnAisleDone'); await t1.p.waitForTimeout(800);
@@ -363,8 +377,10 @@ await (await admin.$('#mapWrap')).evaluate((el) => el.closest('.card').scrollInt
 await admin.screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-map-level-a.png`, clip: await (await admin.$('#mapWrap')).evaluate((el) => { const r = el.closest('.card').getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: Math.min(r.height, 700) }; }) });
 await admin.click('#mapLevels button:nth-child(1)'); await admin.waitForTimeout(900);
 check('Admin: map note summarises areas not on the drawing (no staging/doors)', /Not on the drawing — AREAS \d+\/8 · SYSTEM \d+\/4 · WIP \d+\/4\./.test(await admin.textContent('#mapNote')), clean(await admin.textContent('#mapNote')).slice(0, 200));
+await toSettings();
 const devRow = clean(await admin.textContent('#deviceTable'));
-check('Admin: scanners show last seen + team after sign-on', /SCANNER-01.*\d{1,2}:\d\d.*1/.test(devRow), devRow.slice(0, 160));
+check('Settings: scanners show last seen + team after sign-on', /SCANNER-01.*\d{1,2}:\d\d.*1/.test(devRow), devRow.slice(0, 160));
+await toDashboard();
 const statuses = await admin.$$eval('#palletTable .tag', (t) => [...new Set(t.map((x) => x.textContent))]);
 check('Admin: pallet report statuses', ['COUNTED TWICE', 'WRONG BIN', 'QTY VARIANCE', 'NOT IN MASTER', 'MISSING'].every((s) => statuses.includes(s)), statuses.join(', '));
 check('Admin: EMPTY is not a pallet in the report', !(await admin.$$eval('#palletTable tbody tr', (trs) => trs.some((tr) => /^EMPTY/.test(tr.innerText)))));
@@ -381,12 +397,17 @@ for (const [btn, name] of [['#btnExportPallets', 'pallets'], ['#btnExportCounts'
 // Excel: the real ERP workbook, as-is, into a fresh session
 await admin.fill('#fNewName', 'xlsx check'); await admin.click('#btnCreate'); await admin.waitForTimeout(600);
 await admin.selectOption('#fLayout', 'front-royal'); await admin.click('#btnSaveSettings'); await admin.waitForTimeout(400);
+await toSettings();
+check('Settings: the session picker follows the dashboard to the newest session',
+  /xlsx check/.test(await admin.$eval('#fSessionPick', (s) => s.options[s.selectedIndex].textContent)),
+  await admin.$eval('#fSessionPick', (s) => s.options[s.selectedIndex].textContent));
 await admin.selectOption('#fKind', 'bins'); await admin.setInputFiles('#fFile', `${S}fixtures/Bins.xlsx`); await admin.click('#btnUpload');
 await admin.waitForFunction(() => /Imported|failed/.test(document.getElementById('uploadMsg').textContent), null, { timeout: 60000 }).catch(() => {});
 {
   const m = clean(await admin.textContent('#uploadMsg'));
-  check('Admin: raw ERP Bins.xlsx uploads as-is: 13,673 bins in 28 aisles', /Imported 13,734 rows/.test(m) && /13,673 bins in 28 aisles/.test(m), m.slice(0, 140));
+  check('Settings: raw ERP Bins.xlsx uploads as-is: 13,673 bins in 28 aisles', /Imported 13,734 rows/.test(m) && /13,673 bins in 28 aisles/.test(m), m.slice(0, 140));
 }
+await toDashboard();
 await admin.selectOption('#fSessionPick', '1'); await admin.waitForTimeout(800);
 // close session -> scanner rejected -> reopen
 await admin.click('#btnCloseSession'); await admin.waitForTimeout(600);

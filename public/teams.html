@@ -62,18 +62,18 @@
 
 <header>
   <span class="title">Teams &amp; Crew</span>
+  <nav class="tabs" id="navTabs"></nav>
   <span class="chip" id="countChip" hidden></span>
-  <a href="/admin" class="chip" style="text-decoration:none">Dashboard →</a>
-  <a href="/cycle" class="chip" style="text-decoration:none">Cycle counts →</a>
-  <button id="btnLogout" class="ghost" hidden style="padding:6px 10px;font-size:12px">Log out</button>
+  <span class="chip" id="navWho" hidden></span>
+  <button id="navLogout" class="ghost" hidden style="padding:6px 10px;font-size:12px">Log out</button>
 </header>
 
 <main>
   <section class="screen active" id="scrLogin">
-    <div class="card" style="max-width:420px;margin:40px auto">
+    <div class="card signin">
       <h2>Supervisor sign-in</h2>
-      <label for="fWho">Your name <span style="text-transform:none;letter-spacing:0">— recorded against anything you change</span></label>
-      <input id="fWho" autocomplete="name" placeholder="e.g. Dana">
+      <label for="fUser">Username <span style="text-transform:none;letter-spacing:0">— or your name, if your site still uses the shared password</span></label>
+      <input id="fUser" autocomplete="username" placeholder="e.g. DANA">
       <label for="fPassword">Password</label>
       <input id="fPassword" type="password" autocomplete="current-password">
       <button class="primary" id="btnLogin" style="width:100%;margin-top:10px">Sign in</button>
@@ -146,6 +146,7 @@
   </section>
 </main>
 
+<script src="/nav.js"></script>
 <script src="/teams.js"></script>
 </body>
 </html>

@@ -1,74 +1,27 @@
-/* Supervisor dashboard: sessions, list uploads, racking blocks, team
-   assignments (staggered by block), live progress, pallet report, exports. */
+/* Supervisor dashboard: sessions, team assignments (staggered by racking block),
+   live progress, the warehouse map, second counts and the pallet report.
+   Setup — logins, scanners, uploads, blocks, ERP, backups — lives in /settings. */
 (() => {
   'use strict';
 
-  const $ = (id) => document.getElementById(id);
-  let token = sessionStorage.getItem('admToken') || '';
+  const api = window.appApi;
+  const { $, msg, clearMsg, cell, tag, table } = window.appUi;
+  const apiJson = (p, o) => api.json(p, o);
+  const postJson = (p, body, method) => api.post(p, body, method);
+
   let sessionId = null;
   let sessions = [];
 
-  async function api(path, options = {}) {
-    const res = await fetch(path, {
-      ...options,
-      headers: { authorization: 'Bearer ' + token, ...(options.headers || {}) },
-      cache: 'no-store',
-    });
-    if (res.status === 401) { logout(); throw new Error('Session expired — sign in again'); }
-    if (!res.ok) {
-      let msg = res.status + ' ' + res.statusText;
-      try { msg = (await res.json()).error || msg; } catch { /* keep status text */ }
-      throw new Error(msg);
-    }
-    return res;
-  }
-  const apiJson = (p, o) => api(p, o).then((r) => r.json());
-  const postJson = (p, body, method = 'POST') =>
-    apiJson(p, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   const needSession = (el) => {
     if (sessionId) return true;
     msg(el, 'err', 'Create a session first', 'Type a name under "New session name" and click Create session.');
     return false;
   };
 
-  function msg(el, kind, text, detail) {
-    el.className = 'feedback show ' + kind;
-    el.textContent = text;
-    if (detail) {
-      const d = document.createElement('div');
-      d.className = 'detail';
-      d.textContent = detail;
-      el.appendChild(d);
-    }
-  }
-  const clearMsg = (el) => { el.className = 'feedback'; el.textContent = ''; };
-
   function show(which) {
     $('scrLogin').classList.toggle('active', which === 'login');
     $('scrMain').classList.toggle('active', which === 'main');
-    $('btnLogout').hidden = which !== 'main';
-    $('teamsLink').hidden = which !== 'main';
-    $('cycleLink').hidden = which !== 'main';
     $('sessionChip').hidden = which !== 'main';
-  }
-  function logout() { token = ''; sessionStorage.removeItem('admToken'); show('login'); }
-
-  async function login() {
-    try {
-      const res = await fetch('/api/admin/login', {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ password: $('fPassword').value, name: $('fWho').value }),
-      });
-      if (!res.ok) throw new Error('Wrong password');
-      token = (await res.json()).token;
-      sessionStorage.setItem('admToken', token);
-      $('fPassword').value = '';
-      show('main');
-      await loadLayouts();
-      await refreshErp();
-      await refreshDevices();
-      await loadSessions();
-    } catch (err) { msg($('loginMsg'), 'err', err.message); }
   }
 
   // "Freezer – Aisle F01": the zone comes from the bins in the aisle
@@ -81,158 +34,6 @@
     return contiguous ? `levels ${l[0]}–${l[l.length - 1]}` : `levels ${[...l].join(', ')}`;
   };
   let zoneByAisle = new Map();
-
-  /* ------------------------------------------------------------ table helpers */
-  const cell = (text, cls) => { const td = document.createElement('td'); if (cls) td.className = cls; td.textContent = text ?? ''; return td; };
-  const tag = (text) => { const s = document.createElement('span'); s.className = 'tag ' + text; s.textContent = text; return s; };
-  function table(el, columns, rows, renderRow, empty) {
-    el.innerHTML = '';
-    const thead = document.createElement('thead');
-    const hr = document.createElement('tr');
-    for (const c of columns) { const th = document.createElement('th'); th.textContent = c.label; if (c.num) th.className = 'num'; hr.appendChild(th); }
-    thead.appendChild(hr);
-    const tbody = document.createElement('tbody');
-    if (!rows.length) { const tr = document.createElement('tr'); const td = cell(empty || 'Nothing yet.'); td.colSpan = columns.length; td.className = 'muted'; tr.appendChild(td); tbody.appendChild(tr); }
-    for (const r of rows) tbody.appendChild(renderRow(r));
-    el.append(thead, tbody);
-  }
-
-  /* ------------------------------------------------------------ upload guide */
-  const FILE_GUIDE = {
-    bins: {
-      file: 'bins-template.csv',
-      required: [['Bin Location', 'the code on the bin label; also accepts Location, Bin, Slot']],
-      optional: [['Aisle', 'which aisle the bin is in - taken from the first part of the code if missing (A03-12-1 → A03)'],
-                 ['Zone', 'area of the warehouse, for the progress view'], ['Description', '']],
-      note: 'One row per bin. This is the validation list for question 3 and defines the aisles used for team assignments.',
-    },
-    pallets: {
-      file: 'pallets-template.csv',
-      required: [['Pallet ID', 'the code on the pallet / container label; also accepts Container, LPN, License Plate']],
-      optional: [['SKU', 'shown to the counter after the pallet scan'], ['Description', 'shown to the counter'],
-                 ['UOM', ''], ['Qty', 'what the system says is on it - drives QTY VARIANCE'],
-                 ['Location', 'where the system says it is - drives WRONG BIN']],
-      note: 'One row per pallet. Validation list for question 1. Re-uploading the same pallet updates it rather than duplicating it.',
-    },
-    plan: {
-      file: 'plan-template.csv',
-      required: [['Team', 'team number'], ['Aisle', 'the full aisle code from the bin list, e.g. F01 - a bare number is refused when it could mean two aisles (A01 / F01)'],
-                 ['Levels', 'which levels the team counts, by equipment: A-C, D-F, or A-F for every level']],
-      optional: [],
-      note: 'One row per aisle, in the order each team should count. Upload the bin list first. Aisles can also be queued by hand in Team assignments below.',
-    },
-  };
-
-  function renderGuide() {
-    const g = FILE_GUIDE[$('fKind').value];
-    const box = $('colGuide');
-    box.innerHTML = '';
-    const head = document.createElement('div');
-    head.innerHTML = '<b>Columns</b> — matched by name, any order, extra columns ignored. &nbsp; <a></a>';
-    const a = head.querySelector('a');
-    a.href = '/templates/' + g.file;
-    a.download = g.file;
-    a.textContent = '⬇ Download sample ' + g.file;
-    box.appendChild(head);
-    const cols = document.createElement('div');
-    cols.className = 'cols';
-    for (const [name, why] of g.required) { const c = document.createElement('code'); c.className = 'req'; c.textContent = name + ' (required)'; c.title = why; cols.appendChild(c); }
-    for (const [name, why] of g.optional) { const c = document.createElement('code'); c.textContent = name; c.title = why || 'optional'; cols.appendChild(c); }
-    box.appendChild(cols);
-    const list = document.createElement('div');
-    list.className = 'note';
-    list.innerHTML = [...g.required, ...g.optional].filter(([, why]) => why).map(([n, why]) => `<b>${n}</b>: ${why}`).join(' · ') + '<br>' + g.note;
-    box.appendChild(list);
-  }
-  $('fKind').onchange = renderGuide;
-  renderGuide();
-
-  /* ------------------------------------------------------------ scanners */
-  const deviceUrl = (uid) => `${location.origin}/?d=${uid}`;
-
-  async function refreshDevices() {
-    const data = await apiJson('/api/admin/devices');
-    const rows = data.devices;
-    $('authChip').hidden = false;
-    $('authChip').textContent = data.authRequired ? 'scanners must sign in' : 'scanner sign-in OFF';
-    $('authChip').className = 'chip ' + (data.authRequired ? 'online' : 'offline');
-    table($('deviceTable'),
-      [{ label: 'Scanner' }, { label: 'Link' }, { label: '' }, { label: 'Signed in' }, { label: 'Last seen' }, { label: 'Team' }, { label: 'Notes' }, { label: '' }],
-      rows,
-      (d) => {
-        const tr = document.createElement('tr');
-        tr.append(cell(d.name));
-        const tdLink = document.createElement('td');
-        const code = document.createElement('code'); code.className = 'link'; code.textContent = deviceUrl(d.uid);
-        tdLink.appendChild(code); tr.appendChild(tdLink);
-        const tdBtns = document.createElement('td');
-        const copy = document.createElement('button'); copy.className = 'sm'; copy.textContent = 'Copy';
-        copy.onclick = async () => { try { await navigator.clipboard.writeText(deviceUrl(d.uid)); copy.textContent = 'Copied'; setTimeout(() => (copy.textContent = 'Copy'), 1500); } catch { prompt('Copy this link', deviceUrl(d.uid)); } };
-        const qr = document.createElement('button'); qr.className = 'sm'; qr.textContent = 'QR'; qr.style.marginLeft = '4px';
-        qr.onclick = () => showQr(d);
-        tdBtns.append(copy, qr); tr.appendChild(tdBtns);
-        const tdEnrol = document.createElement('td');
-        if (d.enrolled_at) {
-          tdEnrol.append(new Date(d.enrolled_at).toLocaleDateString());
-          if (d.enrol_count > 1) {
-            const w = document.createElement('span');
-            w.className = 'tag'; w.style.marginLeft = '6px'; w.style.color = 'var(--warn)'; w.style.borderColor = '#5c4813';
-            w.textContent = `${d.enrol_count}×`;
-            w.title = `This link has been used ${d.enrol_count} times. Normal after a scanner is wiped — otherwise reset it.`;
-            tdEnrol.appendChild(w);
-          }
-        } else { const n = document.createElement('span'); n.className = 'muted'; n.textContent = 'not yet'; tdEnrol.appendChild(n); }
-        tr.appendChild(tdEnrol);
-        tr.append(cell(d.last_seen ? new Date(d.last_seen).toLocaleString() : 'never'), cell(d.last_team || '—'), cell(d.notes || '', 'wrap'));
-        const tdDel = document.createElement('td');
-        const reset = document.createElement('button');
-        reset.className = 'sm'; reset.textContent = 'Reset link'; reset.style.marginRight = '4px';
-        reset.title = 'Issue a new link and stop the old one working — use if a link leaks or a scanner is lost';
-        reset.onclick = async () => {
-          if (!confirm(`Reset ${d.name}? Its current link stops working immediately and the scanner must open the new one.`)) return;
-          try { await postJson(`/api/admin/devices/${d.uid}/reset`, {}); await refreshDevices(); msg($('deviceMsg'), 'ok', `${d.name} has a new link`, 'Open it on the scanner, then add it to the home screen again.'); }
-          catch (err) { msg($('deviceMsg'), 'err', err.message); }
-        };
-        tdDel.appendChild(reset);
-        const del = document.createElement('button'); del.className = 'sm danger'; del.textContent = 'Remove';
-        del.onclick = async () => {
-          if (!confirm(`Remove ${d.name}? Its link will stop working on the device.`)) return;
-          try { await apiJson(`/api/admin/devices/${d.uid}`, { method: 'DELETE' }); await refreshDevices(); } catch (err) { msg($('deviceMsg'), 'err', err.message); }
-        };
-        tdDel.appendChild(del); tr.appendChild(tdDel);
-        return tr;
-      }, 'No scanners registered yet.');
-  }
-
-  async function showQr(d) {
-    $('qrTitle').textContent = d.name;
-    $('qrUrl').textContent = deviceUrl(d.uid);
-    $('qrBox').innerHTML = '';
-    $('qrModal').hidden = false;
-    try {
-      if (!window.QRCode) {
-        await new Promise((res, rej) => {
-          const sc = document.createElement('script');
-          sc.src = '/vendor/qrcode.min.js';
-          sc.onload = res; sc.onerror = () => rej(new Error('QR library missing - copy the link instead'));
-          document.head.appendChild(sc);
-        });
-      }
-      new window.QRCode($('qrBox'), { text: deviceUrl(d.uid), width: 220, height: 220, correctLevel: window.QRCode.CorrectLevel.M });
-    } catch (err) { $('qrBox').textContent = 'QR unavailable: ' + err.message; }
-  }
-  $('btnQrClose').onclick = () => { $('qrModal').hidden = true; };
-  $('qrModal').onclick = (e) => { if (e.target === $('qrModal')) $('qrModal').hidden = true; };
-
-  $('btnAddDevice').onclick = async () => {
-    try {
-      const d = await postJson('/api/admin/devices', { name: $('fDevName').value, notes: $('fDevNotes').value });
-      $('fDevName').value = ''; $('fDevNotes').value = '';
-      msg($('deviceMsg'), 'ok', `Added ${d.name}`, `Its link is ${deviceUrl(d.uid)} — open it on the device and add to the home screen.`);
-      await refreshDevices();
-    } catch (err) { msg($('deviceMsg'), 'err', err.message); }
-  };
-  $('fDevName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnAddDevice').click(); });
 
   /* ------------------------------------------------------------ sessions */
   async function loadSessions() {
@@ -256,7 +57,7 @@
   function applySessionSettings() {
     const s = sessions.find((x) => x.id === sessionId);
     if (!s) return;
-    document.querySelector('.two').hidden = s.mode === 'cycle';   // a cycle session has no aisle plan
+    $('teamPlanCard').hidden = s.mode === 'cycle';   // a cycle session has no aisle plan
     $('sessionChip').textContent = `Session #${s.id}${s.status === 'closed' ? ' (closed)' : ''}`;
     $('fPalletMode').value = s.pallet_mode;
     $('fGuided').checked = !!s.guided;
@@ -299,7 +100,7 @@
       $('stats').appendChild(d);
     }
 
-    renderAisles(p.byAisle);
+    zoneByAisle = new Map(p.byAisle.map((a) => [a.aisle, a.zone]));
     // Merge sign-ons (who is on which scanner) with counting activity.
     const byTeam = new Map();
     for (const s of p.signedOn) byTeam.set(s.team, { team: s.team, devices: s.devices, employees: JSON.parse(s.employees || '[]').join(', '), lines: 0, bins: 0 });
@@ -318,40 +119,6 @@
   }
 
   /* ------------------------------------------------------------ aisles */
-  function renderAisles(aisles) {
-    zoneByAisle = new Map(aisles.map((a) => [a.aisle, a.zone]));
-    table($('aisleTable'),
-      [{ label: 'Aisle' }, { label: 'Block' }, { label: 'Bins', num: true }, { label: 'Counted', num: true }, { label: 'Progress' }, { label: 'Status' }],
-      aisles,
-      (a) => {
-        const tr = document.createElement('tr');
-        tr.append(cell(aisleLabel(a.aisle, a.zone)));
-        const tdBlock = document.createElement('td');
-        const inp = document.createElement('input');
-        inp.className = 'sm';
-        inp.value = a.block;
-        inp.title = 'Type a block name and press Enter';
-        inp.onkeydown = async (e) => {
-          if (e.key !== 'Enter') return;
-          try { renderAisles(await postJson(`/api/admin/sessions/${sessionId}/aisles/block`, { aisle: a.aisle, block: inp.value })); await refreshAssignments(); }
-          catch (err) { alert(err.message); }
-        };
-        tdBlock.appendChild(inp);
-        tr.append(tdBlock, cell(a.bins, 'num'), cell(a.bins_counted, 'num'));
-        const td = document.createElement('td');
-        const bar = document.createElement('div'); bar.className = 'bar';
-        const i = document.createElement('i'); i.style.width = (a.bins ? Math.round((a.bins_counted / a.bins) * 100) : 0) + '%';
-        bar.appendChild(i); td.appendChild(bar); tr.appendChild(td);
-        const st = document.createElement('td');
-        if (a.active_team) st.appendChild(tag('active')), st.append(` team ${a.active_detail}`);
-        else if (a.done_count) st.appendChild(tag('done'));
-        else if (a.queued_teams) st.appendChild(tag('queued')), st.append(` team ${a.queued_teams}`);
-        else st.append('—');
-        tr.appendChild(st);
-        return tr;
-      }, 'Upload a bin list to see aisles.');
-  }
-
   /* ------------------------------------------------------------ assignments */
   async function refreshAssignments() {
     const [rows, aisles] = await Promise.all([
@@ -468,75 +235,17 @@
   $('btnExportRecounts').onclick = () => download(`/api/admin/sessions/${sessionId}/export/recounts.csv`, `second-counts-session-${sessionId}.csv`);
 
   /* ------------------------------------------------ ERP, printing, housekeeping */
-  async function refreshErp() {
-    const data = await apiJson('/api/admin/erp/formats');
-    const sel = $('fErpFormat');
-    const prior = sel.value;
-    sel.innerHTML = '';
-    for (const [id, f] of Object.entries(data.formats)) {
-      const o = document.createElement('option');
-      o.value = id; o.textContent = f.label || id;
-      sel.appendChild(o);
-    }
-    if (prior && data.formats[prior]) sel.value = prior;
-  }
-  $('btnErpPreview').onclick = async () => {
-    if (!needSession($('erpMsg'))) return;
-    try {
-      const r = await apiJson(`/api/admin/sessions/${sessionId}/erp/${$('fErpFormat').value}/preview`);
-      msg($('erpMsg'), 'ok', `${r.rows.toLocaleString()} rows — ${r.format.label}`, 'First few lines below. Nothing has been sent anywhere.');
-      $('erpSample').style.display = 'block';
-      $('erpSample').textContent = r.sample;
-    } catch (err) { msg($('erpMsg'), 'err', err.message); }
-  };
-  $('btnErpDownload').onclick = () => {
-    if (!needSession($('erpMsg'))) return;
-    download(`/api/admin/sessions/${sessionId}/erp/${$('fErpFormat').value}.csv`, `${$('fErpFormat').value}-${sessionId}.csv`);
-  };
-
   $('btnPrint').onclick = () => {
-    if (!needSession($('opsMsg'))) return;
+    if (!needSession($('printMsg'))) return;
     const q = new URLSearchParams();
     if ($('fPrintAisle').value.trim()) q.set('aisle', $('fPrintAisle').value.trim());
     if ($('fPrintLevels').value.trim()) q.set('levels', $('fPrintLevels').value.trim());
     if ($('fPrintUncounted').checked) q.set('uncounted', '1');
     if ($('fPrintExpected').checked) q.set('blind', '0');
     // the sheet is a page, not a download, so it needs the token in the URL
-    q.set('t', token);
+    q.set('t', api.token);
     window.open(`/api/admin/sessions/${sessionId}/print/count-sheet?${q}`, '_blank');
   };
-
-  async function refreshOps() {
-    const [b, log] = await Promise.all([apiJson('/api/admin/backups'), apiJson('/api/admin/audit?limit=60')]);
-    $('backupSub').textContent = b.backups.length
-      ? `${b.backups.length} kept (newest ${new Date(b.backups[0].at).toLocaleString()}), one a day, ${b.keep} retained`
-      : 'no backups yet';
-    table($('backupTable'), [{ label: 'Backup' }, { label: 'Size', num: true }, { label: 'Taken' }, { label: '' }], b.backups.slice(0, 20),
-      (f) => {
-        const tr = document.createElement('tr');
-        tr.append(cell(f.name), cell(Math.round(f.bytes / 1024).toLocaleString() + ' KB', 'num'), cell(new Date(f.at).toLocaleString()));
-        const td = document.createElement('td');
-        const dl = document.createElement('button');
-        dl.className = 'sm'; dl.textContent = 'Download';
-        dl.onclick = () => download(`/api/admin/backups/${f.name}`, f.name);
-        td.appendChild(dl); tr.appendChild(td);
-        return tr;
-      }, 'No backups yet — one is taken automatically each day.');
-    table($('auditTable'), [{ label: 'When' }, { label: 'Who' }, { label: 'Did what' }, { label: 'Detail' }], log,
-      (a) => {
-        const tr = document.createElement('tr');
-        tr.append(cell(new Date(a.at).toLocaleString()), cell(a.actor), cell(a.action), cell(a.detail || '', 'wrap'));
-        return tr;
-      }, 'Nothing recorded yet.');
-  }
-  $('btnBackupNow').onclick = async () => {
-    try {
-      const b = await postJson('/api/admin/backups', {});
-      msg($('opsMsg'), 'ok', `Backed up — ${b.name}`, `${Math.round(b.bytes / 1024).toLocaleString()} KB. Download it if you want a copy off this machine.`);
-      await refreshOps();
-    } catch (err) { msg($('opsMsg'), 'err', err.message); }
-  };
-  $('btnAuditExport').onclick = () => download('/api/admin/audit/export.csv', 'audit-log.csv');
 
   /* ------------------------------------------------------------ pallet report */
   async function refreshPallets() {
@@ -797,7 +506,6 @@
     const levels = [...new Set(data.bins.map(([code]) => parseBinCode(code).level).filter(Boolean))].sort();
     renderLevelChips(levels);
     if (mapLevel) data.bins = data.bins.filter(([code]) => parseBinCode(code).level === mapLevel);
-    $('btnLayoutBlocks').hidden = !data.layout;
     $('mapSub').textContent = data.layout ? data.layout.name : 'top-down, built from the bin codes · aisles that share racking are drawn back-to-back';
     if (!data.bins.length) { $('mapNote').textContent = 'Upload a bin list to draw the map.'; svg.setAttribute('height', 0); return; }
     const r = data.layout ? renderBlueprint(svg, data, data.layout) : renderSchematic(svg, data);
@@ -807,23 +515,14 @@
 
   async function refreshAll() {
     if (!sessionId) return;
-    await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts(), refreshOps()]);
+    await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts()]);
   }
 
-  async function download(path, filename) {
-    if (!needSession($('palletNote'))) return;
-    const res = await api(path);
-    const url = URL.createObjectURL(await res.blob());
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-  }
+  const download = (path, filename) =>
+    (needSession($('palletNote')) ? api.download(path, filename) : Promise.resolve())
+      .catch((err) => msg($('palletNote'), 'err', err.message));
 
   /* ------------------------------------------------------------ wiring */
-  $('btnLogin').onclick = login;
-  $('fPassword').addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
-  $('btnLogout').onclick = logout;
   $('fSessionPick').onchange = (e) => { sessionId = Number(e.target.value) || null; applySessionSettings(); refreshAll(); };
   $('fOnlyExceptions').onchange = refreshPallets;
 
@@ -854,79 +553,6 @@
     if (next === 'closed' && !confirm('Close this session? Scanners will no longer be able to send counts to it.')) return;
     try { await postJson(`/api/admin/sessions/${sessionId}/status`, { status: next }); await loadSessions(); }
     catch (err) { msg($('sessionMsg'), 'err', err.message); }
-  };
-
-  // Excel files are converted to CSV in the browser (SheetJS, shipped with the app and
-  // loaded on first use), so the ERP export can be uploaded as-is - no internet needed.
-  async function fileToCsv(file) {
-    if (!/\.xls[xm]?$/i.test(file.name)) return file.text();
-    if (!window.XLSX) {
-      await new Promise((res, rej) => {
-        const sc = document.createElement('script');
-        sc.src = '/vendor/xlsx.full.min.js';
-        sc.onload = res; sc.onerror = () => rej(new Error('Could not load the Excel reader. Save the sheet as CSV instead.'));
-        document.head.appendChild(sc);
-      });
-    }
-    const wb = window.XLSX.read(await file.arrayBuffer(), { type: 'array' });
-    return window.XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
-  }
-
-  async function uploadText(kind, text, label) {
-    if (!sessionId) return msg($('uploadMsg'), 'err', 'Create or select a session first');
-    msg($('uploadMsg'), 'warn', `Uploading ${label}…`);
-    try {
-      const stats = await apiJson(`/api/admin/sessions/${sessionId}/master?kind=${kind}&replace=${$('fReplace').checked ? 1 : 0}`,
-        { method: 'POST', headers: { 'content-type': 'text/csv' }, body: text });
-      const t = stats.totals;
-      msg($('uploadMsg'), 'ok', `Imported ${stats.rows.toLocaleString()} rows from ${label}`,
-        `Session now has ${t.bins.toLocaleString()} bins in ${t.aisles} aisles, ${t.pallets.toLocaleString()} pallets, ${t.assignments} planned aisle assignments` +
-        (stats.skipped ? ` · ${stats.skipped} row(s) skipped (${stats.skippedNoLevels ? stats.skippedNoLevels + ' with no levels; ' : ''}missing required column, or unknown aisle)` : '') +
-        (stats.excluded ? ` · ${stats.excluded} bins left out (counted manually: ${stats.excludedGroups.join(', ')})` : ''));
-      await refreshAll();
-    } catch (err) { msg($('uploadMsg'), 'err', 'Upload failed', err.message); }
-  }
-
-  $('btnLoadSiteBins').onclick = async () => {
-    if (!needSession($('uploadMsg'))) return;
-    const res = await fetch('/templates/front-royal-bins.csv');
-    await uploadText('bins', await res.text(), 'the Front Royal bin list');
-  };
-
-  $('btnUpload').onclick = async () => {
-    const file = $('fFile').files[0];
-    if (!file) return msg($('uploadMsg'), 'err', 'Choose a file first');
-    if (!sessionId) return msg($('uploadMsg'), 'err', 'Create or select a session first');
-    msg($('uploadMsg'), 'warn', `Reading ${file.name}…`);
-    try {
-      const kind = $('fKind').value;
-      const stats = await apiJson(`/api/admin/sessions/${sessionId}/master?kind=${kind}&replace=${$('fReplace').checked ? 1 : 0}`,
-        { method: 'POST', headers: { 'content-type': 'text/csv' }, body: await fileToCsv(file) });
-      const t = stats.totals;
-      msg($('uploadMsg'), 'ok', `Imported ${stats.rows.toLocaleString()} rows from ${file.name}`,
-        `Session now has ${t.bins.toLocaleString()} bins in ${t.aisles} aisles, ${t.pallets.toLocaleString()} pallets, ${t.assignments} planned aisle assignments` +
-        (stats.skipped ? ` · ${stats.skipped} row(s) skipped (${stats.skippedNoLevels ? stats.skippedNoLevels + ' with no levels; ' : ''}missing required column, or unknown aisle)` : '') +
-        (stats.excluded ? ` · ${stats.excluded} bins left out (counted manually: ${stats.excludedGroups.join(', ')})` : ''));
-      $('fFile').value = '';
-      await refreshAll();
-    } catch (err) { msg($('uploadMsg'), 'err', 'Upload failed', err.message); }
-  };
-
-  $('btnLayoutBlocks').onclick = async () => {
-    if (!needSession($('assignMsg'))) return;
-    try {
-      const r = await postJson(`/api/admin/sessions/${sessionId}/aisles/apply-layout`, {});
-      renderAisles(r.aisles);
-      msg($('assignMsg'), 'ok', `Paired ${r.applied} aisle(s) the way the drawing shows them.` + (r.pruned ? ` Removed ${r.pruned} non-aisle group(s) from the list.` : ''));
-      await refreshAssignments();
-    } catch (err) { alert(err.message); }
-  };
-  $('btnAutoBlock').onclick = async () => {
-    if (!needSession($('assignMsg'))) return;
-    try {
-      renderAisles(await postJson(`/api/admin/sessions/${sessionId}/aisles/auto-block`, { size: Number($('fBlockSize').value), offset: Number($('fBlockOffset').value) }));
-      await refreshAssignments();
-    } catch (err) { alert(err.message); }
   };
 
   async function queueAisles(force) {
@@ -972,10 +598,11 @@
       sel.appendChild(o);
     }
   }
-  (async () => {
-    if (!token) return show('login');
-    try { await apiJson('/api/admin/sessions'); show('main'); await loadLayouts(); await refreshErp(); await refreshDevices(); await loadSessions(); }
-    catch { show('login'); }
-  })();
-  setInterval(() => { if (token) { refreshDevices().catch(() => {}); if (sessionId) refreshAll().catch(() => {}); } }, 30000);
+  document.addEventListener('auth', (e) => {
+    if (!e.detail) return show('login');
+    show('main');
+    (async () => { await loadLayouts(); await loadSessions(); })().catch(() => show('login'));
+  });
+  document.addEventListener('DOMContentLoaded', () => { api.start().catch(() => show('login')); });
+  setInterval(() => { if (api.token && sessionId) refreshAll().catch(() => {}); }, 30000);
 })();

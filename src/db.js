@@ -194,6 +194,18 @@ CREATE TABLE IF NOT EXISTS recounts (
 );
 CREATE INDEX IF NOT EXISTS idx_recounts_session ON recounts(session_id, status);
 
+-- Supervisor accounts. Role is 'admin' (may manage accounts) or 'supervisor'.
+CREATE TABLE IF NOT EXISTS users (
+  username      TEXT PRIMARY KEY,
+  name          TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  role          TEXT NOT NULL DEFAULT 'supervisor',
+  active        INTEGER NOT NULL DEFAULT 1,
+  created_at    TEXT NOT NULL,
+  created_by    TEXT,
+  last_login    TEXT
+);
+
 -- Who changed what in the dashboard.
 CREATE TABLE IF NOT EXISTS audit (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,

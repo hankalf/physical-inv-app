@@ -3,57 +3,18 @@
 (() => {
   'use strict';
 
-  const $ = (id) => document.getElementById(id);
+  const api = window.appApi;
+  const { $, msg, clearMsg, fileToCsv } = window.appUi;
   const norm = (v) => String(v == null ? '' : v).trim().toUpperCase();
-  let token = sessionStorage.getItem('admToken') || '';
+  const apiJson = (p, o) => api.json(p, o);
+  const postJson = (p, body, method) => api.post(p, body, method);
+
   let state = { employees: [], teams: [], config: { equipment: {}, levelRules: [] } };
-
-  async function api(path, options = {}) {
-    const res = await fetch(path, {
-      ...options,
-      headers: { authorization: 'Bearer ' + token, ...(options.headers || {}) },
-      cache: 'no-store',
-    });
-    if (res.status === 401) { logout(); throw new Error('Session expired — sign in again'); }
-    if (!res.ok) {
-      let msg = res.status + ' ' + res.statusText;
-      try { msg = (await res.json()).error || msg; } catch { /* keep status text */ }
-      throw new Error(msg);
-    }
-    return res;
-  }
-  const apiJson = (p, o) => api(p, o).then((r) => r.json());
-  const postJson = (p, body, method = 'POST') =>
-    apiJson(p, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-
-  function msg(el, kind, text, detail) {
-    el.className = 'feedback show ' + kind;
-    el.textContent = text;
-    if (detail) { const d = document.createElement('div'); d.className = 'detail'; d.textContent = detail; el.appendChild(d); }
-  }
-  const clearMsg = (el) => { el.className = 'feedback'; el.textContent = ''; };
 
   function show(which) {
     $('scrLogin').classList.toggle('active', which === 'login');
     $('scrMain').classList.toggle('active', which === 'main');
-    $('btnLogout').hidden = which !== 'main';
     $('countChip').hidden = which !== 'main';
-  }
-  function logout() { token = ''; sessionStorage.removeItem('admToken'); show('login'); }
-
-  async function login() {
-    try {
-      const res = await fetch('/api/admin/login', {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ password: $('fPassword').value, name: $('fWho').value }),
-      });
-      if (!res.ok) throw new Error('Wrong password');
-      token = (await res.json()).token;
-      sessionStorage.setItem('admToken', token);
-      $('fPassword').value = '';
-      show('main');
-      await refresh();
-    } catch (err) { msg($('loginMsg'), 'err', err.message); }
   }
 
   /* ------------------------------------------------------------ helpers */
@@ -264,24 +225,6 @@
   }
 
   /* ------------------------------------------------------------ actions */
-  async function fileToCsv(file) {
-    if (!/\.xls[xm]?$/i.test(file.name)) return file.text();
-    if (!window.XLSX) {
-      await new Promise((res, rej) => {
-        const sc = document.createElement('script');
-        sc.src = '/vendor/xlsx.full.min.js';
-        sc.onload = res; sc.onerror = () => rej(new Error('Could not load the Excel reader. Save the sheet as CSV instead.'));
-        document.head.appendChild(sc);
-      });
-    }
-    const wb = window.XLSX.read(await file.arrayBuffer(), { type: 'array' });
-    return window.XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
-  }
-
-  $('btnLogin').onclick = login;
-  $('fPassword').addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
-  $('btnLogout').onclick = logout;
-
   $('btnUpload').onclick = async () => {
     const file = $('fFile').files[0];
     if (!file) return msg($('uploadMsg'), 'err', 'Choose a file first');
@@ -297,13 +240,8 @@
       await refresh();
     } catch (err) { msg($('uploadMsg'), 'err', 'Upload failed', err.message); }
   };
-  $('btnExport').onclick = async () => {
-    const res = await api('/api/admin/people/export/employees.csv');
-    const url = URL.createObjectURL(await res.blob());
-    const a = document.createElement('a'); a.href = url; a.download = 'employees.csv';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-  };
+  $('btnExport').onclick = () => api.download('/api/admin/people/export/employees.csv', 'employees.csv')
+    .catch((err) => msg($('uploadMsg'), 'err', err.message));
 
   $('btnAddPerson').onclick = async () => {
     try {
@@ -350,9 +288,10 @@
   };
 
   /* ------------------------------------------------------------ boot */
-  (async () => {
-    if (!token) return show('login');
-    try { await apiJson('/api/admin/people'); show('main'); await refresh(); }
-    catch { show('login'); }
-  })();
+  document.addEventListener('auth', (e) => {
+    if (!e.detail) return show('login');
+    show('main');
+    refresh().catch(() => show('login'));
+  });
+  document.addEventListener('DOMContentLoaded', () => { api.start().catch(() => show('login')); });
 })();

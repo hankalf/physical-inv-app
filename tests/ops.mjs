@@ -104,21 +104,25 @@ const errors = [];
 const page = await browser.newPage({ viewport: { width: 1500, height: 1000 }, deviceScaleFactor: 1.25 });
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => { if (m.type() === 'error' && !/40[19]/.test(m.text())) errors.push(m.text()); });
-await page.goto(BASE + '/admin');
-await page.fill('#fWho', 'Dana'); await page.fill('#fPassword', 'changeme'); await page.click('#btnLogin');
+// backups, the log and the ERP file live under Settings; the count sheet stays on the dashboard
+await page.goto(BASE + '/settings');
+await page.fill('#fUser', 'Dana'); await page.fill('#fPassword', 'changeme'); await page.click('#btnLogin');
 await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(1800);
-check('Dashboard: the backup list and the log are on screen',
+check('Settings: the backup list and the log are on screen',
   (await page.$$('#backupTable tbody tr')).length > 0 && (await page.$$('#auditTable tbody tr')).length > 3,
   clean(await page.textContent('#backupSub')).slice(0, 80));
-check('Dashboard: the log shows the supervisor by name', /Dana/.test(await page.textContent('#auditTable')));
+check('Settings: the log shows the supervisor by name', /Dana/.test(await page.textContent('#auditTable')));
 await page.selectOption('#fErpFormat', 'adjustments');
 await page.click('#btnErpPreview'); await page.waitForTimeout(800);
-check('Dashboard: an ERP layout previews before anything is downloaded',
+check('Settings: an ERP layout previews before anything is downloaded',
   /rows —/.test(clean(await page.textContent('#erpMsg'))) && /Location,Item/.test(await page.textContent('#erpSample')),
   clean(await page.textContent('#erpMsg')).slice(0, 90));
 await page.$eval('#backupTable', (el) => el.closest('.card').scrollIntoView()); await page.waitForTimeout(300);
 await (await page.$('#backupTable')).evaluate((el) => el.closest('.card').scrollIntoView());
-await page.screenshot({ path: `${S}screenshots/ops-dashboard.png`, clip: await (await page.$('#backupTable')).evaluate((el) => { const r = el.closest('.card').getBoundingClientRect(); return { x: r.x, y: Math.max(0, r.y), width: r.width, height: Math.min(r.height, 700) }; }) });
+await page.screenshot({ path: `${S}screenshots/ops-settings.png`, clip: await (await page.$('#backupTable')).evaluate((el) => { const r = el.closest('.card').getBoundingClientRect(); return { x: r.x, y: Math.max(0, r.y), width: r.width, height: Math.min(r.height, 700) }; }) });
+await page.goto(BASE + '/admin');
+await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(1200);
+check('The sign-in carries across the tabs', !!(await page.$('#navTabs .tab.current')), clean(await page.textContent('#navTabs')));
 const [sheetTab] = await Promise.all([page.waitForEvent('popup'), page.fill('#fPrintAisle', 'F03').then(() => page.fill('#fPrintLevels', 'A')).then(() => page.click('#btnPrint'))]);
 await sheetTab.waitForLoadState();
 check('Dashboard: the print button opens a sheet', /Count sheet/.test(await sheetTab.title()), await sheetTab.title());

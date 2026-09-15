@@ -45,18 +45,18 @@
 
 <header>
   <span class="title">Cycle Counts</span>
+  <nav class="tabs" id="navTabs"></nav>
   <span class="chip" id="clockChip" hidden></span>
-  <a href="/admin" class="chip" style="text-decoration:none">Dashboard →</a>
-  <a href="/teams" class="chip" style="text-decoration:none">Teams &amp; crew →</a>
-  <button id="btnLogout" class="ghost" hidden style="padding:6px 10px;font-size:12px">Log out</button>
+  <span class="chip" id="navWho" hidden></span>
+  <button id="navLogout" class="ghost" hidden style="padding:6px 10px;font-size:12px">Log out</button>
 </header>
 
 <main>
   <section class="screen active" id="scrLogin">
-    <div class="card" style="max-width:420px;margin:40px auto">
+    <div class="card signin">
       <h2>Supervisor sign-in</h2>
-      <label for="fWho">Your name <span style="text-transform:none;letter-spacing:0">— recorded against anything you change</span></label>
-      <input id="fWho" autocomplete="name" placeholder="e.g. Dana">
+      <label for="fUser">Username <span style="text-transform:none;letter-spacing:0">— or your name, if your site still uses the shared password</span></label>
+      <input id="fUser" autocomplete="username" placeholder="e.g. DANA">
       <label for="fPassword">Password</label>
       <input id="fPassword" type="password" autocomplete="current-password">
       <button class="primary" id="btnLogin" style="width:100%;margin-top:10px">Sign in</button>
@@ -67,7 +67,7 @@
   <section class="screen" id="scrMain">
 
     <div class="card">
-      <h2>Programme <span class="muted">a cycle-count session runs for the year — keep using the same one</span></h2>
+      <h2>Program <span class="muted">a cycle-count session runs for the year — keep using the same one</span></h2>
       <div class="inline">
         <div>
           <label for="fSessionPick">Cycle count</label>
@@ -76,11 +76,11 @@
         <div class="auto"><button id="btnCloseSession" class="danger">Close</button></div>
       </div>
       <div id="noSessions" class="hint" style="margin-top:8px" hidden>
-        No cycle-count programme yet. Create one below, then upload the bin list and the inventory report.
+        No cycle-count program yet. Create one below, then upload the bin list and the inventory report.
       </div>
       <hr>
       <div class="inline">
-        <div><label for="fNewName">New programme</label><input id="fNewName" placeholder="e.g. 2026 cycle counts"></div>
+        <div><label for="fNewName">New program</label><input id="fNewName" placeholder="e.g. 2026 cycle counts"></div>
         <div class="auto"><button class="primary" id="btnCreate">Create</button></div>
       </div>
       <div class="feedback" id="sessionMsg"></div>
@@ -173,6 +173,7 @@
   </section>
 </main>
 
+<script src="/nav.js"></script>
 <script src="/cycle.js"></script>
 </body>
 </html>

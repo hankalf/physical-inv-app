@@ -76,19 +76,36 @@ Scanners need internet access for this option, not just warehouse Wi-Fi.
 | `BACKUP_DIR` | `<DB_PATH>/../backups` | Where daily backups are written |
 | `BACKUP_KEEP` | `14` | How many backups to keep |
 | `SCANNER_AUTH` | `required` | `off` lets any client post counts — closed networks only |
+| `SHARED_PASSWORD_LOGIN` | `on` | `off` refuses `ADMIN_PASSWORD` once every supervisor has their own login |
 | `SITE_TIMEZONE` | `America/New_York` | The warehouse's clock — dates a cycle batch is due, and the hour a schedule fires |
 
 ---
 
+## The four supervisor tabs
+
+Every supervisor page carries the same tab bar and one sign-in — sign in once and move
+between them:
+
+| Tab | What lives there |
+|---|---|
+| **Dashboard** (`/admin`) | progress, the session, the map, team assignments, second counts, count sheets, the pallet report |
+| **Cycle counts** (`/cycle`) | the cycle-count program, coverage and today's batch |
+| **Teams & crew** (`/teams`) | the roster, teams, equipment and the level rules |
+| **Settings** (`/settings`) | supervisor logins, scanner setup, list uploads, racking blocks, the ERP export, backups and the log |
+
+The split is between running a count and setting one up: anything you configure once and
+then leave alone is under **Settings**, so the dashboard stays the screen a supervisor
+watches while the floor counts.
+
 ## Cycle counts — `/cycle`
 
-Its own page, on the same supervisor password: create the programme, upload the bin list
+Its own page, on the same sign-in: create the program, upload the bin list
 once and the inventory report whenever it changes, watch coverage, generate today's bins
 and see what is still open. Details under *Cycle counting* below.
 
 ## Teams & crew — `/teams`
 
-A separate page for the roster, on the same supervisor password.
+A separate page for the roster, on the same sign-in.
 
 **Upload the crew list** (CSV or Excel): `Badge` (required), `Name`, `Department`,
 `Equipment`. Equipment can be a list — `Scissor lift; High reach` — and common spellings
@@ -121,9 +138,12 @@ on the page, so a new machine or a changed policy does not need a deploy.
 | Teams get | whole aisles, by level | a generated list of bins |
 | Lives | for one count | for the year — re-upload the report whenever |
 
-## Supervisor — `/admin.html`
+## Setting up a count
 
-### 1. Create a session
+Step 1 is on the **Dashboard**; steps 2 and 3 are under **Settings**, which acts on the
+session picked at the top of that page.
+
+### 1. Create a session — Dashboard
 
 Per-session settings:
 
@@ -133,7 +153,7 @@ Per-session settings:
 | Guided by aisle plan | on / off |
 | Ask for comments | on / off (drops question 4) |
 
-### 2. Upload the lists
+### 2. Upload the lists — Settings
 
 Columns are matched by name, so most ERP exports work unchanged.
 
@@ -154,11 +174,11 @@ Add the column if your codes don't follow either. Wherever an aisle is typed —
 counting plan, the assignment box — `1`, `01` and `F01` all mean the same row.
 
 Sample files are in `sample-data/`, and each upload type has a downloadable template
-with its columns explained in the dashboard. Excel files (`.xlsx`) upload as-is — the
+with its columns explained on the page. Excel files (`.xlsx`) upload as-is — the
 first sheet is converted in the browser.
 
 **Front Royal:** the full ERP bin list ships in the app — **Load Front Royal bin list**
-in the upload card loads all 13,734 bins: racks `F01`–`F24` and `A01`–`A04`, and the
+in the Settings upload card loads all 13,734 bins: racks `F01`–`F24` and `A01`–`A04`, and the
 non-rack bins grouped as `WIP`, `AREAS` and `SYSTEM` (which holds `NIL`, the
 not-in-location bin). Those are *areas*: their bins validate and count like any other,
 but they are not aisles — they don't appear with the racking blocks and can't be
@@ -166,13 +186,13 @@ assigned to a team. Staging lanes and dock doors (`STAGING`, `DOORS`) are counte
 manually and are left out of the import; the layout file's `excluded` list controls that. Odd positions are the Front face of a double-deep
 rack, even positions the Back; the map shows both.
 
-### 3. Pair aisles that share racking
+### 3. Pair aisles that share racking — Settings
 
-In **Aisles & racking blocks**, click **Auto-pair aisles** to group them in twos
+In **Settings → Aisles & racking blocks**, click **Auto-pair aisles** to group them in twos
 (A01+A02, A03+A04, …), or type a block name on any row. Set *Skip first* to 1 if the
 first aisle has a wall behind it. Only one team can be active in a block at a time.
 
-### 4. Assign teams — aisle and levels
+### 4. Assign teams — aisle and levels, on the Dashboard
 
 Queue aisles per team in counting order, each with the **levels** that team's equipment
 covers: `A-C` for a crew on foot, `D-F` for the one with the lift, `A-F` for every
@@ -184,7 +204,7 @@ and the handheld shows *"Waiting: team 1 is still in aisle A03, which shares rac
 with A04"*. Trying to force-start a conflicting aisle from the dashboard is refused
 with the same message.
 
-### 5. Put the map on the real floor plan
+### 5. Put the map on the real floor plan — Dashboard
 
 The **Warehouse map** card draws every bay as a cell coloured by how much of it has a
 count. Each cell is one **bay** — 4 pallet positions per level, odd in front (001, 003) and even
@@ -248,7 +268,7 @@ On the gun, second counts appear on the assignment screen ("5 bins to go back to
 one shows the bin, where it is, and the reason; the counter scans every pallet in that bin
 (or marks it empty) and taps **Bin done**. Completions queue offline like everything else.
 
-### 8. Watch, then export
+### 8. Watch, then export — Dashboard, and Settings for the ERP file
 
 Progress by team (scanner, employees, active aisle, last scan), by aisle, and a pallet
 report with these statuses:
@@ -267,13 +287,13 @@ flags, comments), exceptions only, and uncounted bins.
 
 ---
 
-### 9. Register the scanners
+### 9. Register the scanners — Settings
 
-The **Scanners** card lists every handheld. Add one by name (`SCANNER-05`) and it gets a
-unique link, `https://<server>/?d=<id>`. On the device, open that link in Chrome once —
-scan the QR from the dashboard into the address bar rather than typing it — then menu →
-**Add to Home screen**. From then on the app knows which scanner it is, the dashboard
-shows when it was last seen and which team had it, and removing it here stops the link.
+The **Scanner setup** card lists every handheld. Add one by name (`SCANNER-05`) and it gets
+a unique link, `https://<server>/?d=<id>`. On the device, open that link in Chrome once —
+scan the QR from the page into the address bar rather than typing it — then menu →
+**Add to Home screen**. From then on the app knows which scanner it is, Settings shows
+when it was last seen and which team had it, and removing it here stops the link.
 
 A scanner with no link can still type an ID on first run; it is marked "not registered".
 
@@ -374,6 +394,10 @@ Supervisor (`Authorization: Bearer <token>` from `POST /api/admin/login`):
 | `POST`/`DELETE` | `/api/admin/people/teams` · `/teams/:id` | Create / delete a team |
 | `POST` | `/api/admin/people/assign` | Move someone onto a team |
 | `POST` | `/api/admin/people/equipment` | Save the equipment and level rules |
+| `GET` | `/api/admin/me` | Who am I, and does this site still take the shared password |
+| `POST` | `/api/admin/me/password` | Change your own password |
+| `GET`/`POST` | `/api/admin/users` | List / create supervisor logins (admins only) |
+| `POST`/`DELETE` | `/api/admin/users/:username` | Change role, name, password, active · remove |
 | `GET`/`POST` | `/api/admin/devices` | List / register scanners |
 | `POST` | `/api/admin/devices/:uid/reset` | New link, old token dead |
 | `POST`/`DELETE` | `/api/admin/devices/:uid` | Rename / remove a scanner |
@@ -429,7 +453,7 @@ stamps each count with the scanner that token proves — a payload claiming to b
 scanner is ignored.
 
 Treat a link like a key. **Reset link** issues a new one and kills the old token
-immediately; **Remove** stops the scanner entirely. The dashboard shows when each scanner
+immediately; **Remove** stops the scanner entirely. Settings shows when each scanner
 signed in and flags a link used more than once — normal after a scanner is wiped, worth a
 look otherwise. A scanner that gets cut off mid-count says so plainly and keeps its queued
 lines until it is authorised again.
@@ -437,10 +461,25 @@ lines until it is authorised again.
 `SCANNER_AUTH=off` disables this, for a closed network where anyone who can reach the
 server is already trusted. The app warns at startup when it is off.
 
-**Supervisors** share one password and give a name at sign-in, which is what the audit log
-records. Tokens are in-memory, so a restart signs supervisors out. If the app is exposed
-publicly, still put it behind a VPN or an authenticating proxy and set a real
-`ADMIN_PASSWORD` — the shared password is the weak part now, not the scanners.
+**Supervisors** each get their own login, under **Settings → Supervisor logins**. There are
+two roles: an **admin** can manage logins, a **supervisor** can do everything else. Every
+change is recorded in the audit log against the person who made it, and passwords are
+stored scrypt-hashed, never in the clear.
+
+The **shared password** (`ADMIN_PASSWORD`) is how you get in before any account exists, and
+how you get back in when everyone has forgotten theirs. Its use is logged as exactly that.
+The sign-in box takes either: type your username, or — if the site is still on the shared
+password — just your name, which is what the log then records. An existing username always
+needs that account's own password, so the shared password can never open somebody else's
+account. Once every supervisor has a login, set `SHARED_PASSWORD_LOGIN=off`.
+
+Tokens are in-memory, so a restart signs supervisors out. If the app is exposed publicly,
+still put it behind a VPN or an authenticating proxy.
+
+**Managing logins.** Add one with a username, full name, password and role. An admin can
+reset somebody's password, switch their role, deactivate them (which keeps their history in
+the log but stops the login working) or remove them. The last admin account cannot be
+demoted or deleted — there is always someone who can let people back in.
 
 ---
 
