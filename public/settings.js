@@ -261,8 +261,12 @@
     pallet: { what: 'Pallet ID', sub: 'scan the label on the pallet or container', prompt: 'Scan PALLET ID', ph: '' },
     qty:    { what: 'Quantity',  sub: 'how many are on it',                        prompt: 'Enter QUANTITY', ph: '' },
     bin:    { what: 'Bin',       sub: 'scan the location label',                   prompt: 'Scan BIN LOCATION', ph: '' },
+    lot:    { what: 'Lot code',  sub: 'only on counts that track lots',            prompt: 'Scan LOT CODE', ph: '' },
+    expiry: { what: 'Expiry',    sub: 'only on counts that track best-before dates', prompt: 'Enter EXPIRY (YYYY-MM-DD)', ph: 'e.g. 2027-03-15' },
     comments: { what: 'Comments', sub: 'optional — turned on per count',           prompt: 'Comments (optional)', ph: 'Type a note or tap one below' },
   };
+  // a question the gun knows and this page does not must never blank the screen
+  const stepInfo = (k) => STEP_INFO[k] || { what: k, sub: '', prompt: String(k).toUpperCase(), ph: '' };
   let gunCfg = null;
 
   function renderStepOrder() {
@@ -274,8 +278,8 @@
       li.dataset.step = key;
       const n = document.createElement('span'); n.className = 'n'; n.textContent = i + 1;
       const mid = document.createElement('div');
-      const w = document.createElement('div'); w.className = 'what'; w.textContent = STEP_INFO[key].what;
-      const sub = document.createElement('div'); sub.className = 'sub'; sub.textContent = STEP_INFO[key].sub;
+      const w = document.createElement('div'); w.className = 'what'; w.textContent = stepInfo(key).what;
+      const sub = document.createElement('div'); sub.className = 'sub'; sub.textContent = stepInfo(key).sub;
       mid.append(w, sub);
       const grip = document.createElement('span'); grip.className = 'grip'; grip.textContent = '⋮⋮';
       li.append(n, mid, grip);
@@ -305,7 +309,7 @@
     for (const k of [...gunCfg.order, 'comments']) {
       const o = document.createElement('option');
       o.value = k;
-      o.textContent = `${STEP_INFO[k].what}${k === 'comments' ? '' : ` (step ${gunCfg.order.indexOf(k) + 1})`}`;
+      o.textContent = `${stepInfo(k).what}${k === 'comments' ? '' : ` (step ${gunCfg.order.indexOf(k) + 1})`}`;
       sel.appendChild(o);
     }
     if ([...sel.options].some((o) => o.value === prior)) sel.value = prior;
@@ -320,7 +324,7 @@
     $('deviceNote').textContent = `${dev.name} · ${dev.note}`;
 
     const step = $('fPreviewStep').value || gunCfg.order[0];
-    const info = STEP_INFO[step];
+    const info = stepInfo(step);
     const idx = step === 'comments' ? gunCfg.order.length : gunCfg.order.indexOf(step);
     const total = gunCfg.order.length + 1;
     const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -400,7 +404,7 @@
       });
       gunCfg.defaults = keep;
       renderGun();
-      msg($('gunMsg'), 'ok', 'Saved.', `Scanners will ask ${gunCfg.order.map((k) => STEP_INFO[k].what.toLowerCase()).join(' → ')} at their next sign-on.`);
+      msg($('gunMsg'), 'ok', 'Saved.', `Scanners will ask ${gunCfg.order.map((k) => stepInfo(k).what.toLowerCase()).join(' → ')} at their next sign-on.`);
     } catch (err) { msg($('gunMsg'), 'err', err.message); }
   };
   $('btnResetGun').onclick = () => {

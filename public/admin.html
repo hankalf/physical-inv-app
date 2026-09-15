@@ -119,6 +119,8 @@
         <div class="auto"><label class="cb"><input type="checkbox" id="fAskComments"> Ask for comments</label></div>
         <div class="auto"><label class="cb"><input type="checkbox" id="fAutoRecount"> Auto second counts</label></div>
         <div class="auto"><label class="cb" title="Every scanner lands on this count at sign-on. They can still pick another."><input type="checkbox" id="fDefaultSession"> Scanners start here</label></div>
+        <div class="auto"><label class="cb" title="Adds a LOT CODE question on the gun, checked against the inventory report. Off by default."><input type="checkbox" id="fAskLot"> Ask for the lot code</label></div>
+        <div class="auto"><label class="cb" title="Adds an EXPIRY question on the gun and flags anything already out of date. Off by default."><input type="checkbox" id="fAskExpiry"> Ask for the expiry date</label></div>
         <div class="auto"><label for="fRecMinQty" title="A quantity difference smaller than this and than the percentage below does not raise a second count. 0 raises every difference.">Recount over</label><input id="fRecMinQty" class="sm" type="number" min="0" style="width:74px" placeholder="0"><span class="muted"> units</span></div>
         <div class="auto"><label for="fRecMinPct" title="...or a difference of at least this percentage of the expected quantity. Either threshold is enough.">or over</label><input id="fRecMinPct" class="sm" type="number" min="0" max="100" style="width:66px" placeholder="0"><span class="muted"> %</span></div>
         <div class="auto"><label for="fRecCap" title="Stop raising automatic second counts once this many are open. 0 is no cap.">Cap open</label><input id="fRecCap" class="sm" type="number" min="0" style="width:74px" placeholder="0"></div>
@@ -255,6 +257,21 @@
       </div>
 
       <div data-sub="reports" data-sub-label="Reports">
+    <div class="card">
+      <h2>Find a lot <span class="muted">after a recall notice: where is every case of it</span></h2>
+      <div class="hint" style="margin-top:0">
+        Searches what was actually counted, and what the inventory report expected — so it answers
+        from the floor, not from what the ERP believed before the count started. Needs the lot code
+        question turned on, or a report that carries lot codes.
+      </div>
+      <div class="inline" style="margin-top:12px">
+        <div><label for="fLotSearch">Lot or batch code</label><input id="fLotSearch" placeholder="e.g. LOT-4471 — part of one is enough"></div>
+        <div class="auto"><button class="primary fit" id="btnFindLot">Find it</button></div>
+      </div>
+      <div class="feedback" id="lotMsg"></div>
+      <div class="scroll" style="margin-top:10px"><table id="lotTable"></table></div>
+    </div>
+
     <div class="card">
       <h2>Pallet report</h2>
       <div class="inline">

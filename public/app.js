@@ -67,12 +67,25 @@
      not synced a session yet. */
   const FALLBACK_PROMPTS = {
     comments: ['Damaged', 'Partial pallet', 'Mixed pallet', 'Label unreadable', 'Needs recount', 'Blocked / could not reach'],
-    overrides: [],
+    overrides: ['Label unreadable', 'New receipt, not on the report', 'Relabelled', 'Hand-written ID', 'Supervisor said to count it'],
     commentTimeout: 5,
   };
   const prompts = () => state.session?.prompts || FALLBACK_PROMPTS;
   const LAYOUT_FALLBACK = { showContents: true, showNextBin: true, confirmOver: 1000, vibrate: true };
   const layoutCfg = () => state.session?.layout_cfg || LAYOUT_FALLBACK;
+
+  /* Which questions this count asks, in the order the site configured.
+     lot and expiry are opt-in per count: a frozen-food count needs them for a
+     recall, a spare-parts count would only be slowed down by them. */
+  function stepsFor(session) {
+    const cfg = session.layout_cfg || {};
+    const wanted = new Set(['pallet', 'qty', 'bin',
+      ...(session.askLot ? ['lot'] : []), ...(session.askExpiry ? ['expiry'] : [])]);
+    return [
+      ...(cfg.order || ['pallet', 'qty', 'bin']).filter((k) => wanted.has(k)),
+      ...(session.askComments ? ['comments'] : []),
+    ];
+  }
 
   const state = {
     deviceId: '',
@@ -236,6 +249,34 @@
     $('chipDevice').textContent = state.deviceId + (state.team ? ' · T' + state.team : '');
   }
 
+  /*
+   * Site settings change while people are counting.
+   *
+   * A supervisor edits the one-tap reasons, or the order the questions are
+   * asked in, halfway through a shift - and a gun that read them once at
+   * sign-on would carry the old ones until somebody signed out and back in.
+   * So re-read them with the sync, between pallets where changing the
+   * questions cannot strand a half-finished line. `?have=` means the server
+   * answers without sending the master list again.
+   */
+  const SETTINGS_EVERY_MS = 15000;   // the gun syncs on a twenty-second tick anyway
+  let settingsReadAt = 0;
+
+  async function refreshSiteSettings() {
+    if (!state.session || state.stepIndex !== 0 || state.draft.palletId) return;
+    if (Date.now() - settingsReadAt < SETTINGS_EVERY_MS) return;
+    settingsReadAt = Date.now();
+    const have = await metaGet('masterVersion');
+    const fresh = await api(`/api/sessions/${state.session.id}/master?have=${have ?? -1}`);
+    if (!fresh || !fresh.unchanged) return;   // a new list: the next sign-on downloads it
+    const merged = { ...state.session, ...fresh, id: state.session.id, name: state.session.name };
+    state.session = merged;
+    await metaSet('session', merged);
+    state.steps = stepsFor(merged);
+    document.body.classList.toggle('big-text', (merged.layout_cfg || {}).textSize === 'large');
+    renderStep();
+  }
+
   async function syncQueue() {
     if (state.syncing || !online() || !state.session) return;
     state.syncing = true;
@@ -251,7 +292,8 @@
             comments: l.comments, sku: l.sku, team: l.team, employees: l.employees,
             deviceId: l.deviceId, aisle: l.aisle, unknownPallet: l.unknownPallet,
             unknownLocation: l.unknownLocation, offAssignment: l.offAssignment,
-            duplicatePallet: l.duplicatePallet, emptyBin: l.emptyBin || 0, pass: l.pass || 1, recountId: l.recountId || null, overrideReason: l.overrideReason, scannedAt: l.ts,
+            duplicatePallet: l.duplicatePallet, emptyBin: l.emptyBin || 0, pass: l.pass || 1, recountId: l.recountId || null, overrideReason: l.overrideReason,
+            lot: l.lot || null, expiry: l.expiry || null, scannedAt: l.ts,
           }))),
         });
         const ok = new Set(result.accepted || []);
@@ -268,6 +310,7 @@
       }
       await pullCountedPallets();
       await flushRecountsDone();
+      await refreshSiteSettings();
     } catch (err) {
       console.warn('sync deferred:', err.message);
     } finally {
@@ -409,7 +452,7 @@
     await clearStores(['loc', 'pal', 'dup']);
     await metaSet('dupWatermark', '');
     await bulkPut('loc', data.locations, ([c, zone, aisle, level]) => ({ c, zone, aisle, level: level || '' }));
-    await bulkPut('pal', data.pallets, ([p, sku, desc, expLoc]) => ({ p, sku, desc, expLoc }));
+    await bulkPut('pal', data.pallets, ([p, sku, desc, expLoc, lot, expiry]) => ({ p, sku, desc, expLoc, lot, expiry }));
     await metaSet('masterVersion', data.masterVersion);
     await metaSet('cachedAt', Date.now());
     return { bins: data.locations.length, pallets: data.pallets.length, session: data };
@@ -449,9 +492,8 @@
 
       state.team = team;
       state.session = session;
-      const cfg = session.layout_cfg || {};
-      state.steps = [...(cfg.order || ['pallet', 'qty', 'bin']), ...(session.askComments ? ['comments'] : [])];
-      document.body.classList.toggle('big-text', cfg.textSize === 'large');
+      state.steps = stepsFor(session);
+      document.body.classList.toggle('big-text', (session.layout_cfg || {}).textSize === 'large');
       state.draft = {};
       state.stepIndex = 0;
       $('hdrTitle').textContent = `#${session.id} · ${session.name}`;
@@ -774,12 +816,15 @@
     renderRecountBanner();
     const step = state.steps[state.stepIndex];
     $('stepLabel').textContent = `Step ${state.stepIndex + 1} of ${state.steps.length}`;
-    $('prompt').textContent = { pallet: 'Scan PALLET ID', qty: 'Enter QUANTITY', bin: 'Scan BIN LOCATION', comments: 'Comments (optional)' }[step];
+    $('prompt').textContent = { pallet: 'Scan PALLET ID', qty: 'Enter QUANTITY', bin: 'Scan BIN LOCATION',
+      lot: 'Scan LOT CODE', expiry: 'Enter EXPIRY (YYYY-MM-DD)', comments: 'Comments (optional)' }[step];
     const f = $('fScan');
     f.value = '';
-    f.placeholder = step === 'comments' ? 'Type a note or tap one below' : '';
-    f.inputMode = step === 'qty' ? 'decimal' : step === 'comments' ? 'text' : (state.keyboardOn ? 'text' : 'none');
-    $('btnSkip').hidden = step !== 'comments';
+    f.placeholder = step === 'comments' ? 'Type a note or tap one below'
+      : step === 'expiry' ? 'e.g. 2027-03-15' : '';
+    f.inputMode = step === 'qty' ? 'decimal' : (step === 'comments' || step === 'expiry') ? 'text' : (state.keyboardOn ? 'text' : 'none');
+    // lot and expiry can be missing on a real pallet, so they are skippable
+    $('btnSkip').hidden = !['comments', 'lot', 'expiry'].includes(step);
     $('btnEmpty').hidden = step !== 'pallet';
     $('commentChips').hidden = step !== 'comments';
     if (state.draft.emptyBin && step === 'bin') $('prompt').textContent = 'EMPTY bin — scan its LOCATION';
@@ -928,6 +973,7 @@
         state.draft.sku = pal ? pal.sku : '';
         state.draft.description = pal ? pal.desc : '';
         state.draft.expectedLocation = pal ? pal.expLoc : '';
+        state.draft.expectedLot = pal ? (pal.lot || '') : '';
         if (!pal) state.draft.unknownPallet = 1;
       };
 
@@ -1039,6 +1085,38 @@
       return;
     }
 
+    if (step === 'lot') {
+      // an expected lot from the report is worth checking against, not just recording
+      const want = state.draft.expectedLot;
+      state.draft.lot = value || null;
+      if (value && want && want !== value) {
+        state.draft.lotMismatch = 1;
+        addReason(`lot ${value} where the report says ${want}`);
+        await advance('warn', `Lot ${value}`, `The report says this pallet is lot ${want}.`);
+      } else {
+        await advance('ok', value ? `Lot ${value}` : 'No lot recorded', want && value === want ? 'Matches the report.' : '');
+      }
+      return;
+    }
+
+    if (step === 'expiry') {
+      const iso = parseExpiry(raw);
+      if (raw && String(raw).trim() && !iso) {
+        feedback($('scanMsg'), 'err', 'That is not a date', 'Use YYYY-MM-DD, or tap Skip if the pallet has none.');
+        return;
+      }
+      state.draft.expiry = iso;
+      const expired = iso && iso < new Date().toISOString().slice(0, 10);
+      if (expired) {
+        state.draft.expired = 1;
+        addReason(`expired ${iso}`);
+        await advance('warn', `Expires ${iso}`, 'That date has passed — flag it to a supervisor.');
+      } else {
+        await advance('ok', iso ? `Expires ${iso}` : 'No expiry recorded');
+      }
+      return;
+    }
+
     if (step === 'comments') {
       stopMoveOn();
       // the Enter handler clears the field before calling in, so read what was
@@ -1046,6 +1124,24 @@
       state.draft.comments = String(raw == null ? '' : raw).trim() || null;
       await commitLine();
     }
+  }
+
+  /** YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY, YYMMDD, or a Julian-ish YYYYMMDD. */
+  function parseExpiry(raw) {
+    const t = String(raw == null ? '' : raw).trim();
+    if (!t) return null;
+    let m = /^(\d{4})[-/.]?(\d{2})[-/.]?(\d{2})$/.exec(t);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+    m = /^(\d{2})[-/.](\d{2})[-/.](\d{4})$/.exec(t);
+    if (m) {
+      // a day over 12 settles it; otherwise take the US order the ERP exports in
+      const [, a, b, y] = m;
+      return Number(a) > 12 ? `${y}-${b}-${a}` : `${y}-${a}-${b}`;
+    }
+    m = /^(\d{2})(\d{2})(\d{2})$/.exec(t);
+    if (m) return `20${m[1]}-${m[2]}-${m[3]}`;
+    const d = new Date(t);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
   }
 
   function addReason(reason) {
@@ -1061,6 +1157,31 @@
     else await commitLine();
   }
 
+  /* The reasons a counter may pick are a site setting, edited in the admin
+     panel - they were hard-coded into the page once, which meant every edit a
+     supervisor made stopped at the dashboard and never reached a gun. */
+  function renderOverrideReasons() {
+    const list = prompts().overrides?.length ? prompts().overrides : FALLBACK_PROMPTS.overrides;
+    const want = list.join('\u0000');
+    const sel = $('fReason');
+    if (sel.dataset.built === want) return;
+    sel.dataset.built = want;
+    sel.innerHTML = '';
+    const first = document.createElement('option');
+    first.value = '';
+    first.textContent = 'Choose a reason…';
+    sel.appendChild(first);
+    for (const r of list) {
+      const o = document.createElement('option');
+      o.textContent = r;
+      sel.appendChild(o);
+    }
+    // always available: no list of reasons covers everything a warehouse does
+    const other = document.createElement('option');
+    other.textContent = 'Other';
+    sel.appendChild(other);
+  }
+
   function askOverride(spec) {
     if (state.session && state.session.palletMode === 'strict' && spec.title !== 'Not your aisle') {
       feedback($('scanMsg'), 'err', spec.title, spec.why + ' Overrides are off for this session.');
@@ -1070,6 +1191,7 @@
     }
     state.override = spec;
     beep('err');
+    renderOverrideReasons();
     $('ovTitle').textContent = spec.title;
     $('ovWhy').textContent = spec.why;
     kv($('ovCtx'), spec.rows);
@@ -1120,6 +1242,8 @@
       offAssignment: d.offAssignment ? 1 : 0,
       duplicatePallet: d.duplicatePallet ? 1 : 0,
       overrideReason: d.overrideReason || null,
+      lot: d.lot || null,
+      expiry: d.expiry || null,
       ts: new Date().toISOString(),
       synced: 0,
       voidedLocal: false,

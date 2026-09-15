@@ -81,6 +81,8 @@
     $('fRecMinQty').value = s.recount_min_qty || 0;
     $('fRecMinPct').value = s.recount_min_pct || 0;
     $('fRecCap').value = s.recount_cap || 0;
+    $('fAskLot').checked = !!s.ask_lot;
+    $('fAskExpiry').checked = !!s.ask_expiry;
     $('fDefaultSession').checked = defaultSessionId === s.id;
     $('fDefaultSession').disabled = s.status === 'closed';
     $('fLayout').value = s.layout || '';
@@ -284,12 +286,37 @@
     const data = await apiJson(`/api/admin/sessions/${sessionId}/pallets?limit=500${only}`);
     table($('palletTable'),
       [{ label: 'Pallet' }, { label: 'SKU' }, { label: 'Description' }, { label: 'Expected', num: true }, { label: '1st count', num: true }, { label: 'Counted', num: true },
-       { label: 'Expected bin' }, { label: 'Found in' }, { label: 'Team' }, { label: 'Comments' }, { label: 'Status' }, { label: '' }],
+       { label: 'Expected bin' }, { label: 'Found in' }, { label: 'Lot' }, { label: 'Expiry' }, { label: 'Team' }, { label: 'Comments' }, { label: 'Status' }, { label: '' }],
       data.rows,
       (r) => {
         const tr = document.createElement('tr');
         tr.append(cell(r.pallet_id), cell(r.sku), cell(r.description, 'wrap'), cell(r.expected_qty, 'num'), cell(r.recounted ? r.first_count_qty : '', 'num'), cell(r.counted_qty, 'num'),
-          cell(r.expected_location), cell(r.found_location), cell(r.teams), cell(r.comments, 'wrap'));
+          cell(r.expected_location), cell(r.found_location));
+        // lot and expiry are blank unless the site tracks them, so they cost nothing when it does not
+        const tdLot = document.createElement('td');
+        if (r.found_lot || r.expected_lot) {
+          tdLot.append(r.found_lot || r.expected_lot);
+          if (r.lot_status && r.lot_status !== 'LOT MATCH') {
+            const t = tag(r.lot_status === 'WRONG LOT' ? 'MISSING' : 'queued');
+            t.textContent = r.lot_status === 'WRONG LOT' ? 'wrong lot' : r.lot_status === 'NO LOT SCANNED' ? 'not scanned' : 'not on report';
+            t.style.marginLeft = '5px';
+            t.title = r.expected_lot ? `The report says lot ${r.expected_lot}` : 'No lot for this pallet on the report';
+            tdLot.appendChild(t);
+          }
+        }
+        tr.appendChild(tdLot);
+        const tdExp = document.createElement('td');
+        if (r.expiry) {
+          tdExp.append(r.expiry);
+          if (r.expiry_status && r.expiry_status !== 'IN DATE') {
+            const t = tag(r.expiry_status === 'EXPIRED' ? 'MISSING' : 'queued');
+            t.textContent = r.expiry_status === 'EXPIRED' ? 'expired' : 'soon';
+            t.style.marginLeft = '5px';
+            tdExp.appendChild(t);
+          }
+        }
+        tr.appendChild(tdExp);
+        tr.append(cell(r.teams), cell(r.comments, 'wrap'));
         const td = document.createElement('td'); td.appendChild(tag(r.status));
         if (r.recounted) { td.append(' '); const t2 = tag('2nd'); t2.className = 'tag MATCH'; t2.textContent = '2nd count'; td.appendChild(t2); }
         tr.appendChild(td);
@@ -842,6 +869,7 @@
         palletMode: $('fPalletMode').value, guided: $('fGuided').checked, askComments: $('fAskComments').checked,
         autoRecount: $('fAutoRecount').checked, layout: $('fLayout').value,
         recountMinQty: $('fRecMinQty').value, recountMinPct: $('fRecMinPct').value, recountCap: $('fRecCap').value,
+        askLot: $('fAskLot').checked, askExpiry: $('fAskExpiry').checked,
       });
       const wantDefault = $('fDefaultSession').checked;
       if (wantDefault !== (defaultSessionId === sessionId)) {
@@ -890,6 +918,37 @@
       await refreshAll();
     } catch (err) { msg($('assignMsg'), 'err', err.message); }
   };
+
+  $('btnFindLot').onclick = async () => {
+    if (!needSession($('lotMsg'))) return;
+    const q = $('fLotSearch').value.trim();
+    if (!q) return msg($('lotMsg'), 'err', 'Type a lot code first');
+    try {
+      const r = await apiJson(`/api/admin/sessions/${sessionId}/lot?q=${encodeURIComponent(q)}`);
+      const rows = [
+        ...r.counted.map((x) => ({ ...x, where: 'counted' })),
+        ...r.expected.filter((e) => !r.counted.some((c) => c.pallet_id === e.pallet_id))
+          .map((x) => ({ ...x, where: 'on the report, not counted', location_code: x.expected_location, qty: x.expected_qty })),
+      ];
+      msg($('lotMsg'), rows.length ? 'ok' : 'warn',
+        rows.length ? `${r.counted.length} counted, ${r.expected.length} on the report` : `Nothing matches "${q}"`,
+        rows.length ? 'Counted rows are where it actually is now.' : 'Check the code, or whether this count records lot codes at all.');
+      table($('lotTable'),
+        [{ label: 'Pallet' }, { label: 'Lot' }, { label: 'Expiry' }, { label: 'Qty', num: true }, { label: 'Bin' }, { label: 'Aisle' }, { label: 'Item', }, { label: 'Team' }, { label: 'State' }],
+        rows,
+        (x) => {
+          const tr = document.createElement('tr');
+          tr.append(cell(x.pallet_id), cell(x.lot || ''), cell(x.expiry || ''), cell(x.qty ?? '', 'num'),
+            cell(x.location_code || ''), cell(x.aisle || ''), cell([x.sku, x.description].filter(Boolean).join(' — '), 'wrap'), cell(x.team || ''));
+          const td = document.createElement('td');
+          td.appendChild(tag(x.where === 'counted' ? 'done' : 'queued'));
+          td.append(' ' + x.where);
+          tr.appendChild(td);
+          return tr;
+        }, 'Nothing found.');
+    } catch (err) { msg($('lotMsg'), 'err', err.message); }
+  };
+  $('fLotSearch').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnFindLot').click(); });
 
   $('btnExportPallets').onclick = () => download(`/api/admin/sessions/${sessionId}/export/pallets.csv`, `pallets-session-${sessionId}.csv`);
   $('btnExportCounts').onclick = () => download(`/api/admin/sessions/${sessionId}/export/counts.csv`, `counts-session-${sessionId}.csv`);

@@ -235,13 +235,13 @@ await t1.scan('PLT01005A'); await t1.scan('30'); await t1.scan('F01A005'); await
 await t1.scan('PLT01001A'); await t1.p.waitForSelector('#scrOverride.active');
 check('Handheld T1: duplicate pallet caught', /already counted in bin F01A001/.test(await t1.T('#ovWhy')), await t1.T('#ovWhy'));
 await shot(t1.p, 'hh-duplicate');
-await t1.p.selectOption('#fReason', 'Pallet has two labels'); await t1.p.click('#btnOverrideAccept'); await t1.p.waitForTimeout(200);
+await t1.p.selectOption('#fReason', 'Relabelled'); await t1.p.click('#btnOverrideAccept'); await t1.p.waitForTimeout(200);
 await t1.scan('40'); await t1.scan('F01A009'); await t1.p.click('#btnSkip'); await t1.p.waitForTimeout(200);
 check('Handheld T1: duplicate accepted with reason → flagged line', /Counted PLT01001A.*flagged/.test(await t1.T('#scanMsg')), await t1.T('#scanMsg'));
 // unknown pallet with override
 await t1.scan('NOLABEL-77'); await t1.p.waitForSelector('#scrOverride.active');
 check('Handheld T1: unknown pallet needs reason', (await t1.T('#ovTitle')) === 'Pallet not on the list');
-await t1.p.selectOption('#fReason', 'New pallet not in master file'); await t1.p.fill('#fReasonNote', 'handwritten tag'); await t1.p.click('#btnOverrideAccept'); await t1.p.waitForTimeout(200);
+await t1.p.selectOption('#fReason', 'New receipt, not on the report'); await t1.p.fill('#fReasonNote', 'handwritten tag'); await t1.p.click('#btnOverrideAccept'); await t1.p.waitForTimeout(200);
 // bad qty then large qty
 await t1.scan('abc');
 check('Handheld T1: junk quantity refused', /is not a quantity/.test(await t1.T('#scanMsg')), await t1.T('#scanMsg'));
@@ -255,12 +255,12 @@ check('Handheld T1: confirmed → BIN prompt', (await t1.T('#prompt')) === 'Scan
 await t1.scan('F02A001'); await t1.p.waitForSelector('#scrOverride.active');
 check('Handheld T1: bin outside assigned aisle stopped', /is in aisle F02. Your team is assigned to aisle F01/.test(await t1.T('#ovWhy')), await t1.T('#ovWhy'));
 await shot(t1.p, 'hh-off-aisle');
-await t1.p.selectOption('#fReason', 'Pallet is in a different aisle'); await t1.p.click('#btnOverrideAccept'); await t1.p.waitForTimeout(200);
+await t1.p.selectOption('#fReason', 'Supervisor said to count it'); await t1.p.click('#btnOverrideAccept'); await t1.p.waitForTimeout(200);
 await t1.p.click('#btnSkip'); await t1.p.waitForTimeout(200);
 // unknown bin
 await t1.scan('PLT01006A'); await t1.scan('40'); await t1.scan('F99Z999'); await t1.p.waitForSelector('#scrOverride.active');
 check('Handheld T1: unknown bin needs reason', (await t1.T('#ovTitle')) === 'Bin not on the list');
-await t1.p.selectOption('#fReason', 'New bin not in master file'); await t1.p.click('#btnOverrideAccept'); await t1.p.waitForTimeout(200); await t1.p.click('#btnSkip'); await t1.p.waitForTimeout(300);
+await t1.p.selectOption('#fReason', 'Other'); await t1.p.click('#btnOverrideAccept'); await t1.p.waitForTimeout(200); await t1.p.click('#btnSkip'); await t1.p.waitForTimeout(300);
 // a bin on a level that belongs to the other team in this aisle
 await t1.scan('PLT01010A'); await t1.scan('40'); await t1.scan('F01D001'); await t1.p.waitForSelector('#scrOverride.active');
 check('Handheld T1: bin on level D stopped — team has levels A–C', (await t1.T('#ovTitle')) === 'Not your level' && /assigned levels A–C/.test(await t1.T('#ovWhy')), await t1.T('#ovWhy'));

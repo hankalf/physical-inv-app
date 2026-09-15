@@ -3,7 +3,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomUUID, timingSafeEqual } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 
 import {
   db, listSessions, getSession, createSession, deleteSession, checkSessionDeletable, sessionContents, lastUsedLayout, publicSession, masterPayload,
@@ -19,7 +19,7 @@ import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks,
 } from './routes/assignments.js';
-import { progress, palletReport, uncountedBins, rawCounts, exceptions, mapData } from './routes/reports.js';
+import { progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot } from './routes/reports.js';
 import {
   listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
   tasksForTeam, takeRecount, finishRecount, updateRecount, deleteRecount,
@@ -82,12 +82,34 @@ const MIME = {
 
 /* ------------------------------------------------------------ plumbing */
 
+/*
+ * Compressing the same half-megabyte master list thirty times over, once per
+ * handheld at the start of a shift, is nine milliseconds of the whole server
+ * stopped each time. Identical bodies compress to identical bytes, so keep the
+ * last few keyed by their digest - hashing is an order of magnitude cheaper.
+ */
+const GZIP_CACHE = new Map();
+const GZIP_CACHE_MIN = 64 * 1024;   // below this, compressing is cheaper than remembering
+const GZIP_CACHE_MAX = 4 * 1024 * 1024;
+const GZIP_CACHE_KEEP = 6;
+
+function gzipMaybeCached(payload) {
+  if (payload.length < GZIP_CACHE_MIN || payload.length > GZIP_CACHE_MAX) return gzipSync(payload);
+  const key = createHash('sha1').update(payload).digest('base64');
+  const hit = GZIP_CACHE.get(key);
+  if (hit) return hit;
+  const gz = gzipSync(payload);
+  GZIP_CACHE.set(key, gz);
+  while (GZIP_CACHE.size > GZIP_CACHE_KEEP) GZIP_CACHE.delete(GZIP_CACHE.keys().next().value);
+  return gz;
+}
+
 function send(req, res, status, body, headers = {}) {
   let payload = Buffer.isBuffer(body) ? body : Buffer.from(String(body));
   const h = { 'cache-control': 'no-store', ...headers };
   const accepts = String(req.headers['accept-encoding'] || '').includes('gzip');
   if (accepts && payload.length > 1024 && !h['content-encoding']) {
-    payload = gzipSync(payload);
+    payload = gzipMaybeCached(payload);
     h['content-encoding'] = 'gzip';
   }
   h['content-length'] = payload.length;
@@ -487,6 +509,13 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, { ...gone, backup: backup ? backup.name : null, backupError });
   }
 
+  // after a recall notice: where is every case of this lot
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/lot$/)) && method === 'GET') {
+    const found = findLot(m[1], url.searchParams.get('q'));
+    if (found.lot) audit(actor, 'searched for a lot', `${found.lot} — ${found.counted.length} counted, ${found.expected.length} on the report`, m[1]);
+    return sendJson(req, res, 200, found);
+  }
+
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/setup$/)) && method === 'GET') {
     const state = setupState(m[1]);
     if (!state) throw httpError(404, 'session not found');
@@ -507,11 +536,14 @@ async function handleAdmin(req, res, url, m) {
     audit(actor, 'changed session settings', JSON.stringify({ palletMode: mode, guided: body.guided, askComments: body.askComments, layout, autoRecount: body.autoRecount, recount: { minQty, minPct, cap } }), m[1]);
     db.prepare(`UPDATE sessions SET pallet_mode = ?, guided = ?, ask_comments = ?, layout = ?, auto_recount = ?,
                   recount_min_qty = ?, recount_min_pct = ?, recount_cap = ?,
+                  ask_lot = ?, ask_expiry = ?,
                   master_version = master_version + 1 WHERE id = ?`)
       .run(mode, body.guided == null ? s.guided : (body.guided ? 1 : 0),
            body.askComments == null ? s.ask_comments : (body.askComments ? 1 : 0), layout,
            body.autoRecount == null ? s.auto_recount : (body.autoRecount ? 1 : 0),
-           minQty, minPct, cap, s.id);
+           minQty, minPct, cap,
+           body.askLot == null ? s.ask_lot : (body.askLot ? 1 : 0),
+           body.askExpiry == null ? s.ask_expiry : (body.askExpiry ? 1 : 0), s.id);
     return sendJson(req, res, 200, getSession(m[1]));
   }
 
@@ -833,7 +865,7 @@ async function handleAdmin(req, res, url, m) {
     let bin = norm(body.bin);
     let palletId = norm(body.palletId) || null;
     if (!bin && palletId) {
-      const row = palletReport(m[1]).find((r) => r.pallet_id === palletId);
+      const row = palletReport(m[1], { only: [palletId] })[0];
       bin = row ? (String(row.found_location || '').split(',')[0] || row.expected_location) : '';
       if (!bin) throw httpError(400, `no bin known for pallet ${palletId}`);
     }
@@ -869,7 +901,16 @@ async function handleAdmin(req, res, url, m) {
   // --- reports
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/pallets$/)) && method === 'GET') {
     let rows = palletReport(m[1]);
-    if (url.searchParams.get('only') === 'exceptions') rows = rows.filter((r) => r.status !== 'MATCH');
+    /* A pallet with the right count of the wrong lot, or one that is out of
+       date, is an exception too - the quantity being right does not make it
+       something a supervisor can ignore. */
+    if (url.searchParams.get('only') === 'exceptions') {
+      rows = rows.filter(
+        (r) => r.status !== 'MATCH' ||
+          (r.lot_status && r.lot_status !== 'LOT MATCH') ||
+          r.expiry_status === 'EXPIRED' || r.expiry_status === 'EXPIRES SOON'
+      );
+    }
     const limit = Number(url.searchParams.get('limit') || 500);
     return sendJson(req, res, 200, { total: rows.length, rows: rows.slice(0, limit) });
   }
@@ -894,7 +935,7 @@ async function handleAdmin(req, res, url, m) {
   }
 
   const COUNT_COLS = [
-    'id', 'pallet_id', 'qty', 'location_code', 'aisle', 'sku', 'description', 'comments',
+    'id', 'pallet_id', 'qty', 'location_code', 'aisle', 'sku', 'description', 'lot', 'expiry', 'comments',
     'team', 'employees', 'device_id', 'unknown_pallet', 'unknown_location', 'off_assignment',
     'duplicate_pallet', 'empty_bin', 'pass', 'recount_id', 'override_reason', 'voided', 'scanned_at', 'received_at',
   ];
@@ -902,6 +943,7 @@ async function handleAdmin(req, res, url, m) {
     'pallet_id', 'sku', 'description', 'uom', 'expected_qty', 'counted_qty', 'variance_qty',
     'expected_location', 'found_location', 'times_counted', 'teams', 'comments', 'last_scan', 'status',
     'recounted', 'first_count_qty', 'open_recounts',
+    'expected_lot', 'found_lot', 'lot_status', 'expiry', 'expiry_status',
   ];
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/counts\.csv$/))) {
     return sendCsv(req, res, `counts-session-${m[1]}.csv`, toCsv(rawCounts(m[1]), COUNT_COLS));

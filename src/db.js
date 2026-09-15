@@ -268,6 +268,12 @@ CREATE INDEX IF NOT EXISTS idx_counts_pallet  ON counts(session_id, pallet_id);
 CREATE INDEX IF NOT EXISTS idx_counts_loc     ON counts(session_id, location_code);
 CREATE INDEX IF NOT EXISTS idx_counts_team    ON counts(session_id, team);
 CREATE INDEX IF NOT EXISTS idx_counts_device  ON counts(session_id, device_id);
+
+-- Every screen that reports by aisle - the map, the progress board, the aisle
+-- overview - asks "which bins are in this aisle". Without this it re-scans the
+-- whole warehouse once per aisle, which is what makes those screens slow when
+-- fifteen teams are refreshing them.
+CREATE INDEX IF NOT EXISTS idx_locations_aisle ON locations(session_id, aisle);
 `);
 
 // Columns added after the first schema.
@@ -287,6 +293,22 @@ if (!hasCol('recounts', 'batch_id')) db.exec('ALTER TABLE recounts ADD COLUMN ba
 if (!hasCol('counts', 'pass')) db.exec('ALTER TABLE counts ADD COLUMN pass INTEGER NOT NULL DEFAULT 1');
 if (!hasCol('counts', 'recount_id')) db.exec('ALTER TABLE counts ADD COLUMN recount_id INTEGER');
 if (!hasCol('sessions', 'auto_recount')) db.exec('ALTER TABLE sessions ADD COLUMN auto_recount INTEGER NOT NULL DEFAULT 1');
+/* Lot codes and expiry dates. Off unless a count asks for them: a frozen-food
+   site needs them for a recall, a spare-parts count would only be slowed down. */
+if (!hasCol('counts', 'lot')) {
+  db.exec('ALTER TABLE counts ADD COLUMN lot TEXT');
+  db.exec('ALTER TABLE counts ADD COLUMN expiry TEXT');
+}
+if (!hasCol('pallets', 'lot')) {
+  db.exec('ALTER TABLE pallets ADD COLUMN lot TEXT');
+  db.exec('ALTER TABLE pallets ADD COLUMN expiry TEXT');
+}
+if (!hasCol('sessions', 'ask_lot')) {
+  db.exec('ALTER TABLE sessions ADD COLUMN ask_lot INTEGER NOT NULL DEFAULT 0');
+  db.exec('ALTER TABLE sessions ADD COLUMN ask_expiry INTEGER NOT NULL DEFAULT 0');
+}
+db.exec('CREATE INDEX IF NOT EXISTS idx_counts_lot ON counts(session_id, lot)');
+
 /* A second count should be raised for a variance that matters, not for every
    unit of difference - otherwise the list buries the ones worth walking to. */
 if (!hasCol('sessions', 'recount_min_qty')) {
@@ -425,6 +447,8 @@ export const publicSession = (s) => ({
   mode: s.mode || 'full',
   guided: !!s.guided && (s.mode || 'full') === 'full',
   askComments: !!s.ask_comments,
+  askLot: !!s.ask_lot,
+  askExpiry: !!s.ask_expiry,
   autoRecount: !!s.auto_recount,
   masterVersion: s.master_version,
   layout: s.layout || null,
@@ -439,22 +463,42 @@ export const publicSession = (s) => ({
 
 /* ------------------------------------------------------- handheld master data */
 
+/*
+ * The two big lists, kept ready between requests.
+ *
+ * Thirty handhelds pull this within the same minute of a shift starting, and
+ * the lists only change when a supervisor uploads a new one - which is exactly
+ * what master_version tracks. So build them once per version and hand the same
+ * arrays to everyone; the session's own settings are still read fresh, because
+ * those change without a new upload.
+ */
+const masterCache = new Map();
+
 export function masterPayload(sessionId) {
   const id = Number(sessionId);
   const s = getSession(id);
+  const hit = masterCache.get(id);
+  if (hit && hit.version === s.master_version) {
+    return { ...publicSession(s), sessionId: id, locations: hit.locations, pallets: hit.pallets };
+  }
   const locations = db
     .prepare('SELECT code, zone, aisle, level FROM locations WHERE session_id = ? ORDER BY code')
     .all(id);
   const pallets = db
-    .prepare('SELECT pallet_id, sku, description, expected_qty, expected_location FROM pallets WHERE session_id = ?')
+    .prepare('SELECT pallet_id, sku, description, expected_qty, expected_location, lot, expiry FROM pallets WHERE session_id = ?')
     .all(id);
-  return {
+  const built = {
     ...publicSession(s),
     sessionId: id,
     // Compact tuples: these lists can run to six figures of rows.
     locations: locations.map((l) => [l.code, l.zone || '', l.aisle || '', l.level || '']),
-    pallets: pallets.map((p) => [p.pallet_id, p.sku || '', p.description || '', p.expected_location || '']),
+    // the gun checks a scanned lot against the one the report expects
+    pallets: pallets.map((p) => [p.pallet_id, p.sku || '', p.description || '', p.expected_location || '', p.lot || '', p.expiry || '']),
   };
+  // one session's lists at a time: a second count is a new upload, not a reason to hold both
+  masterCache.clear();
+  masterCache.set(id, { version: s.master_version, locations: built.locations, pallets: built.pallets });
+  return built;
 }
 
 /* ------------------------------------------------------------------- sign-ons */
@@ -470,8 +514,9 @@ export function recordSignon(sessionId, { deviceId, team, employees }) {
 const insertCount = db.prepare(`
 INSERT INTO counts (client_id, session_id, pallet_id, qty, location_code, comments, sku,
                     team, employees, device_id, aisle, unknown_pallet, unknown_location,
-                    off_assignment, duplicate_pallet, empty_bin, pass, recount_id, override_reason, scanned_at, received_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    off_assignment, duplicate_pallet, empty_bin, pass, recount_id, override_reason,
+                    lot, expiry, scanned_at, received_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(client_id) DO NOTHING
 `);
 
@@ -505,6 +550,8 @@ export function saveCounts(sessionId, rows) {
         r.offAssignment ? 1 : 0, r.duplicatePallet ? 1 : 0, empty ? 1 : 0,
         Number(r.pass) === 2 ? 2 : 1, r.recountId ? Number(r.recountId) : null,
         r.overrideReason ? String(r.overrideReason) : null,
+        r.lot ? norm(r.lot).slice(0, 64) : null,
+        r.expiry ? String(r.expiry).slice(0, 10) : null,
         r.scannedAt || now, now
       );
       accepted.push(r.clientId);

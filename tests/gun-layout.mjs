@@ -22,12 +22,13 @@ const dev = await j(await fetch(`${BASE}/api/admin/devices`, { method: 'POST', h
 
 /* ---------------- the settings ---------------- */
 const def = await j(await fetch(`${BASE}/api/admin/scanner-layout`, { headers: A }));
-check('It ships asking pallet, quantity, bin', def.order.join(',') === 'pallet,qty,bin' && def.isDefault === true, def.order.join(','));
+check('It ships asking pallet, quantity, bin — with lot and expiry in place for the counts that use them',
+  def.order.join(',') === 'pallet,qty,lot,expiry,bin' && def.isDefault === true, def.order.join(','));
 const rev = await j(await fetch(`${BASE}/api/admin/scanner-layout`, { method: 'POST', headers: A, body: JSON.stringify({ order: ['bin', 'pallet', 'qty'], textSize: 'large', confirmOver: 500 }) }));
-check('The order can be changed to location-first', rev.order.join(',') === 'bin,pallet,qty', rev.order.join(','));
+check('The order can be changed to location-first', rev.order.slice(0, 3).join(',') === 'bin,pallet,qty', rev.order.join(','));
 const half = await j(await fetch(`${BASE}/api/admin/scanner-layout`, { method: 'POST', headers: A, body: JSON.stringify({ order: ['bin'] }) }));
 check('A question can never be dropped by accident — the rest are put back',
-  half.order.length === 3 && half.order[0] === 'bin', half.order.join(','));
+  half.order.length === 5 && half.order[0] === 'bin', half.order.join(','));
 check('...and other settings survive a partial save', half.textSize === 'large' && half.confirmOver === 500, `${half.textSize}, ${half.confirmOver}`);
 check('Editing it needs a sign-in', (await fetch(`${BASE}/api/admin/scanner-layout`)).status === 401);
 
@@ -74,8 +75,8 @@ check('Settings: the scanner screen has its own sub-tab',
   (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.trim()))).includes('Scanner screen'));
 await page.evaluate(() => window.appApi.showSub('gun')); await page.waitForTimeout(1200);
 
-check('Preview: the questions are listed in order, draggable', (await page.$$('#stepOrder li')).length === 3
-  && (await page.$$eval('#stepOrder li', (l) => l.map((x) => x.dataset.step))).join(',') === 'bin,pallet,qty',
+check('Preview: the questions are listed in order, draggable', (await page.$$('#stepOrder li')).length === 5
+  && (await page.$$eval('#stepOrder li', (l) => l.map((x) => x.dataset.step))).slice(0, 3).join(',') === 'bin,pallet,qty',
   (await page.$$eval('#stepOrder li', (l) => l.map((x) => x.dataset.step))).join(','));
 const size = await page.$eval('#gunFrame', (f) => ({ w: f.width, h: f.height }));
 check('Preview: it is drawn at the MC9090\'s real screen size', String(size.w) === '240' && String(size.h) === '320', `${size.w} × ${size.h}`);
@@ -102,11 +103,12 @@ check('Preview: turning the bin guide off takes it out of the preview too',
 await page.click('#btnSaveGun'); await page.waitForTimeout(900);
 check('Settings: saving says what the scanners will ask', /bin → pallet id → quantity/.test(await page.textContent('#gunMsg')), clean(await page.textContent('#gunMsg')).slice(0, 100));
 const saved = await j(await fetch(`${BASE}/api/admin/scanner-layout`, { headers: A }));
-check('Settings: and it is stored', saved.order.join(',') === 'bin,pallet,qty' && saved.showNextBin === false, JSON.stringify({ o: saved.order.join(','), n: saved.showNextBin }));
+check('Settings: and it is stored', saved.order.slice(0, 3).join(',') === 'bin,pallet,qty' && saved.showNextBin === false, JSON.stringify({ o: saved.order.join(','), n: saved.showNextBin }));
 check('Changing it is recorded in the log',
   (await j(await fetch(`${BASE}/api/admin/audit?limit=20`, { headers: A }))).some((r) => r.action === 'changed the scanner screen layout'));
 await page.click('#btnResetGun'); await page.waitForTimeout(500);
-check('Settings: the defaults can be put back', (await page.$$eval('#stepOrder li', (l) => l.map((x) => x.dataset.step))).join(',') === 'pallet,qty,bin');
+check('Settings: the defaults can be put back', (await page.$$eval('#stepOrder li', (l) => l.map((x) => x.dataset.step))).join(',') === 'pallet,qty,lot,expiry,bin',
+  (await page.$$eval('#stepOrder li', (l) => l.map((x) => x.dataset.step))).join(','));
 await page.close();
 
 console.log('\nerrors:', errors.length ? errors : 'none');

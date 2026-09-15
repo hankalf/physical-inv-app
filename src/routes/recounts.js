@@ -95,7 +95,7 @@ export function generateFromVariances(sessionId, { onlyPallets = null, includeMi
   const id = Number(sessionId);
   const session = getSession(id) || {};
   const cap = Number(session.recount_cap || 0);
-  const rows = palletReport(id).filter((r) => r.status !== 'MATCH' && (!onlyPallets || onlyPallets.has(r.pallet_id)));
+  const rows = palletReport(id, { only: onlyPallets }).filter((r) => r.status !== 'MATCH');
   let created = 0;
   let skippedSmall = 0;
   let skippedUnworked = 0;
@@ -107,18 +107,29 @@ export function generateFromVariances(sessionId, { onlyPallets = null, includeMi
     return false;
   };
 
-  const workedAisles = new Set(
-    db.prepare("SELECT DISTINCT aisle FROM assignments WHERE session_id = ? AND status = 'done'").all(id).map((x) => x.aisle));
-  const countedBins = new Set(
-    db.prepare('SELECT DISTINCT location_code FROM counts WHERE session_id = ? AND voided = 0').all(id).map((x) => x.location_code));
-  const aisleOf = (bin) => db.prepare('SELECT aisle FROM locations WHERE session_id = ? AND code = ?').get(id, bin)?.aisle || '';
+  /* Reading every counted bin in the warehouse only pays for itself if a MISSING
+     row actually turns up, and the check that runs on each gun batch never has
+     one - so it is read on first use, not on the way in. */
+  let sets = null;
+  const lookedIn = (bin) => {
+    if (!sets) {
+      sets = {
+        workedAisles: new Set(
+          db.prepare("SELECT DISTINCT aisle FROM assignments WHERE session_id = ? AND status = 'done'").all(id).map((x) => x.aisle)),
+        countedBins: new Set(
+          db.prepare('SELECT DISTINCT location_code FROM counts WHERE session_id = ? AND voided = 0').all(id).map((x) => x.location_code)),
+      };
+    }
+    if (sets.countedBins.has(bin)) return true;
+    const aisle = db.prepare('SELECT aisle FROM locations WHERE session_id = ? AND code = ?').get(id, bin)?.aisle || '';
+    return sets.workedAisles.has(aisle);
+  };
 
   for (const r of rows) {
     if (r.recounted) continue; // a second count already settled this bin
     if (r.status === 'MISSING') {
       if (!includeMissing || !r.expected_location) continue;
-      const looked = countedBins.has(r.expected_location) || workedAisles.has(aisleOf(r.expected_location));
-      if (!looked) { skippedUnworked++; continue; }
+      if (!lookedIn(r.expected_location)) { skippedUnworked++; continue; }
       if (!room()) break;
       if (createRecount(id, { bin: r.expected_location, palletId: r.pallet_id, reason: 'MISSING', detail: `expected ${r.expected_qty ?? '?'} in ${r.expected_location}, never counted`, source: 'auto' }).created) created++;
       continue;

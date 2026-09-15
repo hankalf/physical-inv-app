@@ -79,9 +79,9 @@ export const defaultScannerPrompts = () => ({ ...DEFAULTS, commentTimeout: DEFAU
  * and how much the gun shows. A site that counts location-first wants bin
  * before pallet; a freezer crew in gloves wants bigger text.
  */
-const STEPS = ['pallet', 'qty', 'bin'];
+const STEPS = ['pallet', 'qty', 'bin', 'lot', 'expiry'];
 const LAYOUT_DEFAULTS = {
-  order: ['pallet', 'qty', 'bin'],
+  order: ['pallet', 'qty', 'lot', 'expiry', 'bin'],
   textSize: 'normal',      // normal | large
   showContents: true,      // the SKU and description after a pallet scan
   showNextBin: true,       // the next bin in the aisle

@@ -14,6 +14,8 @@ const UOM_ALIASES = ['uom', 'unit', 'unitofmeasure', 'um'];
 const QTY_ALIASES = ['qty', 'quantity', 'onhand', 'onhandqty', 'expected', 'expectedqty', 'systemqty', 'qtyonhand', 'cases', 'units'];
 const TEAM_ALIASES = ['team', 'teamnumber', 'teamno', 'crew', 'group'];
 const LEVEL_ALIASES = ['level', 'levels', 'tier', 'shelf'];
+const LOT_ALIASES = ['lot', 'lotcode', 'lotno', 'lotnumber', 'batch', 'batchcode', 'batchno', 'batchnumber'];
+const EXPIRY_ALIASES = ['expiry', 'expirydate', 'expiration', 'expirationdate', 'expires', 'bestbefore', 'bestbeforedate', 'useby', 'usebydate', 'shelflifedate'];
 const LASTCOUNT_ALIASES = ['lastphysinvtdate', 'lastphysicalinventorydate', 'lastcounted', 'lastcountdate', 'lastinventorydate', 'lastcount'];
 
 /**
@@ -55,14 +57,16 @@ const upAisle = db.prepare(
    ON CONFLICT(session_id, aisle) DO NOTHING`
 );
 const upPallet = db.prepare(
-  `INSERT INTO pallets (session_id, pallet_id, sku, description, uom, expected_qty, expected_location)
-   VALUES (?, ?, ?, ?, ?, ?, ?)
+  `INSERT INTO pallets (session_id, pallet_id, sku, description, uom, expected_qty, expected_location, lot, expiry)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
    ON CONFLICT(session_id, pallet_id) DO UPDATE SET
      sku = COALESCE(NULLIF(excluded.sku, ''), pallets.sku),
      description = COALESCE(NULLIF(excluded.description, ''), pallets.description),
      uom = COALESCE(NULLIF(excluded.uom, ''), pallets.uom),
      expected_qty = COALESCE(excluded.expected_qty, pallets.expected_qty),
-     expected_location = COALESCE(NULLIF(excluded.expected_location, ''), pallets.expected_location)`
+     expected_location = COALESCE(NULLIF(excluded.expected_location, ''), pallets.expected_location),
+     lot = COALESCE(NULLIF(excluded.lot, ''), pallets.lot),
+     expiry = COALESCE(NULLIF(excluded.expiry, ''), pallets.expiry)`
 );
 
 /**
@@ -139,8 +143,12 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
           pick(rec, DESC_ALIASES),
           norm(pick(rec, UOM_ALIASES)),
           qtyRaw !== '' && Number.isFinite(qty) ? qty : null,
-          norm(pick(rec, LOCATION_ALIASES))
+          norm(pick(rec, LOCATION_ALIASES)),
+          norm(pick(rec, LOT_ALIASES)),
+          parseDate(pick(rec, EXPIRY_ALIASES))
         );
+        if (norm(pick(rec, LOT_ALIASES))) stats.withLots = (stats.withLots || 0) + 1;
+        if (parseDate(pick(rec, EXPIRY_ALIASES))) stats.withExpiry = (stats.withExpiry || 0) + 1;
         stats.pallets++;
         continue;
       }

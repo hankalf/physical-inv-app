@@ -22,14 +22,9 @@ export function aisleOverview(sessionId) {
               (SELECT l.zone FROM locations l
                 WHERE l.session_id = a.session_id AND l.aisle = a.aisle AND COALESCE(l.zone, '') != ''
                 GROUP BY l.zone ORDER BY COUNT(*) DESC LIMIT 1) AS zone,
-              (SELECT COUNT(*) FROM locations l WHERE l.session_id = a.session_id AND l.aisle = a.aisle) AS bins,
-              (SELECT COUNT(DISTINCT c.location_code)
-                 FROM counts c JOIN locations l
-                   ON l.session_id = c.session_id AND l.code = c.location_code
-                WHERE c.session_id = a.session_id AND c.voided = 0 AND l.aisle = a.aisle) AS bins_counted,
-              (SELECT COUNT(*) FROM counts c JOIN locations l
-                   ON l.session_id = c.session_id AND l.code = c.location_code
-                WHERE c.session_id = a.session_id AND c.voided = 0 AND l.aisle = a.aisle) AS pallets_counted,
+              COALESCE(b.bins, 0) AS bins,
+              COALESCE(k.bins_counted, 0) AS bins_counted,
+              COALESCE(k.pallets_counted, 0) AS pallets_counted,
               (SELECT GROUP_CONCAT(team, ',') FROM assignments s
                 WHERE s.session_id = a.session_id AND s.aisle = a.aisle AND s.status = 'active') AS active_team,
               (SELECT GROUP_CONCAT(team || CASE WHEN levels = '' THEN '' ELSE ' (' || levels || ')' END, ', ') FROM assignments s
@@ -39,10 +34,22 @@ export function aisleOverview(sessionId) {
               (SELECT COUNT(*) FROM assignments s
                 WHERE s.session_id = a.session_id AND s.aisle = a.aisle AND s.status = 'done') AS done_count
          FROM aisles a
+         /* Counted once per aisle in a single pass. Doing it per aisle inside the
+            SELECT re-read the whole bin list twenty-eight times a refresh. */
+         LEFT JOIN (SELECT aisle, COUNT(*) AS bins FROM locations WHERE session_id = ? GROUP BY aisle) b
+                ON b.aisle = a.aisle
+         LEFT JOIN (SELECT l.aisle,
+                           COUNT(DISTINCT c.location_code) AS bins_counted,
+                           COUNT(*) AS pallets_counted
+                      FROM counts c JOIN locations l
+                        ON l.session_id = c.session_id AND l.code = c.location_code
+                     WHERE c.session_id = ? AND c.voided = 0
+                     GROUP BY l.aisle) k
+                ON k.aisle = a.aisle
         WHERE a.session_id = ?
         ORDER BY a.block, a.aisle`
     )
-    .all(id);
+    .all(id, id, id);
 }
 
 export const listAssignments = (sessionId) =>

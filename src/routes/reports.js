@@ -73,8 +73,19 @@ export function progress(sessionId) {
 }
 
 /** One row per pallet: expected vs found, with a status a supervisor can act on. */
-export function palletReport(sessionId) {
+/**
+ * One row per pallet: expected vs found, with a status a supervisor can act on.
+ *
+ * `only` narrows it to a handful of pallets. The auto second-count check runs on
+ * every batch a gun sends, and a full count has six figures of pallets in it -
+ * re-reading all of them to judge five is what would make counting crawl once
+ * the whole floor is working.
+ */
+export function palletReport(sessionId, { only = null } = {}) {
   const id = Number(sessionId);
+  const ids = only ? [...only] : null;
+  const filter = ids && ids.length ? ` AND pallet_id IN (${ids.map(() => '?').join(',')})` : '';
+  if (ids && !ids.length) return [];
   const rows = db
     .prepare(
       `WITH counted AS (
@@ -83,26 +94,29 @@ export function palletReport(sessionId) {
                 SUM(c.qty) AS counted_qty,
                 GROUP_CONCAT(DISTINCT c.location_code) AS found_locations,
                 GROUP_CONCAT(DISTINCT c.team) AS teams,
+                GROUP_CONCAT(DISTINCT c.lot) AS counted_lots,
+                MIN(c.expiry) AS counted_expiry,
                 MAX(c.scanned_at) AS last_scan,
                 GROUP_CONCAT(c.comments, ' | ') AS comments,
                 MAX(c.pass) AS max_pass
            FROM counts c
-          WHERE c.session_id = ? AND ${LIVE('c')} AND c.empty_bin = 0
+          WHERE c.session_id = ? AND ${LIVE('c')} AND c.empty_bin = 0${filter.replace('pallet_id', 'c.pallet_id')}
           GROUP BY c.pallet_id
        ),
        firstpass AS (
          SELECT pallet_id, SUM(qty) AS first_qty, GROUP_CONCAT(DISTINCT location_code) AS first_locations
-           FROM counts WHERE session_id = ? AND voided = 0 AND pass = 1 AND empty_bin = 0 GROUP BY pallet_id
+           FROM counts WHERE session_id = ? AND voided = 0 AND pass = 1 AND empty_bin = 0${filter} GROUP BY pallet_id
        ),
        keys AS (
-         SELECT pallet_id FROM pallets WHERE session_id = ?
+         SELECT pallet_id FROM pallets WHERE session_id = ?${filter}
          UNION
          SELECT pallet_id FROM counted
        )
        SELECT k.pallet_id,
               p.sku, p.description, p.uom,
-              p.expected_qty, p.expected_location,
+              p.expected_qty, p.expected_location, p.lot AS expected_lot, p.expiry AS expected_expiry,
               c.times_counted, c.counted_qty, c.found_locations, c.teams, c.last_scan, c.comments, c.max_pass,
+              c.counted_lots, c.counted_expiry,
               f.first_qty, f.first_locations,
               (SELECT COUNT(*) FROM recounts r WHERE r.session_id = ? AND r.pallet_id = k.pallet_id AND r.status != 'done') AS open_recounts,
               CASE WHEN p.pallet_id IS NULL THEN 1 ELSE 0 END AS not_in_master
@@ -112,7 +126,7 @@ export function palletReport(sessionId) {
          LEFT JOIN firstpass f ON f.pallet_id = k.pallet_id
         ORDER BY k.pallet_id`
     )
-    .all(id, id, id, id, id);
+    .all(...(ids ? [id, ...ids, id, ...ids, id, ...ids, id, id] : [id, id, id, id, id]));
 
   return rows.map((r) => {
     const counted = r.times_counted > 0;
@@ -120,6 +134,23 @@ export function palletReport(sessionId) {
     const variance = counted && expectedQty != null ? r.counted_qty - expectedQty : null;
     const misplaced =
       counted && r.expected_location && r.found_locations && r.found_locations !== r.expected_location;
+
+    /* Lot and expiry are orthogonal to quantity: a pallet can be the right
+       count of the wrong lot, so they get their own columns rather than
+       competing for the one status. Blank when the site does not track them. */
+    const foundLot = r.counted_lots || '';
+    let lotStatus = '';
+    if (foundLot && r.expected_lot) lotStatus = foundLot === r.expected_lot ? 'LOT MATCH' : 'WRONG LOT';
+    else if (foundLot && !r.expected_lot) lotStatus = 'LOT NOT ON REPORT';
+    else if (!foundLot && r.expected_lot && counted) lotStatus = 'NO LOT SCANNED';
+
+    const expiry = r.counted_expiry || r.expected_expiry || '';
+    const today = new Date().toISOString().slice(0, 10);
+    let expiryStatus = '';
+    if (expiry) {
+      const soon = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+      expiryStatus = expiry < today ? 'EXPIRED' : expiry <= soon ? 'EXPIRES SOON' : 'IN DATE';
+    }
 
     let status;
     if (!counted) status = 'MISSING';
@@ -146,6 +177,11 @@ export function palletReport(sessionId) {
       recounted: r.max_pass === 2 ? 1 : 0,
       first_count_qty: r.max_pass === 2 ? (r.first_qty ?? '') : '',
       open_recounts: r.open_recounts || 0,
+      expected_lot: r.expected_lot || '',
+      found_lot: foundLot,
+      lot_status: lotStatus,
+      expiry: expiry,
+      expiry_status: expiryStatus,
       status,
     };
   });
@@ -171,6 +207,7 @@ export function rawCounts(sessionId) {
     .prepare(
       `SELECT c.id, c.pallet_id, c.qty, c.location_code, c.aisle, c.sku,
               COALESCE(p.description, '') AS description,
+              c.lot, c.expiry,
               c.comments, c.team, c.employees, c.device_id,
               c.unknown_pallet, c.unknown_location, c.off_assignment, c.duplicate_pallet, c.empty_bin,
               c.pass, c.recount_id, c.override_reason, c.voided, c.scanned_at, c.received_at
@@ -191,15 +228,22 @@ export const exceptions = (sessionId) =>
 /** Everything the warehouse map needs: each bin's count state, and each aisle's block and team. */
 export function mapData(sessionId) {
   const id = Number(sessionId);
+  /* One pass over the counts, not two lookups per bin: the warehouse has ~14,000
+     bins and this is the screen supervisors leave open all day. */
   const bins = db
     .prepare(
-      `SELECT l.code, l.aisle,
-              (SELECT COUNT(*) FROM counts c WHERE c.session_id = l.session_id AND c.location_code = l.code AND c.voided = 0) AS lines,
-              (SELECT COUNT(*) FROM counts c WHERE c.session_id = l.session_id AND c.location_code = l.code AND c.voided = 0
-                  AND (c.unknown_pallet = 1 OR c.unknown_location = 1 OR c.off_assignment = 1 OR c.duplicate_pallet = 1 OR c.override_reason IS NOT NULL)) AS flagged
-         FROM locations l WHERE l.session_id = ? ORDER BY l.aisle, l.code`
+      `SELECT l.code, l.aisle, COALESCE(c.lines, 0) AS lines, COALESCE(c.flagged, 0) AS flagged
+         FROM locations l
+         LEFT JOIN (
+           SELECT location_code,
+                  COUNT(*) AS lines,
+                  SUM(CASE WHEN unknown_pallet = 1 OR unknown_location = 1 OR off_assignment = 1
+                             OR duplicate_pallet = 1 OR override_reason IS NOT NULL THEN 1 ELSE 0 END) AS flagged
+             FROM counts WHERE session_id = ? AND voided = 0 GROUP BY location_code
+         ) c ON c.location_code = l.code
+        WHERE l.session_id = ? ORDER BY l.aisle, l.code`
     )
-    .all(id);
+    .all(id, id);
   return {
     aisles: aisleOverview(id).map((a) => ({
       aisle: a.aisle, block: a.block, zone: a.zone || '',
@@ -208,5 +252,31 @@ export function mapData(sessionId) {
       queuedTeams: a.queued_teams, done: a.done_count > 0,
     })),
     bins: bins.map((b) => [b.code, b.aisle, b.lines, b.flagged]),
+  };
+}
+
+/**
+ * Where a lot is, across the whole count. The question after a recall notice:
+ * "where is every case of lot 4471?" - answerable from what was counted, not
+ * from what the ERP believed before the count started.
+ */
+export function findLot(sessionId, lot) {
+  const id = Number(sessionId);
+  const needle = String(lot || '').trim().toUpperCase();
+  if (!needle) return { lot: '', counted: [], expected: [] };
+  const like = `%${needle}%`;
+  return {
+    lot: needle,
+    counted: db.prepare(
+      `SELECT c.pallet_id, c.lot, c.expiry, c.qty, c.location_code, c.aisle, c.team, c.scanned_at,
+              COALESCE(p.sku, '') AS sku, COALESCE(p.description, '') AS description
+         FROM counts c LEFT JOIN pallets p ON p.session_id = c.session_id AND p.pallet_id = c.pallet_id
+        WHERE c.session_id = ? AND c.voided = 0 AND UPPER(COALESCE(c.lot, '')) LIKE ?
+        ORDER BY c.location_code LIMIT 500`).all(id, like),
+    expected: db.prepare(
+      `SELECT pallet_id, lot, expiry, expected_qty, expected_location, COALESCE(sku, '') AS sku,
+              COALESCE(description, '') AS description
+         FROM pallets WHERE session_id = ? AND UPPER(COALESCE(lot, '')) LIKE ?
+        ORDER BY expected_location LIMIT 500`).all(id, like),
   };
 }
