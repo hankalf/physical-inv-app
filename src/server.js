@@ -12,6 +12,7 @@ import {
   enrollDevice, deviceByToken, resetDevice,
 } from './db.js';
 import { importMaster, pruneAreaAisles } from './routes/master.js';
+import { boardData } from './routes/board.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks,
@@ -32,7 +33,7 @@ import { toCsv, parseRecords, pick } from './util/csv.js';
 import { listLayouts, loadLayout } from './util/layouts.js';
 import { siteTimezone, localDate, localHour } from './util/localtime.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
-import { countSheet } from './routes/printing.js';
+import { countSheet, scannerCards } from './routes/printing.js';
 import {
   countUsers, listUsers, createUser, updateUser, deleteUser, authenticate, changeOwnPassword, getUser,
 } from './routes/users.js';
@@ -186,6 +187,7 @@ async function serveStatic(req, res, pathname) {
     : /^\/teams\/?$/.test(pathname) ? '/teams.html'
     : /^\/cycle\/?$/.test(pathname) ? '/cycle.html'
     : /^\/settings\/?$/.test(pathname) ? '/settings.html'
+    : /^\/board\/?$/.test(pathname) ? '/board.html'
     : pathname;
   const filePath = join(PUBLIC_DIR, normalize(rel).replace(/^(\.\.[/\\])+/, ''));
   if (!filePath.startsWith(PUBLIC_DIR)) return send(req, res, 403, 'forbidden');
@@ -618,6 +620,16 @@ async function handleAdmin(req, res, url, m) {
     return send(req, res, 200, html, { 'content-type': 'text/html; charset=utf-8' });
   }
 
+  // --- setup cards: one QR per scanner, to cut up and tape to the cradles
+  if (p === '/api/admin/print/scanner-cards') {
+    const only = (url.searchParams.get('only') || '').split(',').map((x) => x.trim()).filter(Boolean);
+    const all = listDevices();
+    const chosen = only.length ? all.filter((d) => only.includes(d.uid) || only.includes(d.name)) : all;
+    const origin = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host || 'localhost'}`;
+    audit(actor, 'printed scanner setup cards', `${chosen.length} scanner(s)`);
+    return send(req, res, 200, scannerCards(chosen, origin), { 'content-type': 'text/html; charset=utf-8' });
+  }
+
   // --- housekeeping: the log, and copies of the database
   if (p === '/api/admin/audit' && method === 'GET') {
     return sendJson(req, res, 200, listAudit({
@@ -801,6 +813,11 @@ const server = http.createServer(async (req, res) => {
   const p = url.pathname;
   try {
     if (p === '/api/health') return sendJson(req, res, 200, { ok: true, time: new Date().toISOString(), siteDate: localDate(), siteTimezone: siteTimezone() });
+    // The office board is deliberately open: it goes on a screen nobody signs in,
+    // and it carries progress only - no pallet IDs, no clock in numbers, no controls.
+    if (p === '/api/board' && req.method === 'GET') {
+      return sendJson(req, res, 200, boardData(url.searchParams.get('session')));
+    }
     if (p.startsWith('/api/admin/')) return await handleAdmin(req, res, url, null);
     if (p.startsWith('/api/')) {
       const handled = await handleHandheld(req, res, url, null);

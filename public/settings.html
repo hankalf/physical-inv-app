@@ -5,81 +5,58 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Settings</title>
 <link rel="icon" href="/icon.svg">
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/admin.css">
 <style>
-  body { font-size: 15px; }
-  main { width: 100%; padding: 14px 18px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
-  .card h2 { margin: 0 0 8px; font-size: 17px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .card h2 .muted { font-weight: 400; font-size: 13px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: middle; }
-  th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
-  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  td.wrap { white-space: normal; }
-  .tag { font-size: 11px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); white-space: nowrap; }
-  .tag.admin { color: #fff; background: #1f4d8f; border-color: var(--accent); }
-  .tag.supervisor { color: var(--muted); }
-  .tag.off { color: var(--err); border-color: #6e2c2f; }
-  .tag.done, .tag.active { color: var(--ok); border-color: #1d572a; }
-  .tag.queued, .tag.starter { color: var(--warn); border-color: #5c4813; }
-  .scroll { overflow-x: auto; }
-  button { width: auto; padding: 9px 14px; font-size: 14px; margin-top: 0; }
-  button.sm { padding: 4px 9px; font-size: 12px; }
-  input, select { font-size: 15px; padding: 9px 10px; font-weight: 500; }
-  input.sm { padding: 4px 8px; font-size: 13px; width: 110px; }
-  .inline { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
-  .inline > div { flex: 1 1 180px; min-width: 0; }
-  .inline > div.auto { flex: 0 0 auto; }
-  .bar { height: 8px; background: var(--panel-2); border-radius: 4px; overflow: hidden; min-width: 90px; }
-  .bar i { display: block; height: 100%; background: var(--accent); }
-  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  @media (max-width: 900px) { .two { grid-template-columns: 1fr; } }
-  label.cb { display: inline-flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: 13px; }
-  label.cb input { width: auto; }
-  hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
-  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 10; }
-  .modal-box { background: #fff; color: #0d1117; border-radius: 12px; padding: 20px 24px; text-align: center; max-width: 360px; }
-  .modal-box h2 { margin: 0 0 12px; }
-  .modal-box .muted { color: #57606a; }
-  #qrBox { display: inline-block; padding: 8px; background: #fff; }
-  code.link { user-select: all; font-size: 12px; }
-  .colguide { margin-top: 10px; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
-  .colguide .cols { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
-  .colguide code { background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 2px 7px; font-size: 12px; }
-  .colguide code.req { border-color: var(--accent); color: #fff; }
-  .colguide a { color: var(--accent); font-weight: 700; text-decoration: none; }
-  .colguide .note { color: var(--muted); margin-top: 4px; }
-  .scope { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
+  .scope {
+    display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
+    background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 12px 14px; margin-bottom: 16px;
+  }
   .scope > div { flex: 1 1 260px; min-width: 0; }
+  #qrBox { display: inline-block; padding: 8px; background: #fff; }
 </style>
 </head>
-<body>
+<body class="app">
 
-<header>
-  <span class="title">Settings</span>
-  <nav class="tabs" id="navTabs"></nav>
-  <span class="chip" id="navWho" hidden></span>
-  <button id="navLogout" class="ghost" hidden style="padding:6px 10px;font-size:12px">Log out</button>
-</header>
+<aside class="side">
+  <div class="brand">Inventory Count<span>Front Royal</span></div>
+  <nav id="navTabs"></nav>
+  <div class="side-foot">
+    <span class="chip" id="navWho" hidden></span>
+    <button id="navLogout" class="ghost sm" hidden>Log out</button>
+  </div>
+</aside>
 
-<main>
+<div class="shell">
+  <header class="topbar">
+    <h1>Settings</h1>
+    <span class="spacer"></span>
+    <nav class="subtabs" id="subTabs"></nav>
+  </header>
 
-  <section class="screen active" id="scrLogin">
-    <div class="card signin">
-      <h2>Supervisor sign-in</h2>
-      <label for="fUser">Username <span style="text-transform:none;letter-spacing:0">— or your name, if your site still uses the shared password</span></label>
-      <input id="fUser" autocomplete="username" placeholder="e.g. DANA">
-      <label for="fPassword">Password</label>
-      <input id="fPassword" type="password" autocomplete="current-password">
-      <button class="primary" id="btnLogin" style="width:100%;margin-top:10px">Sign in</button>
-      <div class="feedback" id="loginMsg"></div>
+  <main>
+    <section class="screen active" id="scrLogin">
+      <div class="card signin">
+        <h2>Supervisor sign-in</h2>
+        <label for="fUser">Username <span style="text-transform:none;letter-spacing:0">— or your name, if your site still uses the shared password</span></label>
+        <input id="fUser" autocomplete="username" placeholder="e.g. DANA">
+        <label for="fPassword">Password</label>
+        <input id="fPassword" type="password" autocomplete="current-password">
+        <button class="primary" id="btnLogin" style="width:100%;margin-top:14px">Sign in</button>
+        <div class="feedback" id="loginMsg"></div>
+      </div>
+    </section>
+
+    <section class="screen" id="scrMain">
+    <div class="scope" id="scopeBar">
+      <div>
+        <label for="fSessionPick">These settings apply to</label>
+        <select id="fSessionPick"></select>
+      </div>
+      <div class="auto"><span class="muted" id="scopeNote" style="font-size:13px"></span></div>
     </div>
-  </section>
 
-  <section class="screen" id="scrMain">
-
-    <!-- ============ accounts ============ -->
+      <div data-sub="logins" data-sub-label="Logins">
     <div class="card">
       <h2>Supervisor logins <span class="chip" id="sharedChip" hidden></span>
         <span class="muted">everyone who changes something is recorded by name in the log</span></h2>
@@ -126,6 +103,9 @@
     </div>
 
     <!-- ============ scanners ============ -->
+      </div>
+
+      <div data-sub="scanners" data-sub-label="Scanners">
     <div class="card">
       <h2>Scanner setup <span class="chip" id="authChip" hidden></span>
         <span class="muted">each scanner gets its own link — open it once on the device and add it to the home screen</span></h2>
@@ -133,6 +113,7 @@
         <div class="auto"><label for="fDevName">Scanner name</label><input id="fDevName" style="width:170px" placeholder="SCANNER-05"></div>
         <div><label for="fDevNotes">Notes (optional)</label><input id="fDevNotes" placeholder="e.g. asset tag, freezer unit"></div>
         <div class="auto"><button class="primary fit" id="btnAddDevice">Add scanner</button></div>
+        <div class="auto"><button class="fit" id="btnCards" title="One card per scanner, each with its own QR — cut them up and tape one to each cradle">Print setup cards</button></div>
       </div>
       <div class="feedback" id="deviceMsg"></div>
       <div class="scroll" style="margin-top:10px"><table id="deviceTable"></table></div>
@@ -153,13 +134,9 @@
     </div>
 
     <!-- ============ which session the cards below act on ============ -->
-    <div class="scope">
-      <div>
-        <label for="fSessionPick">These settings apply to</label>
-        <select id="fSessionPick"></select>
       </div>
-      <div class="auto"><span class="muted" id="scopeNote" style="font-size:13px"></span></div>
-    </div>
+
+      <div data-sub="lists" data-sub-label="Lists &amp; racking">
 
     <!-- ============ uploads ============ -->
     <div class="card">
@@ -204,6 +181,9 @@
     </div>
 
     <!-- ============ ERP ============ -->
+      </div>
+
+      <div data-sub="erp" data-sub-label="ERP &amp; backups">
     <div class="card">
       <h2>Send to the ERP <span class="muted">column names and rows are configuration — add a layout to match your system</span></h2>
       <div class="inline">
@@ -232,9 +212,10 @@
         <div><div class="scroll" style="max-height:340px"><table id="auditTable"></table></div></div>
       </div>
     </div>
-
-  </section>
-</main>
+      </div>
+    </section>
+  </main>
+</div>
 
 <script src="/nav.js"></script>
 <script src="/settings.js"></script>

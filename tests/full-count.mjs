@@ -1,4 +1,5 @@
 import { chromium } from 'playwright-core';
+import { expandSubTabs } from './helpers.mjs';
 import { readFileSync } from 'node:fs';
 const S = new URL('.', import.meta.url).pathname;
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
@@ -32,7 +33,7 @@ await admin.fill('#fPassword', 'wrong'); await admin.click('#btnLogin'); await a
 check('Admin: wrong password rejected', clean(await admin.textContent('#loginMsg')) === 'bad password', clean(await admin.textContent('#loginMsg')));
 await shot(admin, 'admin-login');
 await admin.fill('#fPassword', 'changeme'); await admin.click('#btnLogin');
-await admin.waitForSelector('#scrMain.active'); await admin.waitForTimeout(500);
+await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(500);
 check('Admin: login', true);
 check('Admin: the tab bar links the four supervisor pages',
   (await admin.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/cycle,/teams,/settings');
@@ -45,7 +46,7 @@ check('Admin: save settings (Front Royal drawing, validate w/ override, guided, 
 await (await card('#fSessionPick')).asElement().screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-session.png` });
 
 /* ---- setup lives under Settings: scanners, list uploads, racking blocks ---- */
-const toSettings = async () => { await admin.goto(BASE + '/settings'); await admin.waitForSelector('#scrMain.active'); await admin.waitForTimeout(700); };
+const toSettings = async () => { await admin.goto(BASE + '/settings'); await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(700); };
 await toSettings();
 check('Settings: the sign-in carried over from the dashboard, no second password',
   (await admin.$('#scrLogin.active')) === null && /Dashboard/.test(await admin.textContent('#navTabs')));
@@ -95,7 +96,7 @@ const blocks = await admin.$$eval('#aisleTable tbody tr', (trs) => trs.map((tr) 
 check('Settings: blocks A01 | A02+A03 | A04 | F01 | F02+F03 ... and no area groups', blocks.slice(0, 6).join(',') === 'A01,A02+A03,A02+A03,A04,F01,F02+F03' && blocks.length === 28, blocks.slice(0, 7).join(', ') + ` (${blocks.length})`);
 
 /* ---- back to the dashboard for the counting plan ---- */
-const toDashboard = async () => { await admin.goto(BASE + '/admin'); await admin.waitForSelector('#scrMain.active'); await admin.waitForTimeout(1200); };
+const toDashboard = async () => { await admin.goto(BASE + '/admin'); await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(1200); };
 await toDashboard();
 await admin.fill('#fAssignTeam', '5'); await admin.fill('#fAssignAisles', '1'); await admin.fill('#fAssignLevels', ''); await admin.click('#btnAssign'); await admin.waitForTimeout(300);
 check('Admin: queueing without levels is refused', /Levels are required/.test(clean(await admin.textContent('#assignMsg'))), clean(await admin.textContent('#assignMsg')));
@@ -327,7 +328,7 @@ await t2.p.click('#btnEmpty'); await t2.scan('F02A012'); await t2.p.waitForTimeo
 check('Handheld T2: marking a recount bin EMPTY completes the task', (await getRecs()).find((r) => r.bin === 'F02A012').status === 'done');
 
 /* ================= STAGGER ================= */
-await admin.reload(); await admin.waitForSelector('#scrMain.active'); await admin.waitForTimeout(1200);
+await admin.reload(); await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(1200);
 const blockedBtn = await admin.$('#teamList .a.blocked button');
 check('Admin: team 1\'s F03 shown as held (⏳) while team 2 is in F02', !!blockedBtn);
 if (blockedBtn) { await blockedBtn.click(); await admin.waitForTimeout(500); }
@@ -355,7 +356,7 @@ check('Handheld T1: refresh → F03 now active for team 1', /your aisleF03/.test
 await shot(t1.p, 'hh-released');
 
 /* ================= ADMIN REPORTING ================= */
-await admin.reload(); await admin.waitForSelector('#scrMain.active'); await admin.waitForTimeout(1500);
+await admin.reload(); await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(1500);
 const stats = clean(await admin.textContent('#stats'));
 check('Admin: progress stats populated', /Count lines/.test(stats) && /2Teams counting/.test(stats) && /2Scanners/.test(stats), stats.slice(0, 140));
 const teams = clean(await admin.textContent('#teamTable'));
@@ -419,7 +420,7 @@ await admin.selectOption('#fSessionPick', '1'); await admin.waitForTimeout(800);
   const adm2 = { 'content-type': 'application/json', authorization: 'Bearer ' + (await admin.evaluate(() => sessionStorage.getItem('admToken'))) };
   const plain = await (await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: adm2, body: JSON.stringify({ name: 'schematic on purpose', layout: '' }) })).json();
   await fetch(`${BASE}/api/admin/sessions/${plain.id}/master?kind=bins`, { method: 'POST', headers: { authorization: adm2.authorization, 'content-type': 'text/csv' }, body: 'Bin Location\nF01A001\nF01A002\nF02A001\n' });
-  await admin.reload(); await admin.waitForSelector('#scrMain.active'); await admin.waitForTimeout(1500);
+  await admin.reload(); await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(1500);
   await admin.selectOption('#fSessionPick', String(plain.id)); await admin.waitForTimeout(2000);
   check('Admin: a session on the schematic is offered the rack drawing',
     !(await admin.$eval('#mapFix', (el) => el.hidden)) && /Use Front Royal/.test(await admin.textContent('#btnUseDrawing')),

@@ -3,108 +3,78 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Inventory Count — Supervisor</title>
+<title>Inventory Count — Dashboard</title>
 <link rel="icon" href="/icon.svg">
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/admin.css">
 <style>
-  body { font-size: 15px; }
-  main { width: 100%; padding: 14px 18px; }
-  .hero { display: grid; grid-template-columns: minmax(220px, 1fr) 3fr; gap: 18px; align-items: center; }
-  .hero .pct { font-size: 72px; font-weight: 900; line-height: 1; letter-spacing: -.02em; }
-  .hero .pct small { font-size: 18px; color: var(--muted); font-weight: 600; margin-left: 6px; }
-  .bigbar { height: 34px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; position: relative; }
-  .bigbar i { display: block; height: 100%; background: linear-gradient(90deg, #1f6feb, #2ea043); transition: width .6s ease; }
-  .bigbar span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; text-shadow: 0 1px 2px #000a; }
-  .subbar { height: 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin-top: 10px; }
-  .subbar i { display: block; height: 100%; background: #2ea043; }
-  .barlabel { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-top: 4px; }
-  @media (max-width: 800px) { .hero { grid-template-columns: 1fr; } .hero .pct { font-size: 52px; } }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
-  .card h2 { margin: 0 0 8px; font-size: 17px; display: flex; align-items: center; gap: 10px; }
-  .card h2 .muted { font-weight: 400; font-size: 13px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
-  .stat { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
-  .stat .n { font-size: 26px; font-weight: 800; }
-  .stat .l { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: middle; }
-  th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
-  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  td.wrap { white-space: normal; }
-  .tag { font-size: 11px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); white-space: nowrap; }
-  .tag.MATCH, .tag.done { color: var(--ok); border-color: #1d572a; }
-  .tag.QTY.VARIANCE, .tag.WRONG.BIN, .tag.queued { color: var(--warn); border-color: #5c4813; }
-  .tag.MISSING, .tag.COUNTED.TWICE { color: var(--err); border-color: #6e2c2f; }
-  .tag.NOT.IN.MASTER { color: var(--accent); border-color: #1f4d8f; }
-  .tag.open { color: var(--warn); border-color: #5c4813; }
-  .tag.taken { color: #fff; background: #1f4d8f; border-color: var(--accent); }
-  .tag.active { color: #fff; background: #1f4d8f; border-color: var(--accent); }
-  .tag.blocked { color: var(--warn); border-color: #5c4813; }
-  .scroll { overflow-x: auto; }
-  button { width: auto; padding: 9px 14px; font-size: 14px; margin-top: 0; }
-  button.sm { padding: 4px 9px; font-size: 12px; }
-  input, select { font-size: 15px; padding: 9px 10px; font-weight: 500; }
-  input.sm { padding: 4px 8px; font-size: 13px; width: 110px; }
-  .inline { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
-  .inline > div { flex: 1 1 180px; min-width: 0; }
-  .inline > div.auto { flex: 0 0 auto; }
-  .bar { height: 8px; background: var(--panel-2); border-radius: 4px; overflow: hidden; min-width: 90px; }
-  .bar i { display: block; height: 100%; background: var(--accent); }
-  label.cb { display: inline-flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: 13px; }
-  label.cb input { width: auto; }
-  hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
-  #mapLevels .chip-btn { padding: 5px 12px; font-size: 13px; }
-  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
-  .legend i { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -3px; margin-right: 4px; }
+  /* the dashboard's own pieces: the headline figure and the warehouse map */
+  .hero { display: grid; grid-template-columns: minmax(210px, 1fr) 3fr; gap: 22px; align-items: center; }
+  .hero .pct { font-size: 64px; font-weight: 800; line-height: 1; letter-spacing: -.035em; }
+  .hero .pct small { font-size: 17px; color: var(--muted); font-weight: 600; margin-left: 7px; letter-spacing: 0; }
+  @media (max-width: 820px) { .hero { grid-template-columns: 1fr; } .hero .pct { font-size: 48px; } }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+  .legend i { display: inline-block; width: 13px; height: 13px; border-radius: 3px; vertical-align: -2px; margin-right: 5px; }
+  #mapLevels .chip-btn { padding: 5px 13px; font-size: 13px; }
   #map { display: block; font-family: inherit; }
   #map text { fill: var(--text); }
   #map .aisle-label { font-size: 12px; font-weight: 700; }
   #map .bay-label { font-size: 9px; fill: var(--muted); }
   #map .team { font-size: 10px; font-weight: 700; fill: #fff; }
   #map rect.cell:hover { stroke: #fff; stroke-width: 2; }
-  #map.blueprint { max-width: 100%; height: auto; background: #fff; border-radius: 6px; }
-  #map.blueprint .aisle-label { fill: #0d1117; font-size: 11px; }
+  #map.blueprint { max-width: 100%; height: auto; background: #fff; border-radius: 8px; }
+  #map.blueprint .aisle-label { fill: #10151c; font-size: 11px; }
   #map.blueprint .bay-label { display: none; }
-  .team-list { display: flex; flex-direction: column; gap: 8px; }
-  .team { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
-  .team .head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
-  .team .seq { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .seq .a { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; font-size: 13px; background: var(--panel); }
-  .seq .a.active { border-color: var(--accent); background: #1f4d8f; }
-  .seq .a.done { opacity: .55; text-decoration: line-through; }
+
+  .team-list { display: flex; flex-direction: column; gap: 10px; }
+  .team { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .team .head { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 700; }
+  .team .seq { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+  .seq .a { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 8px; padding: 5px 9px; font-size: 13px; background: var(--surface); }
+  .seq .a.active { border-color: var(--accent); background: #1b3c68; }
+  .seq .a.done { opacity: .5; text-decoration: line-through; }
   .seq .a.blocked { border-color: var(--warn); }
-  .seq .a button { padding: 1px 6px; font-size: 11px; border-radius: 4px; }
+  .seq .a button { padding: 1px 7px; font-size: 11px; border-radius: 5px; }
 </style>
 </head>
-<body>
+<body class="app">
 
-<header>
-  <span class="title">Inventory Count</span>
-  <nav class="tabs" id="navTabs"></nav>
-  <span class="chip" id="sessionChip" hidden></span>
-  <span class="chip" id="navWho" hidden></span>
-  <button id="navLogout" class="ghost" hidden style="padding:6px 10px;font-size:12px">Log out</button>
-</header>
+<aside class="side">
+  <div class="brand">Inventory Count<span>Front Royal</span></div>
+  <nav id="navTabs"></nav>
+  <div class="side-foot">
+    <span class="chip" id="navWho" hidden></span>
+    <button id="navLogout" class="ghost sm" hidden>Log out</button>
+  </div>
+</aside>
 
-<main>
+<div class="shell">
+  <header class="topbar">
+    <h1>Dashboard</h1>
+    <span class="chip" id="sessionChip" hidden></span>
+    <span class="muted" id="refreshedAt"></span>
+    <span class="spacer"></span>
+    <a class="chip" href="/board" target="_blank" style="text-decoration:none" title="A read-only progress board for the office screen">Office board ↗</a>
+    <nav class="subtabs" id="subTabs"></nav>
+  </header>
 
-  <section class="screen active" id="scrLogin">
-    <div class="card signin">
-      <h2>Supervisor sign-in</h2>
-      <label for="fUser">Username <span style="text-transform:none;letter-spacing:0">— or your name, if your site still uses the shared password</span></label>
-      <input id="fUser" autocomplete="username" placeholder="e.g. DANA">
-      <label for="fPassword">Password</label>
-      <input id="fPassword" type="password" autocomplete="current-password">
-      <button class="primary" id="btnLogin" style="width:100%;margin-top:10px">Sign in</button>
-      <div class="feedback" id="loginMsg"></div>
-    </div>
-  </section>
+  <main>
+    <section class="screen active" id="scrLogin">
+      <div class="card signin">
+        <h2>Supervisor sign-in</h2>
+        <label for="fUser">Username <span style="text-transform:none;letter-spacing:0">— or your name, if your site still uses the shared password</span></label>
+        <input id="fUser" autocomplete="username" placeholder="e.g. DANA">
+        <label for="fPassword">Password</label>
+        <input id="fPassword" type="password" autocomplete="current-password">
+        <button class="primary" id="btnLogin" style="width:100%;margin-top:14px">Sign in</button>
+        <div class="feedback" id="loginMsg"></div>
+      </div>
+    </section>
 
-  <section class="screen" id="scrMain">
-
-    <!-- ============ progress ============ -->
+    <section class="screen" id="scrMain">
+      <div data-sub="progress" data-sub-label="Progress">
     <div class="card">
-      <h2>Count progress <span class="muted" id="refreshedAt"></span></h2>
+      <h2>Count progress</h2>
       <div class="hero">
         <div><div class="pct"><span id="heroPct">0</span><small>% counted</small></div><div class="muted" id="heroSub">—</div></div>
         <div>
@@ -117,8 +87,6 @@
       <div class="grid" id="stats" style="margin-top:16px"></div>
       <div class="scroll" style="margin-top:14px"><table id="teamTable"></table></div>
     </div>
-
-    <!-- ============ sessions ============ -->
     <div class="card">
       <h2>Count session</h2>
       <div class="inline">
@@ -158,8 +126,9 @@
       </div>
       <div class="feedback" id="sessionMsg"></div>
     </div>
+      </div>
 
-    <!-- ============ warehouse map ============ -->
+      <div data-sub="map" data-sub-label="Map">
     <div class="card">
       <h2>Warehouse map <span class="muted" id="mapSub">top-down, built from the bin codes · aisles that share racking are drawn back-to-back</span></h2>
       <div class="inline" style="margin-bottom:8px">
@@ -184,8 +153,9 @@
         <div class="hint" style="margin:0" id="mapFixWhy"></div>
       </div>
     </div>
+      </div>
 
-    <!-- ============ team assignments ============ -->
+      <div data-sub="teams" data-sub-label="Team plan">
     <div class="card" id="teamPlanCard">
       <h2>Team assignments</h2>
       <div class="hint">Queue aisles per team in counting order, with the <b>levels</b> that team's equipment covers (A–C on foot, D–F with the lift, A–F for all). Levels are required. Two teams can share an aisle on different levels. A team's next aisle waits while another team holds those levels in its racking block — that is what staggers them. Which aisles share racking is set under <a href="/settings" style="color:var(--accent)">Settings</a>.</div>
@@ -198,8 +168,9 @@
       <div class="feedback" id="assignMsg"></div>
       <div class="team-list" id="teamList" style="margin-top:10px"></div>
     </div>
+      </div>
 
-    <!-- ============ second counts ============ -->
+      <div data-sub="second" data-sub-label="Second counts">
     <div class="card">
       <h2>Second counts <span class="muted" id="recountSub"></span></h2>
       <div class="hint">
@@ -221,22 +192,9 @@
       <div class="feedback" id="recountMsg"></div>
       <div class="scroll" style="margin-top:10px"><table id="recountTable"></table></div>
     </div>
-
-    <!-- ============ count sheets ============ -->
-    <div class="card">
-      <h2>Count sheets <span class="muted">paper, for a dead battery or an auditor</span></h2>
-      <div class="inline">
-        <div class="auto"><label for="fPrintAisle">Aisles</label><input id="fPrintAisle" class="sm" placeholder="F03 or F03,F04"></div>
-        <div class="auto"><label for="fPrintLevels">Levels</label><input id="fPrintLevels" class="sm" style="width:90px" placeholder="A-C"></div>
-        <div class="auto"><label class="cb"><input type="checkbox" id="fPrintUncounted"> Only bins with no count yet</label></div>
-        <div class="auto"><label class="cb"><input type="checkbox" id="fPrintExpected"> Show what the system expects</label></div>
-        <div class="auto"><button class="primary" id="btnPrint">Open a printable sheet</button></div>
       </div>
-      <div class="feedback" id="printMsg"></div>
-      <div class="hint" style="margin-top:8px">Blind by default — the expected pallets are hidden so what gets written down is a count.</div>
-    </div>
 
-    <!-- ============ pallet report ============ -->
+      <div data-sub="reports" data-sub-label="Reports">
     <div class="card">
       <h2>Pallet report</h2>
       <div class="inline">
@@ -251,9 +209,22 @@
       <div class="scroll" style="margin-top:10px"><table id="palletTable"></table></div>
       <div class="muted" id="palletNote"></div>
     </div>
-
-  </section>
-</main>
+    <div class="card">
+      <h2>Count sheets <span class="muted">paper, for a dead battery or an auditor</span></h2>
+      <div class="inline">
+        <div class="auto"><label for="fPrintAisle">Aisles</label><input id="fPrintAisle" class="sm" placeholder="F03 or F03,F04"></div>
+        <div class="auto"><label for="fPrintLevels">Levels</label><input id="fPrintLevels" class="sm" style="width:90px" placeholder="A-C"></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fPrintUncounted"> Only bins with no count yet</label></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fPrintExpected"> Show what the system expects</label></div>
+        <div class="auto"><button class="primary" id="btnPrint">Open a printable sheet</button></div>
+      </div>
+      <div class="feedback" id="printMsg"></div>
+      <div class="hint" style="margin-top:8px">Blind by default — the expected pallets are hidden so what gets written down is a count.</div>
+    </div>
+      </div>
+    </section>
+  </main>
+</div>
 
 <script src="/nav.js"></script>
 <script src="/admin.js"></script>

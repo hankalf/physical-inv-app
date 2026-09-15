@@ -5,84 +5,81 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Teams &amp; Crew</title>
 <link rel="icon" href="/icon.svg">
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/admin.css">
 <style>
-  body { font-size: 15px; }
-  main { width: 100%; padding: 14px 18px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
-  .card h2 { margin: 0 0 8px; font-size: 17px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .card h2 .muted { font-weight: 400; font-size: 13px; }
-  button { width: auto; padding: 9px 14px; font-size: 14px; margin-top: 0; }
-  button.sm { padding: 4px 9px; font-size: 12px; }
-  input, select { font-size: 15px; padding: 9px 10px; font-weight: 500; }
-  input.sm { padding: 5px 8px; font-size: 13px; }
-  .inline { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
-  .inline > div { flex: 1 1 180px; }
-  .inline > div.auto { flex: 0 0 auto; }
-  hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
-  label.cb { display: inline-flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: 13px; }
-  label.cb input { width: auto; }
+  /* Both columns scroll inside themselves and stay put, so the person you are
+     dragging and the team you are dragging them to are on screen at once - with
+     a long crew list the page used to scroll the target out from under you. */
+  .board { display: grid; grid-template-columns: 330px 1fr; gap: 16px; align-items: start; }
+  .board > div { position: sticky; top: 8px; max-height: calc(100vh - 210px); overflow-y: auto; padding-right: 2px; }
+  @media (max-width: 1000px) {
+    .board { grid-template-columns: 1fr; }
+    .board > div { position: static; max-height: none; overflow: visible; }
+  }
+  .teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
 
-  .board { display: grid; grid-template-columns: 320px 1fr; gap: 14px; align-items: start; }
-  @media (max-width: 900px) { .board { grid-template-columns: 1fr; } }
-  .teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
-
-  .bucket { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; min-height: 130px; }
-  .bucket.over { border-color: var(--accent); background: #101c2e; }
+  .bucket { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; min-height: 134px; }
+  .bucket.over { border-color: var(--accent); background: #131f31; }
   .bucket .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-  .bucket .name { font-size: 17px; font-weight: 800; }
-  .bucket .reach { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
-  .bucket .reach.full { color: var(--ok); border-color: #1d572a; }
-  .bucket .reach.some { color: var(--warn); border-color: #5c4813; }
-  .bucket .reach.none { color: var(--err); border-color: #6e2c2f; }
-  .bucket .kit { font-size: 12px; color: var(--muted); margin-top: 4px; min-height: 16px; }
-  .bucket .drop { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; min-height: 40px; }
-  .bucket .empty { color: var(--muted); font-size: 13px; border: 1px dashed var(--line); border-radius: 8px; padding: 12px; text-align: center; }
+  .bucket .name { font-size: 16px; font-weight: 800; }
+  .bucket .reach { font-size: 11px; font-weight: 650; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .bucket .reach.full { color: var(--ok); border-color: #235c33; background: var(--ok-ink); }
+  .bucket .reach.some { color: var(--warn); border-color: #5c4813; background: var(--warn-ink); }
+  .bucket .reach.none { color: var(--err); border-color: #6e2c2f; background: var(--err-ink); }
+  .bucket .kit { font-size: 12px; color: var(--muted); margin-top: 5px; min-height: 16px; }
+  .bucket .drop { margin-top: 11px; display: flex; flex-direction: column; gap: 7px; min-height: 42px; }
+  .bucket .empty { color: var(--muted); font-size: 13px; border: 1px dashed var(--line); border-radius: 9px; padding: 14px; text-align: center; }
 
   .person {
-    background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
-    padding: 8px 10px; cursor: grab; display: flex; justify-content: space-between; gap: 8px; align-items: flex-start;
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px;
+    padding: 9px 11px; cursor: grab; display: flex; justify-content: space-between; gap: 8px; align-items: flex-start;
   }
+  .person:hover { border-color: var(--line); background: var(--surface-3); }
   .person:active { cursor: grabbing; }
   .person.dragging { opacity: .4; }
   .person .who { font-weight: 700; }
   .person .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .person .kitrow { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
-  .person .kitrow span { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--text); }
-  .person select { padding: 3px 6px; font-size: 12px; width: auto; font-weight: 500; }
-  .pool { max-height: 70vh; overflow-y: auto; }
-  .rule { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
-  .rule .lv { font-weight: 800; min-width: 86px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); }
-  th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+  .person .kitrow { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .person .kitrow span { font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--text-dim); }
+  .person select { padding: 3px 7px; font-size: 12px; width: auto; font-weight: 500; }
+  .rule { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .rule .lv { font-weight: 800; min-width: 88px; }
 </style>
 </head>
-<body>
+<body class="app">
 
-<header>
-  <span class="title">Teams &amp; Crew</span>
-  <nav class="tabs" id="navTabs"></nav>
-  <span class="chip" id="countChip" hidden></span>
-  <span class="chip" id="navWho" hidden></span>
-  <button id="navLogout" class="ghost" hidden style="padding:6px 10px;font-size:12px">Log out</button>
-</header>
+<aside class="side">
+  <div class="brand">Inventory Count<span>Front Royal</span></div>
+  <nav id="navTabs"></nav>
+  <div class="side-foot">
+    <span class="chip" id="navWho" hidden></span>
+    <button id="navLogout" class="ghost sm" hidden>Log out</button>
+  </div>
+</aside>
 
-<main>
-  <section class="screen active" id="scrLogin">
-    <div class="card signin">
-      <h2>Supervisor sign-in</h2>
-      <label for="fUser">Username <span style="text-transform:none;letter-spacing:0">— or your name, if your site still uses the shared password</span></label>
-      <input id="fUser" autocomplete="username" placeholder="e.g. DANA">
-      <label for="fPassword">Password</label>
-      <input id="fPassword" type="password" autocomplete="current-password">
-      <button class="primary" id="btnLogin" style="width:100%;margin-top:10px">Sign in</button>
-      <div class="feedback" id="loginMsg"></div>
-    </div>
-  </section>
+<div class="shell">
+  <header class="topbar">
+    <h1>Teams &amp; crew</h1>
+    <span class="chip" id="countChip" hidden></span>
+    <span class="spacer"></span>
+    <nav class="subtabs" id="subTabs"></nav>
+  </header>
 
-  <section class="screen" id="scrMain">
+  <main>
+    <section class="screen active" id="scrLogin">
+      <div class="card signin">
+        <h2>Supervisor sign-in</h2>
+        <label for="fUser">Username <span style="text-transform:none;letter-spacing:0">— or your name, if your site still uses the shared password</span></label>
+        <input id="fUser" autocomplete="username" placeholder="e.g. DANA">
+        <label for="fPassword">Password</label>
+        <input id="fPassword" type="password" autocomplete="current-password">
+        <button class="primary" id="btnLogin" style="width:100%;margin-top:14px">Sign in</button>
+        <div class="feedback" id="loginMsg"></div>
+      </div>
+    </section>
 
+    <section class="screen" id="scrMain">
+      <div data-sub="crew" data-sub-label="Crew &amp; teams">
     <div class="card">
       <h2>Crew list <span class="muted">clock in number, name, department, equipment</span></h2>
       <div class="inline">
@@ -126,7 +123,9 @@
         <div class="teams" id="teams"></div>
       </div>
     </div>
+      </div>
 
+      <div data-sub="rules" data-sub-label="Equipment rules">
     <div class="card">
       <h2>What each level needs <span class="muted">a team must have all of it between them</span></h2>
       <div class="hint">
@@ -142,9 +141,10 @@
       <div class="feedback" id="rulesMsg"></div>
       <div style="margin-top:14px"><table id="reachTable"></table></div>
     </div>
-
-  </section>
-</main>
+      </div>
+    </section>
+  </main>
+</div>
 
 <script src="/nav.js"></script>
 <script src="/teams.js"></script>

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Count Progress</title>
+<link rel="icon" href="/icon.svg">
+<link rel="stylesheet" href="/admin.css">
+<style>
+  /* A wall screen, read from ten feet away: everything is bigger, nothing is
+     clickable, and the whole thing fits one 1080p screen without scrolling. */
+  body { padding: 0; }
+  .board { display: flex; flex-direction: column; min-height: 100vh; padding: 2.2vh 2vw; gap: 1.8vh; }
+
+  .bhead { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+  .bhead h1 { margin: 0; font-size: clamp(20px, 2.4vw, 34px); font-weight: 800; letter-spacing: -.02em; }
+  .bhead .sess { color: var(--muted); font-size: clamp(13px, 1.2vw, 18px); font-weight: 600; }
+  .bhead .clock { margin-left: auto; color: var(--muted); font-size: clamp(13px, 1.2vw, 18px); font-variant-numeric: tabular-nums; }
+  .bhead .clock b { color: var(--text); font-weight: 700; }
+
+  .headline { display: grid; grid-template-columns: minmax(260px, 1fr) 2.4fr; gap: 2vw; align-items: center; }
+  .headline .pct { font-size: clamp(64px, 11vw, 168px); font-weight: 800; line-height: .92; letter-spacing: -.045em; }
+  .headline .pct small { font-size: .22em; color: var(--muted); font-weight: 700; letter-spacing: 0; margin-left: .1em; }
+  .headline .of { color: var(--muted); font-size: clamp(13px, 1.3vw, 19px); margin-top: 6px; font-weight: 600; }
+  .bigbar { height: clamp(28px, 4.4vh, 52px); border-radius: 12px; }
+  .bigbar span { font-size: clamp(14px, 1.5vw, 22px); }
+  .subbar { height: clamp(10px, 1.6vh, 18px); }
+  .barlabel { font-size: clamp(12px, 1.1vw, 17px); }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1vw; }
+  .tiles .stat { padding: 1.4vh 1.2vw; }
+  .tiles .n { font-size: clamp(22px, 2.6vw, 40px); }
+  .tiles .l { font-size: clamp(10px, .82vw, 13px); }
+  .tiles .stat.warn .n { color: var(--warn); }
+  .tiles .stat.err .n { color: var(--err); }
+
+  .split { display: grid; grid-template-columns: 1.15fr 1fr; gap: 1.4vw; flex: 1 1 auto; min-height: 0; }
+  @media (max-width: 1000px) { .split { grid-template-columns: 1fr; } .headline { grid-template-columns: 1fr; } }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.4vh 1.2vw; display: flex; flex-direction: column; min-height: 0; }
+  .panel h2 { margin: 0 0 1vh; font-size: clamp(13px, 1.15vw, 18px); font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: .07em; }
+  .panel .body { overflow: hidden; min-height: 0; }
+
+  table { font-size: clamp(12px, 1.05vw, 17px); }
+  th { font-size: clamp(9px, .8vw, 12px); background: transparent; border-bottom: 1px solid var(--line); }
+  td { padding: .85vh .6vw; }
+  tbody tr:hover { background: none; }
+  .team-no { font-weight: 800; font-size: 1.15em; }
+  .dot { display: inline-block; width: .62em; height: .62em; border-radius: 50%; margin-right: .5em; vertical-align: .02em; }
+  .dot.live { background: var(--ok); box-shadow: 0 0 0 .18em rgba(63,207,104,.2); }
+  .dot.idle { background: var(--muted); }
+  .dot.stale { background: var(--warn); }
+
+  .aisles { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(62px, 5.4vw, 96px), 1fr)); gap: .5vw; align-content: start; overflow: hidden; }
+  .ai { border: 1px solid var(--line); border-radius: 8px; padding: .7vh .4vw; text-align: center; background: var(--surface-2); }
+  .ai .code { font-weight: 800; font-size: clamp(11px, 1vw, 15px); }
+  .ai .pc { font-size: clamp(10px, .82vw, 13px); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .ai .mini { height: 4px; border-radius: 999px; background: #0e131c; margin-top: .5vh; overflow: hidden; }
+  .ai .mini i { display: block; height: 100%; background: var(--accent); }
+  .ai.done { border-color: #235c33; background: var(--ok-ink); }
+  .ai.done .mini i { background: var(--ok); }
+  .ai.active { border-color: var(--accent); background: #17304f; }
+  .ai .team { font-size: clamp(9px, .75vw, 12px); color: #9dc6ff; font-weight: 700; }
+
+  .empty { color: var(--muted); text-align: center; padding: 4vh 0; font-size: clamp(14px, 1.3vw, 20px); }
+  .stale-warn { color: var(--warn); }
+</style>
+</head>
+<body>
+<div class="board">
+  <div class="bhead">
+    <h1 id="bTitle">Count progress</h1>
+    <span class="sess" id="bSession"></span>
+    <span class="clock" id="bClock"></span>
+  </div>
+
+  <div class="headline">
+    <div>
+      <div class="pct"><span id="bPct">0</span><small>%</small></div>
+      <div class="of" id="bOf">—</div>
+    </div>
+    <div>
+      <div class="bigbar"><i id="bBar" style="width:0%"></i><span id="bBarText"></span></div>
+      <div class="barlabel"><span>Bins with a count</span><span id="bBins"></span></div>
+      <div class="subbar"><i id="bAisleBar" style="width:0%"></i></div>
+      <div class="barlabel"><span>Aisles handed back as complete</span><span id="bAisles"></span></div>
+    </div>
+  </div>
+
+  <div class="tiles" id="bTiles"></div>
+
+  <div class="split">
+    <div class="panel">
+      <h2>Teams counting</h2>
+      <div class="body scroll"><table id="bTeams"></table></div>
+    </div>
+    <div class="panel">
+      <h2 id="bAisleHead">Aisles</h2>
+      <div class="body aisles" id="bAisleGrid"></div>
+    </div>
+  </div>
+</div>
+<script src="/board.js"></script>
+</body>
+</html>

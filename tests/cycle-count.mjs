@@ -1,4 +1,5 @@
 import { chromium } from 'playwright-core';
+import { expandSubTabs } from './helpers.mjs';
 import { readFileSync } from 'node:fs';
 const S = new URL('.', import.meta.url).pathname;
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
@@ -50,7 +51,7 @@ admin.on('console', (m) => { if (m.type() === 'error' && !/40[19]/.test(m.text()
 admin.on('dialog', (d) => d.accept());
 await admin.goto(BASE + '/cycle');
 await admin.fill('#fPassword', 'changeme'); await admin.click('#btnLogin');
-await admin.waitForSelector('#scrMain.active'); await admin.waitForTimeout(400);
+await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(400);
 await admin.selectOption('#fSessionPick', String(sess.id)); await admin.waitForTimeout(2500);
 check('Cycle page: /cycle lists only cycle-count programs', await admin.title() === 'Cycle Counts' && (await admin.$$eval('#fSessionPick option', (o) => o.length)) === 1);
 const stats = clean(await admin.textContent('#cycleStats'));

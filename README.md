@@ -81,21 +81,41 @@ Scanners need internet access for this option, not just warehouse Wi-Fi.
 
 ---
 
-## The four supervisor tabs
+## The supervisor side
 
-Every supervisor page carries the same tab bar and one sign-in — sign in once and move
-between them:
+A sidebar down the left picks the section; sub-tabs across the top pick the screen. One
+sign-in covers all of them.
 
-| Tab | What lives there |
+| Section | Sub-tabs |
 |---|---|
-| **Dashboard** (`/admin`) | progress, the session, the map, team assignments, second counts, count sheets, the pallet report |
-| **Cycle counts** (`/cycle`) | the cycle-count program, coverage and today's batch |
-| **Teams & crew** (`/teams`) | the roster, teams, equipment and the level rules |
-| **Settings** (`/settings`) | supervisor logins, scanner setup, list uploads, racking blocks, the ERP export, backups and the log |
+| **Dashboard** (`/admin`) | Progress · Map · Team plan · Second counts · Reports |
+| **Cycle counts** (`/cycle`) | Today · Still open · Coverage · Program & data |
+| **Teams & crew** (`/teams`) | Crew & teams · Equipment rules |
+| **Settings** (`/settings`) | Logins · Scanners · Lists & racking · ERP & backups |
 
-The split is between running a count and setting one up: anything you configure once and
-then leave alone is under **Settings**, so the dashboard stays the screen a supervisor
-watches while the floor counts.
+Two splits, both deliberate. **Running a count** is the Dashboard; **setting one up** is
+Settings — anything you configure once and then leave alone. And within a section, one
+screen does one job, so nobody scrolls past four cards to reach the one they came for.
+The open sub-tab is in the URL, so `/admin#map` is a link you can send someone.
+
+The supervisor pages have their own stylesheet (`admin.css`) — they live on an office
+monitor, while the handheld's `styles.css` is tuned for a gloved thumb in a freezer.
+
+## The office board — `/board`
+
+A read-only progress screen for the office wall: the percentage counted, bins and aisles
+done, a row per team showing which aisle they are in and how long since their last scan,
+and a tile per aisle. It **needs no sign-in** — nobody is going to sign a TV in every
+morning — so it carries progress and nothing else: no pallet IDs, no clock in numbers, no
+exports, no controls. It refreshes every 15 seconds, fits a 1080p screen without
+scrolling, and if the server goes away it keeps the last numbers up and says it is not
+updating rather than blanking the wall.
+
+It follows the newest open full count on its own. `?session=<id>` pins it to one, and
+`?every=<seconds>` changes how often it polls.
+
+If your server is reachable from outside the building, put the board behind the same VPN
+or proxy as everything else — it is open by design.
 
 ## Cycle counts — `/cycle`
 
@@ -291,9 +311,14 @@ flags, comments), exceptions only, and uncounted bins.
 
 The **Scanner setup** card lists every handheld. Add one by name (`SCANNER-05`) and it gets
 a unique link, `https://<server>/?d=<id>`. On the device, open that link in Chrome once —
-scan the QR from the page into the address bar rather than typing it — then menu →
-**Add to Home screen**. From then on the app knows which scanner it is, Settings shows
-when it was last seen and which team had it, and removing it here stops the link.
+scan the QR rather than typing it — then menu → **Add to Home screen**. From then on the
+app knows which scanner it is, Settings shows when it was last seen and which team had it,
+and removing it here stops the link.
+
+**Print setup cards** gives you one card per scanner on a sheet, each with its own QR, the
+address underneath and the three steps. Cut them up and tape one to each cradle: setting a
+gun up is then "scan this", not typing a URL on a keypad in a freezer. A card is a key —
+if one goes missing, **Reset link** and print a new one.
 
 A scanner with no link can still type an ID on first run; it is marked "not registered".
 

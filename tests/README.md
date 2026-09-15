@@ -17,7 +17,12 @@ runs the suite in a real Chromium, and exits non-zero if anything fails. Nothing
 | `roster.mjs` | crew import, teams, drag and drop, equipment reach rules, assignment enforcement, the sign-on check |
 | `ops.mjs` | the audit log, backups, ERP layouts and exports, printable count sheets |
 | `scanner-auth.mjs` | enrolment, refusing untokened and forged calls, link reset and removal, and what a cut-off scanner does mid-count |
-| `settings.mjs` | supervisor logins: accounts, roles, the last-admin guard, deactivation, the shared-password fallback, and that the setup cards live on `/settings` and not the dashboard |
+| `settings.mjs` | supervisor logins: accounts, roles, the last-admin guard, deactivation, starter passwords and the first sign-in; the sidebar and sub-tab shell; and that the setup cards live on `/settings` and not the dashboard |
+| `board.mjs` | the office board — what it shows, what it refuses to leak, that it needs no sign-in and survives the server going away — and the printable scanner setup cards |
+
+Most suites flatten the sub-tabs after signing in (`expandSubTabs` in `helpers.mjs`), so
+they can assert on a whole page at once: they are about what the pages do, not which tab a
+control sits behind. The tab mechanism has its own checks in `settings.mjs` ("Shell: …").
 
 Screenshots land in `tests/screenshots/` (gitignored) — useful when a check fails.
 

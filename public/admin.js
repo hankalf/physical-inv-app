@@ -57,7 +57,14 @@
   function applySessionSettings() {
     const s = sessions.find((x) => x.id === sessionId);
     if (!s) return;
-    $('teamPlanCard').hidden = s.mode === 'cycle';   // a cycle session has no aisle plan
+    // a cycle session has no aisle plan, so its whole sub-tab goes
+    const cycle = s.mode === 'cycle';
+    $('teamPlanCard').hidden = cycle;
+    const tab = document.querySelector('#subTabs button[data-goto="teams"]');
+    if (tab) {
+      tab.hidden = cycle;
+      if (cycle && tab.classList.contains('current')) api.showSub('progress');
+    }
     $('sessionChip').textContent = `Session #${s.id}${s.status === 'closed' ? ' (closed)' : ''}`;
     $('fPalletMode').value = s.pallet_mode;
     $('fGuided').checked = !!s.guided;
@@ -187,6 +194,7 @@
     const rows = await apiJson(`/api/admin/sessions/${sessionId}/recounts`);
     const open = rows.filter((r) => r.status !== 'done').length;
     $('recountSub').textContent = rows.length ? `${open} open · ${rows.length - open} done` : '';
+    api.subCount('second', open);   // so an open second count is visible from any tab
     table($('recountTable'),
       [{ label: 'Bin' }, { label: 'Pallet' }, { label: 'Reason' }, { label: 'Detail' }, { label: 'Source' }, { label: '1st team' },
        { label: 'Team' }, { label: 'Status' }, { label: '1st count' }, { label: '2nd count' }, { label: '' }],
@@ -543,6 +551,12 @@
     if (!sessionId) return;
     await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts()]);
   }
+
+  // The map is the expensive one and it is usually off-screen, so redraw it when
+  // its tab is opened rather than every thirty seconds behind the user's back.
+  document.addEventListener('subshow', (e) => {
+    if (e.detail === 'map' && sessionId) refreshMap().catch(() => {});
+  });
 
   const download = (path, filename) =>
     (needSession($('palletNote')) ? api.download(path, filename) : Promise.resolve())

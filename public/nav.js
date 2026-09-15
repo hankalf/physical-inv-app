@@ -4,10 +4,10 @@
   'use strict';
 
   const TABS = [
-    ['/admin', 'Dashboard'],
-    ['/cycle', 'Cycle counts'],
-    ['/teams', 'Teams & crew'],
-    ['/settings', 'Settings'],
+    ['/admin', 'Dashboard', '▤'],
+    ['/cycle', 'Cycle counts', '↻'],
+    ['/teams', 'Teams & crew', '☰'],
+    ['/settings', 'Settings', '⚙'],
   ];
 
   const here = location.pathname.replace(/\/$/, '') || '/admin';
@@ -139,11 +139,14 @@
     const bar = document.getElementById('navTabs');
     if (!bar) return;
     bar.innerHTML = '';
-    for (const [href, label] of TABS) {
+    for (const [href, label, ico] of TABS) {
       const a = document.createElement('a');
       a.href = href;
       a.className = 'tab' + (here === href ? ' current' : '');
-      a.textContent = label;
+      const i = document.createElement('span');
+      i.className = 'ico';
+      i.textContent = ico;
+      a.append(i, document.createTextNode(label));
       bar.appendChild(a);
     }
     const who = document.getElementById('navWho');
@@ -264,8 +267,54 @@
     return api.me;
   };
 
+  /* ------------------------------------------------------------- sub-tabs
+     A page declares them by marking its sections <section data-sub="map"
+     data-sub-label="Map">. One screen, one job - nobody scrolls past four
+     cards to reach the one they came for. */
+  const subKey = 'sub:' + here;
+
+  function renderSubTabs() {
+    const bar = document.getElementById('subTabs');
+    const panes = [...document.querySelectorAll('[data-sub]')];
+    if (!bar || !panes.length) return;
+    const wanted = (location.hash || '').replace('#', '') || sessionStorage.getItem(subKey) || panes[0].dataset.sub;
+    bar.innerHTML = '';
+    for (const pane of panes) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.goto = pane.dataset.sub;
+      b.textContent = pane.dataset.subLabel || pane.dataset.sub;
+      const n = document.createElement('span');
+      n.className = 'n';
+      n.id = 'subCount-' + pane.dataset.sub;
+      n.hidden = true;
+      b.appendChild(n);
+      b.onclick = () => api.showSub(pane.dataset.sub);
+      bar.appendChild(b);
+    }
+    api.showSub(panes.some((p) => p.dataset.sub === wanted) ? wanted : panes[0].dataset.sub);
+  }
+
+  /** Switch sub-tab. Pages listen for `subshow` to refresh what just appeared. */
+  api.showSub = function showSub(name) {
+    for (const pane of document.querySelectorAll('[data-sub]')) pane.classList.toggle('active', pane.dataset.sub === name);
+    for (const b of document.querySelectorAll('#subTabs button')) b.classList.toggle('current', b.dataset.goto === name);
+    try { sessionStorage.setItem(subKey, name); } catch { /* private window */ }
+    if (location.hash.replace('#', '') !== name) history.replaceState(null, '', '#' + name);
+    document.dispatchEvent(new CustomEvent('subshow', { detail: name }));
+  };
+
+  /** A count beside a sub-tab: how many second counts are open, and so on. */
+  api.subCount = function subCount(name, n) {
+    const el = document.getElementById('subCount-' + name);
+    if (!el) return;
+    el.hidden = !n;
+    el.textContent = n;
+  };
+
   document.addEventListener('DOMContentLoaded', () => {
     renderTabs();
+    renderSubTabs();
     const btn = document.getElementById('btnLogin');
     if (btn) {
       const go = async () => {

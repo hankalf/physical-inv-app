@@ -124,3 +124,58 @@ export function countSheet(sessionId, opts = {}) {
 </div>
 </body></html>`;
 }
+
+/*
+ * Setup cards for the scanners: one card per handheld, each with the QR of its
+ * own enrolment link. Cut them up, tape one to each gun's cradle, and setting a
+ * scanner up is "scan this, then Add to Home screen" - no typing a URL with a
+ * trigger and a keypad in a freezer.
+ *
+ * The QR is drawn in the browser from the shipped library, so this stays a
+ * dependency-free HTML page the print dialog can handle.
+ */
+export function scannerCards(devices, origin) {
+  const cards = devices.map((d) => `
+    <div class="card">
+      <div class="name">${esc(d.name)}</div>
+      <div class="qr" data-link="${esc(origin)}/?d=${esc(d.uid)}"></div>
+      <div class="url">${esc(origin)}/?d=${esc(d.uid)}</div>
+      ${d.notes ? `<div class="note">${esc(d.notes)}</div>` : ''}
+      <ol class="how"><li>Scan this with the camera, or type the address.</li><li>Chrome menu → <b>Add to Home screen</b>.</li><li>Open it from the home screen from now on.</li></ol>
+    </div>`).join('');
+
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Scanner setup cards</title>
+<style>
+  @page { size: letter portrait; margin: 12mm; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #000; background: #fff; margin: 0; padding: 12px; }
+  h1 { font-size: 16pt; margin: 0 0 2px; }
+  .sub { color: #444; font-size: 9.5pt; margin-bottom: 12px; }
+  .sheet { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card { border: 1.5px dashed #888; border-radius: 8px; padding: 12px; text-align: center; break-inside: avoid; page-break-inside: avoid; }
+  .name { font-size: 15pt; font-weight: 800; letter-spacing: .02em; margin-bottom: 8px; }
+  .qr { display: flex; justify-content: center; min-height: 168px; align-items: center; }
+  .qr img, .qr canvas { display: block; }
+  .url { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 7.5pt; word-break: break-all; margin-top: 8px; color: #333; }
+  .note { font-size: 9pt; color: #444; margin-top: 4px; font-style: italic; }
+  .how { text-align: left; font-size: 8.5pt; color: #333; margin: 8px 0 0; padding-left: 16px; line-height: 1.45; }
+  .warn { margin-top: 14px; font-size: 8.5pt; color: #666; border-top: 1px solid #ccc; padding-top: 6px; }
+  .none { padding: 30px; text-align: center; color: #666; }
+  @media print { .noprint { display: none; } }
+</style></head>
+<body>
+<h1>Scanner setup cards</h1>
+<div class="sub">${devices.length} scanner${devices.length === 1 ? '' : 's'} · printed ${esc(localDate())} · cut along the dashed lines and tape one to each cradle</div>
+<button class="noprint" onclick="window.print()" style="margin-bottom:10px;padding:6px 12px">Print</button>
+${devices.length ? `<div class="sheet">${cards}</div>` : '<div class="none">No scanners registered yet — add them under Settings → Scanners.</div>'}
+<div class="warn">Each link signs that scanner in, so treat a card like a key: if one goes missing, use <b>Reset link</b> in Settings and print a new card.</div>
+<script src="/vendor/qrcode.min.js"></script>
+<script>
+  for (const box of document.querySelectorAll('.qr')) {
+    try { new QRCode(box, { text: box.dataset.link, width: 168, height: 168, correctLevel: QRCode.CorrectLevel.M }); }
+    catch (e) { box.textContent = 'QR unavailable — type the address below'; }
+  }
+</script>
+</body></html>`;
+}

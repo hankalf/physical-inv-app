@@ -232,6 +232,10 @@
   };
   $('fDevName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnAddDevice').click(); });
 
+  // A printed sheet of QR codes, so a scanner is set up by scanning, not typing
+  // a URL on a keypad. It is a page, not a download, so the token rides the URL.
+  $('btnCards').onclick = () => window.open(`/api/admin/print/scanner-cards?t=${encodeURIComponent(api.token)}`, '_blank');
+
   /* ------------------------------------------------------------ uploads */
   const FILE_GUIDE = {
     bins: {
@@ -464,6 +468,11 @@
         ? 'A cycle count — bins go out in batches, so there is no aisle plan to block out.'
         : 'Uploads, racking blocks and the ERP export below act on this session.';
   }
+
+  // the session bar only means anything to the panes that act on a session
+  document.addEventListener('subshow', (e) => {
+    $('scopeBar').hidden = !['lists', 'erp'].includes(e.detail);
+  });
 
   $('fSessionPick').onchange = (e) => {
     sessionId = Number(e.target.value) || null;

@@ -5,67 +5,114 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cycle Counts</title>
 <link rel="icon" href="/icon.svg">
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/admin.css">
 <style>
-  body { font-size: 15px; }
-  main { width: 100%; padding: 14px 18px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
-  .card h2 { margin: 0 0 8px; font-size: 17px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .card h2 .muted { font-weight: 400; font-size: 13px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
-  .stat { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
-  .stat .n { font-size: 26px; font-weight: 800; }
-  .stat .l { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
-  button { width: auto; padding: 9px 14px; font-size: 14px; margin-top: 0; }
-  button.sm { padding: 4px 9px; font-size: 12px; }
-  input, select { font-size: 15px; padding: 9px 10px; font-weight: 500; }
-  input.sm { padding: 5px 8px; font-size: 13px; }
-  .inline { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
-  .inline > div { flex: 1 1 180px; }
-  .inline > div.auto { flex: 0 0 auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-  th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
-  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  .bar { height: 8px; background: var(--panel-2); border-radius: 4px; overflow: hidden; min-width: 90px; }
-  .bar i { display: block; height: 100%; background: var(--accent); }
-  .bigbar { height: 30px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; position: relative; }
-  .bigbar i { display: block; height: 100%; background: linear-gradient(90deg, #1f6feb, #2ea043); }
-  .bigbar span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; text-shadow: 0 1px 2px #000a; }
-  hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
-  label.cb { display: inline-flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: 13px; }
-  label.cb input { width: auto; }
-  .hint { font-size: 13px; color: var(--muted); }
-  .colguide { margin-top: 10px; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
-  .tag { font-size: 11px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); }
-  .tag.auto { color: var(--accent); border-color: #1f4d8f; }
+  /* the cycle page's own pieces */
+  .tag.auto { color: var(--warn); border-color: #5c4813; }
 </style>
 </head>
-<body>
+<body class="app">
 
-<header>
-  <span class="title">Cycle Counts</span>
-  <nav class="tabs" id="navTabs"></nav>
-  <span class="chip" id="clockChip" hidden></span>
-  <span class="chip" id="navWho" hidden></span>
-  <button id="navLogout" class="ghost" hidden style="padding:6px 10px;font-size:12px">Log out</button>
-</header>
+<aside class="side">
+  <div class="brand">Inventory Count<span>Front Royal</span></div>
+  <nav id="navTabs"></nav>
+  <div class="side-foot">
+    <span class="chip" id="navWho" hidden></span>
+    <button id="navLogout" class="ghost sm" hidden>Log out</button>
+  </div>
+</aside>
 
-<main>
-  <section class="screen active" id="scrLogin">
-    <div class="card signin">
-      <h2>Supervisor sign-in</h2>
-      <label for="fUser">Username <span style="text-transform:none;letter-spacing:0">— or your name, if your site still uses the shared password</span></label>
-      <input id="fUser" autocomplete="username" placeholder="e.g. DANA">
-      <label for="fPassword">Password</label>
-      <input id="fPassword" type="password" autocomplete="current-password">
-      <button class="primary" id="btnLogin" style="width:100%;margin-top:10px">Sign in</button>
-      <div class="feedback" id="loginMsg"></div>
+<div class="shell">
+  <header class="topbar">
+    <h1>Cycle counts</h1>
+    <span class="chip" id="clockChip" hidden></span>
+    <span class="spacer"></span>
+    <nav class="subtabs" id="subTabs"></nav>
+  </header>
+
+  <main>
+    <section class="screen active" id="scrLogin">
+      <div class="card signin">
+        <h2>Supervisor sign-in</h2>
+        <label for="fUser">Username <span style="text-transform:none;letter-spacing:0">— or your name, if your site still uses the shared password</span></label>
+        <input id="fUser" autocomplete="username" placeholder="e.g. DANA">
+        <label for="fPassword">Password</label>
+        <input id="fPassword" type="password" autocomplete="current-password">
+        <button class="primary" id="btnLogin" style="width:100%;margin-top:14px">Sign in</button>
+        <div class="feedback" id="loginMsg"></div>
+      </div>
+    </section>
+
+    <section class="screen" id="scrMain">
+      <div data-sub="today" data-sub-label="Today">
+    <div class="card" id="generateCard">
+      <h2>Today's bins</h2>
+      <div class="hint">
+        Bins are picked by how long they have gone without a count — seeded from the <b>Last Phys. Invt. Date</b> in your
+        export and moved forward as counts land, so a batch never re-picks what was counted yesterday.
+      </div>
+      <div class="inline" style="margin-top:12px">
+        <div class="auto"><label for="fCycBins">Bins</label><input id="fCycBins" class="sm" style="width:80px" type="number" value="40" min="1"></div>
+        <div class="auto">
+          <label for="fCycStrategy">Pick</label>
+          <select id="fCycStrategy">
+            <option value="oldest">Longest since counted</option>
+            <option value="never">Never counted</option>
+            <option value="random">Random sample</option>
+          </select>
+        </div>
+        <div class="auto"><label for="fCycZone">Zone</label><input id="fCycZone" class="sm" style="width:110px" placeholder="any"></div>
+        <div class="auto"><label for="fCycAisle">Aisles</label><input id="fCycAisle" class="sm" placeholder="any"></div>
+        <div class="auto"><label for="fCycLevels">Levels</label><input id="fCycLevels" class="sm" style="width:80px" placeholder="any"></div>
+        <div class="auto"><label for="fCycTeam">Team</label><input id="fCycTeam" class="sm" style="width:70px" placeholder="any"></div>
+        <div class="auto"><button id="btnCycPreview">Preview</button></div>
+        <div class="auto"><button class="primary" id="btnCycGenerate">Generate</button></div>
+      </div>
+      <div class="feedback" id="cycleMsg"></div>
+      <hr>
+      <div class="inline">
+        <div class="auto"><label class="cb"><input type="checkbox" id="fCycAuto"> Generate automatically</label></div>
+        <div class="auto">
+          <label for="fCycEvery">Every</label>
+          <select id="fCycEvery"><option value="day">Weekday</option><option value="week">Week</option></select>
+        </div>
+        <div class="auto"><label for="fCycSchedBins">Bins each time</label><input id="fCycSchedBins" class="sm" style="width:80px" type="number" value="40" min="1"></div>
+        <div class="auto"><label for="fCycHour">From (site time)</label><input id="fCycHour" class="sm" style="width:70px" type="number" value="6" min="0" max="23"></div>
+        <div class="auto"><label for="fCycWeekday">On (weekly)</label>
+          <select id="fCycWeekday"><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select>
+        </div>
+        <div class="auto"><button id="btnCycSchedule">Save schedule</button></div>
+      </div>
     </div>
-  </section>
+      </div>
 
-  <section class="screen" id="scrMain">
+      <div data-sub="open" data-sub-label="Still open">
+    <div class="card" id="batchCard">
+      <h2>Batches</h2>
+      <div style="overflow-x:auto"><table id="batchTable"></table></div>
+    </div>
 
+    <div class="card" id="openCard">
+      <h2>Bins still open <span class="muted" id="openSub"></span></h2>
+      <div style="overflow-x:auto"><table id="openTable"></table></div>
+    </div>
+      </div>
+
+      <div data-sub="coverage" data-sub-label="Coverage">
+    <div class="card" id="coverageCard">
+      <h2>Coverage <span class="muted" id="cycleSub"></span></h2>
+      <div class="bigbar"><i id="covBar" style="width:0%"></i><span id="covBarText"></span></div>
+      <div class="grid" id="cycleStats" style="margin-top:12px"></div>
+      <div class="inline" style="margin-top:10px">
+        <div class="auto"><label for="fCovDays">Count as covered within</label>
+          <select id="fCovDays"><option value="30">30 days</option><option value="60">60 days</option><option value="90" selected>90 days</option><option value="180">180 days</option><option value="365">a year</option></select>
+        </div>
+        <div class="auto"><button id="btnExportCoverage">Coverage CSV</button></div>
+      </div>
+    </div>
+      </div>
+
+      <div data-sub="setup" data-sub-label="Program &amp; data">
     <div class="card">
       <h2>Program <span class="muted">a cycle-count session runs for the year — keep using the same one</span></h2>
       <div class="inline">
@@ -107,71 +154,10 @@
       </div>
       <div class="feedback" id="uploadMsg"></div>
     </div>
-
-    <div class="card" id="coverageCard">
-      <h2>Coverage <span class="muted" id="cycleSub"></span></h2>
-      <div class="bigbar"><i id="covBar" style="width:0%"></i><span id="covBarText"></span></div>
-      <div class="grid" id="cycleStats" style="margin-top:12px"></div>
-      <div class="inline" style="margin-top:10px">
-        <div class="auto"><label for="fCovDays">Count as covered within</label>
-          <select id="fCovDays"><option value="30">30 days</option><option value="60">60 days</option><option value="90" selected>90 days</option><option value="180">180 days</option><option value="365">a year</option></select>
-        </div>
-        <div class="auto"><button id="btnExportCoverage">Coverage CSV</button></div>
       </div>
-    </div>
-
-    <div class="card" id="generateCard">
-      <h2>Today's bins</h2>
-      <div class="hint">
-        Bins are picked by how long they have gone without a count — seeded from the <b>Last Phys. Invt. Date</b> in your
-        export and moved forward as counts land, so a batch never re-picks what was counted yesterday.
-      </div>
-      <div class="inline" style="margin-top:12px">
-        <div class="auto"><label for="fCycBins">Bins</label><input id="fCycBins" class="sm" style="width:80px" type="number" value="40" min="1"></div>
-        <div class="auto">
-          <label for="fCycStrategy">Pick</label>
-          <select id="fCycStrategy">
-            <option value="oldest">Longest since counted</option>
-            <option value="never">Never counted</option>
-            <option value="random">Random sample</option>
-          </select>
-        </div>
-        <div class="auto"><label for="fCycZone">Zone</label><input id="fCycZone" class="sm" style="width:110px" placeholder="any"></div>
-        <div class="auto"><label for="fCycAisle">Aisles</label><input id="fCycAisle" class="sm" placeholder="any"></div>
-        <div class="auto"><label for="fCycLevels">Levels</label><input id="fCycLevels" class="sm" style="width:80px" placeholder="any"></div>
-        <div class="auto"><label for="fCycTeam">Team</label><input id="fCycTeam" class="sm" style="width:70px" placeholder="any"></div>
-        <div class="auto"><button id="btnCycPreview">Preview</button></div>
-        <div class="auto"><button class="primary" id="btnCycGenerate">Generate</button></div>
-      </div>
-      <div class="feedback" id="cycleMsg"></div>
-      <hr>
-      <div class="inline">
-        <div class="auto"><label class="cb"><input type="checkbox" id="fCycAuto"> Generate automatically</label></div>
-        <div class="auto">
-          <label for="fCycEvery">Every</label>
-          <select id="fCycEvery"><option value="day">Weekday</option><option value="week">Week</option></select>
-        </div>
-        <div class="auto"><label for="fCycSchedBins">Bins each time</label><input id="fCycSchedBins" class="sm" style="width:80px" type="number" value="40" min="1"></div>
-        <div class="auto"><label for="fCycHour">From (site time)</label><input id="fCycHour" class="sm" style="width:70px" type="number" value="6" min="0" max="23"></div>
-        <div class="auto"><label for="fCycWeekday">On (weekly)</label>
-          <select id="fCycWeekday"><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select>
-        </div>
-        <div class="auto"><button id="btnCycSchedule">Save schedule</button></div>
-      </div>
-    </div>
-
-    <div class="card" id="batchCard">
-      <h2>Batches</h2>
-      <div style="overflow-x:auto"><table id="batchTable"></table></div>
-    </div>
-
-    <div class="card" id="openCard">
-      <h2>Bins still open <span class="muted" id="openSub"></span></h2>
-      <div style="overflow-x:auto"><table id="openTable"></table></div>
-    </div>
-
-  </section>
-</main>
+    </section>
+  </main>
+</div>
 
 <script src="/nav.js"></script>
 <script src="/cycle.js"></script>

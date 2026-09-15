@@ -1,5 +1,6 @@
 /* Settings: per-supervisor logins, and the setup cards that moved off the dashboard. */
 import { chromium } from 'playwright-core';
+import { expandSubTabs } from './helpers.mjs';
 
 const S = new URL('.', import.meta.url).pathname;
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
@@ -122,9 +123,37 @@ await page.fill('#fUser', 'nobody'); await page.fill('#fPassword', 'wrong'); awa
 check('Settings: a bad sign-in says so and stays on the sign-in screen',
   clean(await page.textContent('#loginMsg')).length > 0 && (await page.$('#scrLogin.active')) !== null, clean(await page.textContent('#loginMsg')));
 await page.fill('#fUser', 'DANA'); await page.fill('#fPassword', 'freezer-2026'); await page.click('#btnLogin');
-await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(1500);
+await page.waitForSelector('#scrMain.active'); await expandSubTabs(page); await page.waitForTimeout(1500);
 check('Settings: signing in as an account shows who you are in the header',
   /Dana Whitfield/.test(clean(await page.textContent('#navWho'))) && /admin/.test(clean(await page.textContent('#navWho'))), clean(await page.textContent('#navWho')));
+
+/* ---- the shell: a sidebar, and sub-tabs that show one thing at a time ---- */
+check('Shell: the sidebar links all four pages, with this one marked',
+  (await page.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/cycle,/teams,/settings'
+    && (await page.$eval('#navTabs .tab.current', (a) => a.getAttribute('href'))) === '/settings');
+check('Shell: Settings is split into sub-tabs',
+  (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.replace(/\d+$/, '').trim()))).join(' | ') === 'Logins | Scanners | Lists & racking | ERP & backups',
+  (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.trim()))).join(' | '));
+check('Shell: exactly one pane is on screen at a time',
+  (await page.$$eval('[data-sub]', (p) => p.filter((x) => x.classList.contains('active')).length)) === 1);
+await page.click('#subTabs button:text-is("Scanners")'); await page.waitForTimeout(500);
+check('Shell: clicking a sub-tab swaps the pane and marks the tab',
+  await page.$eval('[data-sub="scanners"]', (el) => el.classList.contains('active'))
+    && !(await page.$eval('[data-sub="logins"]', (el) => el.classList.contains('active')))
+    && await page.$eval('#subTabs button:text-is("Scanners")', (b) => b.classList.contains('current')));
+check('Shell: the session bar hides on a pane that has no session to act on',
+  await page.$eval('#scopeBar', (el) => el.hidden));
+await page.click('#subTabs button:has-text("Lists")'); await page.waitForTimeout(500);
+check('Shell: and comes back on one that does', !(await page.$eval('#scopeBar', (el) => el.hidden)));
+check('Shell: the sub-tab is in the URL, so a link can point straight at one',
+  (await page.evaluate(() => location.hash)) === '#lists', await page.evaluate(() => location.hash));
+check('Shell: the open sub-tab survives a reload',
+  await (async () => {
+    const before = await page.evaluate(() => location.hash);
+    await page.reload(); await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(1200);
+    return (await page.evaluate(() => location.hash)) === before && await page.$eval('[data-sub="lists"]', (el) => el.classList.contains('active'));
+  })(), await page.evaluate(() => location.hash));
+await page.click('#subTabs button:text-is("Logins")'); await page.waitForTimeout(600);
 
 const headings = await page.$$eval('#scrMain .card > h2', (h) => h.map((x) => x.firstChild.textContent.trim()));
 check('Settings: the six setup cards are all on this page',
@@ -204,7 +233,7 @@ await fetch(`${BASE}/api/admin/me/password`, { method: 'POST', headers: bearer(r
 const sup = await browser.newPage({ viewport: { width: 1200, height: 900 } });
 await sup.goto(BASE + '/settings');
 await sup.fill('#fUser', 'RILEY'); await sup.fill('#fPassword', 'riley-own-pass'); await sup.click('#btnLogin');
-await sup.waitForSelector('#scrMain.active'); await sup.waitForTimeout(1200);
+await sup.waitForSelector('#scrMain.active'); await expandSubTabs(sup); await sup.waitForTimeout(1200);
 check('Settings: a supervisor is told account management is an admin job, and keeps the rest',
   await sup.$eval('#adminOnly', (el) => el.hidden) && !(await sup.$eval('#notAdmin', (el) => el.hidden))
     && !(await sup.$eval('#ownPassword', (el) => el.hidden)) && (await sup.$$('#deviceTable tbody tr')).length >= 0,

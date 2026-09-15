@@ -1,5 +1,6 @@
 /* Housekeeping: the audit log, backups, the ERP file, and paper count sheets. */
 import { chromium } from 'playwright-core';
+import { expandSubTabs } from './helpers.mjs';
 import { readFileSync } from 'node:fs';
 
 const S = new URL('.', import.meta.url).pathname;
@@ -107,7 +108,7 @@ page.on('console', (m) => { if (m.type() === 'error' && !/40[19]/.test(m.text())
 // backups, the log and the ERP file live under Settings; the count sheet stays on the dashboard
 await page.goto(BASE + '/settings');
 await page.fill('#fUser', 'Dana'); await page.fill('#fPassword', 'changeme'); await page.click('#btnLogin');
-await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(1800);
+await page.waitForSelector('#scrMain.active'); await expandSubTabs(page); await page.waitForTimeout(1800);
 check('Settings: the backup list and the log are on screen',
   (await page.$$('#backupTable tbody tr')).length > 0 && (await page.$$('#auditTable tbody tr')).length > 3,
   clean(await page.textContent('#backupSub')).slice(0, 80));
@@ -121,7 +122,7 @@ await page.$eval('#backupTable', (el) => el.closest('.card').scrollIntoView()); 
 await (await page.$('#backupTable')).evaluate((el) => el.closest('.card').scrollIntoView());
 await page.screenshot({ path: `${S}screenshots/ops-settings.png`, clip: await (await page.$('#backupTable')).evaluate((el) => { const r = el.closest('.card').getBoundingClientRect(); return { x: r.x, y: Math.max(0, r.y), width: r.width, height: Math.min(r.height, 700) }; }) });
 await page.goto(BASE + '/admin');
-await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(1200);
+await page.waitForSelector('#scrMain.active'); await expandSubTabs(page); await page.waitForTimeout(1200);
 check('The sign-in carries across the tabs', !!(await page.$('#navTabs .tab.current')), clean(await page.textContent('#navTabs')));
 const [sheetTab] = await Promise.all([page.waitForEvent('popup'), page.fill('#fPrintAisle', 'F03').then(() => page.fill('#fPrintLevels', 'A')).then(() => page.click('#btnPrint'))]);
 await sheetTab.waitForLoadState();

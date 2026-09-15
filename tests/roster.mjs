@@ -1,4 +1,5 @@
 import { chromium } from 'playwright-core';
+import { expandSubTabs } from './helpers.mjs';
 import { readFileSync } from 'node:fs';
 const S = new URL('.', import.meta.url).pathname;
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
@@ -24,7 +25,7 @@ p.on('dialog', (d) => d.accept());
 await p.goto(BASE + '/teams');
 check('Teams page: /teams serves the page', await p.title() === 'Teams & Crew');
 await p.fill('#fPassword', 'changeme'); await p.click('#btnLogin');
-await p.waitForSelector('#scrMain.active'); await p.waitForTimeout(400);
+await p.waitForSelector('#scrMain.active'); await expandSubTabs(p); await p.waitForTimeout(400);
 
 // roster upload
 const roster = `Badge,Name,Department,Equipment
@@ -71,7 +72,7 @@ const admin = await browser.newPage({ viewport: { width: 1500, height: 950 } });
 admin.on('dialog', (d) => d.dismiss());   // refuse the "assign anyway" prompt
 await admin.goto(BASE + '/admin');
 await admin.fill('#fPassword', 'changeme'); await admin.click('#btnLogin');
-await admin.waitForSelector('#scrMain.active'); await admin.waitForTimeout(600);
+await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(600);
 await admin.selectOption('#fSessionPick', String(sess.id)); await admin.waitForTimeout(1200);
 await admin.fill('#fAssignTeam', '1'); await admin.fill('#fAssignAisles', 'F01'); await admin.fill('#fAssignLevels', 'A-F');
 await admin.click('#btnAssign'); await admin.waitForTimeout(800);
