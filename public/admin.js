@@ -232,7 +232,9 @@
   /* ------------------------------------------------------------ progress */
   async function refreshProgress() {
     const p = await apiJson(`/api/admin/sessions/${sessionId}/progress`);
-    const pct = p.bins_total ? Math.round((p.bins_counted / p.bins_total) * 100) : 0;
+    const raw = p.bins_total ? (p.bins_counted / p.bins_total) * 100 : 0;
+    // one decimal early on, so the first hour of a big count doesn't read "0%"
+    const pct = raw >= 10 ? Math.round(raw) : Math.round(raw * 10) / 10;
     const aislesDone = p.byAisle.filter((a) => a.done_count > 0).length;
     const aislePct = p.byAisle.length ? Math.round((aislesDone / p.byAisle.length) * 100) : 0;
     $('heroPct').textContent = pct;
