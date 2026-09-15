@@ -32,6 +32,7 @@ importHelpers.parseRecords = parseRecords;
 importHelpers.pick = pick;
 import { toCsv, parseRecords, pick } from './util/csv.js';
 import { listLayouts, loadLayout } from './util/layouts.js';
+import { siteTimezone, localDate, localHour } from './util/localtime.js';
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -630,7 +631,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const p = url.pathname;
   try {
-    if (p === '/api/health') return sendJson(req, res, 200, { ok: true, time: new Date().toISOString() });
+    if (p === '/api/health') return sendJson(req, res, 200, { ok: true, time: new Date().toISOString(), siteDate: localDate(), siteTimezone: siteTimezone() });
     if (p.startsWith('/api/admin/')) return await handleAdmin(req, res, url, null);
     if (p.startsWith('/api/')) {
       const handled = await handleHandheld(req, res, url, null);
@@ -653,6 +654,7 @@ setInterval(() => {
 
 server.listen(PORT, HOST, () => {
   console.log(`physical-inv-app listening on http://${HOST}:${PORT}`);
+  console.log(`  site clock: ${siteTimezone()} - today is ${localDate()}, hour ${localHour()}`);
   console.log(`  scanner:   http://<server-ip>:${PORT}/`);
   console.log(`  dashboard: http://<server-ip>:${PORT}/admin.html`);
 });

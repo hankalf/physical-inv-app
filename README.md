@@ -73,6 +73,7 @@ Scanners need internet access for this option, not just warehouse Wi-Fi.
 | `ADMIN_PASSWORD` | `changeme` | Supervisor dashboard password — **set this** |
 | `DB_PATH` | `./data/inventory.db` | SQLite file (falls back to `./data` if unwritable) |
 | `MAX_UPLOAD_MB` | `64` | Upload size cap |
+| `SITE_TIMEZONE` | `America/New_York` | The warehouse's clock — dates a cycle batch is due, and the hour a schedule fires |
 
 ---
 

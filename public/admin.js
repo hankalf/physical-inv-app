@@ -413,7 +413,8 @@
       d.querySelector('.l').textContent = l;
       $('cycleStats').appendChild(d);
     }
-    $('cycleSub').textContent = data.batches.length ? `${data.batches.length} batch(es)` : 'no batches yet';
+    $('cycleSub').textContent = (data.batches.length ? `${data.batches.length} batch(es) · ` : '') +
+      `site clock ${data.siteTimezone}, today is ${data.siteDate}`;
 
     table($('batchTable'),
       [{ label: 'Due' }, { label: 'Batch' }, { label: 'Picked by' }, { label: 'Scope' }, { label: 'Bins', num: true }, { label: 'Done', num: true }, { label: 'Progress' }, { label: 'Teams' }, { label: '' }],

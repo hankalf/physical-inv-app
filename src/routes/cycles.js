@@ -15,7 +15,7 @@ import { db, norm, getSession } from '../db.js';
  */
 
 const now = () => new Date().toISOString();
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => localDate();      // the warehouse's date, not the server's
 
 export const STRATEGIES = {
   oldest: 'Longest since it was counted',
@@ -151,10 +151,9 @@ export function runSchedules() {
     let plan;
     try { plan = JSON.parse(s.cycle_schedule); } catch { continue; }
     if (!plan || !plan.every) continue;
-    const d = new Date();
-    const weekday = d.getDay();                      // 0 Sun .. 6 Sat
+    const weekday = localWeekday();                  // 0 Sun .. 6 Sat, at the site
     const hour = Number(plan.hour ?? 6);
-    if (d.getHours() < hour) continue;
+    if (localHour() < hour) continue;
     if (plan.every === 'week') {
       const wanted = Number(plan.weekday ?? 1);
       if (weekday !== wanted) continue;
@@ -166,7 +165,7 @@ export function runSchedules() {
     try {
       const r = generateBatch(s.id, { ...plan, target: plan.bins, due, auto: 1, name: `${due} · scheduled` });
       made.push({ session: s.id, bins: r.created });
-      console.log(`[cycle] session ${s.id}: generated ${r.created} bins for ${due}`);
+      console.log(`[cycle] session ${s.id}: generated ${r.created} bins for ${due} (${siteTimezone()})`);
     } catch (err) {
       console.warn(`[cycle] session ${s.id}: ${err.message}`);
     }
