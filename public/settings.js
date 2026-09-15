@@ -56,7 +56,13 @@
         tdRole.appendChild(tag(u.role));
         tr.appendChild(tdRole);
         const tdSt = document.createElement('td');
-        if (u.active) tdSt.appendChild(tag('active')); else tdSt.appendChild(tag('off'));
+        tdSt.appendChild(u.active ? tag('active') : tag('off'));
+        if (u.active && u.mustChange) {
+          const w = tag('starter');
+          w.title = 'Still on the password they were given — they choose their own at their next sign-in.';
+          w.style.marginLeft = '4px';
+          tdSt.appendChild(w);
+        }
         tr.appendChild(tdSt);
         tr.append(
           cell(u.last_login ? new Date(u.last_login).toLocaleString() : 'never'),
@@ -74,9 +80,14 @@
         act.appendChild(button(u.active ? 'Deactivate' : 'Reactivate', 'sm', () =>
           change({ active: !u.active }, u.active ? `Deactivate ${u.username}? They will not be able to sign in.` : '')));
         act.appendChild(button('Reset password', 'sm', async () => {
-          const pw = prompt(`New password for ${u.username} (at least 8 characters)`);
+          const pw = prompt(`New password for ${u.username} — leave blank to generate one.\n\nEither way they choose their own the next time they sign in.`, '');
           if (pw === null) return;
-          change({ password: pw });
+          try {
+            const r = await api.post(`/api/admin/users/${u.username}`, { password: pw });
+            if (r.starterPassword) { clearMsg($('userMsg')); showStarter(u.username, r.starterPassword); }
+            else msg($('userMsg'), 'ok', `${u.username} has a new password`, 'They will be asked to replace it when they next sign in.');
+            await refreshUsers();
+          } catch (err) { msg($('userMsg'), 'err', err.message); }
         }));
         act.appendChild(button('Remove', 'sm danger', async () => {
           if (!confirm(`Remove ${u.username}? Their entries in the log are kept.`)) return;
@@ -89,6 +100,25 @@
       }, 'No logins yet — everyone is signing in with the shared password.');
   }
 
+  /* A starter password is shown once, big enough to read across a desk, and is
+     not recoverable afterwards - it exists only to get its owner to the screen
+     where they choose their own. */
+  function showStarter(username, password) {
+    const box = $('starterBox');
+    box.style.display = 'block';
+    box.className = 'feedback show ok';
+    box.textContent = '';
+    const head = document.createElement('div');
+    head.textContent = `${username} can sign in now — read them this password:`;
+    const code = document.createElement('div');
+    code.textContent = password;
+    code.style.cssText = 'font-size:26px;font-weight:800;letter-spacing:.06em;margin:8px 0;user-select:all';
+    const why = document.createElement('div');
+    why.className = 'detail';
+    why.textContent = 'They will be asked to choose their own password the moment they sign in. This one is not shown again — if it is lost, use Reset password.';
+    box.append(head, code, why);
+  }
+
   $('btnAddUser').onclick = async () => {
     try {
       const u = await api.post('/api/admin/users', {
@@ -96,7 +126,8 @@
         password: $('fNewPass').value, role: $('fNewRole').value,
       });
       $('fNewUser').value = ''; $('fNewFullName').value = ''; $('fNewPass').value = '';
-      msg($('userMsg'), 'ok', `Added ${u.username}`, `Tell them the password and have them change it under "Your password".`);
+      if (u.starterPassword) { clearMsg($('userMsg')); showStarter(u.username, u.starterPassword); }
+      else msg($('userMsg'), 'ok', `Added ${u.username}`, 'They will be asked to choose their own password the first time they sign in.');
       await refreshMe();
     } catch (err) { msg($('userMsg'), 'err', err.message); }
   };

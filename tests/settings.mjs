@@ -46,6 +46,27 @@ const unknown = await login({ username: 'Casey', name: 'Casey', password: 'chang
 check('A name that is not an account still signs in on the shared password, recorded as that name',
   unknown.ok && (await j(unknown.clone())).name === 'Casey' && (await j(unknown)).shared === true, '');
 
+/* ---------------- a login that sets its own password ---------------- */
+const gen = await j(await fetch(`${BASE}/api/admin/users`, { method: 'POST', headers: A, body: JSON.stringify({ username: 'PAT', name: 'Pat Nkemelu' }) }));
+check('With no password given, one is generated and handed back once',
+  /^[a-z]+-[A-Z2-9]{4}$/.test(gen.starterPassword || '') && gen.mustChange === true, gen.starterPassword);
+check('The starter is never shown again', !(await j(await fetch(`${BASE}/api/admin/users`, { headers: A }))).users.find((u) => u.username === 'PAT').starterPassword);
+const patIn = await j(await login({ username: 'PAT', password: gen.starterPassword }));
+check('The starter password signs them in, and says a real one is needed', patIn.mustChange === true, JSON.stringify(patIn.mustChange));
+const PAT = bearer(patIn.token);
+check('Who am I says so too, so a reload cannot skip the step', (await j(await fetch(`${BASE}/api/admin/me`, { headers: PAT }))).mustChange === true);
+const same = await fetch(`${BASE}/api/admin/me/password`, { method: 'POST', headers: PAT, body: JSON.stringify({ current: gen.starterPassword, next: gen.starterPassword }) });
+check('Keeping the starter as the new password is refused', same.status === 400 && /already have/.test((await j(same)).error), '');
+const setOwn = await fetch(`${BASE}/api/admin/me/password`, { method: 'POST', headers: PAT, body: JSON.stringify({ current: gen.starterPassword, next: 'my-own-password' }) });
+check('They set their own password and the flag clears', setOwn.ok && (await j(setOwn)).mustChange === false, '');
+check('The new password works and the starter no longer does',
+  (await login({ username: 'PAT', password: 'my-own-password' })).ok && (await login({ username: 'PAT', password: gen.starterPassword })).status === 401, '');
+const reset = await j(await fetch(`${BASE}/api/admin/users/PAT`, { method: 'POST', headers: A, body: JSON.stringify({ password: '' }) }));
+check('An admin reset generates a fresh starter and makes them choose again',
+  /^[a-z]+-[A-Z2-9]{4}$/.test(reset.starterPassword || '') && reset.mustChange === true, reset.starterPassword);
+check('A password an admin types is also a starter, not a permanent password',
+  (await j(await fetch(`${BASE}/api/admin/users/PAT`, { method: 'POST', headers: A, body: JSON.stringify({ password: 'typed-by-an-admin' }) }))).mustChange === true, '');
+
 /* ---------------- what a plain supervisor may not do ---------------- */
 const SAM = bearer((await j(await login({ username: 'SAM', password: 'dock-truck-9' }))).token);
 const nope = await fetch(`${BASE}/api/admin/users`, { headers: SAM });
@@ -119,19 +140,70 @@ check('Dashboard: the setup cards are gone from it',
   dashHeadings.join(' | '));
 await dash.close();
 
-check('Settings: the accounts table lists everyone', (await page.$$('#userTable tbody tr')).length === 2, clean(await page.textContent('#userTable')).slice(0, 120));
-await page.fill('#fNewUser', 'RILEY'); await page.fill('#fNewFullName', 'Riley Chen'); await page.fill('#fNewPass', 'scissor-lift-3');
+check('Settings: the accounts table lists everyone and flags who is still on a starter',
+  (await page.$$('#userTable tbody tr')).length === 3 && /starter/.test(await page.textContent('#userTable')),
+  clean(await page.textContent('#userTable')).slice(0, 140));
+await page.fill('#fNewUser', 'RILEY'); await page.fill('#fNewFullName', 'Riley Chen');
 await page.click('#btnAddUser'); await page.waitForTimeout(900);
-check('Settings: a login can be added from the page', /Added RILEY/.test(clean(await page.textContent('#userMsg'))) && (await page.$$('#userTable tbody tr')).length === 3, clean(await page.textContent('#userMsg')).slice(0, 90));
-await page.click('#userTable tbody tr:has-text("RILEY") button:text-is("Reset password")'); await page.waitForTimeout(700);
+const starter = clean(await page.textContent('#starterBox'));
+const starterPw = (/([a-z]+-[A-Z2-9]{4})/.exec(starter) || [])[1];
+check('Settings: adding a login with no password shows a starter to read out, once',
+  !!starterPw && /RILEY can sign in now/.test(starter) && (await page.$$('#userTable tbody tr')).length === 4, starterPw || starter.slice(0, 90));
+check('Settings: that starter actually signs them in', (await login({ username: 'RILEY', password: starterPw })).ok, '');
+await page.click('#userTable tbody tr:has-text("RILEY") button:text-is("Reset password")'); await page.waitForTimeout(900);
 check('Settings: an admin can reset somebody\'s password for them',
   (await login({ username: 'RILEY', password: 'reset-password-42' })).ok, '');
 await page.screenshot({ path: `${S}screenshots/settings-accounts.png`, clip: await page.$eval('#userTable', (el) => { const r = el.closest('.card').getBoundingClientRect(); return { x: r.x, y: Math.max(0, r.y), width: r.width, height: Math.min(r.height, 640) }; }) });
 
-// a plain supervisor sees the page, but not the account controls
+// first sign-in: a starter password gets you as far as choosing a real one, and no further
+{
+  const fresh = await j(await fetch(`${BASE}/api/admin/users`, { method: 'POST', headers: A, body: JSON.stringify({ username: 'NEWBIE', name: 'Ash Kowalski' }) }));
+  const np = await browser.newPage({ viewport: { width: 1100, height: 800 } });
+  np.on('pageerror', (e) => errors.push('newbie: ' + e.message));
+  await np.goto(BASE + '/admin');
+  await np.fill('#fUser', 'NEWBIE'); await np.fill('#fPassword', fresh.starterPassword); await np.click('#btnLogin');
+  await np.waitForSelector('#navSetPassword.active', { timeout: 15000 });
+  await np.waitForTimeout(600);
+  check('First sign-in: they land on "Choose your password", not the dashboard',
+    (await np.$eval('#scrMain', (el) => el.classList.contains('active'))) === false
+      && /starter password/.test(await np.textContent('#npWho')),
+    clean(await np.textContent('#npWho')).slice(0, 90));
+  check('First sign-in: it does not ask for the password they just typed',
+    await np.$eval('#npCurrentWrap', (el) => el.hidden));
+  await np.screenshot({ path: `${S}screenshots/settings-first-sign-in.png`, clip: { x: 0, y: 0, width: 1100, height: 560 } });
+  await np.fill('#npNext', 'short'); await np.fill('#npConfirm', 'short'); await np.click('#npSave'); await np.waitForTimeout(400);
+  check('First sign-in: a short password is refused without a round trip', /8 characters/.test(await np.textContent('#npMsg')), clean(await np.textContent('#npMsg')));
+  await np.fill('#npNext', 'apple-cart-9'); await np.fill('#npConfirm', 'apple-cart-8'); await np.click('#npSave'); await np.waitForTimeout(400);
+  check('First sign-in: a mistyped confirmation is caught', /do not match/.test(await np.textContent('#npMsg')), clean(await np.textContent('#npMsg')));
+  await np.fill('#npNext', 'apple-cart-9'); await np.fill('#npConfirm', 'apple-cart-9'); await np.click('#npSave');
+  await np.waitForSelector('#scrMain.active', { timeout: 15000 }); await np.waitForTimeout(1200);
+  check('First sign-in: with a real password set they go straight through to the dashboard',
+    await np.$eval('#navSetPassword', (el) => el.hidden) && /Ash Kowalski/.test(await np.textContent('#navWho')),
+    clean(await np.textContent('#navWho')));
+  check('First sign-in: the password they chose is the one that works from now on',
+    (await login({ username: 'NEWBIE', password: 'apple-cart-9' })).ok
+      && (await login({ username: 'NEWBIE', password: fresh.starterPassword })).status === 401, '');
+  // and a reload cannot walk past the step
+  const fresh2 = await j(await fetch(`${BASE}/api/admin/users`, { method: 'POST', headers: A, body: JSON.stringify({ username: 'NEWBIE2', name: 'Kim Alvarez' }) }));
+  await np.evaluate(() => sessionStorage.removeItem('admToken'));
+  const tok2 = (await j(await login({ username: 'NEWBIE2', password: fresh2.starterPassword }))).token;
+  await np.evaluate((t) => sessionStorage.setItem('admToken', t), tok2);
+  await np.goto(BASE + '/teams');
+  await np.waitForSelector('#navSetPassword.active', { timeout: 15000 }); await np.waitForTimeout(500);
+  check('First sign-in: reloading another tab does not skip it, and it asks for the starter there',
+    !(await np.$eval('#npCurrentWrap', (el) => el.hidden)) && /Finish setting up/.test(await np.textContent('#npWho')),
+    clean(await np.textContent('#npWho')).slice(0, 80));
+  await np.close();
+}
+
+// a plain supervisor sees the page, but not the account controls.
+// RILEY was just reset, so settle on a password of their own first — otherwise
+// they land on "Choose your password", which is itself the point of the step.
+const rileyTok = (await j(await login({ username: 'RILEY', password: 'reset-password-42' }))).token;
+await fetch(`${BASE}/api/admin/me/password`, { method: 'POST', headers: bearer(rileyTok), body: JSON.stringify({ current: 'reset-password-42', next: 'riley-own-pass' }) });
 const sup = await browser.newPage({ viewport: { width: 1200, height: 900 } });
 await sup.goto(BASE + '/settings');
-await sup.fill('#fUser', 'RILEY'); await sup.fill('#fPassword', 'reset-password-42'); await sup.click('#btnLogin');
+await sup.fill('#fUser', 'RILEY'); await sup.fill('#fPassword', 'riley-own-pass'); await sup.click('#btnLogin');
 await sup.waitForSelector('#scrMain.active'); await sup.waitForTimeout(1200);
 check('Settings: a supervisor is told account management is an admin job, and keeps the rest',
   await sup.$eval('#adminOnly', (el) => el.hidden) && !(await sup.$eval('#notAdmin', (el) => el.hidden))

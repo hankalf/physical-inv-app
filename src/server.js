@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 
 import {
-  db, listSessions, getSession, createSession, publicSession, masterPayload,
+  db, listSessions, getSession, createSession, lastUsedLayout, publicSession, masterPayload,
   saveCounts, countedPallets, recordSignon, norm,
   listDevices, getDevice, createDevice, updateDevice, deleteDevice, touchDevice,
   enrollDevice, deviceByToken, resetDevice,
@@ -363,7 +363,11 @@ async function handleAdmin(req, res, url, m) {
       if (user) {
         adminTokens.set(token, { name: user.name, username: user.username, role: user.role });
         audit(user.name, 'signed in', `as ${user.username} (${user.role})`);
-        return sendJson(req, res, 200, { token, name: user.name, username: user.username, role: user.role, accounts: countUsers() });
+        // a starter password gets them in, but only as far as choosing a real one
+        return sendJson(req, res, 200, {
+          token, name: user.name, username: user.username, role: user.role,
+          mustChange: user.mustChange, accounts: countUsers(),
+        });
       }
       if (getUser(username)) throw httpError(401, 'that username and password do not match');
     }
@@ -407,12 +411,19 @@ async function handleAdmin(req, res, url, m) {
   if (p === '/api/admin/sessions' && method === 'POST') {
     const body = await readJson(req);
     if (!body.name || !String(body.name).trim()) throw httpError(400, 'name required');
+    // A new count inherits the map drawing the site is already using - and if this
+    // is the first count, the one drawing that ships takes it. Nobody should have
+    // to remember to turn the blueprint back on.
+    const shipped = listLayouts();
+    const layout = body.layout !== undefined ? String(body.layout || '')
+      : lastUsedLayout() || (shipped.length === 1 ? shipped[0].id : '');
     const created = createSession({
       mode: body.mode === 'cycle' ? 'cycle' : 'full',
       name: String(body.name).trim(),
       palletMode: body.palletMode,
       guided: body.guided !== false,
       askComments: body.askComments !== false,
+      layout: loadLayout(layout) ? layout : '',
     });
     audit(actor, 'created session', `#${created.id} "${created.name}" (${created.mode})`, created.id);
     return sendJson(req, res, 200, created);
@@ -497,7 +508,11 @@ async function handleAdmin(req, res, url, m) {
   if (p === '/api/admin/me' && method === 'GET') {
     const who = currentUser(req, url);
     if (!who) throw httpError(401, 'unauthorized');
-    return sendJson(req, res, 200, { ...who, accounts: countUsers(), sharedLogin: SHARED_LOGIN });
+    const account = who.username ? getUser(who.username) : null;
+    return sendJson(req, res, 200, {
+      ...who, mustChange: !!(account && account.must_change),
+      accounts: countUsers(), sharedLogin: SHARED_LOGIN,
+    });
   }
   if (p === '/api/admin/users' && method === 'GET') {
     requireAccountAdmin(req, url);
@@ -526,9 +541,9 @@ async function handleAdmin(req, res, url, m) {
     const who = currentUser(req, url);
     if (!who || !who.username) throw httpError(400, 'sign in with an account to change its password');
     const body = await readJson(req);
-    changeOwnPassword(who.username, body.current, body.next);
+    const updated = changeOwnPassword(who.username, body.current, body.next);
     audit(actor, 'changed their own password', who.username);
-    return sendJson(req, res, 200, { ok: true });
+    return sendJson(req, res, 200, { ok: true, ...updated });
   }
 
   // --- roster: employees, teams, equipment

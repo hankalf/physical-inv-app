@@ -203,7 +203,8 @@ CREATE TABLE IF NOT EXISTS users (
   active        INTEGER NOT NULL DEFAULT 1,
   created_at    TEXT NOT NULL,
   created_by    TEXT,
-  last_login    TEXT
+  last_login    TEXT,
+  must_change   INTEGER NOT NULL DEFAULT 0
 );
 
 -- Who changed what in the dashboard.
@@ -285,6 +286,8 @@ if (!hasCol('recounts', 'batch_id')) db.exec('ALTER TABLE recounts ADD COLUMN ba
 if (!hasCol('counts', 'pass')) db.exec('ALTER TABLE counts ADD COLUMN pass INTEGER NOT NULL DEFAULT 1');
 if (!hasCol('counts', 'recount_id')) db.exec('ALTER TABLE counts ADD COLUMN recount_id INTEGER');
 if (!hasCol('sessions', 'auto_recount')) db.exec('ALTER TABLE sessions ADD COLUMN auto_recount INTEGER NOT NULL DEFAULT 1');
+// a login can be handed out with a starter password the person must replace
+if (!hasCol('users', 'must_change')) db.exec('ALTER TABLE users ADD COLUMN must_change INTEGER NOT NULL DEFAULT 0');
 if (!hasCol('assignments', 'levels')) {
   // a team is assigned an aisle AND the levels it has the equipment for
   db.exec("ALTER TABLE assignments ADD COLUMN levels TEXT NOT NULL DEFAULT ''");
@@ -329,17 +332,22 @@ export function listSessions(status) {
 
 export const getSession = (id) => db.prepare('SELECT * FROM sessions WHERE id = ?').get(Number(id));
 
-export function createSession({ name, mode = 'full', palletMode = 'warn', guided = 1, askComments = 1 }) {
+export function createSession({ name, mode = 'full', palletMode = 'warn', guided = 1, askComments = 1, layout = '' }) {
   const check = ['off', 'warn', 'strict'].includes(palletMode) ? palletMode : 'warn';
   const kind = mode === 'cycle' ? 'cycle' : 'full';
   const info = db
     .prepare(
-      `INSERT INTO sessions (name, mode, pallet_mode, guided, ask_comments, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO sessions (name, mode, pallet_mode, guided, ask_comments, layout, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(name, kind, check, kind === 'cycle' ? 0 : (guided ? 1 : 0), askComments ? 1 : 0, new Date().toISOString());
+    .run(name, kind, check, kind === 'cycle' ? 0 : (guided ? 1 : 0), askComments ? 1 : 0,
+         String(layout || ''), new Date().toISOString());
   return getSession(info.lastInsertRowid);
 }
+
+/** The drawing the site is already using, so a new count is not back on a schematic. */
+export const lastUsedLayout = () =>
+  db.prepare("SELECT layout FROM sessions WHERE layout IS NOT NULL AND layout != '' ORDER BY id DESC LIMIT 1").get()?.layout || '';
 
 export const bumpMasterVersion = (sessionId) =>
   db.prepare('UPDATE sessions SET master_version = master_version + 1 WHERE id = ?').run(Number(sessionId));

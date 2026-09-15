@@ -44,6 +44,8 @@
 
     logout() {
       api.token = ''; api.me = null;
+      const box = document.getElementById('navSetPassword');
+      if (box) { box.hidden = true; box.classList.remove('active'); }
       sessionStorage.removeItem('admToken');
       document.dispatchEvent(new CustomEvent('auth', { detail: null }));
     },
@@ -173,11 +175,82 @@
     api.token = me.token;
     api.me = me;
     sessionStorage.setItem('admToken', me.token);
+    if (me.mustChange) justTyped = password;      // so the next step need not ask again
     renderTabs();
-    document.dispatchEvent(new CustomEvent('auth', { detail: me }));
+    announce();
     return me;
   }
   api.signIn = signIn;
+
+  /* ---------------------------------------------------------- first sign-in
+     A login handed out with a starter password gets no further than choosing a
+     real one. The panel is built here so every page has it without markup. */
+  let justTyped = '';
+
+  function announce() {
+    if (api.me && api.me.mustChange) return setPassword();
+    setPasswordPanel().hidden = true;
+    document.dispatchEvent(new CustomEvent('auth', { detail: api.me }));
+  }
+
+  function setPasswordPanel() {
+    let box = document.getElementById('navSetPassword');
+    if (box) return box;
+    box = document.createElement('section');
+    box.id = 'navSetPassword';
+    box.className = 'screen active';
+    box.innerHTML = `
+      <div class="card signin">
+        <h2>Choose your password</h2>
+        <div class="hint" id="npWho"></div>
+        <div id="npCurrentWrap" hidden>
+          <label for="npCurrent">The password you were given</label>
+          <input id="npCurrent" type="password" autocomplete="current-password">
+        </div>
+        <label for="npNext">New password <span style="text-transform:none;letter-spacing:0">— at least 8 characters</span></label>
+        <input id="npNext" type="password" autocomplete="new-password">
+        <label for="npConfirm">Type it again</label>
+        <input id="npConfirm" type="password" autocomplete="new-password">
+        <button class="primary" id="npSave" style="width:100%;margin-top:10px">Save and carry on</button>
+        <div class="feedback" id="npMsg"></div>
+      </div>`;
+    (document.querySelector('main') || document.body).appendChild(box);
+    const save = async () => {
+      const m = box.querySelector('#npMsg');
+      const next = box.querySelector('#npNext').value;
+      const current = justTyped || box.querySelector('#npCurrent').value;
+      const fail = (t) => { m.className = 'feedback show err'; m.textContent = t; };
+      if (next.length < 8) return fail('At least 8 characters, please');
+      if (next !== box.querySelector('#npConfirm').value) return fail('Those two do not match');
+      try {
+        await api.post('/api/admin/me/password', { current, next });
+        justTyped = '';
+        api.me = { ...api.me, mustChange: false };
+        for (const id of ['npCurrent', 'npNext', 'npConfirm']) box.querySelector('#' + id).value = '';
+        m.className = 'feedback';
+        m.textContent = '';
+        announce();
+      } catch (err) { fail(err.message); }
+    };
+    box.querySelector('#npSave').onclick = save;
+    for (const id of ['npCurrent', 'npNext', 'npConfirm']) {
+      box.querySelector('#' + id).addEventListener('keydown', (e) => { if (e.key === 'Enter') save(); });
+    }
+    return box;
+  }
+
+  function setPassword() {
+    // hide whatever the page is showing; this is the only thing on screen now
+    for (const el of document.querySelectorAll('main > .screen')) el.classList.remove('active');
+    const box = setPasswordPanel();
+    box.hidden = false;
+    box.classList.add('active');
+    box.querySelector('#npCurrentWrap').hidden = !!justTyped;
+    box.querySelector('#npWho').textContent = justTyped
+      ? `Signed in as ${api.me.username}. This login was handed to you with a starter password — pick one only you know, then you are through.`
+      : `Signed in as ${api.me.username}. Finish setting up this login: type the password you were given, then one only you know.`;
+    box.querySelector(justTyped ? '#npNext' : '#npCurrent').focus();
+  }
 
   /** Every page calls this on load: are we signed in, and who are we? */
   api.start = async function start() {
@@ -187,7 +260,7 @@
       } catch { api.token = ''; api.me = null; sessionStorage.removeItem('admToken'); }
     }
     renderTabs();
-    document.dispatchEvent(new CustomEvent('auth', { detail: api.me }));
+    announce();
     return api.me;
   };
 

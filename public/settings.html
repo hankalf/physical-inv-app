@@ -22,7 +22,7 @@
   .tag.supervisor { color: var(--muted); }
   .tag.off { color: var(--err); border-color: #6e2c2f; }
   .tag.done, .tag.active { color: var(--ok); border-color: #1d572a; }
-  .tag.queued { color: var(--warn); border-color: #5c4813; }
+  .tag.queued, .tag.starter { color: var(--warn); border-color: #5c4813; }
   .scroll { overflow-x: auto; }
   button { width: auto; padding: 9px 14px; font-size: 14px; margin-top: 0; }
   button.sm { padding: 4px 9px; font-size: 12px; }
@@ -92,7 +92,7 @@
         <div class="inline" style="margin-top:10px">
           <div class="auto"><label for="fNewUser">Username</label><input id="fNewUser" style="width:140px" placeholder="DANA"></div>
           <div><label for="fNewFullName">Full name</label><input id="fNewFullName" placeholder="Dana Whitfield"></div>
-          <div class="auto"><label for="fNewPass">Password</label><input id="fNewPass" type="password" style="width:160px" autocomplete="new-password" placeholder="8+ characters"></div>
+          <div class="auto"><label for="fNewPass">Password</label><input id="fNewPass" type="password" style="width:190px" autocomplete="new-password" placeholder="leave blank to generate"></div>
           <div class="auto">
             <label for="fNewRole">Role</label>
             <select id="fNewRole">
@@ -102,9 +102,15 @@
           </div>
           <div class="auto"><button class="primary fit" id="btnAddUser">Add login</button></div>
         </div>
+        <div class="hint">
+          Leave the password blank and one is generated for you — read it out once, and they choose
+          their own the first time they sign in. Type one instead and they still have to replace it,
+          so nobody but its owner ever knows a working password.
+        </div>
         <div class="feedback" id="userMsg"></div>
         <div class="scroll" style="margin-top:10px"><table id="userTable"></table></div>
       </div>
+      <div class="feedback" id="starterBox" style="display:none"></div>
       <div class="hint" id="notAdmin" hidden>
         Only an admin can add or remove logins. You can still change your own password below.
       </div>

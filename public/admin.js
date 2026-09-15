@@ -487,6 +487,26 @@
   }
 
   let mapLevel = '';
+  let layouts = [];
+
+  /** Offer the drawing when a session is on the schematic and a drawing exists. */
+  function showMapFix(noDrawing, hasBins) {
+    $('mapFix').hidden = !(noDrawing && hasBins);
+    if ($('mapFix').hidden) return;
+    $('btnUseDrawing').textContent = `Use ${layouts[0].name}`;
+    $('mapFixWhy').textContent = 'This session is on the schematic. Switch it to the rack drawing to see the real floor plan.';
+  }
+  $('btnUseDrawing').onclick = async () => {
+    if (!needSession($('sessionMsg')) || !layouts.length) return;
+    try {
+      $('fLayout').value = layouts[0].id;
+      await postJson(`/api/admin/sessions/${sessionId}/settings`, {
+        palletMode: $('fPalletMode').value, guided: $('fGuided').checked, askComments: $('fAskComments').checked,
+        autoRecount: $('fAutoRecount').checked, layout: layouts[0].id,
+      });
+      await loadSessions();
+    } catch (err) { msg($('sessionMsg'), 'err', err.message); }
+  };
   function renderLevelChips(levels) {
     const box = $('mapLevels');
     box.innerHTML = '';
@@ -507,7 +527,13 @@
     renderLevelChips(levels);
     if (mapLevel) data.bins = data.bins.filter(([code]) => parseBinCode(code).level === mapLevel);
     $('mapSub').textContent = data.layout ? data.layout.name : 'top-down, built from the bin codes · aisles that share racking are drawn back-to-back';
-    if (!data.bins.length) { $('mapNote').textContent = 'Upload a bin list to draw the map.'; svg.setAttribute('height', 0); return; }
+    // An empty map card reads as broken, so say which of the two things is missing.
+    showMapFix(!data.layout && layouts.length > 0, data.bins.length > 0);
+    if (!data.bins.length) {
+      $('mapNote').textContent = 'No bins in this session yet — upload its bin list under Settings and the map draws itself.';
+      svg.setAttribute('height', 0);
+      return;
+    }
     const r = data.layout ? renderBlueprint(svg, data, data.layout) : renderSchematic(svg, data);
     $('mapNote').textContent = `${mapLevel ? 'Level ' + mapLevel + ': ' : ''}${r.counted.toLocaleString()} of ${r.total.toLocaleString()} bins have a count. Each cell is a bay; hover for the bins in it.` +
       (r.missing.length ? ` Not on the drawing — ${r.missing.join(' · ')}.` : '');
@@ -591,8 +617,10 @@
 
   /* ------------------------------------------------------------ boot */
   async function loadLayouts() {
+    layouts = await apiJson('/api/admin/layouts');
     const sel = $('fLayout');
-    for (const l of await apiJson('/api/admin/layouts')) {
+    sel.innerHTML = '<option value="">Schematic (auto from bin codes)</option>';
+    for (const l of layouts) {
       const o = document.createElement('option');
       o.value = l.id; o.textContent = `${l.name} (${l.aisles} aisles)`;
       sel.appendChild(o);

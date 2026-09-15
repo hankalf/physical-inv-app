@@ -395,7 +395,13 @@ for (const [btn, name] of [['#btnExportPallets', 'pallets'], ['#btnExportCounts'
   check(`Admin: export ${name}.csv`, dl.suggestedFilename().startsWith(name) && lines.length > 1, `${lines.length - 1} rows, header: ${lines[0].slice(0, 70)}`);
 }
 // Excel: the real ERP workbook, as-is, into a fresh session
-await admin.fill('#fNewName', 'xlsx check'); await admin.click('#btnCreate'); await admin.waitForTimeout(600);
+await admin.fill('#fNewName', 'xlsx check'); await admin.click('#btnCreate'); await admin.waitForTimeout(1500);
+check('Admin: a new session comes up on the site drawing, not back on the schematic',
+  await admin.$eval('#fLayout', (s) => s.value) === 'front-royal'
+    && /rack layout/.test(await admin.textContent('#mapSub')),
+  `${await admin.$eval('#fLayout', (s) => s.value)} · ${(await admin.textContent('#mapSub')).slice(0, 50)}`);
+check('Admin: a session with no bins yet says so instead of showing an empty map',
+  /No bins in this session yet/.test(await admin.textContent('#mapNote')), clean(await admin.textContent('#mapNote')).slice(0, 80));
 await admin.selectOption('#fLayout', 'front-royal'); await admin.click('#btnSaveSettings'); await admin.waitForTimeout(400);
 await toSettings();
 check('Settings: the session picker follows the dashboard to the newest session',
@@ -409,6 +415,21 @@ await admin.waitForFunction(() => /Imported|failed/.test(document.getElementById
 }
 await toDashboard();
 await admin.selectOption('#fSessionPick', '1'); await admin.waitForTimeout(800);
+{ // a session put on the schematic is offered the drawing rather than just looking wrong
+  const adm2 = { 'content-type': 'application/json', authorization: 'Bearer ' + (await admin.evaluate(() => sessionStorage.getItem('admToken'))) };
+  const plain = await (await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: adm2, body: JSON.stringify({ name: 'schematic on purpose', layout: '' }) })).json();
+  await fetch(`${BASE}/api/admin/sessions/${plain.id}/master?kind=bins`, { method: 'POST', headers: { authorization: adm2.authorization, 'content-type': 'text/csv' }, body: 'Bin Location\nF01A001\nF01A002\nF02A001\n' });
+  await admin.reload(); await admin.waitForSelector('#scrMain.active'); await admin.waitForTimeout(1500);
+  await admin.selectOption('#fSessionPick', String(plain.id)); await admin.waitForTimeout(2000);
+  check('Admin: a session on the schematic is offered the rack drawing',
+    !(await admin.$eval('#mapFix', (el) => el.hidden)) && /Use Front Royal/.test(await admin.textContent('#btnUseDrawing')),
+    clean(await admin.textContent('#btnUseDrawing')));
+  await admin.click('#btnUseDrawing'); await admin.waitForTimeout(2500);
+  check('Admin: one click switches it to the blueprint and the offer goes away',
+    await admin.$eval('#map', (s) => s.classList.contains('blueprint')) && await admin.$eval('#mapFix', (el) => el.hidden),
+    await admin.$eval('#fLayout', (s) => s.value));
+  await admin.selectOption('#fSessionPick', '1'); await admin.waitForTimeout(2500);
+}
 // close session -> scanner rejected -> reopen
 await admin.click('#btnCloseSession'); await admin.waitForTimeout(600);
 const closedPost = await fetch(`${BASE}/api/sessions/1/counts`, { method: 'POST', headers: api.headers, body: JSON.stringify([{ clientId: 'x1', palletId: 'P', qty: 1, location: 'F01A001', team: '1', deviceId: 'D' }]) });
