@@ -138,7 +138,7 @@ export function listEmployees() {
 
 export function upsertEmployee({ badge, name, dept, equipment, active = 1 }) {
   const b = norm(badge);
-  if (!b) throw Object.assign(new Error('badge required'), { status: 400 });
+  if (!b) throw Object.assign(new Error('clock in number required'), { status: 400 });
   const known = getEquipment();
   const list = Array.isArray(equipment) ? equipment.map(norm).filter((e) => known[e]) : parseEquipment(equipment);
   db.prepare(
@@ -173,7 +173,7 @@ export function importEmployees(text, { replace = false } = {}) {
   try {
     if (replace) { db.exec('DELETE FROM team_members'); db.exec('DELETE FROM employees'); }
     for (const rec of records) {
-      const badge = norm(pick(rec, ['badge', 'badgeid', 'employeeid', 'empid', 'id', 'employeenumber', 'employeeno', 'number']));
+      const badge = norm(pick(rec, ['clockinnumber', 'clocknumber', 'clockin', 'clockno', 'badge', 'badgeid', 'employeeid', 'empid', 'id', 'employeenumber', 'employeeno', 'number']));
       if (!badge) { stats.skipped++; continue; }
       const rawEquip = pick(rec, ['equipment', 'equipmentcertified', 'certifications', 'certified', 'licences', 'licenses', 'canoperate', 'machines']);
       for (const part of String(rawEquip).split(/[,;/|]+/)) {
@@ -237,7 +237,7 @@ export function deleteTeam(id) {
 /** Move an employee onto a team, or off every team when teamId is null. */
 export function assignMember(badge, teamId) {
   const b = norm(badge);
-  if (!db.prepare('SELECT 1 FROM employees WHERE badge = ?').get(b)) throw Object.assign(new Error(`no employee with badge ${b}`), { status: 404 });
+  if (!db.prepare('SELECT 1 FROM employees WHERE badge = ?').get(b)) throw Object.assign(new Error(`nobody with clock in number ${b}`), { status: 404 });
   db.prepare('DELETE FROM team_members WHERE badge = ?').run(b);
   if (teamId != null && teamId !== '') {
     if (!db.prepare('SELECT 1 FROM teams WHERE id = ?').get(Number(teamId))) throw Object.assign(new Error('no such team'), { status: 404 });

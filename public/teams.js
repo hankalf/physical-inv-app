@@ -45,7 +45,7 @@
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ password: $('fPassword').value }),
+        body: JSON.stringify({ password: $('fPassword').value, name: $('fWho').value }),
       });
       if (!res.ok) throw new Error('Wrong password');
       token = (await res.json()).token;

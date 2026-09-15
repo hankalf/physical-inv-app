@@ -48,6 +48,7 @@
     $('scrMain').classList.toggle('active', which === 'main');
     $('btnLogout').hidden = which !== 'main';
     $('teamsLink').hidden = which !== 'main';
+    $('cycleLink').hidden = which !== 'main';
     $('sessionChip').hidden = which !== 'main';
   }
   function logout() { token = ''; sessionStorage.removeItem('admToken'); show('login'); }
@@ -56,7 +57,7 @@
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ password: $('fPassword').value }),
+        body: JSON.stringify({ password: $('fPassword').value, name: $('fWho').value }),
       });
       if (!res.ok) throw new Error('Wrong password');
       token = (await res.json()).token;
@@ -64,6 +65,7 @@
       $('fPassword').value = '';
       show('main');
       await loadLayouts();
+      await refreshErp();
       await refreshDevices();
       await loadSessions();
     } catch (err) { msg($('loginMsg'), 'err', err.message); }
@@ -216,7 +218,7 @@
     for (const s of sessions) {
       const o = document.createElement('option');
       o.value = s.id;
-      o.textContent = `#${s.id} — ${s.name} (${s.status})`;
+      o.textContent = `#${s.id} — ${s.name} (${s.mode === 'cycle' ? 'cycle · ' : ''}${s.status})`;
       sel.appendChild(o);
     }
     if (!sessions.length) { sel.innerHTML = '<option value="">No sessions yet — create one below</option>'; sessionId = null; return; }
@@ -229,8 +231,7 @@
   function applySessionSettings() {
     const s = sessions.find((x) => x.id === sessionId);
     if (!s) return;
-    document.querySelector('.two').hidden = s.mode === 'cycle';   // aisles & assignments
-    $('cycleCard').hidden = s.mode !== 'cycle';
+    document.querySelector('.two').hidden = s.mode === 'cycle';   // a cycle session has no aisle plan
     $('sessionChip').textContent = `Session #${s.id}${s.status === 'closed' ? ' (closed)' : ''}`;
     $('fPalletMode').value = s.pallet_mode;
     $('fGuided').checked = !!s.guided;
@@ -389,108 +390,6 @@
     }
   }
 
-  /* ------------------------------------------------------------ cycle counting */
-  const isCycle = () => (sessions.find((x) => x.id === sessionId) || {}).mode === 'cycle';
-
-  async function refreshCycle() {
-    $('cycleCard').hidden = !isCycle();
-    if (!isCycle()) return;
-    const data = await apiJson(`/api/admin/sessions/${sessionId}/cycle/batches`);
-    const c = data.coverage;
-    const pct = c.bins ? Math.round((c.recent / c.bins) * 100) : 0;
-    $('cycleStats').innerHTML = '';
-    for (const [n, l] of [
-      [`${pct}%`, `Counted in the last ${c.days} days`],
-      [`${c.recent.toLocaleString()} / ${c.bins.toLocaleString()}`, 'Bins covered'],
-      [c.never.toLocaleString(), 'Never counted'],
-      [c.oldest ? new Date(c.oldest).toLocaleDateString() : '—', 'Oldest count on record'],
-      [c.openTasks.toLocaleString(), 'Bins on open lists'],
-    ]) {
-      const d = document.createElement('div');
-      d.className = 'stat';
-      d.innerHTML = '<div class="n"></div><div class="l"></div>';
-      d.querySelector('.n').textContent = n;
-      d.querySelector('.l').textContent = l;
-      $('cycleStats').appendChild(d);
-    }
-    $('cycleSub').textContent = (data.batches.length ? `${data.batches.length} batch(es) · ` : '') +
-      `site clock ${data.siteTimezone}, today is ${data.siteDate}`;
-
-    table($('batchTable'),
-      [{ label: 'Due' }, { label: 'Batch' }, { label: 'Picked by' }, { label: 'Scope' }, { label: 'Bins', num: true }, { label: 'Done', num: true }, { label: 'Progress' }, { label: 'Teams' }, { label: '' }],
-      data.batches,
-      (b) => {
-        const tr = document.createElement('tr');
-        const scope = (() => { try { const s2 = JSON.parse(b.scope || '{}'); return [s2.zone, s2.aisle, s2.levels].filter(Boolean).join(' · ') || 'whole site'; } catch { return 'whole site'; } })();
-        tr.append(cell(b.due_date), cell(b.name + (b.auto ? ' (auto)' : '')), cell(data.strategies[b.strategy] || b.strategy), cell(scope),
-          cell(b.bins, 'num'), cell(b.done, 'num'));
-        const td = document.createElement('td');
-        const bar = document.createElement('div'); bar.className = 'bar';
-        const i = document.createElement('i'); i.style.width = (b.bins ? Math.round((b.done / b.bins) * 100) : 0) + '%';
-        bar.appendChild(i); td.appendChild(bar); tr.appendChild(td);
-        tr.append(cell(b.teams || '—'));
-        const tdDel = document.createElement('td');
-        const del = document.createElement('button'); del.className = 'sm danger'; del.textContent = b.done ? 'Clear rest' : 'Remove';
-        del.onclick = async () => {
-          if (!confirm(`${b.done ? 'Remove the bins still open in' : 'Remove'} "${b.name}"? Counts already recorded are kept.`)) return;
-          try { await apiJson(`/api/admin/sessions/${sessionId}/cycle/batches/${b.id}`, { method: 'DELETE' }); await refreshAll(); } catch (err) { msg($('cycleMsg'), 'err', err.message); }
-        };
-        tdDel.appendChild(del); tr.appendChild(tdDel);
-        return tr;
-      }, 'No batches yet — generate one above.');
-
-    // schedule fields reflect what is stored
-    const s2 = sessions.find((x) => x.id === sessionId);
-    let plan = null;
-    try { plan = s2.cycle_schedule ? JSON.parse(s2.cycle_schedule) : null; } catch { /* ignore */ }
-    $('fCycAuto').checked = !!plan;
-    if (plan) {
-      $('fCycEvery').value = plan.every; $('fCycSchedBins').value = plan.bins;
-      $('fCycHour').value = plan.hour; $('fCycWeekday').value = String(plan.weekday ?? 1);
-    }
-  }
-
-  const cycleOpts = () => ({
-    target: Number($('fCycBins').value), strategy: $('fCycStrategy').value,
-    zone: $('fCycZone').value, aisle: $('fCycAisle').value, levels: $('fCycLevels').value, team: $('fCycTeam').value,
-  });
-
-  $('btnCycPreview').onclick = async () => {
-    if (!needSession($('cycleMsg'))) return;
-    try {
-      const r = await postJson(`/api/admin/sessions/${sessionId}/cycle/preview`, cycleOpts());
-      const oldest = r.picked[0], newest = r.picked[r.picked.length - 1];
-      msg($('cycleMsg'), 'warn', `${r.picked.length} bins would be picked (${r.available.toLocaleString()} match that scope)`,
-        r.picked.length ? `From ${oldest.code} (${oldest.last_counted ? 'last counted ' + oldest.last_counted.slice(0, 10) : 'never counted'}) to ${newest.code}. Nothing generated yet.` : '');
-    } catch (err) { msg($('cycleMsg'), 'err', err.message); }
-  };
-
-  $('btnCycGenerate').onclick = async () => {
-    if (!needSession($('cycleMsg'))) return;
-    try {
-      const r = await postJson(`/api/admin/sessions/${sessionId}/cycle/batches`, cycleOpts());
-      msg($('cycleMsg'), 'ok', `Generated ${r.created} bins for ${r.batch.due_date}.`, 'They are on the scanners now — teams see them at sign-on or after a refresh.');
-      await refreshAll();
-    } catch (err) { msg($('cycleMsg'), 'err', err.message); }
-  };
-
-  $('btnCycSchedule').onclick = async () => {
-    if (!needSession($('cycleMsg'))) return;
-    try {
-      const body = $('fCycAuto').checked
-        ? { every: $('fCycEvery').value, bins: Number($('fCycSchedBins').value), strategy: $('fCycStrategy').value,
-            hour: Number($('fCycHour').value), weekday: Number($('fCycWeekday').value),
-            zone: $('fCycZone').value, aisle: $('fCycAisle').value, levels: $('fCycLevels').value }
-        : {};
-      await postJson(`/api/admin/sessions/${sessionId}/cycle/schedule`, body);
-      msg($('cycleMsg'), 'ok', $('fCycAuto').checked
-        ? `Saved: ${$('fCycSchedBins').value} bins every ${$('fCycEvery').value === 'week' ? $('fCycWeekday').selectedOptions[0].textContent : 'weekday'} from ${$('fCycHour').value}:00.`
-        : 'Automatic generation turned off.');
-      await loadSessions();
-    } catch (err) { msg($('cycleMsg'), 'err', err.message); }
-  };
-  $('btnExportCoverage').onclick = () => download(`/api/admin/sessions/${sessionId}/export/coverage.csv`, `bin-coverage-session-${sessionId}.csv`);
-
   /* ------------------------------------------------------------ second counts */
   async function refreshRecounts() {
     const rows = await apiJson(`/api/admin/sessions/${sessionId}/recounts`);
@@ -542,6 +441,77 @@
     } catch (err) { msg($('recountMsg'), 'err', err.message); }
   };
   $('btnExportRecounts').onclick = () => download(`/api/admin/sessions/${sessionId}/export/recounts.csv`, `second-counts-session-${sessionId}.csv`);
+
+  /* ------------------------------------------------ ERP, printing, housekeeping */
+  async function refreshErp() {
+    const data = await apiJson('/api/admin/erp/formats');
+    const sel = $('fErpFormat');
+    const prior = sel.value;
+    sel.innerHTML = '';
+    for (const [id, f] of Object.entries(data.formats)) {
+      const o = document.createElement('option');
+      o.value = id; o.textContent = f.label || id;
+      sel.appendChild(o);
+    }
+    if (prior && data.formats[prior]) sel.value = prior;
+  }
+  $('btnErpPreview').onclick = async () => {
+    if (!needSession($('erpMsg'))) return;
+    try {
+      const r = await apiJson(`/api/admin/sessions/${sessionId}/erp/${$('fErpFormat').value}/preview`);
+      msg($('erpMsg'), 'ok', `${r.rows.toLocaleString()} rows — ${r.format.label}`, 'First few lines below. Nothing has been sent anywhere.');
+      $('erpSample').style.display = 'block';
+      $('erpSample').textContent = r.sample;
+    } catch (err) { msg($('erpMsg'), 'err', err.message); }
+  };
+  $('btnErpDownload').onclick = () => {
+    if (!needSession($('erpMsg'))) return;
+    download(`/api/admin/sessions/${sessionId}/erp/${$('fErpFormat').value}.csv`, `${$('fErpFormat').value}-${sessionId}.csv`);
+  };
+
+  $('btnPrint').onclick = () => {
+    if (!needSession($('opsMsg'))) return;
+    const q = new URLSearchParams();
+    if ($('fPrintAisle').value.trim()) q.set('aisle', $('fPrintAisle').value.trim());
+    if ($('fPrintLevels').value.trim()) q.set('levels', $('fPrintLevels').value.trim());
+    if ($('fPrintUncounted').checked) q.set('uncounted', '1');
+    if ($('fPrintExpected').checked) q.set('blind', '0');
+    // the sheet is a page, not a download, so it needs the token in the URL
+    q.set('t', token);
+    window.open(`/api/admin/sessions/${sessionId}/print/count-sheet?${q}`, '_blank');
+  };
+
+  async function refreshOps() {
+    const [b, log] = await Promise.all([apiJson('/api/admin/backups'), apiJson('/api/admin/audit?limit=60')]);
+    $('backupSub').textContent = b.backups.length
+      ? `${b.backups.length} kept (newest ${new Date(b.backups[0].at).toLocaleString()}), one a day, ${b.keep} retained`
+      : 'no backups yet';
+    table($('backupTable'), [{ label: 'Backup' }, { label: 'Size', num: true }, { label: 'Taken' }, { label: '' }], b.backups.slice(0, 20),
+      (f) => {
+        const tr = document.createElement('tr');
+        tr.append(cell(f.name), cell(Math.round(f.bytes / 1024).toLocaleString() + ' KB', 'num'), cell(new Date(f.at).toLocaleString()));
+        const td = document.createElement('td');
+        const dl = document.createElement('button');
+        dl.className = 'sm'; dl.textContent = 'Download';
+        dl.onclick = () => download(`/api/admin/backups/${f.name}`, f.name);
+        td.appendChild(dl); tr.appendChild(td);
+        return tr;
+      }, 'No backups yet — one is taken automatically each day.');
+    table($('auditTable'), [{ label: 'When' }, { label: 'Who' }, { label: 'Did what' }, { label: 'Detail' }], log,
+      (a) => {
+        const tr = document.createElement('tr');
+        tr.append(cell(new Date(a.at).toLocaleString()), cell(a.actor), cell(a.action), cell(a.detail || '', 'wrap'));
+        return tr;
+      }, 'Nothing recorded yet.');
+  }
+  $('btnBackupNow').onclick = async () => {
+    try {
+      const b = await postJson('/api/admin/backups', {});
+      msg($('opsMsg'), 'ok', `Backed up — ${b.name}`, `${Math.round(b.bytes / 1024).toLocaleString()} KB. Download it if you want a copy off this machine.`);
+      await refreshOps();
+    } catch (err) { msg($('opsMsg'), 'err', err.message); }
+  };
+  $('btnAuditExport').onclick = () => download('/api/admin/audit/export.csv', 'audit-log.csv');
 
   /* ------------------------------------------------------------ pallet report */
   async function refreshPallets() {
@@ -812,7 +782,7 @@
 
   async function refreshAll() {
     if (!sessionId) return;
-    await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts(), refreshCycle()]);
+    await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts(), refreshOps()]);
   }
 
   async function download(path, filename) {
@@ -979,7 +949,7 @@
   }
   (async () => {
     if (!token) return show('login');
-    try { await apiJson('/api/admin/sessions'); show('main'); await loadLayouts(); await refreshDevices(); await loadSessions(); }
+    try { await apiJson('/api/admin/sessions'); show('main'); await loadLayouts(); await refreshErp(); await refreshDevices(); await loadSessions(); }
     catch { show('login'); }
   })();
   setInterval(() => { if (token) { refreshDevices().catch(() => {}); if (sessionId) refreshAll().catch(() => {}); } }, 30000);

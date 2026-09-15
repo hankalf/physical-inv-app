@@ -29,6 +29,7 @@ const up = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kin
 check('Cycle: bin list imports the ERP Last Phys. Invt. Date column', up.withDates > 3000, `${up.withDates} bins with a date`);
 await fetch(`${BASE}/api/admin/sessions/${sess.id}/settings`, { method: 'POST', headers: A, body: JSON.stringify({ layout: 'front-royal' }) });
 await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=pallets`, { method: 'POST', headers: { authorization: 'Bearer ' + token, 'content-type': 'text/csv' }, body: readFileSync(`${S}fixtures/pallets.csv`, 'utf8') });
+await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'a full count too' }) });
 const dev = await j(await fetch(`${BASE}/api/admin/devices`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'CYCLE-01' }) }));
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
@@ -37,26 +38,27 @@ const admin = await browser.newPage({ viewport: { width: 1600, height: 950 }, de
 admin.on('pageerror', (e) => errors.push('admin: ' + e.message));
 admin.on('console', (m) => { if (m.type() === 'error' && !/40[19]/.test(m.text())) errors.push('admin: ' + m.text()); });
 admin.on('dialog', (d) => d.accept());
-await admin.goto(BASE + '/admin');
+await admin.goto(BASE + '/cycle');
 await admin.fill('#fPassword', 'changeme'); await admin.click('#btnLogin');
 await admin.waitForSelector('#scrMain.active'); await admin.waitForTimeout(400);
 await admin.selectOption('#fSessionPick', String(sess.id)); await admin.waitForTimeout(2500);
-check('Dashboard: cycle card shown, aisle plan hidden for a cycle session',
-  (await admin.getAttribute('#cycleCard', 'hidden')) === null && (await admin.getAttribute('.two', 'hidden')) !== null);
+check('Cycle page: /cycle lists only cycle-count programmes', await admin.title() === 'Cycle Counts' && (await admin.$$eval('#fSessionPick option', (o) => o.length)) === 1);
 const stats = clean(await admin.textContent('#cycleStats'));
-check('Dashboard: coverage stats from the ERP dates', /Counted in the last 90 days/.test(stats) && /Never counted/.test(stats), stats.slice(0, 150));
+check('Cycle page: coverage stats from the ERP dates', /Counted within 90 days/.test(stats) && /Never counted/.test(stats) && /Bins\/day to stay covered/.test(stats), stats.slice(0, 160));
+check('Cycle page: the site clock is shown', /America\/New_York/.test(clean(await admin.textContent('#clockChip'))), clean(await admin.textContent('#clockChip')));
 
 await admin.fill('#fCycBins', '25'); await admin.click('#btnCycPreview'); await admin.waitForTimeout(700);
 const prev = clean(await admin.textContent('#cycleMsg'));
-check('Dashboard: preview says what would be picked, without generating', /25 bins would be picked/.test(prev) && /Nothing generated yet/.test(prev), prev.slice(0, 170));
-check('Dashboard: the oldest-first strategy picks never-counted bins first', /never counted/.test(prev), prev.slice(prev.indexOf('From'), prev.indexOf('From') + 80));
+check('Cycle page: preview says what would be picked, without generating', /25 bins would be picked/.test(prev) && /Nothing generated yet/.test(prev), prev.slice(0, 170));
+check('Cycle page: the oldest-first strategy picks never-counted bins first', /never counted/.test(prev), prev.slice(prev.indexOf('From'), prev.indexOf('From') + 80));
 
 await admin.click('#btnCycGenerate'); await admin.waitForTimeout(1500);
-check('Dashboard: batch generated', /Generated 25 bins/.test(clean(await admin.textContent('#cycleMsg'))), clean(await admin.textContent('#cycleMsg')).slice(0, 90));
+check('Cycle page: batch generated', /Generated 25 bins/.test(clean(await admin.textContent('#cycleMsg'))), clean(await admin.textContent('#cycleMsg')).slice(0, 90));
 const batches = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/cycle/batches`, { headers: A }));
 check('Cycle: batch row records the pick rule and progress', batches.batches[0].bins === 25 && batches.batches[0].done === 0 && batches.batches[0].strategy === 'oldest', JSON.stringify({ bins: batches.batches[0].bins, done: batches.batches[0].done }));
-await admin.$eval('#cycleCard', (el) => el.scrollIntoView()); await admin.waitForTimeout(300);
-await shot(await admin.$('#cycleCard'), 'admin-cycle');
+await admin.$eval('#generateCard', (el) => el.scrollIntoView()); await admin.waitForTimeout(300);
+await shot(await admin.$('#generateCard'), 'admin-cycle');
+await shot(await admin.$('#coverageCard'), 'admin-coverage');
 
 // generating again must not re-pick the same bins
 await admin.fill('#fCycBins', '10'); await admin.click('#btnCycGenerate'); await admin.waitForTimeout(1200);
@@ -75,6 +77,12 @@ const T = (sel) => gun.textContent(sel).then(clean);
 const scan = async (v) => { await gun.fill('#fScan', v); await gun.press('#fScan', 'Enter'); await gun.waitForTimeout(260); };
 await gun.goto(`${BASE}/?d=${dev.uid}`);
 await gun.waitForSelector('#scrSignon.active');
+await gun.waitForTimeout(400);
+check('Gun: sign-on offers a choice of full count or cycle count', (await gun.getAttribute('#modePick', 'hidden')) === null, 'both kinds are running');
+await gun.click('#btnModeCycle'); await gun.waitForTimeout(300);
+check('Gun: choosing Cycle count narrows the list to cycle programmes',
+  (await gun.$$eval('#fSession option', (o) => o.map((x) => x.textContent))).every((t) => /cycle/i.test(t)),
+  (await gun.$$eval('#fSession option', (o) => o.map((x) => x.textContent))).join(' | '));
 await gun.selectOption('#fSession', String(sess.id));
 await gun.fill('#fTeam', '7'); await gun.fill('#fEmployee', 'E7001'); await gun.press('#fEmployee', 'Enter');
 await gun.click('#btnStart'); await gun.waitForSelector('#scrAssign.active', { timeout: 20000 });
@@ -108,12 +116,27 @@ check('Cycle: bins counted today are not picked again', !t2.tasks.some((t) => t.
 // schedule
 await admin.check('#fCycAuto'); await admin.fill('#fCycSchedBins', '60'); await admin.fill('#fCycHour', '5');
 await admin.click('#btnCycSchedule'); await admin.waitForTimeout(900);
-check('Dashboard: schedule saved', /60 bins every weekday from 5:00/.test(clean(await admin.textContent('#cycleMsg'))), clean(await admin.textContent('#cycleMsg')));
+check('Cycle page: schedule saved', /60 bins every weekday from 5:00 site time/.test(clean(await admin.textContent('#cycleMsg'))), clean(await admin.textContent('#cycleMsg')));
 const run1 = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/cycle/run-schedule`, { method: 'POST', headers: A, body: '{}' }));
 const run2 = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/cycle/run-schedule`, { method: 'POST', headers: A, body: '{}' }));
 const health = await j(await fetch(`${BASE}/api/health`));
 check('Cycle: batches are dated by the warehouse clock, not the server\'s', batches.batches[0].due_date === health.siteDate && health.siteTimezone === 'America/New_York', `batch ${batches.batches[0].due_date}, site ${health.siteDate} (${health.siteTimezone}), server ${new Date().toISOString().slice(0, 10)}`);
 check('Cycle: the schedule generates once for a due date, never twice', run1.generated.length === 1 && run2.generated.length === 0, `first ${JSON.stringify(run1.generated)} second ${JSON.stringify(run2.generated)}`);
+
+/* the same equipment check, against the levels of the bins on the list */
+await fetch(`${BASE}/api/admin/people/employees`, { method: 'POST', headers: A, body: JSON.stringify({ badge: 'C001', name: 'Pat Lowe', dept: 'Freezer', equipment: ['SCISSOR LIFT'] }) });
+const t7 = await j(await fetch(`${BASE}/api/sessions/${sess.id}/recounts?team=7`));
+const levels = [...new Set(t7.tasks.map((t) => t.bin.replace(/^[A-Z]+\d+/, '')[0]))].sort().join('');
+await gun.goto(`${BASE}/?d=${dev.uid}`); await gun.waitForSelector('#scrSignon.active'); await gun.waitForTimeout(400);
+for (const chip of await gun.$$('#employeeChips button')) await chip.click();
+await gun.click('#btnModeCycle'); await gun.waitForTimeout(200);
+await gun.selectOption('#fSession', String(sess.id));
+await gun.fill('#fTeam', '7'); await gun.fill('#fEmployee', 'C001'); await gun.press('#fEmployee', 'Enter');
+await gun.click('#btnStart'); await gun.waitForSelector('#scrAssign.active', { timeout: 20000 }); await gun.waitForTimeout(600);
+const crewBanner = clean(await gun.textContent('#crewBanner'));
+check('Gun: the equipment check runs on a cycle count too, against the bins on the list',
+  /Check your equipment/.test(crewBanner) && /the bins on your list/.test(crewBanner) && /high reach truck|dock truck/.test(crewBanner), crewBanner.slice(0, 190));
+await shot(gun, 'gun-cycle-crewcheck');
 
 console.log('\nerrors:', errors.length ? errors : 'none');
 console.log(`\n${results.filter(Boolean).length}/${results.length} cycle checks passed`);

@@ -80,6 +80,8 @@
     qtyConfirm: null,
     syncing: false,
     keyboardOn: false,
+    mode: '',          // 'full' or 'cycle' - what this crew is doing today
+    sessions: [],
   };
 
   const $ = (id) => document.getElementById(id);
@@ -263,29 +265,57 @@
   }
 
   /* ------------------------------------------------------------ sign-on */
+  // Only offer the kinds of work that actually exist, and default to the one
+  // this scanner did last.
+  function renderSessionChoices() {
+    const sel = $('fSession');
+    const kinds = new Set(state.sessions.map((s) => s.mode || 'full'));
+    $('btnModeFull').hidden = !kinds.has('full');
+    $('btnModeCycle').hidden = !kinds.has('cycle');
+    $('modePick').hidden = kinds.size < 2;
+    if (!kinds.has(state.mode)) state.mode = kinds.has('full') ? 'full' : [...kinds][0] || '';
+    $('btnModeFull').classList.toggle('selected', state.mode === 'full');
+    $('btnModeCycle').classList.toggle('selected', state.mode === 'cycle');
+
+    const shown = state.sessions.filter((s) => (s.mode || 'full') === state.mode);
+    sel.innerHTML = '';
+    for (const s of shown) {
+      const o = document.createElement('option');
+      o.value = s.id;
+      o.textContent = `#${s.id} — ${s.name}`;
+      o.dataset.session = JSON.stringify(s);
+      sel.appendChild(o);
+    }
+    if (!shown.length) sel.innerHTML = `<option value="">No ${state.mode === 'cycle' ? 'cycle count' : 'full count'} running</option>`;
+  }
+
+  async function pickMode(mode) {
+    state.mode = mode;
+    await metaSet('mode', mode);
+    renderSessionChoices();
+    const last = await metaGet('lastSessionId');
+    if (last && [...$('fSession').options].some((o) => o.value === String(last))) $('fSession').value = String(last);
+  }
+
   async function loadSessions() {
     const sel = $('fSession');
     sel.innerHTML = '';
     try {
       const sessions = await api('/api/sessions');
-      if (!sessions.length) { sel.innerHTML = '<option value="">No open sessions on the server</option>'; return; }
-      for (const s of sessions) {
-        const o = document.createElement('option');
-        o.value = s.id;
-        o.textContent = `#${s.id} — ${s.name}`;
-        o.dataset.session = JSON.stringify(s);
-        sel.appendChild(o);
-      }
+      if (!sessions.length) { sel.innerHTML = '<option value="">No open sessions on the server</option>'; $('modePick').hidden = true; return; }
+      state.sessions = sessions;
+      await metaSet('sessions', sessions);
+      renderSessionChoices();
       const last = await metaGet('lastSessionId');
-      if (last) sel.value = String(last);
+      if (last && [...sel.options].some((o) => o.value === String(last))) sel.value = String(last);
     } catch (err) {
       const cached = await metaGet('session');
       if (cached) {
-        const o = document.createElement('option');
-        o.value = cached.id;
-        o.textContent = `#${cached.id} — ${cached.name} (cached)`;
-        o.dataset.session = JSON.stringify(cached);
-        sel.appendChild(o);
+        state.sessions = [cached];
+        state.mode = cached.mode || 'full';
+        renderSessionChoices();
+        sel.value = String(cached.id);
+        sel.selectedOptions[0].textContent += ' (cached)';
         feedback($('signonMsg'), 'warn', 'Server unreachable', 'Using the list cached on this scanner. Counts will queue until Wi-Fi returns.');
       } else {
         sel.innerHTML = '<option value="">Server unreachable</option>';
@@ -346,7 +376,7 @@
     const team = norm($('fTeam').value);
     if (!team) { feedback($('signonMsg'), 'err', 'Enter your team number'); return; }
     if (norm($('fEmployee').value)) addEmployee();
-    if (!state.employees.length) { feedback($('signonMsg'), 'err', 'Add at least one employee ID'); return; }
+    if (!state.employees.length) { feedback($('signonMsg'), 'err', 'Add at least one clock in number'); return; }
     const opt = $('fSession').selectedOptions[0];
     if (!opt || !opt.value) { feedback($('signonMsg'), 'err', 'Pick a count session'); return; }
     let session = JSON.parse(opt.dataset.session);
@@ -471,8 +501,12 @@
     el.innerHTML = '';
     el.appendChild(document.createTextNode(c.shortfall ? 'Check your equipment' : 'Check the crew'));
     const lines = [];
-    if (c.shortfall) lines.push(`${c.shortfall.message} Aisle ${c.forAisle} was given to team ${state.team} for ${levelsLabel(c.forLevels)}.`);
-    if (c.unknown.length) lines.push(`Not on the crew list: ${c.unknown.join(', ')} — check the badge, or ask a supervisor to add them.`);
+    if (c.shortfall) {
+      lines.push(c.forAisle && c.forAisle.startsWith('Aisle')
+        ? `${c.shortfall.message} ${c.forAisle} was given to team ${state.team} for ${levelsLabel(c.forLevels)}.`
+        : `${c.shortfall.message} ${c.forAisle || 'Your work'} covers ${levelsLabel(c.forLevels)}.`);
+    }
+    if (c.unknown.length) lines.push(`Not on the crew list: ${c.unknown.join(', ')} — check the clock in number, or ask a supervisor to add them.`);
     for (const e of c.elsewhere) lines.push(`${e.name} (${e.badge}) is on team ${e.team} today, not team ${state.team}.`);
     if (c.crew.length) lines.push(`Between you: ${c.equipmentLabels.length ? c.equipmentLabels.join(' + ') : 'on foot only'} — reaches ${levelsLabel(c.reach)}.`);
     for (const t of lines) {
@@ -1004,6 +1038,8 @@
 
   $('btnStart').onclick = signon;
   $('btnRefreshSessions').onclick = loadSessions;
+  $('btnModeFull').onclick = () => pickMode('full');
+  $('btnModeCycle').onclick = () => pickMode('cycle');
   $('btnAddEmployee').onclick = addEmployee;
   $('fEmployee').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addEmployee(); } });
   $('fTeam').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('fEmployee').focus(); } });
@@ -1116,6 +1152,7 @@
       ? `This scanner is registered as ${state.deviceId}${linked && linked.offline ? ' (offline - using saved identity)' : ''}.`
       : (state.deviceId ? `Scanner ID ${state.deviceId} was typed on this device (not registered).` : '');
     state.employees = (await metaGet('employees')) || [];
+    state.mode = (await metaGet('mode')) || '';
     $('fTeam').value = (await metaGet('team')) || '';
     renderEmployees();
     await updateChips();

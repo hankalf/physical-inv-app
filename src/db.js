@@ -191,6 +191,17 @@ CREATE TABLE IF NOT EXISTS recounts (
 );
 CREATE INDEX IF NOT EXISTS idx_recounts_session ON recounts(session_id, status);
 
+-- Who changed what in the dashboard.
+CREATE TABLE IF NOT EXISTS audit (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  at         TEXT NOT NULL,
+  actor      TEXT NOT NULL,
+  action     TEXT NOT NULL,
+  detail     TEXT,
+  session_id INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_audit_at ON audit(id DESC);
+
 -- Small key/value store for site settings that must be editable without a deploy.
 CREATE TABLE IF NOT EXISTS settings (
   key   TEXT PRIMARY KEY,

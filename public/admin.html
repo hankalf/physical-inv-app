@@ -96,6 +96,7 @@
 <header>
   <span class="title">Inventory Count — Supervisor</span>
   <span class="chip" id="sessionChip" hidden></span>
+  <a href="/cycle" class="chip" id="cycleLink" style="text-decoration:none" hidden>Cycle counts →</a>
   <a href="/teams" class="chip" id="teamsLink" style="text-decoration:none" hidden>Teams &amp; crew →</a>
   <button id="btnLogout" class="ghost" hidden style="padding:6px 10px;font-size:12px">Log out</button>
 </header>
@@ -105,6 +106,8 @@
   <section class="screen active" id="scrLogin">
     <div class="card" style="max-width:420px;margin:40px auto">
       <h2>Supervisor sign-in</h2>
+      <label for="fWho">Your name <span style="text-transform:none;letter-spacing:0">— recorded against anything you change</span></label>
+      <input id="fWho" autocomplete="name" placeholder="e.g. Dana">
       <label for="fPassword">Password</label>
       <input id="fPassword" type="password" autocomplete="current-password">
       <button class="primary" id="btnLogin" style="width:100%;margin-top:10px">Sign in</button>
@@ -269,51 +272,6 @@
       </div>
     </div>
 
-    <!-- ============ cycle counting ============ -->
-    <div class="card" id="cycleCard" hidden>
-      <h2>Cycle count <span class="muted" id="cycleSub"></span></h2>
-      <div class="hint">
-        Upload a fresh inventory report whenever you want current quantities (Replace existing), then generate a batch.
-        Bins are picked by how long they have gone without a count — seeded from the <b>Last Phys. Invt. Date</b> in your
-        export and kept up to date as counts land — so a batch never re-picks what was counted yesterday.
-      </div>
-      <div class="grid" id="cycleStats" style="margin-top:12px"></div>
-      <div class="inline" style="margin-top:12px">
-        <div class="auto"><label for="fCycBins">Bins</label><input id="fCycBins" class="sm" style="width:80px" type="number" value="40" min="1"></div>
-        <div class="auto">
-          <label for="fCycStrategy">Pick</label>
-          <select id="fCycStrategy">
-            <option value="oldest">Longest since counted</option>
-            <option value="never">Never counted</option>
-            <option value="random">Random sample</option>
-          </select>
-        </div>
-        <div class="auto"><label for="fCycZone">Zone</label><input id="fCycZone" class="sm" style="width:110px" placeholder="any"></div>
-        <div class="auto"><label for="fCycAisle">Aisles</label><input id="fCycAisle" class="sm" placeholder="any"></div>
-        <div class="auto"><label for="fCycLevels">Levels</label><input id="fCycLevels" class="sm" style="width:80px" placeholder="any"></div>
-        <div class="auto"><label for="fCycTeam">Team</label><input id="fCycTeam" class="sm" style="width:70px" placeholder="any"></div>
-        <div class="auto"><button id="btnCycPreview">Preview</button></div>
-        <div class="auto"><button class="primary" id="btnCycGenerate">Generate batch</button></div>
-      </div>
-      <div class="feedback" id="cycleMsg"></div>
-      <hr>
-      <div class="inline">
-        <div class="auto"><label class="cb"><input type="checkbox" id="fCycAuto"> Generate automatically</label></div>
-        <div class="auto">
-          <label for="fCycEvery">Every</label>
-          <select id="fCycEvery"><option value="day">Weekday</option><option value="week">Week</option></select>
-        </div>
-        <div class="auto"><label for="fCycSchedBins">Bins each time</label><input id="fCycSchedBins" class="sm" style="width:80px" type="number" value="40" min="1"></div>
-        <div class="auto"><label for="fCycHour">From (hour)</label><input id="fCycHour" class="sm" style="width:70px" type="number" value="6" min="0" max="23"></div>
-        <div class="auto"><label for="fCycWeekday">On (weekly)</label>
-          <select id="fCycWeekday"><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select>
-        </div>
-        <div class="auto"><button id="btnCycSchedule">Save schedule</button></div>
-        <div class="auto"><button id="btnExportCoverage">Coverage CSV</button></div>
-      </div>
-      <div class="scroll" style="margin-top:12px"><table id="batchTable"></table></div>
-    </div>
-
     <!-- ============ second counts ============ -->
     <div class="card">
       <h2>Second counts <span class="muted" id="recountSub"></span></h2>
@@ -335,6 +293,47 @@
       </div>
       <div class="feedback" id="recountMsg"></div>
       <div class="scroll" style="margin-top:10px"><table id="recountTable"></table></div>
+    </div>
+
+    <!-- ============ send to the ERP, print, housekeeping ============ -->
+    <div class="card">
+      <h2>Send to the ERP <span class="muted">column names and rows are configuration — add a layout to match your system</span></h2>
+      <div class="inline">
+        <div>
+          <label for="fErpFormat">Layout</label>
+          <select id="fErpFormat"></select>
+        </div>
+        <div class="auto"><button id="btnErpPreview">Preview</button></div>
+        <div class="auto"><button class="primary" id="btnErpDownload">Download CSV</button></div>
+      </div>
+      <div class="feedback" id="erpMsg"></div>
+      <pre id="erpSample" class="hint" style="white-space:pre;overflow-x:auto;margin-top:8px;display:none;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px"></pre>
+    </div>
+
+    <div class="card">
+      <h2>Count sheets <span class="muted">paper, for a dead battery or an auditor</span></h2>
+      <div class="inline">
+        <div class="auto"><label for="fPrintAisle">Aisles</label><input id="fPrintAisle" class="sm" placeholder="F03 or F03,F04"></div>
+        <div class="auto"><label for="fPrintLevels">Levels</label><input id="fPrintLevels" class="sm" style="width:90px" placeholder="A-C"></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fPrintUncounted"> Only bins with no count yet</label></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fPrintExpected"> Show what the system expects</label></div>
+        <div class="auto"><button class="primary" id="btnPrint">Open a printable sheet</button></div>
+      </div>
+      <div class="hint" style="margin-top:8px">Blind by default — the expected pallets are hidden so what gets written down is a count.</div>
+    </div>
+
+    <div class="card">
+      <h2>Backups &amp; log</h2>
+      <div class="inline">
+        <div class="auto"><button id="btnBackupNow">Back up now</button></div>
+        <div class="auto"><button id="btnAuditExport">Export the log</button></div>
+        <div class="auto"><span class="muted" id="backupSub"></span></div>
+      </div>
+      <div class="feedback" id="opsMsg"></div>
+      <div class="two" style="margin-top:12px">
+        <div><div class="scroll"><table id="backupTable"></table></div></div>
+        <div><div class="scroll" style="max-height:340px"><table id="auditTable"></table></div></div>
+      </div>
     </div>
 
     <!-- ============ pallet report ============ -->

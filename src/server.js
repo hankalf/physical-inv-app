@@ -20,19 +20,23 @@ import {
   listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
   tasksForTeam, takeRecount, finishRecount, updateRecount, deleteRecount,
 } from './routes/recounts.js';
-import { generateBatch, previewBatch, listBatches, deleteBatch, coverage, runSchedules, STRATEGIES } from './routes/cycles.js';
+import { generateBatch, previewBatch, listBatches, deleteBatch, coverage, runSchedules, STRATEGIES, levelsOnOpenTasks } from './routes/cycles.js';
 import {
   listEmployees, upsertEmployee, deleteEmployee, importEmployees, importHelpers,
   listTeams, createTeam, deleteTeam, assignMember, getConfig, setConfig, getEmployee,
   crewCheck, crewShortfall,
 } from './routes/people.js';
 
-// people.js parses uploaded rosters with the shared CSV helpers
-importHelpers.parseRecords = parseRecords;
-importHelpers.pick = pick;
 import { toCsv, parseRecords, pick } from './util/csv.js';
 import { listLayouts, loadLayout } from './util/layouts.js';
 import { siteTimezone, localDate, localHour } from './util/localtime.js';
+import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
+import { countSheet } from './routes/printing.js';
+import { listFormats, saveFormat, buildExport, availableFields } from './routes/erp.js';
+
+// people.js parses uploaded rosters with the shared CSV helpers
+importHelpers.parseRecords = parseRecords;
+importHelpers.pick = pick;
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -112,7 +116,7 @@ const httpError = (status, message) => Object.assign(new Error(message), { statu
 
 /* ------------------------------------------------------------ admin auth */
 
-const adminTokens = new Set();
+const adminTokens = new Map();   // token -> supervisor name
 
 function passwordMatches(candidate) {
   const a = Buffer.from(String(candidate || ''));
@@ -120,10 +124,13 @@ function passwordMatches(candidate) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-function requireAdmin(req) {
+function requireAdmin(req, url) {
   const auth = String(req.headers.authorization || '');
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  let token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  // a count sheet is opened in a new tab, which cannot carry a header
+  if (!token && url && /\/print\//.test(url.pathname)) token = url.searchParams.get('t') || '';
   if (!adminTokens.has(token)) throw httpError(401, 'unauthorized');
+  return adminTokens.get(token) || 'supervisor';
 }
 
 /* ------------------------------------------------------------ static */
@@ -132,6 +139,7 @@ async function serveStatic(req, res, pathname) {
   const rel = pathname === '/' ? '/index.html'
     : /^\/admin\/?$/.test(pathname) ? '/admin.html'
     : /^\/teams\/?$/.test(pathname) ? '/teams.html'
+    : /^\/cycle\/?$/.test(pathname) ? '/cycle.html'
     : pathname;
   const filePath = join(PUBLIC_DIR, normalize(rel).replace(/^(\.\.[/\\])+/, ''));
   if (!filePath.startsWith(PUBLIC_DIR)) return send(req, res, 403, 'forbidden');
@@ -149,6 +157,26 @@ async function serveStatic(req, res, pathname) {
 }
 
 /* ------------------------------------------------------------ routes */
+
+/**
+ * Who signed on and whether they can reach the work. In a full count the levels
+ * come from the aisle the team was given; in a cycle count they come from the
+ * bins on its list, which is the same question asked of different work.
+ */
+function crewFor(sessionId, team, badges, status) {
+  const check = crewCheck(badges, team);
+  const session = getSession(sessionId);
+  let levels = '';
+  let where = '';
+  if (session && session.mode === 'cycle') {
+    levels = levelsOnOpenTasks(sessionId, team);
+    where = 'the bins on your list';
+  } else {
+    levels = status.active ? status.active.levels : (status.queuedDetail?.[0]?.levels || '');
+    where = status.active ? `Aisle ${status.active.aisle}` : (status.queued?.[0] ? `Aisle ${status.queued[0]}` : '');
+  }
+  return { ...check, forAisle: where, forLevels: levels, shortfall: crewShortfall(check, levels) };
+}
 
 function openSession(id) {
   const s = getSession(id);
@@ -198,13 +226,7 @@ async function handleHandheld(req, res, url, m) {
 
     // Who actually signed on, and can they reach what this team was given?
     const status = teamStatus(m[1], body.team);
-    const check = crewCheck(body.employees, body.team);
-    const levels = status.active ? status.active.levels : (status.queuedDetail?.[0]?.levels || '');
-    const aisle = status.active ? status.active.aisle : (status.queued?.[0] || '');
-    return sendJson(req, res, 200, {
-      ...status,
-      crew: { ...check, forAisle: aisle, forLevels: levels, shortfall: crewShortfall(check, levels) },
-    });
+    return sendJson(req, res, 200, { ...status, crew: crewFor(m[1], body.team, body.employees, status) });
   }
 
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/team-status$/)) && method === 'GET') {
@@ -213,10 +235,7 @@ async function handleHandheld(req, res, url, m) {
     const status = teamStatus(m[1], team);
     const badges = (url.searchParams.get('employees') || '').split(',').filter(Boolean);
     if (!badges.length) return sendJson(req, res, 200, status);
-    const check = crewCheck(badges, team);
-    const levels = status.active ? status.active.levels : (status.queuedDetail?.[0]?.levels || '');
-    const aisle = status.active ? status.active.aisle : (status.queued?.[0] || '');
-    return sendJson(req, res, 200, { ...status, crew: { ...check, forAisle: aisle, forLevels: levels, shortfall: crewShortfall(check, levels) } });
+    return sendJson(req, res, 200, { ...status, crew: crewFor(m[1], team, badges, status) });
   }
 
   // A team declares an aisle finished from the handheld; the block frees up.
@@ -244,90 +263,6 @@ async function handleHandheld(req, res, url, m) {
     const result = saveCounts(m[1], rows);
     if (result.firstCountPallets.length) result.recounts = autoAfterCounts(m[1], result.firstCountPallets);
     return sendJson(req, res, 200, result);
-  }
-
-  // --- roster: employees, teams, equipment
-  if (p === '/api/admin/people' && method === 'GET') {
-    return sendJson(req, res, 200, { employees: listEmployees(), teams: listTeams(), config: getConfig() });
-  }
-  if (p === '/api/admin/people/employees' && method === 'POST') {
-    const body = await readJson(req);
-    return sendJson(req, res, 200, upsertEmployee(body));
-  }
-  if (p === '/api/admin/people/employees/import' && method === 'POST') {
-    const text = await readBody(req);
-    return sendJson(req, res, 200, importEmployees(text, { replace: url.searchParams.get('replace') === '1' }));
-  }
-  if ((m = p.match(/^\/api\/admin\/people\/employees\/([^/]+)$/)) && method === 'DELETE') {
-    return sendJson(req, res, 200, { deleted: deleteEmployee(decodeURIComponent(m[1])) });
-  }
-  if (p === '/api/admin/people/teams' && method === 'POST') {
-    const body = await readJson(req);
-    return sendJson(req, res, 200, createTeam(body));
-  }
-  if ((m = p.match(/^\/api\/admin\/people\/teams\/(\d+)$/)) && method === 'DELETE') {
-    return sendJson(req, res, 200, { deleted: deleteTeam(m[1]) });
-  }
-  if (p === '/api/admin/people/assign' && method === 'POST') {
-    const body = await readJson(req);
-    return sendJson(req, res, 200, { teams: assignMember(body.badge, body.teamId ?? null) });
-  }
-  if (p === '/api/admin/people/equipment' && method === 'POST') {
-    const body = await readJson(req);
-    return sendJson(req, res, 200, setConfig(body));
-  }
-  if (p === '/api/admin/people/export/employees.csv') {
-    const rows = listEmployees().map((e) => ({ ...e, equipment: e.equipment.join('; '), team: e.team || '' }));
-    return sendCsv(req, res, 'employees.csv', toCsv(rows, ['badge', 'name', 'dept', 'equipment', 'reach', 'team', 'active']));
-  }
-
-  // --- cycle counting
-  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/batches$/)) && method === 'GET') {
-    return sendJson(req, res, 200, { batches: listBatches(m[1]), coverage: coverage(m[1], url.searchParams.get('days') || 90), strategies: STRATEGIES });
-  }
-  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/preview$/)) && method === 'POST') {
-    const body = await readJson(req);
-    return sendJson(req, res, 200, previewBatch(m[1], body));
-  }
-  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/batches$/)) && method === 'POST') {
-    const body = await readJson(req);
-    return sendJson(req, res, 200, generateBatch(m[1], body));
-  }
-  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/batches\/(\d+)$/)) && method === 'DELETE') {
-    return sendJson(req, res, 200, { deleted: deleteBatch(m[1], m[2]) });
-  }
-  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/schedule$/)) && method === 'POST') {
-    const body = await readJson(req);
-    const plan = body && body.every ? JSON.stringify({
-      every: body.every === 'week' ? 'week' : 'day',
-      bins: Math.max(1, Math.min(5000, Number(body.bins) || 40)),
-      strategy: STRATEGIES[body.strategy] ? body.strategy : 'oldest',
-      hour: Math.max(0, Math.min(23, Number(body.hour ?? 6))),
-      weekday: Number(body.weekday ?? 1),
-      weekdays: Array.isArray(body.weekdays) ? body.weekdays.map(Number) : [1, 2, 3, 4, 5],
-      zone: body.zone || '', aisle: body.aisle || '', levels: body.levels || '',
-    }) : null;
-    db.prepare('UPDATE sessions SET cycle_schedule = ? WHERE id = ?').run(plan, Number(m[1]));
-    return sendJson(req, res, 200, getSession(m[1]));
-  }
-  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/run-schedule$/)) && method === 'POST') {
-    return sendJson(req, res, 200, { generated: runSchedules() });
-  }
-  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/coverage\.csv$/))) {
-    const rows = db.prepare(
-      `SELECT l.aisle, l.code AS bin, l.level, COALESCE(l.zone,'') AS zone, COALESCE(l.last_counted,'') AS last_counted
-         FROM locations l WHERE l.session_id = ? ORDER BY COALESCE(l.last_counted,''), l.code`).all(Number(m[1]));
-    return sendCsv(req, res, `bin-coverage-session-${m[1]}.csv`, toCsv(rows, ['aisle', 'bin', 'level', 'zone', 'last_counted']));
-  }
-
-  // --- roster lookups from the gun
-  if ((m = p.match(/^\/api\/people\/([^/]+)$/)) && method === 'GET') {
-    const e = getEmployee(decodeURIComponent(m[1]));
-    if (!e) throw httpError(404, 'badge not on the roster');
-    return sendJson(req, res, 200, e);
-  }
-  if (p === '/api/teams' && method === 'GET') {
-    return sendJson(req, res, 200, listTeams().map((t) => ({ name: t.name, reach: t.reach, members: t.members.length })));
   }
 
   // --- second counts, from the gun
@@ -366,23 +301,28 @@ async function handleAdmin(req, res, url, m) {
     const body = await readJson(req);
     if (!passwordMatches(body.password)) throw httpError(401, 'bad password');
     const token = randomUUID();
-    adminTokens.add(token);
-    return sendJson(req, res, 200, { token });
+    const who = String(body.name || '').trim().slice(0, 40) || 'supervisor';
+    adminTokens.set(token, who);
+    audit(who, 'signed in');
+    return sendJson(req, res, 200, { token, name: who });
   }
 
-  requireAdmin(req);
+  const actor = requireAdmin(req, url);
 
   // --- scanners
   if (p === '/api/admin/devices' && method === 'GET') return sendJson(req, res, 200, listDevices());
   if (p === '/api/admin/devices' && method === 'POST') {
     const body = await readJson(req);
-    return sendJson(req, res, 200, createDevice(body));
+    const dev = createDevice(body);
+    audit(actor, 'registered a scanner', dev.name);
+    return sendJson(req, res, 200, dev);
   }
   if ((m = p.match(/^\/api\/admin\/devices\/([a-z0-9]+)$/)) && method === 'POST') {
     const body = await readJson(req);
     return sendJson(req, res, 200, updateDevice(m[1], body));
   }
   if ((m = p.match(/^\/api\/admin\/devices\/([a-z0-9]+)$/)) && method === 'DELETE') {
+    audit(actor, 'removed a scanner', getDevice(m[1])?.name || m[1]);
     return sendJson(req, res, 200, { deleted: deleteDevice(m[1]) });
   }
 
@@ -391,13 +331,15 @@ async function handleAdmin(req, res, url, m) {
   if (p === '/api/admin/sessions' && method === 'POST') {
     const body = await readJson(req);
     if (!body.name || !String(body.name).trim()) throw httpError(400, 'name required');
-    return sendJson(req, res, 200, createSession({
+    const created = createSession({
       mode: body.mode === 'cycle' ? 'cycle' : 'full',
       name: String(body.name).trim(),
       palletMode: body.palletMode,
       guided: body.guided !== false,
       askComments: body.askComments !== false,
-    }));
+    });
+    audit(actor, 'created session', `#${created.id} "${created.name}" (${created.mode})`, created.id);
+    return sendJson(req, res, 200, created);
   }
 
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/settings$/)) && method === 'POST') {
@@ -406,6 +348,7 @@ async function handleAdmin(req, res, url, m) {
     if (!s) throw httpError(404, 'session not found');
     const mode = ['off', 'warn', 'strict'].includes(body.palletMode) ? body.palletMode : s.pallet_mode;
     const layout = body.layout === undefined ? s.layout : (body.layout && loadLayout(body.layout) ? body.layout : null);
+    audit(actor, 'changed session settings', JSON.stringify({ palletMode: mode, guided: body.guided, askComments: body.askComments, layout, autoRecount: body.autoRecount }), m[1]);
     db.prepare('UPDATE sessions SET pallet_mode = ?, guided = ?, ask_comments = ?, layout = ?, auto_recount = ?, master_version = master_version + 1 WHERE id = ?')
       .run(mode, body.guided == null ? s.guided : (body.guided ? 1 : 0),
            body.askComments == null ? s.ask_comments : (body.askComments ? 1 : 0), layout,
@@ -416,12 +359,15 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/master$/)) && method === 'POST') {
     const kind = url.searchParams.get('kind') || 'bins';
     const text = await readBody(req);
-    return sendJson(req, res, 200, importMaster(m[1], kind, text, { replace: url.searchParams.get('replace') === '1' }));
+    const stats = importMaster(m[1], kind, text, { replace: url.searchParams.get('replace') === '1' });
+    audit(actor, `uploaded ${kind}`, `${stats.rows} rows, ${stats.skipped} skipped${url.searchParams.get('replace') === '1' ? ', replacing what was there' : ''}`, m[1]);
+    return sendJson(req, res, 200, stats);
   }
 
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/status$/)) && method === 'POST') {
     const body = await readJson(req);
     const status = body.status === 'closed' ? 'closed' : 'open';
+    audit(actor, status === 'closed' ? 'closed session' : 'reopened session', '', m[1]);
     db.prepare('UPDATE sessions SET status = ?, closed_at = ? WHERE id = ?')
       .run(status, status === 'closed' ? new Date().toISOString() : null, Number(m[1]));
     return sendJson(req, res, 200, getSession(m[1]));
@@ -456,13 +402,18 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments$/)) && method === 'POST') {
     const body = await readJson(req);
     const aisles = Array.isArray(body.aisles) ? body.aisles : String(body.aisles || '').split(/[,\s]+/);
-    return sendJson(req, res, 200, queueAssignments(m[1], body.team, aisles, body.levels || '', { force: !!body.force }));
+    const queued = queueAssignments(m[1], body.team, aisles, body.levels || '', { force: !!body.force });
+    audit(actor, body.force ? 'assigned aisles OVERRIDING the equipment check' : 'assigned aisles',
+      `team ${body.team}: ${queued.added.join(', ') || 'nothing'} (levels ${body.levels})`, m[1]);
+    return sendJson(req, res, 200, queued);
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments\/(\d+)$/)) && method === 'POST') {
     const body = await readJson(req);
+    audit(actor, `assignment ${body.status}`, `assignment ${m[2]}`, m[1]);
     return sendJson(req, res, 200, setAssignmentStatus(m[1], m[2], body.status));
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments\/(\d+)$/)) && method === 'DELETE') {
+    audit(actor, 'removed an assignment', `assignment ${m[2]}`, m[1]);
     return sendJson(req, res, 200, deleteAssignment(m[1], m[2]));
   }
 
@@ -476,24 +427,31 @@ async function handleAdmin(req, res, url, m) {
   }
   if (p === '/api/admin/people/employees/import' && method === 'POST') {
     const text = await readBody(req);
-    return sendJson(req, res, 200, importEmployees(text, { replace: url.searchParams.get('replace') === '1' }));
+    const st = importEmployees(text, { replace: url.searchParams.get('replace') === '1' });
+    audit(actor, 'uploaded the crew list', `${st.imported} of ${st.rows} rows${url.searchParams.get('replace') === '1' ? ', replacing the list' : ''}`);
+    return sendJson(req, res, 200, st);
   }
   if ((m = p.match(/^\/api\/admin\/people\/employees\/([^/]+)$/)) && method === 'DELETE') {
     return sendJson(req, res, 200, { deleted: deleteEmployee(decodeURIComponent(m[1])) });
   }
   if (p === '/api/admin/people/teams' && method === 'POST') {
     const body = await readJson(req);
-    return sendJson(req, res, 200, createTeam(body));
+    const team = createTeam(body);
+    audit(actor, 'created a team', team.name);
+    return sendJson(req, res, 200, team);
   }
   if ((m = p.match(/^\/api\/admin\/people\/teams\/(\d+)$/)) && method === 'DELETE') {
+    audit(actor, 'deleted a team', `team ${m[1]}`);
     return sendJson(req, res, 200, { deleted: deleteTeam(m[1]) });
   }
   if (p === '/api/admin/people/assign' && method === 'POST') {
     const body = await readJson(req);
+    audit(actor, 'moved someone between teams', `${body.badge} -> ${body.teamId ? 'team ' + body.teamId : 'no team'}`);
     return sendJson(req, res, 200, { teams: assignMember(body.badge, body.teamId ?? null) });
   }
   if (p === '/api/admin/people/equipment' && method === 'POST') {
     const body = await readJson(req);
+    audit(actor, 'changed the equipment rules', JSON.stringify(body.levelRules || []));
     return sendJson(req, res, 200, setConfig(body));
   }
   if (p === '/api/admin/people/export/employees.csv') {
@@ -501,9 +459,70 @@ async function handleAdmin(req, res, url, m) {
     return sendCsv(req, res, 'employees.csv', toCsv(rows, ['badge', 'name', 'dept', 'equipment', 'reach', 'team', 'active']));
   }
 
+  // --- the file that goes back into the ERP
+  if (p === '/api/admin/erp/formats' && method === 'GET') {
+    return sendJson(req, res, 200, { formats: listFormats(), fields: availableFields() });
+  }
+  if (p === '/api/admin/erp/formats' && method === 'POST') {
+    const body = await readJson(req);
+    audit(actor, 'saved an ERP export format', String(body.id || ''));
+    return sendJson(req, res, 200, { formats: saveFormat(body.id, body) });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/erp\/([a-z0-9-]+)\.csv$/))) {
+    const built = buildExport(m[1], m[2]);
+    audit(actor, 'exported to the ERP', `${m[2]}: ${built.rows} rows`, m[1]);
+    return sendCsv(req, res, `${m[2]}-session-${m[1]}-${localDate()}.csv`, built.csv);
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/erp\/([a-z0-9-]+)\/preview$/)) && method === 'GET') {
+    const built = buildExport(m[1], m[2]);
+    return sendJson(req, res, 200, { rows: built.rows, format: built.format, sample: built.csv.split('\r\n').slice(0, 6).join('\n') });
+  }
+
+  // --- paper, for when the scanners are not an option
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/print\/count-sheet$/))) {
+    const q = url.searchParams;
+    const html = countSheet(m[1], {
+      aisle: q.get('aisle') || '', levels: q.get('levels') || '', batch: q.get('batch') || '',
+      onlyUncounted: q.get('uncounted') === '1', blind: q.get('blind') !== '0',
+    });
+    audit(actor, 'printed a count sheet', [...q].map(([k, v]) => `${k}=${v}`).join(' ') || 'whole site', m[1]);
+    return send(req, res, 200, html, { 'content-type': 'text/html; charset=utf-8' });
+  }
+
+  // --- housekeeping: the log, and copies of the database
+  if (p === '/api/admin/audit' && method === 'GET') {
+    return sendJson(req, res, 200, listAudit({
+      limit: url.searchParams.get('limit'), sessionId: url.searchParams.get('session'),
+      actor: url.searchParams.get('actor'), action: url.searchParams.get('action'),
+    }));
+  }
+  if (p === '/api/admin/audit/export.csv') {
+    return sendCsv(req, res, 'audit-log.csv', toCsv(listAudit({ limit: 5000 }), ['at', 'actor', 'action', 'detail', 'session_id']));
+  }
+  if (p === '/api/admin/backups' && method === 'GET') {
+    return sendJson(req, res, 200, { backups: listBackups(), keep: Number(process.env.BACKUP_KEEP || 14) });
+  }
+  if (p === '/api/admin/backups' && method === 'POST') {
+    const b = makeBackup('manual');
+    audit(actor, 'took a backup', `${b.name} (${Math.round(b.bytes / 1024)} KB)`);
+    return sendJson(req, res, 200, b);
+  }
+  if ((m = p.match(/^\/api\/admin\/backups\/([A-Za-z0-9_.-]+\.db)$/)) && method === 'GET') {
+    const full = backupPath(m[1]);
+    if (!full) throw httpError(400, 'bad backup name');
+    audit(actor, 'downloaded a backup', m[1]);
+    const body = await readFile(full).catch(() => { throw httpError(404, 'no such backup'); });
+    return send(req, res, 200, body, { 'content-type': 'application/octet-stream', 'content-disposition': `attachment; filename="${m[1]}"` });
+  }
+
   // --- cycle counting
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/batches$/)) && method === 'GET') {
-    return sendJson(req, res, 200, { batches: listBatches(m[1]), coverage: coverage(m[1], url.searchParams.get('days') || 90), strategies: STRATEGIES });
+    return sendJson(req, res, 200, {
+      batches: listBatches(m[1]),
+      coverage: coverage(m[1], url.searchParams.get('days') || 90),
+      strategies: STRATEGIES,
+      siteDate: localDate(), siteTimezone: siteTimezone(), siteHour: localHour(),
+    });
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/preview$/)) && method === 'POST') {
     const body = await readJson(req);
@@ -511,9 +530,12 @@ async function handleAdmin(req, res, url, m) {
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/batches$/)) && method === 'POST') {
     const body = await readJson(req);
-    return sendJson(req, res, 200, generateBatch(m[1], body));
+    const made = generateBatch(m[1], body);
+    audit(actor, 'generated a cycle batch', `${made.created} bins, ${body.strategy || 'oldest'}, due ${made.batch.due_date}`, m[1]);
+    return sendJson(req, res, 200, made);
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/batches\/(\d+)$/)) && method === 'DELETE') {
+    audit(actor, 'removed a cycle batch', `batch ${m[2]}`, m[1]);
     return sendJson(req, res, 200, { deleted: deleteBatch(m[1], m[2]) });
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/schedule$/)) && method === 'POST') {
@@ -527,6 +549,7 @@ async function handleAdmin(req, res, url, m) {
       weekdays: Array.isArray(body.weekdays) ? body.weekdays.map(Number) : [1, 2, 3, 4, 5],
       zone: body.zone || '', aisle: body.aisle || '', levels: body.levels || '',
     }) : null;
+    audit(actor, plan ? 'set the cycle schedule' : 'turned the cycle schedule off', plan || '', m[1]);
     db.prepare('UPDATE sessions SET cycle_schedule = ? WHERE id = ?').run(plan, Number(m[1]));
     return sendJson(req, res, 200, getSession(m[1]));
   }
@@ -538,6 +561,18 @@ async function handleAdmin(req, res, url, m) {
       `SELECT l.aisle, l.code AS bin, l.level, COALESCE(l.zone,'') AS zone, COALESCE(l.last_counted,'') AS last_counted
          FROM locations l WHERE l.session_id = ? ORDER BY COALESCE(l.last_counted,''), l.code`).all(Number(m[1]));
     return sendCsv(req, res, `bin-coverage-session-${m[1]}.csv`, toCsv(rows, ['aisle', 'bin', 'level', 'zone', 'last_counted']));
+  }
+
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/open$/)) && method === 'GET') {
+    const rows = db.prepare(
+      `SELECT r.id, r.bin, r.team, r.status, r.detail, r.batch_id, b.due_date, b.name AS batch,
+              l.aisle, l.level, COALESCE(l.zone, '') AS zone
+         FROM recounts r
+         LEFT JOIN cycle_batches b ON b.id = r.batch_id
+         LEFT JOIN locations l ON l.session_id = r.session_id AND l.code = r.bin
+        WHERE r.session_id = ? AND r.reason = 'CYCLE' AND r.status != 'done'
+        ORDER BY b.due_date, r.bin LIMIT 500`).all(Number(m[1]));
+    return sendJson(req, res, 200, rows);
   }
 
   // --- second counts
@@ -556,16 +591,21 @@ async function handleAdmin(req, res, url, m) {
     }
     if (!bin) throw httpError(400, 'bin or pallet id required');
     if (!db.prepare('SELECT 1 FROM locations WHERE session_id = ? AND code = ?').get(Number(m[1]), bin)) throw httpError(400, `${bin} is not a bin in this session`);
+    audit(actor, 'requested a second count', `${bin}${palletId ? ' / ' + palletId : ''}${body.note ? ' — ' + body.note : ''}`, m[1]);
     return sendJson(req, res, 200, createRecount(m[1], { bin, palletId, reason: 'MANUAL', detail: body.note || '', source: 'manual', team: body.team || null }));
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts\/generate$/)) && method === 'POST') {
-    return sendJson(req, res, 200, generateFromVariances(m[1]));
+    const gen = generateFromVariances(m[1]);
+    audit(actor, 'raised second counts from the variances', `${gen.created} raised from ${gen.considered} pallets`, m[1]);
+    return sendJson(req, res, 200, gen);
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts\/(\d+)$/)) && method === 'POST') {
     const body = await readJson(req);
+    audit(actor, 'changed a second count', `#${m[2]} ${JSON.stringify(body)}`, m[1]);
     return sendJson(req, res, 200, updateRecount(m[1], m[2], body));
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts\/(\d+)$/)) && method === 'DELETE') {
+    audit(actor, 'removed a second count', `#${m[2]}`, m[1]);
     return sendJson(req, res, 200, { deleted: deleteRecount(m[1], m[2]) });
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/recounts\.csv$/))) {
@@ -651,6 +691,9 @@ const server = http.createServer(async (req, res) => {
 setInterval(() => {
   try { runSchedules(); } catch (err) { console.warn('[cycle] schedule check failed:', err.message); }
 }, 15 * 60 * 1000).unref();
+
+// a copy of the database, once a day, kept for BACKUP_KEEP days
+startBackupSchedule().unref();
 
 server.listen(PORT, HOST, () => {
   console.log(`physical-inv-app listening on http://${HOST}:${PORT}`);

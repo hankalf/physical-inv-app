@@ -138,3 +138,8 @@ progress { width: 100%; height: 14px; }
 .bins span.counted { color: #7ee29a; border-color: #1d572a; background: #10281a; }
 .hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
 .link { background: none; border: none; color: var(--accent); width: auto; padding: 6px 0; font-size: 13px; }
+
+/* the sign-on "what are you doing" choice */
+#modePick button { margin-top: 0; }
+#modePick button.selected { background: var(--accent); border-color: var(--accent); color: #fff; }
+#modePick button[hidden] { display: none !important; }

@@ -73,9 +73,17 @@ Scanners need internet access for this option, not just warehouse Wi-Fi.
 | `ADMIN_PASSWORD` | `changeme` | Supervisor dashboard password — **set this** |
 | `DB_PATH` | `./data/inventory.db` | SQLite file (falls back to `./data` if unwritable) |
 | `MAX_UPLOAD_MB` | `64` | Upload size cap |
+| `BACKUP_DIR` | `<DB_PATH>/../backups` | Where daily backups are written |
+| `BACKUP_KEEP` | `14` | How many backups to keep |
 | `SITE_TIMEZONE` | `America/New_York` | The warehouse's clock — dates a cycle batch is due, and the hour a schedule fires |
 
 ---
+
+## Cycle counts — `/cycle`
+
+Its own page, on the same supervisor password: create the programme, upload the bin list
+once and the inventory report whenever it changes, watch coverage, generate today's bins
+and see what is still open. Details under *Cycle counting* below.
 
 ## Teams & crew — `/teams`
 
@@ -273,16 +281,17 @@ A scanner with no link can still type an ID on first run; it is marked "not regi
 **First run:** if the scanner was opened from its registered link, nothing to do. Otherwise
 it asks for an ID.
 
-**Sign-on:** pick the session, enter the team number, scan or type each employee's badge
-(Enter after each), tap **Sign on & load list**.
+**Sign-on:** choose what you are doing — **Full count** or **Cycle count** (the choice only
+appears when both are running) — pick the one you want, enter the team number, scan or type
+each **clock in number** (Enter after each), tap **Sign on & load list**.
 
-The badges are checked against the crew list, and the assignment screen says what it found:
+The clock in numbers are checked against the crew list, and the assignment screen says what it found:
 who signed on, what they have between them and how high it reaches. It calls out a badge
 that is not on the crew list, anybody rostered to a different team today, and — in red —
-a crew that cannot reach the levels their aisle was given, naming the machine they are
-short of. None of it blocks counting; it is there so a shift-change shuffle is caught at
+a crew that cannot reach the levels of their work — the aisle they were given in a full
+count, or the bins on their list in a cycle count — naming the machine they are short of. None of it blocks counting; it is there so a shift-change shuffle is caught at
 6am rather than at the variance report. Signing off clears the crew, so the next shift
-scans their own badges in.
+scans their own numbers in.
 
 **Assignment screen** (guided sessions): shows the team's aisle, a grid of its bins
 coloured as they get a count, and what comes next. **Aisle complete** hands the aisle
@@ -354,6 +363,11 @@ Supervisor (`Authorization: Bearer <token>` from `POST /api/admin/login`):
 
 | Method | Path | Purpose |
 |---|---|---|
+| `GET` | `/api/admin/audit` · `/audit/export.csv` | Who changed what |
+| `GET`/`POST` | `/api/admin/backups` · `/backups/:name` | List, take, download a backup |
+| `GET`/`POST` | `/api/admin/erp/formats` | ERP layouts |
+| `GET` | `/api/admin/sessions/:id/erp/:format.csv` | The file for the ERP |
+| `GET` | `/api/admin/sessions/:id/print/count-sheet` | Printable count sheet |
 | `GET` | `/api/admin/people` | Roster: employees, teams, equipment rules |
 | `POST` | `/api/admin/people/employees` · `/import` | Add or update one · import a list |
 | `POST`/`DELETE` | `/api/admin/people/teams` · `/teams/:id` | Create / delete a team |
@@ -382,6 +396,27 @@ Supervisor (`Authorization: Bearer <token>` from `POST /api/admin/login`):
 | `GET` | `/api/admin/sessions/:id/export/{pallets,counts,exceptions,uncounted,recounts,coverage}.csv` | Exports |
 
 ---
+
+## Housekeeping
+
+**Who changed what.** Sign-in asks for a name, and every change a supervisor makes is
+recorded — sessions, uploads, assignments (including an override of the equipment check),
+second counts, cycle batches, scanners, the crew list, exports and printed sheets. The log
+is on the dashboard and exports as CSV.
+
+**Backups.** A copy of the database is taken automatically once a day and kept for
+`BACKUP_KEEP` days (14), plus a **Back up now** button. Each one is a consistent snapshot
+taken with `VACUUM INTO`, downloadable from the dashboard — download one if you want a copy
+somewhere other than this machine, because a volume is not a backup.
+
+**Count sheets.** Paper, for a dead battery or an auditor: choose aisles and levels, get a
+printable sheet with one row per bin, pre-printed with level, position and face, and blank
+boxes for the pallet and the count. Blind by default. Optionally only bins with no count yet.
+
+**Sending it back to the ERP.** Three layouts ship — *pallet lines*, *adjustments* (only
+what differs, with a signed adjustment), and *bin lines* (every line with who counted it).
+Column names and the shape of a row are configuration, so a site can add its own layout
+through `POST /api/admin/erp/formats` and export it immediately, without a deploy.
 
 ## Security
 

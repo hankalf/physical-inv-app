@@ -173,3 +173,16 @@ export function runSchedules() {
   }
   return made;
 }
+
+/** Levels a team's open cycle bins sit on — what their equipment has to reach. */
+export function levelsOnOpenTasks(sessionId, team) {
+  const rows = db
+    .prepare(
+      `SELECT DISTINCT COALESCE(l.level, '') AS level
+         FROM recounts r JOIN locations l ON l.session_id = r.session_id AND l.code = r.bin
+        WHERE r.session_id = ? AND r.reason = 'CYCLE' AND r.status != 'done'
+          AND (r.team IS NULL OR r.team = ?)`
+    )
+    .all(Number(sessionId), norm(team));
+  return rows.map((r) => r.level).filter(Boolean).sort().join('');
+}
