@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teams &amp; Crew</title>
+<link rel="icon" href="/icon.svg">
+<link rel="stylesheet" href="/styles.css">
+<style>
+  body { font-size: 15px; }
+  main { width: 100%; padding: 14px 18px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .card h2 { margin: 0 0 8px; font-size: 17px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .card h2 .muted { font-weight: 400; font-size: 13px; }
+  button { width: auto; padding: 9px 14px; font-size: 14px; margin-top: 0; }
+  button.sm { padding: 4px 9px; font-size: 12px; }
+  input, select { font-size: 15px; padding: 9px 10px; font-weight: 500; }
+  input.sm { padding: 5px 8px; font-size: 13px; }
+  .inline { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+  .inline > div { flex: 1 1 180px; }
+  .inline > div.auto { flex: 0 0 auto; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+  label.cb { display: inline-flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: 13px; }
+  label.cb input { width: auto; }
+
+  .board { display: grid; grid-template-columns: 320px 1fr; gap: 14px; align-items: start; }
+  @media (max-width: 900px) { .board { grid-template-columns: 1fr; } }
+  .teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+
+  .bucket { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; min-height: 130px; }
+  .bucket.over { border-color: var(--accent); background: #101c2e; }
+  .bucket .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .bucket .name { font-size: 17px; font-weight: 800; }
+  .bucket .reach { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .bucket .reach.full { color: var(--ok); border-color: #1d572a; }
+  .bucket .reach.some { color: var(--warn); border-color: #5c4813; }
+  .bucket .reach.none { color: var(--err); border-color: #6e2c2f; }
+  .bucket .kit { font-size: 12px; color: var(--muted); margin-top: 4px; min-height: 16px; }
+  .bucket .drop { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; min-height: 40px; }
+  .bucket .empty { color: var(--muted); font-size: 13px; border: 1px dashed var(--line); border-radius: 8px; padding: 12px; text-align: center; }
+
+  .person {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 10px; cursor: grab; display: flex; justify-content: space-between; gap: 8px; align-items: flex-start;
+  }
+  .person:active { cursor: grabbing; }
+  .person.dragging { opacity: .4; }
+  .person .who { font-weight: 700; }
+  .person .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .person .kitrow { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+  .person .kitrow span { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--text); }
+  .person select { padding: 3px 6px; font-size: 12px; width: auto; font-weight: 500; }
+  .pool { max-height: 70vh; overflow-y: auto; }
+  .rule { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+  .rule .lv { font-weight: 800; min-width: 86px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="title">Teams &amp; Crew</span>
+  <span class="chip" id="countChip" hidden></span>
+  <a href="/admin" class="chip" style="text-decoration:none">Dashboard →</a>
+  <button id="btnLogout" class="ghost" hidden style="padding:6px 10px;font-size:12px">Log out</button>
+</header>
+
+<main>
+  <section class="screen active" id="scrLogin">
+    <div class="card" style="max-width:420px;margin:40px auto">
+      <h2>Supervisor sign-in</h2>
+      <label for="fPassword">Password</label>
+      <input id="fPassword" type="password" autocomplete="current-password">
+      <button class="primary" id="btnLogin" style="width:100%;margin-top:10px">Sign in</button>
+      <div class="feedback" id="loginMsg"></div>
+    </div>
+  </section>
+
+  <section class="screen" id="scrMain">
+
+    <div class="card">
+      <h2>Crew list <span class="muted">badge, name, department, equipment</span></h2>
+      <div class="inline">
+        <div><label for="fFile">CSV or Excel file</label><input type="file" id="fFile" accept=".csv,.tsv,.txt,.xlsx,.xlsm"></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fReplace"> Replace the whole list</label></div>
+        <div class="auto"><button class="primary" id="btnUpload">Upload</button></div>
+        <div class="auto"><a id="lnkTemplate" href="/templates/employees-template.csv" download style="color:var(--accent);font-weight:700;text-decoration:none">⬇ Sample CSV</a></div>
+        <div class="auto"><button id="btnExport">Export current list</button></div>
+      </div>
+      <div class="hint" style="margin-top:8px">
+        Columns matched by name: <b>Badge</b> (required), Name, Department, Equipment. Equipment can be a list —
+        <code>Scissor lift; High reach</code>. Spellings like <i>forklift</i>, <i>reach truck</i>, <i>pallet jack</i> are understood.
+      </div>
+      <div class="feedback" id="uploadMsg"></div>
+      <hr>
+      <div class="inline">
+        <div class="auto"><label for="fBadge">Badge</label><input id="fBadge" class="sm" style="width:110px" placeholder="E1042"></div>
+        <div><label for="fName">Name</label><input id="fName" placeholder="Full name"></div>
+        <div class="auto"><label for="fDept">Department</label><input id="fDept" class="sm" placeholder="Freezer"></div>
+        <div><label for="fEquip">Equipment</label><div class="inline" id="equipPicker" style="gap:12px"></div></div>
+        <div class="auto"><button class="primary" id="btnAddPerson">Add / update</button></div>
+      </div>
+      <div class="feedback" id="personMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Teams <span class="muted">drag people between the crew list and a team — or use the menu on a card</span></h2>
+      <div class="inline">
+        <div class="auto"><label for="fTeamName">New team</label><input id="fTeamName" class="sm" style="width:110px" placeholder="3"></div>
+        <div><label for="fTeamNotes">Notes</label><input id="fTeamNotes" placeholder="e.g. night shift, freezer"></div>
+        <div class="auto"><button class="primary" id="btnAddTeam">Add team</button></div>
+      </div>
+      <div class="feedback" id="teamMsg"></div>
+
+      <div class="board" style="margin-top:14px">
+        <div class="bucket" id="poolBucket" data-team="">
+          <div class="head"><span class="name">Not on a team</span><span class="reach" id="poolCount">0</span></div>
+          <div class="kit">Drag someone onto a team to assign them.</div>
+          <div class="drop pool" id="pool"></div>
+        </div>
+        <div class="teams" id="teams"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>What each level needs <span class="muted">a team must have all of it between them</span></h2>
+      <div class="hint">
+        Level A is on foot. Everything above needs equipment, and a level reachable two ways lists both rules.
+        An aisle assignment for levels a team cannot reach is refused in the dashboard.
+      </div>
+      <div id="rules" style="margin-top:12px"></div>
+      <div class="inline" style="margin-top:8px">
+        <div class="auto"><button id="btnAddRule">Add a rule</button></div>
+        <div class="auto"><button class="primary" id="btnSaveRules">Save rules</button></div>
+        <div class="auto"><button id="btnResetRules" class="ghost">Back to the Front Royal defaults</button></div>
+      </div>
+      <div class="feedback" id="rulesMsg"></div>
+      <div style="margin-top:14px"><table id="reachTable"></table></div>
+    </div>
+
+  </section>
+</main>
+
+<script src="/teams.js"></script>
+</body>
+</html>

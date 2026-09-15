@@ -76,6 +76,33 @@ Scanners need internet access for this option, not just warehouse Wi-Fi.
 
 ---
 
+## Teams & crew — `/teams`
+
+A separate page for the roster, on the same supervisor password.
+
+**Upload the crew list** (CSV or Excel): `Badge` (required), `Name`, `Department`,
+`Equipment`. Equipment can be a list — `Scissor lift; High reach` — and common spellings
+(*forklift*, *reach truck*, *pallet jack*, *walkie*) are understood; anything unrecognised
+is reported rather than silently dropped. People can also be added one at a time.
+
+**Teams** are created here and people are **dragged** between the crew list and a team
+card (every card also has a menu, for a tablet). Each card shows the equipment the team
+has between them and the levels that reaches.
+
+**What each level needs** is the rule table, and it is enforced. At Front Royal:
+
+| Level | Needs, between the team |
+|---|---|
+| A | on foot |
+| B–C | dock truck **and** scissor lift |
+| C–F | high reach **and** scissor lift |
+
+So a team with a scissor lift alone reaches level A only; add a dock truck and they reach
+A–C; a high reach and a scissor lift reach A and C–F. Level C is reachable either way.
+Assigning a team levels it cannot reach is refused in the dashboard, naming what is
+missing — a supervisor can still insist, and is asked to confirm. The rules are editable
+on the page, so a new machine or a changed policy does not need a deploy.
+
 ## Two kinds of session
 
 | | **Full count** | **Cycle count** |
@@ -318,6 +345,11 @@ Supervisor (`Authorization: Bearer <token>` from `POST /api/admin/login`):
 
 | Method | Path | Purpose |
 |---|---|---|
+| `GET` | `/api/admin/people` | Roster: employees, teams, equipment rules |
+| `POST` | `/api/admin/people/employees` · `/import` | Add or update one · import a list |
+| `POST`/`DELETE` | `/api/admin/people/teams` · `/teams/:id` | Create / delete a team |
+| `POST` | `/api/admin/people/assign` | Move someone onto a team |
+| `POST` | `/api/admin/people/equipment` | Save the equipment and level rules |
 | `GET`/`POST` | `/api/admin/devices` | List / register scanners |
 | `POST`/`DELETE` | `/api/admin/devices/:uid` | Rename / remove a scanner |
 | `GET`/`POST` | `/api/admin/sessions` | List / create (`mode: full \| cycle`) |

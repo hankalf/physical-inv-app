@@ -47,6 +47,7 @@
     $('scrLogin').classList.toggle('active', which === 'login');
     $('scrMain').classList.toggle('active', which === 'main');
     $('btnLogout').hidden = which !== 'main';
+    $('teamsLink').hidden = which !== 'main';
     $('sessionChip').hidden = which !== 'main';
   }
   function logout() { token = ''; sessionStorage.removeItem('admToken'); show('login'); }
@@ -932,11 +933,25 @@
     } catch (err) { alert(err.message); }
   };
 
+  async function queueAisles(force) {
+    const r = await postJson(`/api/admin/sessions/${sessionId}/assignments`,
+      { team: $('fAssignTeam').value, aisles: $('fAssignAisles').value, levels: $('fAssignLevels').value, force });
+    return r;
+  }
+
   $('btnAssign').onclick = async () => {
     if (!needSession($('assignMsg'))) return;
     if (!$('fAssignLevels').value.trim()) { msg($('assignMsg'), 'err', 'Levels are required', 'Which levels does this team count? e.g. A-C, D-F, or A-F for every level.'); $('fAssignLevels').focus(); return; }
     try {
-      const r = await postJson(`/api/admin/sessions/${sessionId}/assignments`, { team: $('fAssignTeam').value, aisles: $('fAssignAisles').value, levels: $('fAssignLevels').value });
+      let r;
+      try {
+        r = await queueAisles(false);
+      } catch (err) {
+        // the team cannot reach those levels: say so, and let a supervisor insist
+        if (!/cannot reach level/.test(err.message)) throw err;
+        if (!confirm(`${err.message}\n\nAssign it anyway?`)) { msg($('assignMsg'), 'err', err.message, 'Nothing queued. Change the levels, or put someone with the right equipment on the team (Teams & crew).'); return; }
+        r = await queueAisles(true);
+      }
       const parts = [];
       if (r.added.length) parts.push(`queued ${r.added.join(', ')}`);
       if (r.activated.length) parts.push(`started ${r.activated.map((a) => `team ${a.team} in ${a.aisle}${a.levels ? ' (' + a.levels + ')' : ''}`).join('; ')}`);

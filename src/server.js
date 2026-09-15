@@ -21,7 +21,15 @@ import {
   tasksForTeam, takeRecount, finishRecount, updateRecount, deleteRecount,
 } from './routes/recounts.js';
 import { generateBatch, previewBatch, listBatches, deleteBatch, coverage, runSchedules, STRATEGIES } from './routes/cycles.js';
-import { toCsv } from './util/csv.js';
+import {
+  listEmployees, upsertEmployee, deleteEmployee, importEmployees, importHelpers,
+  listTeams, createTeam, deleteTeam, assignMember, getConfig, setConfig, getEmployee,
+} from './routes/people.js';
+
+// people.js parses uploaded rosters with the shared CSV helpers
+importHelpers.parseRecords = parseRecords;
+importHelpers.pick = pick;
+import { toCsv, parseRecords, pick } from './util/csv.js';
 import { listLayouts, loadLayout } from './util/layouts.js';
 
 const PORT = Number(process.env.PORT || 3000);
@@ -121,6 +129,7 @@ function requireAdmin(req) {
 async function serveStatic(req, res, pathname) {
   const rel = pathname === '/' ? '/index.html'
     : /^\/admin\/?$/.test(pathname) ? '/admin.html'
+    : /^\/teams\/?$/.test(pathname) ? '/teams.html'
     : pathname;
   const filePath = join(PUBLIC_DIR, normalize(rel).replace(/^(\.\.[/\\])+/, ''));
   if (!filePath.startsWith(PUBLIC_DIR)) return send(req, res, 403, 'forbidden');
@@ -219,6 +228,41 @@ async function handleHandheld(req, res, url, m) {
     return sendJson(req, res, 200, result);
   }
 
+  // --- roster: employees, teams, equipment
+  if (p === '/api/admin/people' && method === 'GET') {
+    return sendJson(req, res, 200, { employees: listEmployees(), teams: listTeams(), config: getConfig() });
+  }
+  if (p === '/api/admin/people/employees' && method === 'POST') {
+    const body = await readJson(req);
+    return sendJson(req, res, 200, upsertEmployee(body));
+  }
+  if (p === '/api/admin/people/employees/import' && method === 'POST') {
+    const text = await readBody(req);
+    return sendJson(req, res, 200, importEmployees(text, { replace: url.searchParams.get('replace') === '1' }));
+  }
+  if ((m = p.match(/^\/api\/admin\/people\/employees\/([^/]+)$/)) && method === 'DELETE') {
+    return sendJson(req, res, 200, { deleted: deleteEmployee(decodeURIComponent(m[1])) });
+  }
+  if (p === '/api/admin/people/teams' && method === 'POST') {
+    const body = await readJson(req);
+    return sendJson(req, res, 200, createTeam(body));
+  }
+  if ((m = p.match(/^\/api\/admin\/people\/teams\/(\d+)$/)) && method === 'DELETE') {
+    return sendJson(req, res, 200, { deleted: deleteTeam(m[1]) });
+  }
+  if (p === '/api/admin/people/assign' && method === 'POST') {
+    const body = await readJson(req);
+    return sendJson(req, res, 200, { teams: assignMember(body.badge, body.teamId ?? null) });
+  }
+  if (p === '/api/admin/people/equipment' && method === 'POST') {
+    const body = await readJson(req);
+    return sendJson(req, res, 200, setConfig(body));
+  }
+  if (p === '/api/admin/people/export/employees.csv') {
+    const rows = listEmployees().map((e) => ({ ...e, equipment: e.equipment.join('; '), team: e.team || '' }));
+    return sendCsv(req, res, 'employees.csv', toCsv(rows, ['badge', 'name', 'dept', 'equipment', 'reach', 'team', 'active']));
+  }
+
   // --- cycle counting
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/batches$/)) && method === 'GET') {
     return sendJson(req, res, 200, { batches: listBatches(m[1]), coverage: coverage(m[1], url.searchParams.get('days') || 90), strategies: STRATEGIES });
@@ -256,6 +300,16 @@ async function handleHandheld(req, res, url, m) {
       `SELECT l.aisle, l.code AS bin, l.level, COALESCE(l.zone,'') AS zone, COALESCE(l.last_counted,'') AS last_counted
          FROM locations l WHERE l.session_id = ? ORDER BY COALESCE(l.last_counted,''), l.code`).all(Number(m[1]));
     return sendCsv(req, res, `bin-coverage-session-${m[1]}.csv`, toCsv(rows, ['aisle', 'bin', 'level', 'zone', 'last_counted']));
+  }
+
+  // --- roster lookups from the gun
+  if ((m = p.match(/^\/api\/people\/([^/]+)$/)) && method === 'GET') {
+    const e = getEmployee(decodeURIComponent(m[1]));
+    if (!e) throw httpError(404, 'badge not on the roster');
+    return sendJson(req, res, 200, e);
+  }
+  if (p === '/api/teams' && method === 'GET') {
+    return sendJson(req, res, 200, listTeams().map((t) => ({ name: t.name, reach: t.reach, members: t.members.length })));
   }
 
   // --- second counts, from the gun
@@ -384,7 +438,7 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments$/)) && method === 'POST') {
     const body = await readJson(req);
     const aisles = Array.isArray(body.aisles) ? body.aisles : String(body.aisles || '').split(/[,\s]+/);
-    return sendJson(req, res, 200, queueAssignments(m[1], body.team, aisles, body.levels || ''));
+    return sendJson(req, res, 200, queueAssignments(m[1], body.team, aisles, body.levels || '', { force: !!body.force }));
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments\/(\d+)$/)) && method === 'POST') {
     const body = await readJson(req);
@@ -392,6 +446,41 @@ async function handleAdmin(req, res, url, m) {
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments\/(\d+)$/)) && method === 'DELETE') {
     return sendJson(req, res, 200, deleteAssignment(m[1], m[2]));
+  }
+
+  // --- roster: employees, teams, equipment
+  if (p === '/api/admin/people' && method === 'GET') {
+    return sendJson(req, res, 200, { employees: listEmployees(), teams: listTeams(), config: getConfig() });
+  }
+  if (p === '/api/admin/people/employees' && method === 'POST') {
+    const body = await readJson(req);
+    return sendJson(req, res, 200, upsertEmployee(body));
+  }
+  if (p === '/api/admin/people/employees/import' && method === 'POST') {
+    const text = await readBody(req);
+    return sendJson(req, res, 200, importEmployees(text, { replace: url.searchParams.get('replace') === '1' }));
+  }
+  if ((m = p.match(/^\/api\/admin\/people\/employees\/([^/]+)$/)) && method === 'DELETE') {
+    return sendJson(req, res, 200, { deleted: deleteEmployee(decodeURIComponent(m[1])) });
+  }
+  if (p === '/api/admin/people/teams' && method === 'POST') {
+    const body = await readJson(req);
+    return sendJson(req, res, 200, createTeam(body));
+  }
+  if ((m = p.match(/^\/api\/admin\/people\/teams\/(\d+)$/)) && method === 'DELETE') {
+    return sendJson(req, res, 200, { deleted: deleteTeam(m[1]) });
+  }
+  if (p === '/api/admin/people/assign' && method === 'POST') {
+    const body = await readJson(req);
+    return sendJson(req, res, 200, { teams: assignMember(body.badge, body.teamId ?? null) });
+  }
+  if (p === '/api/admin/people/equipment' && method === 'POST') {
+    const body = await readJson(req);
+    return sendJson(req, res, 200, setConfig(body));
+  }
+  if (p === '/api/admin/people/export/employees.csv') {
+    const rows = listEmployees().map((e) => ({ ...e, equipment: e.equipment.join('; '), team: e.team || '' }));
+    return sendCsv(req, res, 'employees.csv', toCsv(rows, ['badge', 'name', 'dept', 'equipment', 'reach', 'team', 'active']));
   }
 
   // --- cycle counting

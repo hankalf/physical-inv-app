@@ -191,6 +191,36 @@ CREATE TABLE IF NOT EXISTS recounts (
 );
 CREATE INDEX IF NOT EXISTS idx_recounts_session ON recounts(session_id, status);
 
+-- Small key/value store for site settings that must be editable without a deploy.
+CREATE TABLE IF NOT EXISTS settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+-- The roster. Employees and teams outlive a count session.
+CREATE TABLE IF NOT EXISTS employees (
+  badge      TEXT PRIMARY KEY,
+  name       TEXT NOT NULL,
+  dept       TEXT,
+  equipment  TEXT NOT NULL DEFAULT '[]',   -- JSON array of equipment keys
+  active     INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS teams (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  name       TEXT NOT NULL UNIQUE,
+  notes      TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS team_members (
+  team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  badge   TEXT    NOT NULL REFERENCES employees(badge) ON DELETE CASCADE,
+  PRIMARY KEY (team_id, badge)
+);
+CREATE INDEX IF NOT EXISTS idx_member_badge ON team_members(badge);
+
 -- One generated day's (or week's) worth of cycle-count bins.
 CREATE TABLE IF NOT EXISTS cycle_batches (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,

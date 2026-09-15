@@ -1,5 +1,6 @@
 import { db, norm, resolveAisle } from '../db.js';
-import { aisleNumber, normLevels, levelsOverlap } from '../util/bincode.js';
+import { aisleNumber, normLevels, levelsOverlap, levelsLabel } from '../util/bincode.js';
+import { reachShortfall } from './people.js';
 
 /*
  * Guided counting.
@@ -119,12 +120,19 @@ export function autoBlock(sessionId, size = 2, offset = 0) {
   return aisleOverview(id);
 }
 
-export function queueAssignments(sessionId, team, aisles, levelsRaw = '') {
+export function queueAssignments(sessionId, team, aisles, levelsRaw = '', { force = false } = {}) {
   const id = Number(sessionId);
   const t = norm(team);
   const levels = normLevels(levelsRaw);
   if (!t) throw Object.assign(new Error('team required'), { status: 400 });
   if (!levels) throw Object.assign(new Error('levels required - e.g. A-C, D-F, or A-F for every level'), { status: 400 });
+
+  // A team can only be sent where its equipment reaches. Teams with no roster
+  // entry are not second-guessed; a supervisor can override with force.
+  if (!force) {
+    const short = reachShortfall(t, levels);
+    if (short) throw Object.assign(new Error(short.message), { status: 409, code: 'reach' });
+  }
   const maxPos = db
     .prepare('SELECT COALESCE(MAX(position), -1) AS p FROM assignments WHERE session_id = ? AND team = ?')
     .get(id, t).p;
