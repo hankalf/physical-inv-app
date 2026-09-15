@@ -24,6 +24,26 @@ const clean = (list, cap = 24) => [...new Set(
     .map((x) => x.slice(0, 48)),
 )].slice(0, cap);
 
+/* Which count a scanner lands on at sign-on. A site running a wall-to-wall
+   alongside its cycle programme wants every gun starting on the right one. */
+export function defaultSessionId() {
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'defaultSessionId'").get();
+  const id = row ? Number(row.value) : 0;
+  if (!id) return 0;
+  const s = db.prepare("SELECT id FROM sessions WHERE id = ? AND status = 'open'").get(id);
+  return s ? s.id : 0;     // a closed or deleted one stops being the default
+}
+
+export function setDefaultSessionId(id) {
+  const n = Number(id) || 0;
+  if (n && !db.prepare("SELECT 1 FROM sessions WHERE id = ? AND status = 'open'").get(n)) {
+    throw Object.assign(new Error('that count is not open, so scanners cannot start on it'), { status: 400 });
+  }
+  db.prepare("INSERT INTO settings (key, value) VALUES ('defaultSessionId', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+    .run(String(n));
+  return defaultSessionId();
+}
+
 export function scannerPrompts() {
   const row = db.prepare("SELECT value FROM settings WHERE key = 'scannerPrompts'").get();
   let saved = {};

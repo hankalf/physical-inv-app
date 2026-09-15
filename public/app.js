@@ -329,8 +329,13 @@
     state.mode = mode;
     await metaSet('mode', mode);
     renderSessionChoices();
+    const has = (v) => v && [...$('fSession').options].some((o) => o.value === String(v));
+    /* A supervisor's default wins over what this gun did last: it is how you
+       point every scanner at the wall-to-wall on the morning it starts. */
+    const preferred = state.sessions.find((x) => x.isDefault && (x.mode || 'full') === state.mode);
     const last = await metaGet('lastSessionId');
-    if (last && [...$('fSession').options].some((o) => o.value === String(last))) $('fSession').value = String(last);
+    if (preferred && has(preferred.id)) $('fSession').value = String(preferred.id);
+    else if (has(last)) $('fSession').value = String(last);
   }
 
   async function loadSessions() {
@@ -791,6 +796,7 @@
       stopMoveOn();
     }
     renderContext();
+    renderNextBin();
     focusScan();
   }
 
@@ -831,6 +837,63 @@
     };
     tick();
     moveOnTimer = setInterval(tick, 1000);
+  }
+
+
+  /* --------------------------------------------------- the next bin to count
+     Once a team is in an aisle, walking it is a sequence: 001, 002, 003 ... and
+     the gun should say which one is next rather than leaving a counter to keep
+     their own place down a 650-bin aisle. Scanning something else is still
+     fine - the next one is just recomputed. */
+  let countedInAisle = new Set();
+
+  async function refreshCounted() {
+    const a = state.assignment;
+    if (!a || !a.active) { countedInAisle = new Set(); return; }
+    countedInAisle = new Set([...(a.progress?.countedBins || []), ...(await localCountedBins(a.active.aisle))]);
+  }
+
+  function nextBinCode() {
+    const a = state.assignment;
+    if (!a || !a.active || !Array.isArray(a.bins)) return null;
+    // a.bins is the assigned aisle and levels already; code order is 001, 002, 003 ...
+    const ordered = [...a.bins].sort((x, y) => String(x).localeCompare(String(y), undefined, { numeric: true }));
+    return ordered.find((b) => !countedInAisle.has(b)) || null;
+  }
+
+  function renderNextBin() {
+    const el = $('nextBin');
+    const a = state.assignment;
+    const onTask = !!state.recount;
+    if (onTask || !a || !a.active || !state.session?.guided) { el.hidden = true; return; }
+    const total = (a.bins || []).length;
+    const next = nextBinCode();
+    el.hidden = false;
+    el.innerHTML = '';
+    if (!next) {
+      el.className = 'nextbin done';
+      el.append(`Every bin in ${a.active.aisle} has a count — tap "Aisle complete" when you are happy.`);
+      return;
+    }
+    el.className = 'nextbin';
+    const lead = document.createElement('span');
+    lead.className = 'nb-lead';
+    lead.textContent = 'Next bin';
+    const code = document.createElement('b');
+    code.className = 'nb-code';
+    code.textContent = next;
+    const where = document.createElement('span');
+    where.className = 'nb-where';
+    where.textContent = describeBin(next) || '';
+    const prog = document.createElement('span');
+    prog.className = 'nb-prog';
+    prog.textContent = `${countedInAisle.size} of ${total}`;
+    el.append(lead, code, where, prog);
+  }
+
+  async function refreshNextBin() {
+    await refreshCounted();
+    renderNextBin();
   }
 
   function renderContext() {
@@ -1051,6 +1114,8 @@
     await wrap(tx('lines', 'readwrite').put(line));
     if (!line.emptyBin) await wrap(tx('dup', 'readwrite').put({ p: line.palletId, loc: line.location, team: line.team }));
     updateChips();
+    if (line.location) countedInAisle.add(line.location);
+    renderNextBin();
     syncQueue();
 
     state.draft = {};

@@ -181,3 +181,15 @@ button.fit { flex: 0 0 auto; width: auto; }
   color: var(--warn); background: #2b2410; border: 1px solid #5c4813; text-align: center;
 }
 .moveon.held { color: var(--muted); background: var(--panel); border-color: var(--line); font-weight: 500; }
+
+/* the next bin in the aisle, so nobody keeps their own place down a 650-bin run */
+.nextbin {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 10px; padding: 10px 12px; border-radius: 8px;
+  background: #101c2e; border: 1px solid #1f4d8f;
+}
+.nextbin .nb-lead { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+.nextbin .nb-code { font-size: 26px; font-weight: 900; letter-spacing: .02em; line-height: 1.1; }
+.nextbin .nb-where { font-size: 13px; color: var(--muted); }
+.nextbin .nb-prog { margin-left: auto; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.nextbin.done { background: #10281a; border-color: #1d572a; color: #7ee29a; font-weight: 700; font-size: 14px; }

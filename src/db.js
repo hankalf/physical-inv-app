@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { loadLayout } from './util/layouts.js';
-import { scannerPrompts } from './routes/scanner-prompts.js';
+import { scannerPrompts, defaultSessionId } from './routes/scanner-prompts.js';
 import { mkdirSync, accessSync, constants } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
@@ -387,6 +387,8 @@ export const publicSession = (s) => ({
   faces: loadLayout(s.layout)?.faces || null,
   // the one-tap reasons, and how long the comments step waits before moving on
   prompts: scannerPrompts(),
+  // the count a scanner should land on at sign-on, if a supervisor picked one
+  isDefault: defaultSessionId() === s.id,
 });
 
 /* ------------------------------------------------------- handheld master data */

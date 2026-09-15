@@ -196,6 +196,7 @@ Per-session settings:
 | Pallet ID check | **Validate, allow override with reason** (default) · Validate, no overrides · Accept any ID (duplicates still blocked) |
 | Guided by aisle plan | on / off |
 | Ask for comments | on / off (drops question 4) |
+| Scanners start here | every gun lands on this count at sign-on — they can still pick another |
 | Recount thresholds | how big a quantity difference has to be before somebody walks back — units, percentage, and a cap on how many stay open |
 
 ### 2. Upload the lists — Settings
@@ -300,6 +301,14 @@ On the gun a cycle session has no aisle plan — the batch *is* the job. The cou
 "40 bins", each task naming the bin and where it is; they scan every pallet in it (or mark
 it empty) and move to the next. A cycle-count line is a first count, so anything that
 disagrees with the report raises a second count exactly as in a full count.
+
+### Walking the aisle
+
+Once a team is in an aisle the gun names the **next bin** — `F01A001`, then `F01A002`,
+then `F01A003` — with where it is (level, position, front or back) and how far along the
+aisle they are. Nobody has to keep their own place down a 650-bin run. Counting out of
+order is still fine: the guide just points at the next one still open. It appears only on a
+guided count with an aisle assigned, since otherwise there is no aisle to walk.
 
 ### What the scanners offer — Settings
 

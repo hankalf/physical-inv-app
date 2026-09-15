@@ -22,6 +22,7 @@ runs the suite in a real Chromium, and exits non-zero if anything fails. Nothing
 | `superadmin.mjs` | the seeded admin login: that it is created from the environment, is a real admin, is left alone on every later boot so a changed password is never reset, and that bad input never stops the app coming up. Starts its own servers |
 | `recount-threshold.mjs` | that a second count is raised for a difference worth walking back for: the unit and percentage thresholds, the cap, and that a pallet in an aisle nobody has counted is not reported missing |
 | `scanner-prompts.mjs` | the editable one-tap reasons the gun offers, and the comments step moving itself on — including that typing or tapping a reason stops the clock and the note is kept |
+| `gun-guidance.mjs` | the next-bin guide walking an aisle 001, 002, 003 and skipping what is already counted, and the count a supervisor makes scanners start on |
 | `lockout.mjs` | turning the shared password off: that it is ignored while no admin exists, bites the moment one does, survives a restart, and can always be switched back on. Starts its own servers, since the thing under test is read at startup |
 | `board.mjs` | the office board — what it shows, what it refuses to leak, that it needs no sign-in and survives the server going away — and the printable scanner setup cards |
 

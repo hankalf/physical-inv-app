@@ -14,7 +14,7 @@ import {
 import { importMaster, pruneAreaAisles } from './routes/master.js';
 import { boardData } from './routes/board.js';
 import { setupState } from './routes/setup.js';
-import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts } from './routes/scanner-prompts.js';
+import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, defaultSessionId, setDefaultSessionId } from './routes/scanner-prompts.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks,
@@ -654,6 +654,18 @@ async function handleAdmin(req, res, url, m) {
     });
     audit(actor, 'printed a count sheet', [...q].map(([k, v]) => `${k}=${v}`).join(' ') || 'whole site', m[1]);
     return send(req, res, 200, html, { 'content-type': 'text/html; charset=utf-8' });
+  }
+
+  // --- which count the scanners land on
+  if (p === '/api/admin/default-session' && method === 'GET') {
+    return sendJson(req, res, 200, { sessionId: defaultSessionId() });
+  }
+  if (p === '/api/admin/default-session' && method === 'POST') {
+    const body = await readJson(req);
+    const id = setDefaultSessionId(body.sessionId);
+    const s = id ? getSession(id) : null;
+    audit(actor, 'set the default count for scanners', s ? `#${s.id} "${s.name}"` : 'none - scanners choose for themselves', id || null);
+    return sendJson(req, res, 200, { sessionId: id });
   }
 
   // --- what the gun offers as one-tap reasons

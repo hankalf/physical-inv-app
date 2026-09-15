@@ -81,6 +81,8 @@
     $('fRecMinQty').value = s.recount_min_qty || 0;
     $('fRecMinPct').value = s.recount_min_pct || 0;
     $('fRecCap').value = s.recount_cap || 0;
+    $('fDefaultSession').checked = defaultSessionId === s.id;
+    $('fDefaultSession').disabled = s.status === 'closed';
     $('fLayout').value = s.layout || '';
     $('btnCloseSession').textContent = s.status === 'closed' ? 'Reopen session' : 'Close session';
   }
@@ -704,6 +706,7 @@
   }
 
   let lastMap = { aisles: [], bins: [] };
+  let defaultSessionId = 0;
 
   async function refreshMap() {
     const data = await apiJson(`/api/admin/sessions/${sessionId}/map`);
@@ -732,6 +735,10 @@
   async function refreshPicker() {
     sessions = await apiJson('/api/admin/sessions');
     picker.render(sessions, sessionId);
+  }
+
+  async function refreshDefaultSession() {
+    defaultSessionId = (await apiJson('/api/admin/default-session')).sessionId || 0;
   }
 
   async function refreshAll() {
@@ -794,7 +801,13 @@
         autoRecount: $('fAutoRecount').checked, layout: $('fLayout').value,
         recountMinQty: $('fRecMinQty').value, recountMinPct: $('fRecMinPct').value, recountCap: $('fRecCap').value,
       });
-      msg($('sessionMsg'), 'ok', 'Settings saved. Scanners pick them up at their next sign-on.');
+      const wantDefault = $('fDefaultSession').checked;
+      if (wantDefault !== (defaultSessionId === sessionId)) {
+        await postJson('/api/admin/default-session', { sessionId: wantDefault ? sessionId : 0 });
+        await refreshDefaultSession();
+      }
+      msg($('sessionMsg'), 'ok', 'Settings saved. Scanners pick them up at their next sign-on.',
+        defaultSessionId === sessionId ? 'Every scanner will land on this count at sign-on.' : '');
       await loadSessions();
     } catch (err) { msg($('sessionMsg'), 'err', err.message); }
   };
@@ -855,7 +868,7 @@
   document.addEventListener('auth', (e) => {
     if (!e.detail) return show('login');
     show('main');
-    (async () => { await loadLayouts(); await loadSessions(); })().catch(() => show('login'));
+    (async () => { await loadLayouts(); await refreshDefaultSession(); await loadSessions(); })().catch(() => show('login'));
   });
   document.addEventListener('DOMContentLoaded', () => { api.start().catch(() => show('login')); });
   setInterval(() => { if (api.token && sessionId) refreshAll().catch(() => {}); }, 30000);
