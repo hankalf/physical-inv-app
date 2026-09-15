@@ -63,6 +63,9 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
   const newAisles = new Set();
   const layout = loadLayout(session.layout);
   const areas = new Set(((layout && layout.areas) || []).map(norm));
+  const excluded = new Set(((layout && layout.excluded) || []).map(norm));
+  stats.excluded = 0;
+  stats.excludedGroups = [...excluded];
   const RACK = /^[A-Z]+\d+[A-Z]\d+$/;
 
   db.exec('BEGIN');
@@ -91,8 +94,10 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
           if (!zone && rule) zone = norm(rule.zone);
           if (!zone && layout && layout.zones) zone = norm(layout.zones[/^[A-Z]+/.exec(code)?.[0]] || '');
         }
+        // groups counted by hand stay out of the app entirely
+        if (excluded.has(aisle)) { stats.excluded++; continue; }
         upLocation.run(id, code, zone, aisle, desc);
-        // areas (doors, staging, ...) are countable bins but not aisles
+        // areas (WIP, system bins, ...) are countable bins but not aisles
         if (!areas.has(aisle)) { upAisle.run(id, aisle, aisle); newAisles.add(aisle); }
         stats.bins++;
         continue;
@@ -155,12 +160,15 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
 /** Drop aisle rows (and their assignments) for groups the layout says are areas, not aisles. */
 export function pruneAreaAisles(sessionId, layout) {
   const areas = ((layout && layout.areas) || []).map(norm);
-  if (!areas.length) return 0;
+  const excluded = ((layout && layout.excluded) || []).map(norm);
   const id = Number(sessionId);
   let removed = 0;
-  for (const a of areas) {
+  for (const a of [...areas, ...excluded]) {
     db.prepare('DELETE FROM assignments WHERE session_id = ? AND aisle = ?').run(id, a);
     removed += db.prepare('DELETE FROM aisles WHERE session_id = ? AND aisle = ?').run(id, a).changes;
   }
+  // bins of an excluded group already in the session go too
+  for (const a of excluded) db.prepare('DELETE FROM locations WHERE session_id = ? AND aisle = ?').run(id, a);
+  if (excluded.length) bumpMasterVersion(id);
   return removed;
 }

@@ -3,7 +3,7 @@
  "image": "/layouts/front-royal.png",
  "width": 1560,
  "height": 1670,
- "note": "Keys are aisle codes as they appear in the bin list (F01A001 -> F01). Positions run left to right (top to bottom for vertical racks) from 001; odd positions are the Front face, even the Back (double-deep), grouped 4 per bay. \"front\" says which side of the row its aisle is on. Set \"reverse\": true on an aisle to flip its direction. \"areas\" are bin groups that are counted but are not aisles: they are not listed with the racking blocks and cannot be assigned to a team.",
+ "note": "Keys are aisle codes as they appear in the bin list (F01A001 -> F01). Positions run left to right (top to bottom for vertical racks) from 001; odd positions are the Front face, even the Back (double-deep), grouped 4 per bay. \"front\" says which side of the row its aisle is on. Set \"reverse\": true on an aisle to flip its direction. \"areas\" are bin groups that are counted but are not aisles: they are not listed with the racking blocks and cannot be assigned to a team. \"excluded\" groups are counted manually and are left out of the import altogether.",
  "blocks": [
   [
    "F01"
@@ -476,5 +476,9 @@
   "STAGING",
   "SYSTEM",
   "WIP"
+ ],
+ "excluded": [
+  "STAGING",
+  "DOORS"
  ]
 }

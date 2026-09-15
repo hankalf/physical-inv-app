@@ -663,7 +663,8 @@
       const t = stats.totals;
       msg($('uploadMsg'), 'ok', `Imported ${stats.rows.toLocaleString()} rows from ${label}`,
         `Session now has ${t.bins.toLocaleString()} bins in ${t.aisles} aisles, ${t.pallets.toLocaleString()} pallets, ${t.assignments} planned aisle assignments` +
-        (stats.skipped ? ` · ${stats.skipped} row(s) skipped (missing required column, or unknown aisle)` : ''));
+        (stats.skipped ? ` · ${stats.skipped} row(s) skipped (missing required column, or unknown aisle)` : '') +
+        (stats.excluded ? ` · ${stats.excluded} bins left out (counted manually: ${stats.excludedGroups.join(', ')})` : ''));
       await refreshAll();
     } catch (err) { msg($('uploadMsg'), 'err', 'Upload failed', err.message); }
   }
@@ -686,7 +687,8 @@
       const t = stats.totals;
       msg($('uploadMsg'), 'ok', `Imported ${stats.rows.toLocaleString()} rows from ${file.name}`,
         `Session now has ${t.bins.toLocaleString()} bins in ${t.aisles} aisles, ${t.pallets.toLocaleString()} pallets, ${t.assignments} planned aisle assignments` +
-        (stats.skipped ? ` · ${stats.skipped} row(s) skipped (missing required column, or unknown aisle)` : ''));
+        (stats.skipped ? ` · ${stats.skipped} row(s) skipped (missing required column, or unknown aisle)` : '') +
+        (stats.excluded ? ` · ${stats.excluded} bins left out (counted manually: ${stats.excludedGroups.join(', ')})` : ''));
       $('fFile').value = '';
       await refreshAll();
     } catch (err) { msg($('uploadMsg'), 'err', 'Upload failed', err.message); }
