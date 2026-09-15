@@ -192,7 +192,9 @@
 
   function announce() {
     if (api.me && api.me.mustChange) return setPassword();
-    setPasswordPanel().hidden = true;
+    const box = setPasswordPanel();
+    box.hidden = true;
+    box.classList.remove('active');     // so the DOM does not claim a screen that is not showing
     document.dispatchEvent(new CustomEvent('auth', { detail: api.me }));
   }
 

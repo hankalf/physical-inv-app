@@ -240,6 +240,43 @@ check('Settings: a supervisor is told account management is an admin job, and ke
   clean(await sup.textContent('#notAdmin')).slice(0, 80));
 await sup.close();
 
+/* ---- every supervisor page on a phone-width screen ---- */
+{
+  const narrow = await browser.newPage({ viewport: { width: 430, height: 940 } });
+  narrow.on('pageerror', (e) => errors.push('narrow: ' + e.message));
+  const bad = [];
+  for (const path of ['/admin', '/cycle', '/teams', '/settings', '/board']) {
+    await narrow.goto(BASE + path);
+    if (path === '/board') {
+      await narrow.waitForTimeout(1400);
+    } else {
+      // The sign-in carries across pages, so only the first one asks. Give the
+      // page a moment to restore it first, or the click races that and both win.
+      await narrow.waitForTimeout(900);
+      if (await narrow.$('#scrLogin.active')) {
+        await narrow.fill('#fUser', 'DANA'); await narrow.fill('#fPassword', 'freezer-2026'); await narrow.click('#btnLogin');
+      }
+      // 'attached', not visible: a page with nothing in it yet (no cycle session
+      // here) is legitimately zero-height, and that is not what this checks.
+      await narrow.waitForSelector('#scrMain.active', { state: 'attached', timeout: 15000 })
+        .catch(() => bad.push(`${path} never reached the page`));
+      await narrow.waitForTimeout(1200);
+    }
+    const over = await narrow.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    if (over) bad.push(`${path} +${over}px`);
+  }
+  check('Narrow: no page scrolls sideways at 430px — only the tables do, inside their own box',
+    bad.length === 0, bad.join(', ') || 'all clean');
+  await narrow.goto(BASE + '/admin');
+  await narrow.waitForSelector('#scrMain.active'); await narrow.waitForTimeout(1500);
+  check('Narrow: the sidebar becomes a top bar and the tabs stay reachable',
+    (await narrow.$$('#navTabs .tab')).length === 4
+      && await narrow.$eval('#navTabs .tab.current', (a) => a.getBoundingClientRect().top < 260),
+    `tab top ${Math.round(await narrow.$eval('#navTabs .tab.current', (a) => a.getBoundingClientRect().top))}px`);
+  await narrow.screenshot({ path: `${S}screenshots/settings-narrow.png` });
+  await narrow.close();
+}
+
 console.log('\nerrors:', errors.length ? errors : 'none');
 console.log(`\n${results.filter(Boolean).length}/${results.length} settings checks passed`);
 await browser.close();

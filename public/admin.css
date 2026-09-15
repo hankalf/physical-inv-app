@@ -94,7 +94,7 @@ body.app { display: grid; grid-template-columns: var(--side) 1fr; min-height: 10
 main { padding: 18px 22px 40px; min-width: 0; }
 .screen { display: none; }
 .screen.active { display: block; }
-[data-sub] { display: none; }
+[data-sub] { display: none; min-width: 0; }
 [data-sub].active { display: block; }
 
 @media (max-width: 900px) {
@@ -113,6 +113,7 @@ main { padding: 18px 22px 40px; min-width: 0; }
 
 /* ----------------------------------------------------------------- surfaces */
 .card {
+  min-width: 0;
   background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--radius); box-shadow: var(--shadow);
   padding: 18px 20px; margin-bottom: 16px;
@@ -129,7 +130,7 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 18px -20px; }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
 @media (max-width: 1100px) { .two { grid-template-columns: 1fr; } }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
-.scroll { overflow-x: auto; }
+.scroll { overflow-x: auto; max-width: 100%; }
 
 /* stat tiles */
 .stat { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
@@ -163,7 +164,10 @@ label.cb input { width: auto; }
 
 .inline { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
 .inline > div { flex: 1 1 180px; min-width: 0; }
-.inline > div.auto { flex: 0 0 auto; }
+/* an auto-width cell still must not push the page wider than the screen: a long
+   option like "Front Royal - rack layout D-22P9170-L001 (rev A)" otherwise does */
+.inline > div.auto { flex: 0 0 auto; max-width: 100%; }
+.inline > div.auto select, .inline > div.auto input { max-width: 100%; }
 .row { display: flex; gap: 8px; align-items: stretch; }
 .row > * { flex: 1; min-width: 0; }
 
