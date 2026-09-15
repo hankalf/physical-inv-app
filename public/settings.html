@@ -121,6 +121,46 @@
 
       <div data-sub="scanners" data-sub-label="Scanners">
     <div class="card">
+      <h2>What the scanners offer <span class="chip" id="promptChip" hidden></span>
+        <span class="muted">the one-tap reasons a counter can pick, without typing</span></h2>
+      <div class="hint" style="margin-top:0">
+        The reasons a site needs are the site's own — "Blocked by a trailer" means something here
+        and nothing anywhere else. Changes reach a scanner at its next sign-on.
+      </div>
+      <div class="two" style="margin-top:14px">
+        <div>
+          <h3 style="margin-top:0">Comments</h3>
+          <div class="hint" style="margin-top:0">Offered on the last step, after the bin is scanned.</div>
+          <div class="chips" id="commentList" style="margin-top:10px"></div>
+          <div class="row" style="margin-top:10px">
+            <input id="fNewComment" placeholder="e.g. Frozen to the rack" maxlength="48">
+            <button class="fit" id="btnAddComment">Add</button>
+          </div>
+        </div>
+        <div>
+          <h3 style="margin-top:0">Override reasons</h3>
+          <div class="hint" style="margin-top:0">Offered when a pallet ID is not on the list and the counter is allowed to accept it anyway.</div>
+          <div class="chips" id="overrideList" style="margin-top:10px"></div>
+          <div class="row" style="margin-top:10px">
+            <input id="fNewOverride" placeholder="e.g. Hand-written ID" maxlength="48">
+            <button class="fit" id="btnAddOverride">Add</button>
+          </div>
+        </div>
+      </div>
+      <hr>
+      <div class="inline">
+        <div class="auto">
+          <label for="fCommentTimeout">Comments step moves on after</label>
+          <input id="fCommentTimeout" class="sm" type="number" min="0" max="120" style="width:80px">
+          <span class="muted"> seconds · 0 waits for the counter</span>
+        </div>
+        <div class="auto"><button class="primary fit" id="btnSavePrompts">Save</button></div>
+        <div class="auto"><button class="fit" id="btnResetPrompts">Restore the defaults</button></div>
+      </div>
+      <div class="feedback" id="promptMsg"></div>
+    </div>
+
+    <div class="card">
       <h2>Scanner setup <span class="chip" id="authChip" hidden></span>
         <span class="muted">each scanner gets its own link — open it once on the device and add it to the home screen</span></h2>
       <div class="inline">

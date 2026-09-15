@@ -14,6 +14,7 @@ import {
 import { importMaster, pruneAreaAisles } from './routes/master.js';
 import { boardData } from './routes/board.js';
 import { setupState } from './routes/setup.js';
+import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts } from './routes/scanner-prompts.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks,
@@ -463,11 +464,19 @@ async function handleAdmin(req, res, url, m) {
     if (!s) throw httpError(404, 'session not found');
     const mode = ['off', 'warn', 'strict'].includes(body.palletMode) ? body.palletMode : s.pallet_mode;
     const layout = body.layout === undefined ? s.layout : (body.layout && loadLayout(body.layout) ? body.layout : null);
-    audit(actor, 'changed session settings', JSON.stringify({ palletMode: mode, guided: body.guided, askComments: body.askComments, layout, autoRecount: body.autoRecount }), m[1]);
-    db.prepare('UPDATE sessions SET pallet_mode = ?, guided = ?, ask_comments = ?, layout = ?, auto_recount = ?, master_version = master_version + 1 WHERE id = ?')
+    // how big a difference has to be before somebody walks back to the bin
+    const num = (v, fallback, max) => (v == null || v === '' ? fallback : Math.max(0, Math.min(max, Number(v) || 0)));
+    const minQty = num(body.recountMinQty, s.recount_min_qty, 1e6);
+    const minPct = num(body.recountMinPct, s.recount_min_pct, 100);
+    const cap = num(body.recountCap, s.recount_cap, 1e6);
+    audit(actor, 'changed session settings', JSON.stringify({ palletMode: mode, guided: body.guided, askComments: body.askComments, layout, autoRecount: body.autoRecount, recount: { minQty, minPct, cap } }), m[1]);
+    db.prepare(`UPDATE sessions SET pallet_mode = ?, guided = ?, ask_comments = ?, layout = ?, auto_recount = ?,
+                  recount_min_qty = ?, recount_min_pct = ?, recount_cap = ?,
+                  master_version = master_version + 1 WHERE id = ?`)
       .run(mode, body.guided == null ? s.guided : (body.guided ? 1 : 0),
            body.askComments == null ? s.ask_comments : (body.askComments ? 1 : 0), layout,
-           body.autoRecount == null ? s.auto_recount : (body.autoRecount ? 1 : 0), s.id);
+           body.autoRecount == null ? s.auto_recount : (body.autoRecount ? 1 : 0),
+           minQty, minPct, cap, s.id);
     return sendJson(req, res, 200, getSession(m[1]));
   }
 
@@ -647,6 +656,18 @@ async function handleAdmin(req, res, url, m) {
     return send(req, res, 200, html, { 'content-type': 'text/html; charset=utf-8' });
   }
 
+  // --- what the gun offers as one-tap reasons
+  if (p === '/api/admin/scanner-prompts' && method === 'GET') {
+    return sendJson(req, res, 200, { ...scannerPrompts(), defaults: defaultScannerPrompts() });
+  }
+  if (p === '/api/admin/scanner-prompts' && method === 'POST') {
+    const body = await readJson(req);
+    const saved = saveScannerPrompts(body);
+    audit(actor, 'changed the scanner reasons',
+      `${saved.comments.length} comment(s), ${saved.overrides.length} override reason(s), comments move on after ${saved.commentTimeout || 'never'}${saved.commentTimeout ? 's' : ''}`);
+    return sendJson(req, res, 200, saved);
+  }
+
   // --- setup cards: one QR per scanner, to cut up and tape to the cradles
   if (p === '/api/admin/print/scanner-cards') {
     const only = (url.searchParams.get('only') || '').split(',').map((x) => x.trim()).filter(Boolean);
@@ -764,7 +785,11 @@ async function handleAdmin(req, res, url, m) {
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts\/generate$/)) && method === 'POST') {
     const gen = generateFromVariances(m[1]);
-    audit(actor, 'raised second counts from the variances', `${gen.created} raised from ${gen.considered} pallets`, m[1]);
+    audit(actor, 'raised second counts from the variances',
+      `${gen.created} raised from ${gen.considered} pallets`
+      + (gen.skippedUnworked ? `, ${gen.skippedUnworked} skipped (aisle not counted yet)` : '')
+      + (gen.skippedSmall ? `, ${gen.skippedSmall} under the threshold` : '')
+      + (gen.cappedAt ? `, stopped at the cap of ${gen.cappedAt}` : ''), m[1]);
     return sendJson(req, res, 200, gen);
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts\/(\d+)$/)) && method === 'POST') {

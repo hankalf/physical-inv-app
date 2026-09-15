@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { loadLayout } from './util/layouts.js';
+import { scannerPrompts } from './routes/scanner-prompts.js';
 import { mkdirSync, accessSync, constants } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
@@ -286,6 +287,13 @@ if (!hasCol('recounts', 'batch_id')) db.exec('ALTER TABLE recounts ADD COLUMN ba
 if (!hasCol('counts', 'pass')) db.exec('ALTER TABLE counts ADD COLUMN pass INTEGER NOT NULL DEFAULT 1');
 if (!hasCol('counts', 'recount_id')) db.exec('ALTER TABLE counts ADD COLUMN recount_id INTEGER');
 if (!hasCol('sessions', 'auto_recount')) db.exec('ALTER TABLE sessions ADD COLUMN auto_recount INTEGER NOT NULL DEFAULT 1');
+/* A second count should be raised for a variance that matters, not for every
+   unit of difference - otherwise the list buries the ones worth walking to. */
+if (!hasCol('sessions', 'recount_min_qty')) {
+  db.exec('ALTER TABLE sessions ADD COLUMN recount_min_qty INTEGER NOT NULL DEFAULT 0');
+  db.exec('ALTER TABLE sessions ADD COLUMN recount_min_pct REAL NOT NULL DEFAULT 0');
+  db.exec('ALTER TABLE sessions ADD COLUMN recount_cap INTEGER NOT NULL DEFAULT 0');
+}
 // a login can be handed out with a starter password the person must replace
 if (!hasCol('users', 'must_change')) db.exec('ALTER TABLE users ADD COLUMN must_change INTEGER NOT NULL DEFAULT 0');
 if (!hasCol('assignments', 'levels')) {
@@ -377,6 +385,8 @@ export const publicSession = (s) => ({
   layout: s.layout || null,
   // odd/even position -> Front/Back, so the gun can tell the counter which face a bin is on
   faces: loadLayout(s.layout)?.faces || null,
+  // the one-tap reasons, and how long the comments step waits before moving on
+  prompts: scannerPrompts(),
 });
 
 /* ------------------------------------------------------- handheld master data */

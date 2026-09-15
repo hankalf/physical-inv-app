@@ -247,6 +247,85 @@
     } catch (err) { msg($('passMsg'), 'err', err.message); }
   };
 
+
+  /* ------------------------------------------------- what the scanners offer */
+  let promptState = { comments: [], overrides: [], commentTimeout: 5, defaults: null };
+
+  function renderPromptList(which, id) {
+    const box = $(id);
+    box.innerHTML = '';
+    const items = promptState[which];
+    if (!items.length) {
+      const e = document.createElement('span');
+      e.className = 'muted';
+      e.textContent = 'none — counters will have to type it';
+      box.appendChild(e);
+      return;
+    }
+    for (const text of items) {
+      const b = button(text, 'chip-btn remove', () => {
+        promptState[which] = promptState[which].filter((x) => x !== text);
+        renderPromptList(which, id);
+      });
+      b.title = 'Remove it';
+      box.appendChild(b);
+    }
+  }
+  const renderPrompts = () => {
+    renderPromptList('comments', 'commentList');
+    renderPromptList('overrides', 'overrideList');
+    $('fCommentTimeout').value = promptState.commentTimeout;
+    const chip = $('promptChip');
+    chip.hidden = false;
+    chip.className = 'chip' + (promptState.isDefault ? '' : ' online');
+    chip.textContent = promptState.isDefault ? 'the defaults' : 'set for this site';
+  };
+
+  async function refreshPrompts() {
+    promptState = await api.json('/api/admin/scanner-prompts');
+    renderPrompts();
+  }
+
+  const addPrompt = (which, inputId, listId) => {
+    const v = $(inputId).value.replace(/\s+/g, ' ').trim().slice(0, 48);
+    if (!v) return;
+    if (promptState[which].some((x) => x.toLowerCase() === v.toLowerCase())) {
+      msg($('promptMsg'), 'warn', `"${v}" is already there`);
+      return;
+    }
+    promptState[which] = [...promptState[which], v];
+    $(inputId).value = '';
+    clearMsg($('promptMsg'));
+    renderPromptList(which, listId);
+  };
+  $('btnAddComment').onclick = () => addPrompt('comments', 'fNewComment', 'commentList');
+  $('btnAddOverride').onclick = () => addPrompt('overrides', 'fNewOverride', 'overrideList');
+  $('fNewComment').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnAddComment').click(); });
+  $('fNewOverride').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnAddOverride').click(); });
+
+  $('btnSavePrompts').onclick = async () => {
+    try {
+      promptState = await api.post('/api/admin/scanner-prompts', {
+        comments: promptState.comments,
+        overrides: promptState.overrides,
+        commentTimeout: $('fCommentTimeout').value,
+      });
+      promptState.defaults = promptState.defaults || null;
+      renderPrompts();
+      const t = Number(promptState.commentTimeout || 0);
+      msg($('promptMsg'), 'ok', 'Saved.', t
+        ? `Scanners pick this up at their next sign-on. The comments step will move on by itself after ${t} second(s).`
+        : 'Scanners pick this up at their next sign-on. The comments step will wait for the counter.');
+    } catch (err) { msg($('promptMsg'), 'err', err.message); }
+  };
+  $('btnResetPrompts').onclick = async () => {
+    if (!confirm('Put the comment and override reasons back to the shipped defaults?')) return;
+    const d = promptState.defaults || { comments: [], overrides: [], commentTimeout: 5 };
+    promptState = { ...promptState, ...d };
+    renderPrompts();
+    msg($('promptMsg'), 'warn', 'Defaults loaded — press Save to keep them.');
+  };
+
   /* ------------------------------------------------------------ scanners */
   const deviceUrl = (uid) => `${location.origin}/?d=${uid}`;
 
@@ -597,7 +676,7 @@
 
   async function load() {
     await refreshMe();
-    await Promise.all([refreshDevices(), refreshErp(), refreshOps()]);
+    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts()]);
     await loadSessions();
     await refreshSetup().catch(() => {});
   }

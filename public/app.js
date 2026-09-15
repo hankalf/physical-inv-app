@@ -61,7 +61,15 @@
 
   /* ------------------------------------------------------------ state */
   const LARGE_QTY = Number(localStorage.getItem('largeQtyThreshold') || 1000);
-  const QUICK_COMMENTS = ['Damaged', 'Partial pallet', 'Mixed pallet', 'Label unreadable', 'Needs recount', 'Blocked / could not reach'];
+  /* The one-tap reasons and how long the comments step waits are site settings,
+     edited in the admin panel. These are only the fallback for a gun that has
+     not synced a session yet. */
+  const FALLBACK_PROMPTS = {
+    comments: ['Damaged', 'Partial pallet', 'Mixed pallet', 'Label unreadable', 'Needs recount', 'Blocked / could not reach'],
+    overrides: [],
+    commentTimeout: 5,
+  };
+  const prompts = () => state.session?.prompts || FALLBACK_PROMPTS;
 
   const state = {
     deviceId: '',
@@ -765,17 +773,64 @@
     $('btnEmpty').hidden = step !== 'pallet';
     $('commentChips').hidden = step !== 'comments';
     if (state.draft.emptyBin && step === 'bin') $('prompt').textContent = 'EMPTY bin — scan its LOCATION';
-    if (step === 'comments' && !$('commentChips').childElementCount) {
-      for (const c of QUICK_COMMENTS) {
-        const b = document.createElement('button');
-        b.className = 'chip-btn';
-        b.textContent = c;
-        b.onclick = () => { f.value = f.value ? f.value + '; ' + c : c; focusScan(); };
-        $('commentChips').appendChild(b);
+    if (step === 'comments') {
+      const want = prompts().comments.join('\u0000');
+      if ($('commentChips').dataset.built !== want) {
+        $('commentChips').dataset.built = want;
+        $('commentChips').innerHTML = '';
+        for (const c of prompts().comments) {
+          const b = document.createElement('button');
+          b.className = 'chip-btn';
+          b.textContent = c;
+          b.onclick = () => { holdMoveOn(); f.value = f.value ? f.value + '; ' + c : c; focusScan(); };
+          $('commentChips').appendChild(b);
+        }
       }
+      startMoveOn();
+    } else {
+      stopMoveOn();
     }
     renderContext();
     focusScan();
+  }
+
+  /* ------------------------------------------------- moving on by itself
+     Comments are optional, and a counter with both hands full is not going to
+     tap Skip on every pallet. So the step counts down and moves on. Touching
+     anything - typing, a chip, the keypad - stops the clock, because somebody
+     is clearly still writing. */
+  let moveOnTimer = null;
+  let moveOnLeft = 0;
+
+  function stopMoveOn() {
+    if (moveOnTimer) { clearInterval(moveOnTimer); moveOnTimer = null; }
+    $('moveOn').hidden = true;
+  }
+  function holdMoveOn() {
+    if (!moveOnTimer) return;
+    stopMoveOn();
+    $('moveOn').hidden = false;
+    $('moveOn').textContent = 'Take your time — tap Skip or press Enter when done';
+    $('moveOn').className = 'moveon held';
+  }
+  function startMoveOn() {
+    stopMoveOn();
+    const secs = Number(prompts().commentTimeout || 0);
+    if (!secs) return;
+    moveOnLeft = secs;
+    const tick = () => {
+      $('moveOn').hidden = false;
+      $('moveOn').className = 'moveon';
+      $('moveOn').textContent = `Moving on to the next bin in ${moveOnLeft}\u2026`;
+      if (moveOnLeft <= 0) {
+        stopMoveOn();
+        if (state.steps[state.stepIndex] === 'comments') handleEntry($('fScan').value);
+        return;
+      }
+      moveOnLeft -= 1;
+    };
+    tick();
+    moveOnTimer = setInterval(tick, 1000);
   }
 
   function renderContext() {
@@ -912,7 +967,10 @@
     }
 
     if (step === 'comments') {
-      state.draft.comments = $('fScan').value.trim() || null;
+      stopMoveOn();
+      // the Enter handler clears the field before calling in, so read what was
+      // passed, not the box - reading the box lost every typed note
+      state.draft.comments = String(raw == null ? '' : raw).trim() || null;
       await commitLine();
     }
   }
@@ -1111,7 +1169,8 @@
     renderStep();
     feedback($('scanMsg'), 'warn', 'Empty bin', 'Scan the location of the empty bin.');
   };
-  $('btnSkip').onclick = () => { $('fScan').value = ''; handleEntry(''); };
+  $('btnSkip').onclick = () => { stopMoveOn(); $('fScan').value = ''; handleEntry(''); };
+  $('fScan').addEventListener('input', () => { if (state.steps[state.stepIndex] === 'comments') holdMoveOn(); });
   $('btnToAssign').onclick = async () => { state.recount = null; await refreshAssignment(true); renderAssignment(); showScreen('scrAssign'); };
   $('btnHistory').onclick = () => { renderHistory(); state.historyReturn = 'scrScan'; showScreen('scrHistory'); };
   $('btnHistoryBack').onclick = () => {

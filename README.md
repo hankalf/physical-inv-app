@@ -196,6 +196,7 @@ Per-session settings:
 | Pallet ID check | **Validate, allow override with reason** (default) · Validate, no overrides · Accept any ID (duplicates still blocked) |
 | Guided by aisle plan | on / off |
 | Ask for comments | on / off (drops question 4) |
+| Recount thresholds | how big a quantity difference has to be before somebody walks back — units, percentage, and a cap on how many stay open |
 
 ### 2. Upload the lists — Settings
 
@@ -299,6 +300,19 @@ On the gun a cycle session has no aisle plan — the batch *is* the job. The cou
 "40 bins", each task naming the bin and where it is; they scan every pallet in it (or mark
 it empty) and move to the next. A cycle-count line is a first count, so anything that
 disagrees with the report raises a second count exactly as in a full count.
+
+### What the scanners offer — Settings
+
+The one-tap reasons a counter picks instead of typing: the **comments** chips on the last
+step, and the **override reasons** for accepting a pallet ID that is not on the list. Both
+are editable, because the reasons a site needs are the site's own — "Blocked by a trailer"
+means something at one warehouse and nothing at another. Changes reach a scanner at its
+next sign-on.
+
+The comments step also **moves itself on**. Comments are optional and a counter with both
+hands full is not going to tap Skip on every pallet, so the step counts down — five seconds
+by default — and goes to the next bin. Typing or tapping a reason stops the clock, because
+somebody is clearly still writing. Set the wait to 0 and it waits for the counter instead.
 
 ### 7. Second counts
 

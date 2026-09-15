@@ -101,7 +101,11 @@
     </div>
     <div class="card">
       <h2>Count session <span class="muted" id="sessionCardSub"></span></h2>
-      <div class="hint" style="margin-top:0">Settings for the count picked in the header. Scanners pick them up at their next sign-on.</div>
+      <div class="hint" style="margin-top:0">
+        Settings for the count picked in the header. Scanners pick them up at their next sign-on.
+        The <b>recount thresholds</b> decide how big a quantity difference has to be before somebody
+        walks back to the bin — leave them at 0 to send someone back for every unit.
+      </div>
       <div class="inline" style="margin-top:12px">
         <div class="auto">
           <label for="fPalletMode">Pallet ID check</label>
@@ -114,6 +118,9 @@
         <div class="auto"><label class="cb"><input type="checkbox" id="fGuided"> Guided by aisle plan</label></div>
         <div class="auto"><label class="cb"><input type="checkbox" id="fAskComments"> Ask for comments</label></div>
         <div class="auto"><label class="cb"><input type="checkbox" id="fAutoRecount"> Auto second counts</label></div>
+        <div class="auto"><label for="fRecMinQty" title="A quantity difference smaller than this and than the percentage below does not raise a second count. 0 raises every difference.">Recount over</label><input id="fRecMinQty" class="sm" type="number" min="0" style="width:74px" placeholder="0"><span class="muted"> units</span></div>
+        <div class="auto"><label for="fRecMinPct" title="...or a difference of at least this percentage of the expected quantity. Either threshold is enough.">or over</label><input id="fRecMinPct" class="sm" type="number" min="0" max="100" style="width:66px" placeholder="0"><span class="muted"> %</span></div>
+        <div class="auto"><label for="fRecCap" title="Stop raising automatic second counts once this many are open. 0 is no cap.">Cap open</label><input id="fRecCap" class="sm" type="number" min="0" style="width:74px" placeholder="0"></div>
         <div class="auto">
           <label for="fLayout">Map drawing</label>
           <select id="fLayout"><option value="">Schematic (auto from bin codes)</option></select>

@@ -78,6 +78,9 @@
     $('fGuided').checked = !!s.guided;
     $('fAskComments').checked = !!s.ask_comments;
     $('fAutoRecount').checked = !!s.auto_recount;
+    $('fRecMinQty').value = s.recount_min_qty || 0;
+    $('fRecMinPct').value = s.recount_min_pct || 0;
+    $('fRecCap').value = s.recount_cap || 0;
     $('fLayout').value = s.layout || '';
     $('btnCloseSession').textContent = s.status === 'closed' ? 'Reopen session' : 'Close session';
   }
@@ -244,7 +247,12 @@
     if (!needSession($('recountMsg'))) return;
     try {
       const r = await postJson(`/api/admin/sessions/${sessionId}/recounts/generate`, {});
-      msg($('recountMsg'), 'ok', `Raised ${r.created} second count(s) from ${r.considered} pallet(s) that disagree with the report.`);
+      const skipped = [];
+      if (r.skippedUnworked) skipped.push(`${r.skippedUnworked.toLocaleString()} pallet(s) in aisles nobody has counted yet — not missing, just not reached`);
+      if (r.skippedSmall) skipped.push(`${r.skippedSmall.toLocaleString()} under the recount threshold`);
+      if (r.cappedAt) skipped.push(`stopped at the cap of ${r.cappedAt} open`);
+      msg($('recountMsg'), 'ok', `Raised ${r.created} second count(s) from ${r.considered} pallet(s) that disagree with the report.`,
+        skipped.length ? 'Left alone: ' + skipped.join(' · ') + '.' : '');
       await refreshAll();
     } catch (err) { msg($('recountMsg'), 'err', err.message); }
   };
@@ -678,6 +686,7 @@
       await postJson(`/api/admin/sessions/${sessionId}/settings`, {
         palletMode: $('fPalletMode').value, guided: $('fGuided').checked, askComments: $('fAskComments').checked,
         autoRecount: $('fAutoRecount').checked, layout: layouts[0].id,
+        recountMinQty: $('fRecMinQty').value, recountMinPct: $('fRecMinPct').value, recountCap: $('fRecCap').value,
       });
       await loadSessions();
     } catch (err) { msg($('sessionMsg'), 'err', err.message); }
@@ -783,6 +792,7 @@
       await postJson(`/api/admin/sessions/${sessionId}/settings`, {
         palletMode: $('fPalletMode').value, guided: $('fGuided').checked, askComments: $('fAskComments').checked,
         autoRecount: $('fAutoRecount').checked, layout: $('fLayout').value,
+        recountMinQty: $('fRecMinQty').value, recountMinPct: $('fRecMinPct').value, recountCap: $('fRecCap').value,
       });
       msg($('sessionMsg'), 'ok', 'Settings saved. Scanners pick them up at their next sign-on.');
       await loadSessions();

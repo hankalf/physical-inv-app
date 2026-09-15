@@ -174,3 +174,10 @@ button.fit { flex: 0 0 auto; width: auto; }
 }
 .card h2 .chip.online { color: var(--ok); border-color: #1d572a; }
 .card h2 .chip.offline { color: var(--warn); border-color: #5c4813; }
+
+/* the comments step counting itself down */
+.moveon {
+  margin-top: 10px; padding: 9px 12px; border-radius: 8px; font-size: 14px; font-weight: 700;
+  color: var(--warn); background: #2b2410; border: 1px solid #5c4813; text-align: center;
+}
+.moveon.held { color: var(--muted); background: var(--panel); border-color: var(--line); font-weight: 500; }

@@ -62,18 +62,68 @@ export function createRecount(sessionId, { bin, palletId, reason = 'MANUAL', det
   return { id: info.lastInsertRowid, created: true };
 }
 
-/** Raise tasks for every pallet that currently disagrees with the report. */
+/**
+ * Is this quantity difference worth sending somebody back for?
+ *
+ * Either threshold is enough: a hundred units off matters on a big pallet even
+ * at one percent, and sixty percent off matters on a small one even at six
+ * units. Both default to zero, which raises everything, as it always did.
+ */
+function materialQty(session, expected, counted) {
+  const minQty = Number(session.recount_min_qty || 0);
+  const minPct = Number(session.recount_min_pct || 0);
+  if (!minQty && !minPct) return true;
+  const diff = Math.abs(Number(counted || 0) - Number(expected || 0));
+  if (!diff) return false;
+  const pct = expected ? (diff / Math.abs(Number(expected))) * 100 : 100;
+  return (minQty > 0 && diff >= minQty) || (minPct > 0 && pct >= minPct);
+}
+
+const openRecounts = (id) =>
+  db.prepare("SELECT COUNT(*) n FROM recounts WHERE session_id = ? AND status != 'done'").get(id).n;
+
+/**
+ * Raise tasks for every pallet that currently disagrees with the report.
+ *
+ * MISSING is the one that needs care: a pallet nobody has counted is only
+ * missing if somebody has actually been to look. Mid-count, every aisle not
+ * reached yet would otherwise be raised as missing stock, which buries the
+ * real exceptions - so a pallet counts as missing only once its bin has been
+ * counted or its aisle has been handed back.
+ */
 export function generateFromVariances(sessionId, { onlyPallets = null, includeMissing = true } = {}) {
   const id = Number(sessionId);
+  const session = getSession(id) || {};
+  const cap = Number(session.recount_cap || 0);
   const rows = palletReport(id).filter((r) => r.status !== 'MATCH' && (!onlyPallets || onlyPallets.has(r.pallet_id)));
   let created = 0;
+  let skippedSmall = 0;
+  let skippedUnworked = 0;
+  let cappedAt = 0;
+  const room = () => {
+    if (!cap) return true;
+    if (openRecounts(id) < cap) return true;
+    cappedAt = cap;
+    return false;
+  };
+
+  const workedAisles = new Set(
+    db.prepare("SELECT DISTINCT aisle FROM assignments WHERE session_id = ? AND status = 'done'").all(id).map((x) => x.aisle));
+  const countedBins = new Set(
+    db.prepare('SELECT DISTINCT location_code FROM counts WHERE session_id = ? AND voided = 0').all(id).map((x) => x.location_code));
+  const aisleOf = (bin) => db.prepare('SELECT aisle FROM locations WHERE session_id = ? AND code = ?').get(id, bin)?.aisle || '';
+
   for (const r of rows) {
     if (r.recounted) continue; // a second count already settled this bin
     if (r.status === 'MISSING') {
       if (!includeMissing || !r.expected_location) continue;
+      const looked = countedBins.has(r.expected_location) || workedAisles.has(aisleOf(r.expected_location));
+      if (!looked) { skippedUnworked++; continue; }
+      if (!room()) break;
       if (createRecount(id, { bin: r.expected_location, palletId: r.pallet_id, reason: 'MISSING', detail: `expected ${r.expected_qty ?? '?'} in ${r.expected_location}, never counted`, source: 'auto' }).created) created++;
       continue;
     }
+    if (r.status === 'QTY VARIANCE' && !materialQty(session, r.expected_qty, r.counted_qty)) { skippedSmall++; continue; }
     const firstTeam = db.prepare(
       `SELECT team FROM counts WHERE session_id = ? AND pallet_id = ? AND voided = 0 AND pass = 1 ORDER BY id DESC LIMIT 1`).get(id, r.pallet_id)?.team || null;
     const bins = String(r.found_location || '').split(',').filter(Boolean);
@@ -82,10 +132,11 @@ export function generateFromVariances(sessionId, { onlyPallets = null, includeMi
       : r.status === 'COUNTED TWICE' ? `found in ${r.found_location}`
       : `qty ${r.counted_qty}, not on the report`;
     for (const bin of bins) {
+      if (!room()) break;
       if (createRecount(id, { bin, palletId: r.pallet_id, reason: r.status, detail, source: 'auto', firstTeam }).created) created++;
     }
   }
-  return { created, considered: rows.length };
+  return { created, considered: rows.length, skippedSmall, skippedUnworked, cappedAt };
 }
 
 /** Called after a batch of first-count lines lands, when the session auto-recounts. */
