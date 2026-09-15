@@ -76,7 +76,7 @@ Scanners need internet access for this option, not just warehouse Wi-Fi.
 | `BACKUP_DIR` | `<DB_PATH>/../backups` | Where daily backups are written |
 | `BACKUP_KEEP` | `14` | How many backups to keep |
 | `SCANNER_AUTH` | `required` | `off` lets any client post counts — closed networks only |
-| `SHARED_PASSWORD_LOGIN` | `on` | `off` refuses `ADMIN_PASSWORD` once every supervisor has their own login |
+| `SHARED_PASSWORD_LOGIN` | `on` | `off` refuses `ADMIN_PASSWORD` — but only once an admin login exists (see below) |
 | `SITE_TIMEZONE` | `America/New_York` | The warehouse's clock — dates a cycle batch is due, and the hour a schedule fires |
 
 ---
@@ -503,7 +503,27 @@ how you get back in when everyone has forgotten theirs. Its use is logged as exa
 The sign-in box takes either: type your username, or — if the site is still on the shared
 password — just your name, which is what the log then records. An existing username always
 needs that account's own password, so the shared password can never open somebody else's
-account. Once every supervisor has a login, set `SHARED_PASSWORD_LOGIN=off`.
+account.
+
+### Switching the shared password off
+
+In this order, or you will lock yourselves out:
+
+1. Set `ADMIN_PASSWORD` to something real. A fresh deployment warns at startup while it is
+   still `changeme`.
+2. Sign in with it and add yourself an **admin** login under **Settings → Logins**.
+3. Sign in as that login and check it works.
+4. Set `SHARED_PASSWORD_LOGIN=off`.
+
+Get that order wrong and it does not matter: **`off` is ignored while there is no admin
+account.** Off with nobody to sign in as is not a locked door, it is a bricked deployment —
+nobody can sign in, and nobody can create the account that would fix it, without a
+redeploy. So the switch waits, says so at startup and in the Settings card, and takes
+effect by itself the moment an admin login exists. No redeploy, no restart.
+
+The same guard works the other way: the last admin account cannot be deleted or demoted,
+so the door cannot be sealed from the inside either. And if it ever comes to it, putting
+`SHARED_PASSWORD_LOGIN` back to `on` always lets you in.
 
 Tokens are in-memory, so a restart signs supervisors out. If the app is exposed publicly,
 still put it behind a VPN or an authenticating proxy.

@@ -18,6 +18,7 @@ runs the suite in a real Chromium, and exits non-zero if anything fails. Nothing
 | `ops.mjs` | the audit log, backups, ERP layouts and exports, printable count sheets |
 | `scanner-auth.mjs` | enrolment, refusing untokened and forged calls, link reset and removal, and what a cut-off scanner does mid-count |
 | `settings.mjs` | supervisor logins: accounts, roles, the last-admin guard, deactivation, starter passwords and the first sign-in; the sidebar and sub-tab shell; and that the setup cards live on `/settings` and not the dashboard |
+| `lockout.mjs` | turning the shared password off: that it is ignored while no admin exists, bites the moment one does, survives a restart, and can always be switched back on. Starts its own servers, since the thing under test is read at startup |
 | `board.mjs` | the office board — what it shows, what it refuses to leak, that it needs no sign-in and survives the server going away — and the printable scanner setup cards |
 
 Most suites flatten the sub-tabs after signing in (`expandSubTabs` in `helpers.mjs`), so

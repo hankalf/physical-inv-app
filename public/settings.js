@@ -28,18 +28,54 @@
     $('notAdmin').hidden = isAdmin;
     $('ownPassword').hidden = !me.username;
     $('ownPasswordNA').hidden = !!me.username;
+    /* Three states, and the middle one is the one worth naming: the setting says
+       off, but there is no admin account to sign in with, so it is being held
+       open rather than locking the building. */
     const chip = $('sharedChip');
-    // Once there is a real login, the shared password is the thing to turn off.
-    if (me.sharedLogin) {
-      chip.hidden = false;
-      chip.className = 'chip ' + (me.accounts ? 'offline' : '');
-      chip.textContent = me.accounts ? 'shared password still accepted' : 'shared password only';
-      chip.title = 'Set SHARED_PASSWORD_LOGIN=off once everyone has their own login.';
-    } else {
-      chip.hidden = false;
+    chip.hidden = false;
+    if (me.sharedLoginHeldOpen) {
+      chip.className = 'chip offline';
+      chip.textContent = 'shared password held open';
+      chip.title = 'SHARED_PASSWORD_LOGIN is off, but turning it off now would leave nobody able to sign in.';
+    } else if (!me.sharedLogin) {
       chip.className = 'chip online';
       chip.textContent = 'logins only';
       chip.title = 'The shared password is turned off — every supervisor signs in as themselves.';
+    } else {
+      chip.className = 'chip ' + (me.admins ? 'offline' : '');
+      chip.textContent = me.admins ? 'shared password still accepted' : 'shared password only';
+      chip.title = 'Set SHARED_PASSWORD_LOGIN=off once somebody has an admin login.';
+    }
+
+    // and say what to do about it, in the card rather than only in a tooltip
+    const note = $('sharedNote');
+    if (me.sharedLoginHeldOpen) {
+      note.className = 'feedback show warn';
+      note.textContent = 'SHARED_PASSWORD_LOGIN is off, but it is still being accepted.';
+      const d = document.createElement('div');
+      d.className = 'detail';
+      d.textContent = 'There is no admin account yet, so turning it off would leave nobody able to sign in — '
+        + 'and nobody able to create the account that would fix it. Add an admin login below and the setting '
+        + 'takes effect on its own, no redeploy.';
+      note.appendChild(d);
+    } else if (me.sharedLogin && me.admins) {
+      note.className = 'feedback show warn';
+      note.textContent = 'The shared password still works.';
+      const d = document.createElement('div');
+      d.className = 'detail';
+      d.textContent = `${me.admins} admin login${me.admins === 1 ? '' : 's'} exist${me.admins === 1 ? 's' : ''}, so nothing needs it now. `
+        + 'Set SHARED_PASSWORD_LOGIN=off in the server environment and everyone signs in as themselves.';
+      note.appendChild(d);
+    } else if (me.sharedLogin) {
+      note.className = 'feedback show warn';
+      note.textContent = 'The shared password is the only way in.';
+      const d = document.createElement('div');
+      d.className = 'detail';
+      d.textContent = 'Add an admin login below, sign in as it to check it works, then set SHARED_PASSWORD_LOGIN=off.';
+      note.appendChild(d);
+    } else {
+      note.className = 'feedback';
+      note.textContent = '';
     }
     if (isAdmin) await refreshUsers();
   }

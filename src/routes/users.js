@@ -26,6 +26,9 @@ function verify(password, stored) {
 
 export const countUsers = () => db.prepare('SELECT COUNT(*) n FROM users WHERE active = 1').get().n;
 
+/** Active admins. Nobody can be shut out while this is zero. */
+export const countAdmins = () => db.prepare("SELECT COUNT(*) n FROM users WHERE active = 1 AND role = 'admin'").get().n;
+
 const shape = (u) => ({
   username: u.username, name: u.name, role: u.role, active: !!u.active,
   created_at: u.created_at, last_login: u.last_login, created_by: u.created_by,

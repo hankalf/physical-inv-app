@@ -35,7 +35,7 @@ import { siteTimezone, localDate, localHour } from './util/localtime.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards } from './routes/printing.js';
 import {
-  countUsers, listUsers, createUser, updateUser, deleteUser, authenticate, changeOwnPassword, getUser,
+  countUsers, countAdmins, listUsers, createUser, updateUser, deleteUser, authenticate, changeOwnPassword, getUser,
 } from './routes/users.js';
 import { listFormats, saveFormat, buildExport, availableFields } from './routes/erp.js';
 
@@ -131,9 +131,20 @@ const httpError = (status, message) => Object.assign(new Error(message), { statu
 // token -> { name, username, role }
 const adminTokens = new Map();
 
-// The shared password is the way in before anyone has an account, and the way
-// back in when everyone has forgotten theirs. Its use is always logged as such.
-const SHARED_LOGIN = String(process.env.SHARED_PASSWORD_LOGIN || 'on').toLowerCase() !== 'off';
+/*
+ * The shared password is the way in before anyone has an account, and the way
+ * back in when everyone has forgotten theirs. Its use is always logged as such.
+ *
+ * SHARED_PASSWORD_LOGIN=off turns it off - but only once there is an admin
+ * account to turn it off in favour of. Off with no admin is not a locked door,
+ * it is a bricked deployment: nobody can sign in, and nobody can create the
+ * account that would let them, without a redeploy. So the switch waits, says
+ * so at startup, and takes effect by itself the moment an admin exists.
+ */
+const SHARED_LOGIN_WANTED = String(process.env.SHARED_PASSWORD_LOGIN || 'on').toLowerCase() !== 'off';
+const sharedLoginOn = () => SHARED_LOGIN_WANTED || countAdmins() === 0;
+/** True when the setting is off but being held open because nobody could get back in. */
+const sharedLoginHeldOpen = () => !SHARED_LOGIN_WANTED && countAdmins() === 0;
 
 function passwordMatches(candidate) {
   const a = Buffer.from(String(candidate || ''));
@@ -375,11 +386,13 @@ async function handleAdmin(req, res, url, m) {
     }
 
     // otherwise the shared password, which is recorded for what it is
-    if (!SHARED_LOGIN) throw httpError(401, 'sign in with your username and password');
+    if (!sharedLoginOn()) throw httpError(401, 'sign in with your username and password');
     if (!passwordMatches(body.password)) throw httpError(401, 'bad password');
     const who = String(body.name || username || '').trim().slice(0, 40) || 'shared password';
     adminTokens.set(token, { name: who, username: '', role: 'admin' });
-    audit(who, 'signed in with the shared password', countUsers() ? 'accounts exist - this should be rare' : 'no accounts yet');
+    audit(who, 'signed in with the shared password', sharedLoginHeldOpen()
+      ? 'SHARED_PASSWORD_LOGIN is off but held open - no admin account exists yet'
+      : countUsers() ? 'accounts exist - this should be rare' : 'no accounts yet');
     return sendJson(req, res, 200, { token, name: who, username: '', role: 'admin', shared: true, accounts: countUsers() });
   }
 
@@ -513,12 +526,13 @@ async function handleAdmin(req, res, url, m) {
     const account = who.username ? getUser(who.username) : null;
     return sendJson(req, res, 200, {
       ...who, mustChange: !!(account && account.must_change),
-      accounts: countUsers(), sharedLogin: SHARED_LOGIN,
+      accounts: countUsers(), admins: countAdmins(),
+      sharedLogin: sharedLoginOn(), sharedLoginHeldOpen: sharedLoginHeldOpen(),
     });
   }
   if (p === '/api/admin/users' && method === 'GET') {
     requireAccountAdmin(req, url);
-    return sendJson(req, res, 200, { users: listUsers(), sharedLogin: SHARED_LOGIN });
+    return sendJson(req, res, 200, { users: listUsers(), sharedLogin: sharedLoginOn(), sharedLoginHeldOpen: sharedLoginHeldOpen() });
   }
   if (p === '/api/admin/users' && method === 'POST') {
     const me = requireAccountAdmin(req, url);
@@ -846,5 +860,22 @@ server.listen(PORT, HOST, () => {
   console.log(`physical-inv-app listening on http://${HOST}:${PORT}`);
   console.log(`  site clock: ${siteTimezone()} - today is ${localDate()}, hour ${localHour()}`);
   console.log(`  scanner:   http://<server-ip>:${PORT}/`);
-  console.log(`  dashboard: http://<server-ip>:${PORT}/admin.html`);
+  console.log(`  dashboard: http://<server-ip>:${PORT}/admin`);
+  console.log(`  office board: http://<server-ip>:${PORT}/board`);
+
+  // Say plainly how somebody signs in, because getting this wrong locks people out.
+  const admins = countAdmins();
+  console.log(`  sign-in:   ${admins} admin account(s), ${countUsers()} login(s) in total`);
+  if (sharedLoginHeldOpen()) {
+    console.warn('[warn] SHARED_PASSWORD_LOGIN=off, but there is no admin account yet, so the');
+    console.warn('       shared password is STILL ACCEPTED - turning it off now would leave');
+    console.warn('       nobody able to sign in. Sign in with it, add an admin under');
+    console.warn('       Settings -> Logins, and the setting takes effect on its own.');
+  } else if (!SHARED_LOGIN_WANTED) {
+    console.log('  shared password: off - everyone signs in with their own login');
+  } else if (admins) {
+    console.log('  shared password: ON - set SHARED_PASSWORD_LOGIN=off now that admins exist');
+  } else {
+    console.log('  shared password: ON - the only way in until you add an admin login');
+  }
 });
