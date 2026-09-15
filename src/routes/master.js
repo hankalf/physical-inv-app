@@ -14,6 +14,7 @@ const UOM_ALIASES = ['uom', 'unit', 'unitofmeasure', 'um'];
 const QTY_ALIASES = ['qty', 'quantity', 'onhand', 'onhandqty', 'expected', 'expectedqty', 'systemqty', 'qtyonhand', 'cases', 'units'];
 const TEAM_ALIASES = ['team', 'teamnumber', 'teamno', 'crew', 'group'];
 const LEVEL_ALIASES = ['level', 'levels', 'tier', 'shelf'];
+const LASTCOUNT_ALIASES = ['lastphysinvtdate', 'lastphysicalinventorydate', 'lastcounted', 'lastcountdate', 'lastinventorydate', 'lastcount'];
 
 /**
  * Which aisle a bin belongs to when the file has no aisle column - see
@@ -23,13 +24,32 @@ const LEVEL_ALIASES = ['level', 'levels', 'tier', 'shelf'];
 export const deriveAisle = (code) => parseBinCode(code).aisle;
 
 const upLocation = db.prepare(
-  `INSERT INTO locations (session_id, code, zone, aisle, level, description) VALUES (?, ?, ?, ?, ?, ?)
+  `INSERT INTO locations (session_id, code, zone, aisle, level, last_counted, description) VALUES (?, ?, ?, ?, ?, ?, ?)
    ON CONFLICT(session_id, code) DO UPDATE SET
      zone = COALESCE(NULLIF(excluded.zone, ''), locations.zone),
      aisle = COALESCE(NULLIF(excluded.aisle, ''), locations.aisle),
      level = COALESCE(NULLIF(excluded.level, ''), locations.level),
+     -- a re-upload must never rewind a bin counted in this app since
+     last_counted = MAX(COALESCE(locations.last_counted, ''), COALESCE(excluded.last_counted, '')),
      description = COALESCE(NULLIF(excluded.description, ''), locations.description)`
 );
+
+// "3/14/2026", "2026-03-14", "14/03/2026 08:00" -> "2026-03-14"; anything else -> null
+export function parseDate(raw) {
+  const t = String(raw == null ? '' : raw).trim();
+  if (!t) return null;
+  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(t);
+  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})/.exec(t);
+  if (m) {
+    // US exports are M/D/Y; a first number above 12 can only be the day
+    const [, a, b, y] = m;
+    const [mo, day] = Number(a) > 12 ? [b, a] : [a, b];
+    return `${y}-${String(mo).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+  const d = new Date(t);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
 const upAisle = db.prepare(
   `INSERT INTO aisles (session_id, aisle, block) VALUES (?, ?, ?)
    ON CONFLICT(session_id, aisle) DO NOTHING`
@@ -99,7 +119,9 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
         // groups counted by hand stay out of the app entirely
         if (excluded.has(aisle)) { stats.excluded++; continue; }
         const level = norm(pick(rec, LEVEL_ALIASES)) || parseBinCode(code).level || '';
-        upLocation.run(id, code, zone, aisle, level, desc);
+        const lastCounted = parseDate(pick(rec, LASTCOUNT_ALIASES));
+        if (lastCounted) stats.withDates = (stats.withDates || 0) + 1;
+        upLocation.run(id, code, zone, aisle, level, lastCounted, desc);
         // areas (WIP, system bins, ...) are countable bins but not aisles
         if (!areas.has(aisle)) { upAisle.run(id, aisle, aisle); newAisles.add(aisle); }
         stats.bins++;

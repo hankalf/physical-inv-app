@@ -67,6 +67,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   name           TEXT    NOT NULL,
   status         TEXT    NOT NULL DEFAULT 'open',
   -- how strictly a scanned pallet id is checked against the uploaded list
+  mode           TEXT    NOT NULL DEFAULT 'full',   -- full (wall-to-wall) | cycle
+  cycle_schedule TEXT,                               -- JSON: how often to generate a batch
   pallet_mode    TEXT    NOT NULL DEFAULT 'warn',   -- off | warn | strict
   guided         INTEGER NOT NULL DEFAULT 1,        -- teams follow aisle assignments
   ask_comments   INTEGER NOT NULL DEFAULT 1,
@@ -78,10 +80,11 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE TABLE IF NOT EXISTS locations (
   session_id  INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   code        TEXT    NOT NULL,
-  zone        TEXT,
-  aisle       TEXT,
-  level       TEXT,
-  description TEXT,
+  zone         TEXT,
+  aisle        TEXT,
+  level        TEXT,
+  last_counted TEXT,        -- seeded from the ERP export, moved forward as lines land
+  description  TEXT,
   PRIMARY KEY (session_id, code)
 );
 
@@ -188,6 +191,20 @@ CREATE TABLE IF NOT EXISTS recounts (
 );
 CREATE INDEX IF NOT EXISTS idx_recounts_session ON recounts(session_id, status);
 
+-- One generated day's (or week's) worth of cycle-count bins.
+CREATE TABLE IF NOT EXISTS cycle_batches (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  name       TEXT    NOT NULL,
+  due_date   TEXT    NOT NULL,
+  target     INTEGER NOT NULL,
+  strategy   TEXT    NOT NULL,
+  scope      TEXT,
+  auto       INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT    NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_batches_session ON cycle_batches(session_id, due_date);
+
 CREATE INDEX IF NOT EXISTS idx_counts_session ON counts(session_id, voided);
 CREATE INDEX IF NOT EXISTS idx_counts_pallet  ON counts(session_id, pallet_id);
 CREATE INDEX IF NOT EXISTS idx_counts_loc     ON counts(session_id, location_code);
@@ -200,6 +217,10 @@ const hasCol = (t, c) => db.prepare(`PRAGMA table_info('${t}')`).all().some((x) 
 if (!hasCol('sessions', 'layout')) db.exec('ALTER TABLE sessions ADD COLUMN layout TEXT');
 if (!hasCol('locations', 'level')) db.exec('ALTER TABLE locations ADD COLUMN level TEXT');
 if (!hasCol('counts', 'empty_bin')) db.exec('ALTER TABLE counts ADD COLUMN empty_bin INTEGER NOT NULL DEFAULT 0');
+if (!hasCol('locations', 'last_counted')) db.exec('ALTER TABLE locations ADD COLUMN last_counted TEXT');
+if (!hasCol('sessions', 'mode')) db.exec("ALTER TABLE sessions ADD COLUMN mode TEXT NOT NULL DEFAULT 'full'");
+if (!hasCol('sessions', 'cycle_schedule')) db.exec('ALTER TABLE sessions ADD COLUMN cycle_schedule TEXT');
+if (!hasCol('recounts', 'batch_id')) db.exec('ALTER TABLE recounts ADD COLUMN batch_id INTEGER');
 if (!hasCol('counts', 'pass')) db.exec('ALTER TABLE counts ADD COLUMN pass INTEGER NOT NULL DEFAULT 1');
 if (!hasCol('counts', 'recount_id')) db.exec('ALTER TABLE counts ADD COLUMN recount_id INTEGER');
 if (!hasCol('sessions', 'auto_recount')) db.exec('ALTER TABLE sessions ADD COLUMN auto_recount INTEGER NOT NULL DEFAULT 1');
@@ -247,14 +268,15 @@ export function listSessions(status) {
 
 export const getSession = (id) => db.prepare('SELECT * FROM sessions WHERE id = ?').get(Number(id));
 
-export function createSession({ name, palletMode = 'warn', guided = 1, askComments = 1 }) {
-  const mode = ['off', 'warn', 'strict'].includes(palletMode) ? palletMode : 'warn';
+export function createSession({ name, mode = 'full', palletMode = 'warn', guided = 1, askComments = 1 }) {
+  const check = ['off', 'warn', 'strict'].includes(palletMode) ? palletMode : 'warn';
+  const kind = mode === 'cycle' ? 'cycle' : 'full';
   const info = db
     .prepare(
-      `INSERT INTO sessions (name, pallet_mode, guided, ask_comments, created_at)
-       VALUES (?, ?, ?, ?, ?)`
+      `INSERT INTO sessions (name, mode, pallet_mode, guided, ask_comments, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`
     )
-    .run(name, mode, guided ? 1 : 0, askComments ? 1 : 0, new Date().toISOString());
+    .run(name, kind, check, kind === 'cycle' ? 0 : (guided ? 1 : 0), askComments ? 1 : 0, new Date().toISOString());
   return getSession(info.lastInsertRowid);
 }
 
@@ -265,7 +287,8 @@ export const publicSession = (s) => ({
   id: s.id,
   name: s.name,
   palletMode: s.pallet_mode,
-  guided: !!s.guided,
+  mode: s.mode || 'full',
+  guided: !!s.guided && (s.mode || 'full') === 'full',
   askComments: !!s.ask_comments,
   autoRecount: !!s.auto_recount,
   masterVersion: s.master_version,
@@ -320,6 +343,7 @@ export function saveCounts(sessionId, rows) {
   const accepted = [];
   const rejected = [];
   const firstCountPallets = new Set();
+  const countedBins = new Set();
   db.exec('BEGIN');
   try {
     for (const r of rows) {
@@ -345,11 +369,17 @@ export function saveCounts(sessionId, rows) {
       );
       accepted.push(r.clientId);
       if (!empty && Number(r.pass) !== 2) firstCountPallets.add(norm(r.palletId));
+      countedBins.add(norm(r.location));
     }
     db.exec('COMMIT');
   } catch (err) {
     db.exec('ROLLBACK');
     throw err;
+  }
+  // a counted bin is a counted bin: keep the cycle-count clock honest
+  if (accepted.length) {
+    const stamp = db.prepare('UPDATE locations SET last_counted = ? WHERE session_id = ? AND code = ?');
+    for (const bin of countedBins) stamp.run(now, id, bin);
   }
   return { accepted, rejected, firstCountPallets: [...firstCountPallets] };
 }

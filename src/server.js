@@ -20,6 +20,7 @@ import {
   listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
   tasksForTeam, takeRecount, finishRecount, updateRecount, deleteRecount,
 } from './routes/recounts.js';
+import { generateBatch, previewBatch, listBatches, deleteBatch, coverage, runSchedules, STRATEGIES } from './routes/cycles.js';
 import { toCsv } from './util/csv.js';
 import { listLayouts, loadLayout } from './util/layouts.js';
 
@@ -218,6 +219,45 @@ async function handleHandheld(req, res, url, m) {
     return sendJson(req, res, 200, result);
   }
 
+  // --- cycle counting
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/batches$/)) && method === 'GET') {
+    return sendJson(req, res, 200, { batches: listBatches(m[1]), coverage: coverage(m[1], url.searchParams.get('days') || 90), strategies: STRATEGIES });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/preview$/)) && method === 'POST') {
+    const body = await readJson(req);
+    return sendJson(req, res, 200, previewBatch(m[1], body));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/batches$/)) && method === 'POST') {
+    const body = await readJson(req);
+    return sendJson(req, res, 200, generateBatch(m[1], body));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/batches\/(\d+)$/)) && method === 'DELETE') {
+    return sendJson(req, res, 200, { deleted: deleteBatch(m[1], m[2]) });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/schedule$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const plan = body && body.every ? JSON.stringify({
+      every: body.every === 'week' ? 'week' : 'day',
+      bins: Math.max(1, Math.min(5000, Number(body.bins) || 40)),
+      strategy: STRATEGIES[body.strategy] ? body.strategy : 'oldest',
+      hour: Math.max(0, Math.min(23, Number(body.hour ?? 6))),
+      weekday: Number(body.weekday ?? 1),
+      weekdays: Array.isArray(body.weekdays) ? body.weekdays.map(Number) : [1, 2, 3, 4, 5],
+      zone: body.zone || '', aisle: body.aisle || '', levels: body.levels || '',
+    }) : null;
+    db.prepare('UPDATE sessions SET cycle_schedule = ? WHERE id = ?').run(plan, Number(m[1]));
+    return sendJson(req, res, 200, getSession(m[1]));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/run-schedule$/)) && method === 'POST') {
+    return sendJson(req, res, 200, { generated: runSchedules() });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/coverage\.csv$/))) {
+    const rows = db.prepare(
+      `SELECT l.aisle, l.code AS bin, l.level, COALESCE(l.zone,'') AS zone, COALESCE(l.last_counted,'') AS last_counted
+         FROM locations l WHERE l.session_id = ? ORDER BY COALESCE(l.last_counted,''), l.code`).all(Number(m[1]));
+    return sendCsv(req, res, `bin-coverage-session-${m[1]}.csv`, toCsv(rows, ['aisle', 'bin', 'level', 'zone', 'last_counted']));
+  }
+
   // --- second counts, from the gun
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/recounts$/)) && method === 'GET') {
     if (!getSession(m[1])) throw httpError(404, 'session not found');
@@ -280,6 +320,7 @@ async function handleAdmin(req, res, url, m) {
     const body = await readJson(req);
     if (!body.name || !String(body.name).trim()) throw httpError(400, 'name required');
     return sendJson(req, res, 200, createSession({
+      mode: body.mode === 'cycle' ? 'cycle' : 'full',
       name: String(body.name).trim(),
       palletMode: body.palletMode,
       guided: body.guided !== false,
@@ -351,6 +392,45 @@ async function handleAdmin(req, res, url, m) {
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments\/(\d+)$/)) && method === 'DELETE') {
     return sendJson(req, res, 200, deleteAssignment(m[1], m[2]));
+  }
+
+  // --- cycle counting
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/batches$/)) && method === 'GET') {
+    return sendJson(req, res, 200, { batches: listBatches(m[1]), coverage: coverage(m[1], url.searchParams.get('days') || 90), strategies: STRATEGIES });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/preview$/)) && method === 'POST') {
+    const body = await readJson(req);
+    return sendJson(req, res, 200, previewBatch(m[1], body));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/batches$/)) && method === 'POST') {
+    const body = await readJson(req);
+    return sendJson(req, res, 200, generateBatch(m[1], body));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/batches\/(\d+)$/)) && method === 'DELETE') {
+    return sendJson(req, res, 200, { deleted: deleteBatch(m[1], m[2]) });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/schedule$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const plan = body && body.every ? JSON.stringify({
+      every: body.every === 'week' ? 'week' : 'day',
+      bins: Math.max(1, Math.min(5000, Number(body.bins) || 40)),
+      strategy: STRATEGIES[body.strategy] ? body.strategy : 'oldest',
+      hour: Math.max(0, Math.min(23, Number(body.hour ?? 6))),
+      weekday: Number(body.weekday ?? 1),
+      weekdays: Array.isArray(body.weekdays) ? body.weekdays.map(Number) : [1, 2, 3, 4, 5],
+      zone: body.zone || '', aisle: body.aisle || '', levels: body.levels || '',
+    }) : null;
+    db.prepare('UPDATE sessions SET cycle_schedule = ? WHERE id = ?').run(plan, Number(m[1]));
+    return sendJson(req, res, 200, getSession(m[1]));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/run-schedule$/)) && method === 'POST') {
+    return sendJson(req, res, 200, { generated: runSchedules() });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/coverage\.csv$/))) {
+    const rows = db.prepare(
+      `SELECT l.aisle, l.code AS bin, l.level, COALESCE(l.zone,'') AS zone, COALESCE(l.last_counted,'') AS last_counted
+         FROM locations l WHERE l.session_id = ? ORDER BY COALESCE(l.last_counted,''), l.code`).all(Number(m[1]));
+    return sendCsv(req, res, `bin-coverage-session-${m[1]}.csv`, toCsv(rows, ['aisle', 'bin', 'level', 'zone', 'last_counted']));
   }
 
   // --- second counts
@@ -458,6 +538,12 @@ const server = http.createServer(async (req, res) => {
     return sendJson(req, res, status, { error: err.message || 'server error' });
   }
 });
+
+// Scheduled cycle batches. Checked every 15 minutes; generation is keyed on the
+// due date, so a restart or a missed window cannot produce two batches for a day.
+setInterval(() => {
+  try { runSchedules(); } catch (err) { console.warn('[cycle] schedule check failed:', err.message); }
+}, 15 * 60 * 1000).unref();
 
 server.listen(PORT, HOST, () => {
   console.log(`physical-inv-app listening on http://${HOST}:${PORT}`);

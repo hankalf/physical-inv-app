@@ -378,7 +378,8 @@
       state.draft = {};
       state.stepIndex = 0;
       $('hdrTitle').textContent = `#${session.id} · ${session.name}`;
-      $('btnToAssign').hidden = !session.guided;
+      $('btnToAssign').hidden = !session.guided && session.mode !== 'cycle';
+      if (session.mode === 'cycle') $('btnToAssign').textContent = 'My list';
       updateChips();
 
       if (online()) {
@@ -398,7 +399,8 @@
       }
       state.recountsDoneLocal = (await metaGet('recountsDoneLocal')) || [];
 
-      if (session.guided) { renderAssignment(); showScreen('scrAssign'); }
+      // a cycle session has no aisle plan, but the bin list is the job: show it
+      if (session.guided || session.mode === 'cycle') { renderAssignment(); showScreen('scrAssign'); }
       else { showScreen('scrScan'); renderStep(); }
       syncQueue();
     } catch (err) {
@@ -441,12 +443,36 @@
   async function renderAssignment() {
     const a = state.assignment;
     const card = $('assignCard');
+    const cycleMode = state.session && state.session.mode === 'cycle';
+    if (cycleMode) {
+      card.innerHTML = '';
+      $('btnAisleDone').hidden = true;
+      $('btnCount').hidden = true;
+      const tasks = (state.recounts || []).filter((t) => !(state.recountsDoneLocal || []).includes(t.id));
+      $('recountCard').hidden = false;
+      $('btnRecounts').hidden = !tasks.length;
+      $('recountCount').textContent = tasks.length;
+      $('recountCardTitle').textContent = 'Cycle count';
+      $('recountCardSub').textContent = tasks.length
+        ? 'bins on your list — scan every pallet in each, or mark it empty.'
+        : 'Nothing on your list right now. Tap Refresh once a supervisor has generated today\'s bins.';
+      $('btnRecounts').textContent = 'Start counting the list';
+      return;
+    }
+    $('btnCount').hidden = false;
     clearFeedback($('assignMsg'));
     $('btnAisleDone').hidden = !(a && a.active);
     const tasks = (state.recounts || []).filter((t) => !(state.recountsDoneLocal || []).includes(t.id));
+    const cycle = tasks.filter((t) => t.kind === 'cycle').length;
+    const cycleOnly = cycle === tasks.length;
     $('recountCard').hidden = !tasks.length;
     $('btnRecounts').hidden = !tasks.length;
     $('recountCount').textContent = tasks.length;
+    $('recountCardTitle').textContent = cycleOnly ? 'Cycle count' : cycle ? 'Bins to count' : 'Second counts available';
+    $('recountCardSub').textContent = cycleOnly
+      ? 'bins on today\'s list — scan every pallet in each, or mark it empty.'
+      : 'bins to go back to — the first count didn\'t agree with the inventory report, or a supervisor asked.';
+    $('btnRecounts').textContent = cycleOnly ? 'Start counting the list' : 'Start second counts';
 
     if (!a) {
       card.innerHTML = '<div class="assign waiting"><div class="aisle">No plan</div><div class="sub">No assignment loaded for this team. Refresh once Wi-Fi is back, or count freely.</div></div>';
@@ -556,7 +582,9 @@
     $('recountRow').hidden = !t;
     if (!t) return;
     $('recountBanner').innerHTML = '';
-    $('recountBanner').appendChild(document.createTextNode(`SECOND COUNT · bin ${t.bin}`));
+    $('recountBanner').dataset.bin = t.bin;
+    $('recountBanner').dataset.kind = t.kind || 'recount';
+    $('recountBanner').appendChild(document.createTextNode(`${t.kind === 'cycle' ? 'CYCLE COUNT' : 'SECOND COUNT'} · bin ${t.bin}`));
     const d = document.createElement('div'); d.className = 'detail';
     d.textContent = `${describeBin(t.bin)} — ${t.reason}. Scan every pallet in this bin, then tap Bin done.`;
     $('recountBanner').appendChild(d);
@@ -836,7 +864,8 @@
       palletId: d.emptyBin ? 'EMPTY' : d.palletId,
       qty: d.emptyBin ? 0 : d.qty,
       emptyBin: d.emptyBin ? 1 : 0,
-      pass: state.recount ? 2 : 1,
+      // a cycle count is the count for that bin, not a second one
+      pass: state.recount && state.recount.kind !== 'cycle' ? 2 : 1,
       recountId: state.recount ? state.recount.id : null,
       location: d.location,
       comments: d.comments || null,

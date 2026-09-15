@@ -228,6 +228,8 @@
   function applySessionSettings() {
     const s = sessions.find((x) => x.id === sessionId);
     if (!s) return;
+    document.querySelector('.two').hidden = s.mode === 'cycle';   // aisles & assignments
+    $('cycleCard').hidden = s.mode !== 'cycle';
     $('sessionChip').textContent = `Session #${s.id}${s.status === 'closed' ? ' (closed)' : ''}`;
     $('fPalletMode').value = s.pallet_mode;
     $('fGuided').checked = !!s.guided;
@@ -385,6 +387,107 @@
       list.appendChild(box);
     }
   }
+
+  /* ------------------------------------------------------------ cycle counting */
+  const isCycle = () => (sessions.find((x) => x.id === sessionId) || {}).mode === 'cycle';
+
+  async function refreshCycle() {
+    $('cycleCard').hidden = !isCycle();
+    if (!isCycle()) return;
+    const data = await apiJson(`/api/admin/sessions/${sessionId}/cycle/batches`);
+    const c = data.coverage;
+    const pct = c.bins ? Math.round((c.recent / c.bins) * 100) : 0;
+    $('cycleStats').innerHTML = '';
+    for (const [n, l] of [
+      [`${pct}%`, `Counted in the last ${c.days} days`],
+      [`${c.recent.toLocaleString()} / ${c.bins.toLocaleString()}`, 'Bins covered'],
+      [c.never.toLocaleString(), 'Never counted'],
+      [c.oldest ? new Date(c.oldest).toLocaleDateString() : '—', 'Oldest count on record'],
+      [c.openTasks.toLocaleString(), 'Bins on open lists'],
+    ]) {
+      const d = document.createElement('div');
+      d.className = 'stat';
+      d.innerHTML = '<div class="n"></div><div class="l"></div>';
+      d.querySelector('.n').textContent = n;
+      d.querySelector('.l').textContent = l;
+      $('cycleStats').appendChild(d);
+    }
+    $('cycleSub').textContent = data.batches.length ? `${data.batches.length} batch(es)` : 'no batches yet';
+
+    table($('batchTable'),
+      [{ label: 'Due' }, { label: 'Batch' }, { label: 'Picked by' }, { label: 'Scope' }, { label: 'Bins', num: true }, { label: 'Done', num: true }, { label: 'Progress' }, { label: 'Teams' }, { label: '' }],
+      data.batches,
+      (b) => {
+        const tr = document.createElement('tr');
+        const scope = (() => { try { const s2 = JSON.parse(b.scope || '{}'); return [s2.zone, s2.aisle, s2.levels].filter(Boolean).join(' · ') || 'whole site'; } catch { return 'whole site'; } })();
+        tr.append(cell(b.due_date), cell(b.name + (b.auto ? ' (auto)' : '')), cell(data.strategies[b.strategy] || b.strategy), cell(scope),
+          cell(b.bins, 'num'), cell(b.done, 'num'));
+        const td = document.createElement('td');
+        const bar = document.createElement('div'); bar.className = 'bar';
+        const i = document.createElement('i'); i.style.width = (b.bins ? Math.round((b.done / b.bins) * 100) : 0) + '%';
+        bar.appendChild(i); td.appendChild(bar); tr.appendChild(td);
+        tr.append(cell(b.teams || '—'));
+        const tdDel = document.createElement('td');
+        const del = document.createElement('button'); del.className = 'sm danger'; del.textContent = b.done ? 'Clear rest' : 'Remove';
+        del.onclick = async () => {
+          if (!confirm(`${b.done ? 'Remove the bins still open in' : 'Remove'} "${b.name}"? Counts already recorded are kept.`)) return;
+          try { await apiJson(`/api/admin/sessions/${sessionId}/cycle/batches/${b.id}`, { method: 'DELETE' }); await refreshAll(); } catch (err) { msg($('cycleMsg'), 'err', err.message); }
+        };
+        tdDel.appendChild(del); tr.appendChild(tdDel);
+        return tr;
+      }, 'No batches yet — generate one above.');
+
+    // schedule fields reflect what is stored
+    const s2 = sessions.find((x) => x.id === sessionId);
+    let plan = null;
+    try { plan = s2.cycle_schedule ? JSON.parse(s2.cycle_schedule) : null; } catch { /* ignore */ }
+    $('fCycAuto').checked = !!plan;
+    if (plan) {
+      $('fCycEvery').value = plan.every; $('fCycSchedBins').value = plan.bins;
+      $('fCycHour').value = plan.hour; $('fCycWeekday').value = String(plan.weekday ?? 1);
+    }
+  }
+
+  const cycleOpts = () => ({
+    target: Number($('fCycBins').value), strategy: $('fCycStrategy').value,
+    zone: $('fCycZone').value, aisle: $('fCycAisle').value, levels: $('fCycLevels').value, team: $('fCycTeam').value,
+  });
+
+  $('btnCycPreview').onclick = async () => {
+    if (!needSession($('cycleMsg'))) return;
+    try {
+      const r = await postJson(`/api/admin/sessions/${sessionId}/cycle/preview`, cycleOpts());
+      const oldest = r.picked[0], newest = r.picked[r.picked.length - 1];
+      msg($('cycleMsg'), 'warn', `${r.picked.length} bins would be picked (${r.available.toLocaleString()} match that scope)`,
+        r.picked.length ? `From ${oldest.code} (${oldest.last_counted ? 'last counted ' + oldest.last_counted.slice(0, 10) : 'never counted'}) to ${newest.code}. Nothing generated yet.` : '');
+    } catch (err) { msg($('cycleMsg'), 'err', err.message); }
+  };
+
+  $('btnCycGenerate').onclick = async () => {
+    if (!needSession($('cycleMsg'))) return;
+    try {
+      const r = await postJson(`/api/admin/sessions/${sessionId}/cycle/batches`, cycleOpts());
+      msg($('cycleMsg'), 'ok', `Generated ${r.created} bins for ${r.batch.due_date}.`, 'They are on the scanners now — teams see them at sign-on or after a refresh.');
+      await refreshAll();
+    } catch (err) { msg($('cycleMsg'), 'err', err.message); }
+  };
+
+  $('btnCycSchedule').onclick = async () => {
+    if (!needSession($('cycleMsg'))) return;
+    try {
+      const body = $('fCycAuto').checked
+        ? { every: $('fCycEvery').value, bins: Number($('fCycSchedBins').value), strategy: $('fCycStrategy').value,
+            hour: Number($('fCycHour').value), weekday: Number($('fCycWeekday').value),
+            zone: $('fCycZone').value, aisle: $('fCycAisle').value, levels: $('fCycLevels').value }
+        : {};
+      await postJson(`/api/admin/sessions/${sessionId}/cycle/schedule`, body);
+      msg($('cycleMsg'), 'ok', $('fCycAuto').checked
+        ? `Saved: ${$('fCycSchedBins').value} bins every ${$('fCycEvery').value === 'week' ? $('fCycWeekday').selectedOptions[0].textContent : 'weekday'} from ${$('fCycHour').value}:00.`
+        : 'Automatic generation turned off.');
+      await loadSessions();
+    } catch (err) { msg($('cycleMsg'), 'err', err.message); }
+  };
+  $('btnExportCoverage').onclick = () => download(`/api/admin/sessions/${sessionId}/export/coverage.csv`, `bin-coverage-session-${sessionId}.csv`);
 
   /* ------------------------------------------------------------ second counts */
   async function refreshRecounts() {
@@ -707,7 +810,7 @@
 
   async function refreshAll() {
     if (!sessionId) return;
-    await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts()]);
+    await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts(), refreshCycle()]);
   }
 
   async function download(path, filename) {
@@ -729,10 +832,10 @@
 
   $('btnCreate').onclick = async () => {
     try {
-      const s = await postJson('/api/admin/sessions', { name: $('fNewName').value });
+      const s = await postJson('/api/admin/sessions', { name: $('fNewName').value, mode: $('fNewMode').value });
       $('fNewName').value = '';
       sessionId = s.id;
-      msg($('sessionMsg'), 'ok', `Created session #${s.id}. Upload its bin list and pallet list next.`);
+      msg($('sessionMsg'), 'ok', `Created ${s.mode === 'cycle' ? 'cycle-count' : 'full count'} session #${s.id}.`, 'Upload its bin list and inventory report next.');
       await loadSessions();
     } catch (err) { msg($('sessionMsg'), 'err', err.message); }
   };

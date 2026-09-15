@@ -158,6 +158,13 @@
       <hr>
       <div class="inline">
         <div><label for="fNewName">New session name</label><input id="fNewName" placeholder="e.g. Q3 2026 wall-to-wall"></div>
+        <div class="auto">
+          <label for="fNewMode">Type</label>
+          <select id="fNewMode">
+            <option value="full">Full count — teams work whole aisles</option>
+            <option value="cycle">Cycle count — a batch of bins per day/week</option>
+          </select>
+        </div>
         <div class="auto"><button class="primary" id="btnCreate">Create session</button></div>
       </div>
       <div class="feedback" id="sessionMsg"></div>
@@ -259,6 +266,51 @@
         <div class="feedback" id="assignMsg"></div>
         <div class="team-list" id="teamList" style="margin-top:10px"></div>
       </div>
+    </div>
+
+    <!-- ============ cycle counting ============ -->
+    <div class="card" id="cycleCard" hidden>
+      <h2>Cycle count <span class="muted" id="cycleSub"></span></h2>
+      <div class="hint">
+        Upload a fresh inventory report whenever you want current quantities (Replace existing), then generate a batch.
+        Bins are picked by how long they have gone without a count — seeded from the <b>Last Phys. Invt. Date</b> in your
+        export and kept up to date as counts land — so a batch never re-picks what was counted yesterday.
+      </div>
+      <div class="grid" id="cycleStats" style="margin-top:12px"></div>
+      <div class="inline" style="margin-top:12px">
+        <div class="auto"><label for="fCycBins">Bins</label><input id="fCycBins" class="sm" style="width:80px" type="number" value="40" min="1"></div>
+        <div class="auto">
+          <label for="fCycStrategy">Pick</label>
+          <select id="fCycStrategy">
+            <option value="oldest">Longest since counted</option>
+            <option value="never">Never counted</option>
+            <option value="random">Random sample</option>
+          </select>
+        </div>
+        <div class="auto"><label for="fCycZone">Zone</label><input id="fCycZone" class="sm" style="width:110px" placeholder="any"></div>
+        <div class="auto"><label for="fCycAisle">Aisles</label><input id="fCycAisle" class="sm" placeholder="any"></div>
+        <div class="auto"><label for="fCycLevels">Levels</label><input id="fCycLevels" class="sm" style="width:80px" placeholder="any"></div>
+        <div class="auto"><label for="fCycTeam">Team</label><input id="fCycTeam" class="sm" style="width:70px" placeholder="any"></div>
+        <div class="auto"><button id="btnCycPreview">Preview</button></div>
+        <div class="auto"><button class="primary" id="btnCycGenerate">Generate batch</button></div>
+      </div>
+      <div class="feedback" id="cycleMsg"></div>
+      <hr>
+      <div class="inline">
+        <div class="auto"><label class="cb"><input type="checkbox" id="fCycAuto"> Generate automatically</label></div>
+        <div class="auto">
+          <label for="fCycEvery">Every</label>
+          <select id="fCycEvery"><option value="day">Weekday</option><option value="week">Week</option></select>
+        </div>
+        <div class="auto"><label for="fCycSchedBins">Bins each time</label><input id="fCycSchedBins" class="sm" style="width:80px" type="number" value="40" min="1"></div>
+        <div class="auto"><label for="fCycHour">From (hour)</label><input id="fCycHour" class="sm" style="width:70px" type="number" value="6" min="0" max="23"></div>
+        <div class="auto"><label for="fCycWeekday">On (weekly)</label>
+          <select id="fCycWeekday"><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select>
+        </div>
+        <div class="auto"><button id="btnCycSchedule">Save schedule</button></div>
+        <div class="auto"><button id="btnExportCoverage">Coverage CSV</button></div>
+      </div>
+      <div class="scroll" style="margin-top:12px"><table id="batchTable"></table></div>
     </div>
 
     <!-- ============ second counts ============ -->

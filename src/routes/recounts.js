@@ -23,6 +23,7 @@ export const REASONS = {
   'COUNTED TWICE': 'Pallet counted in more than one bin',
   'MISSING': 'Expected pallet not found here',
   'MANUAL': 'Requested by a supervisor',
+  'CYCLE': 'Cycle count',
 };
 
 export function listRecounts(sessionId) {
@@ -121,14 +122,15 @@ export function tasksForTeam(sessionId, team) {
   const t = norm(team);
   return db
     .prepare(
-      `SELECT id, bin, pallet_id, reason, status, team
+      `SELECT id, bin, pallet_id, reason, status, team, batch_id
          FROM recounts
         WHERE session_id = ? AND status != 'done'
           AND (team = ? OR (team IS NULL AND COALESCE(first_team, '') != ?))
         ORDER BY CASE WHEN team = ? THEN 0 ELSE 1 END, bin`
     )
     .all(Number(sessionId), t, t, t)
-    .map((r) => ({ id: r.id, bin: r.bin, palletId: r.pallet_id, reason: REASONS[r.reason] || r.reason, mine: r.team === t, status: r.status }));
+    .map((r) => ({ id: r.id, bin: r.bin, palletId: r.pallet_id, reason: REASONS[r.reason] || r.reason,
+                   kind: r.reason === 'CYCLE' ? 'cycle' : 'recount', mine: r.team === t, status: r.status }));
 }
 
 export function takeRecount(sessionId, recountId, team) {
@@ -137,7 +139,7 @@ export function takeRecount(sessionId, recountId, team) {
   if (!r) throw Object.assign(new Error('recount not found'), { status: 404 });
   if (r.status === 'done') throw Object.assign(new Error('this recount is already done'), { status: 409 });
   if (r.team && r.team !== t) throw Object.assign(new Error(`team ${r.team} already has this recount`), { status: 409 });
-  if (r.first_team && r.first_team === t) throw Object.assign(new Error('a different team must do the second count'), { status: 409 });
+  if (r.reason !== 'CYCLE' && r.first_team && r.first_team === t) throw Object.assign(new Error('a different team must do the second count'), { status: 409 });
   db.prepare("UPDATE recounts SET team = ?, status = 'taken', taken_at = COALESCE(taken_at, ?) WHERE id = ?").run(t, now(), r.id);
   return db.prepare('SELECT * FROM recounts WHERE id = ?').get(r.id);
 }

@@ -76,6 +76,14 @@ Scanners need internet access for this option, not just warehouse Wi-Fi.
 
 ---
 
+## Two kinds of session
+
+| | **Full count** | **Cycle count** |
+|---|---|---|
+| Scope | wall-to-wall | a batch of bins per day or week |
+| Teams get | whole aisles, by level | a generated list of bins |
+| Lives | for one count | for the year — re-upload the report whenever |
+
 ## Supervisor — `/admin.html`
 
 ### 1. Create a session
@@ -159,7 +167,32 @@ left to right from 001, each bay split into its Front and Back face); **Pair fro
 racking blocks. To move an aisle, edit its box in the JSON; to add a site, add a pair
 of files.
 
-### 6. Second counts
+### 6. Cycle counting
+
+In a **cycle count** session the manager uploads a fresh inventory report whenever they
+want current quantities (tick *Replace existing*), then generates a batch: how many bins,
+how to pick them, and optionally a zone, aisle or level to stay inside.
+
+Bins are picked by how long they have gone without a count. That date starts from the
+**Last Phys. Invt. Date** column in your ERP export and moves forward as lines land, so a
+batch never re-picks what was counted yesterday and the oldest corners come up first.
+*Preview* shows what would be picked without generating anything. The other strategies are
+*never counted* and *random sample*.
+
+Tick **Generate automatically** for a standing schedule — 40 bins every weekday from 6am,
+or a weekly batch on a chosen day. The server checks every 15 minutes and creates at most
+one scheduled batch per day, so a restart or a missed window cannot double up.
+
+The card shows coverage: what share of bins have been counted in the last 90 days, how many
+have never been counted, the oldest count on record, and progress per batch. **Coverage CSV**
+lists every bin oldest-first.
+
+On the gun a cycle session has no aisle plan — the batch *is* the job. The counter sees
+"40 bins", each task naming the bin and where it is; they scan every pallet in it (or mark
+it empty) and move to the next. A cycle-count line is a first count, so anything that
+disagrees with the report raises a second count exactly as in a full count.
+
+### 7. Second counts
 
 The pallet list *is* the inventory report, and the app compares every first count against
 it as it lands. When a line disagrees — quantity differs, pallet in an unexpected bin, not
@@ -178,7 +211,7 @@ On the gun, second counts appear on the assignment screen ("5 bins to go back to
 one shows the bin, where it is, and the reason; the counter scans every pallet in that bin
 (or marks it empty) and taps **Bin done**. Completions queue offline like everything else.
 
-### 7. Watch, then export
+### 8. Watch, then export
 
 Progress by team (scanner, employees, active aisle, last scan), by aisle, and a pallet
 report with these statuses:
@@ -197,7 +230,7 @@ flags, comments), exceptions only, and uncounted bins.
 
 ---
 
-### 8. Register the scanners
+### 9. Register the scanners
 
 The **Scanners** card lists every handheld. Add one by name (`SCANNER-05`) and it gets a
 unique link, `https://<server>/?d=<id>`. On the device, open that link in Chrome once —
@@ -287,7 +320,10 @@ Supervisor (`Authorization: Bearer <token>` from `POST /api/admin/login`):
 |---|---|---|
 | `GET`/`POST` | `/api/admin/devices` | List / register scanners |
 | `POST`/`DELETE` | `/api/admin/devices/:uid` | Rename / remove a scanner |
-| `GET`/`POST` | `/api/admin/sessions` | List / create |
+| `GET`/`POST` | `/api/admin/sessions` | List / create (`mode: full \| cycle`) |
+| `GET`/`POST` | `/api/admin/sessions/:id/cycle/batches` | List / generate cycle batches |
+| `POST` | `/api/admin/sessions/:id/cycle/preview` | What a batch would pick |
+| `POST` | `/api/admin/sessions/:id/cycle/schedule` | Daily/weekly auto-generation |
 | `POST` | `/api/admin/sessions/:id/settings` | Pallet check mode, guided, comments |
 | `POST` | `/api/admin/sessions/:id/master?kind=bins\|pallets\|plan&replace=` | Upload a list |
 | `POST` | `/api/admin/sessions/:id/status` | Open / close |
@@ -302,7 +338,7 @@ Supervisor (`Authorization: Bearer <token>` from `POST /api/admin/login`):
 | `POST`/`DELETE` | `/api/admin/sessions/:id/recounts/:rid` | Assign, finish, reopen, remove |
 | `GET` | `/api/admin/sessions/:id/pallets?only=exceptions` | Pallet report |
 | `GET` | `/api/admin/sessions/:id/uncounted` | Bins with no count |
-| `GET` | `/api/admin/sessions/:id/export/{pallets,counts,exceptions,uncounted,recounts}.csv` | Exports |
+| `GET` | `/api/admin/sessions/:id/export/{pallets,counts,exceptions,uncounted,recounts,coverage}.csv` | Exports |
 
 ---
 
