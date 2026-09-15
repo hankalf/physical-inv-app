@@ -124,6 +124,7 @@ export function queueAssignments(sessionId, team, aisles, levelsRaw = '') {
   const t = norm(team);
   const levels = normLevels(levelsRaw);
   if (!t) throw Object.assign(new Error('team required'), { status: 400 });
+  if (!levels) throw Object.assign(new Error('levels required - e.g. A-C, D-F, or A-F for every level'), { status: 400 });
   const maxPos = db
     .prepare('SELECT COALESCE(MAX(position), -1) AS p FROM assignments WHERE session_id = ? AND team = ?')
     .get(id, t).p;

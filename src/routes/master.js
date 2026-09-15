@@ -128,6 +128,7 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
         const aisle = resolveAisle(id, pick(rec, AISLE_ALIASES));
         if (!team || !aisle) { stats.skipped++; continue; }
         const levels = normLevels(pick(rec, LEVEL_ALIASES));
+        if (!levels) { stats.skipped++; stats.skippedNoLevels = (stats.skippedNoLevels || 0) + 1; continue; }
         const pos = db
           .prepare('SELECT COALESCE(MAX(position), -1) + 1 AS p FROM assignments WHERE session_id = ? AND team = ?')
           .get(id, team).p;

@@ -54,6 +54,7 @@
   label.cb { display: inline-flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: 13px; }
   label.cb input { width: auto; }
   hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+  #mapLevels .chip-btn { padding: 5px 12px; font-size: 13px; }
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 10; }
   .modal-box { background: #fff; color: #0d1117; border-radius: 12px; padding: 20px 24px; text-align: center; max-width: 360px; }
   .modal-box h2 { margin: 0 0 12px; }
@@ -207,6 +208,10 @@
     <!-- ============ warehouse map ============ -->
     <div class="card">
       <h2>Warehouse map <span class="muted" id="mapSub">top-down, built from the bin codes · aisles that share racking are drawn back-to-back</span></h2>
+      <div class="inline" style="margin-bottom:8px">
+        <div class="auto"><span class="muted" style="font-size:13px">Show level:</span></div>
+        <div class="auto"><div class="chips" id="mapLevels" style="margin:0"></div></div>
+      </div>
       <div class="legend">
         <span><i style="background:#8b949e"></i> not counted</span>
         <span><i style="background:#d29922"></i> partly counted</span>
@@ -237,11 +242,11 @@
 
       <div class="card">
         <h2>Team assignments</h2>
-        <div class="hint">Queue aisles per team in counting order, with the <b>levels</b> that team's equipment covers (A–C on foot, D–F with the lift…). Two teams can share an aisle on different levels. A team's next aisle waits while another team holds those levels in its racking block — that is what staggers them.</div>
+        <div class="hint">Queue aisles per team in counting order, with the <b>levels</b> that team's equipment covers (A–C on foot, D–F with the lift, A–F for all). Levels are required. Two teams can share an aisle on different levels. A team's next aisle waits while another team holds those levels in its racking block — that is what staggers them.</div>
         <div class="inline" style="margin-top:8px">
           <div class="auto"><label for="fAssignTeam">Team</label><input id="fAssignTeam" class="sm" style="width:70px" placeholder="3"></div>
           <div><label for="fAssignAisles">Aisles, in order</label><input id="fAssignAisles" placeholder="F01, F03, F05"></div>
-          <div class="auto"><label for="fAssignLevels">Levels</label><input id="fAssignLevels" class="sm" placeholder="A-C or all" title="Which levels this team counts, by equipment: A-C on foot, D-F with the lift. Blank = every level."></div>
+          <div class="auto"><label for="fAssignLevels">Levels (required)</label><input id="fAssignLevels" class="sm" placeholder="A-C" required title="Which levels this team counts, by equipment: A-C on foot, D-F with the lift, A-F for every level."></div>
           <div class="auto"><button class="primary" id="btnAssign">Queue</button></div>
         </div>
         <div class="feedback" id="assignMsg"></div>

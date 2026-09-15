@@ -130,7 +130,8 @@ first aisle has a wall behind it. Only one team can be active in a block at a ti
 ### 4. Assign teams — aisle and levels
 
 Queue aisles per team in counting order, each with the **levels** that team's equipment
-covers: `A-C` for a crew on foot, `D-F` for the one with the lift, blank for every level.
+covers: `A-C` for a crew on foot, `D-F` for the one with the lift, `A-F` for every
+level. Levels are required — a plan row without them is skipped.
 Two teams can work the same aisle on different levels at the same time. The first aisle
 for each team starts immediately if its block is free on those levels. When a team marks an aisle complete, its next aisle
 starts automatically — unless another team holds that block on overlapping levels, in which case it waits
@@ -141,7 +142,10 @@ with the same message.
 ### 5. Put the map on the real floor plan
 
 The **Warehouse map** card draws every bay as a cell coloured by how much of it has a
-count. With no drawing chosen it lays aisles out schematically. Pick a **Map drawing**
+count. Pick a level (A–F) above the map to see one level alone — useful when two crews
+share an aisle on different levels. Hovering a cell names the aisle, the face, the
+position numbers and levels in it, and lists which bins are counted and which are still
+open. With no drawing chosen it lays aisles out schematically. Pick a **Map drawing**
 in the session settings and it draws the same cells over the actual rack layout, in
 the positions the racking really has, with team badges on the aisles they're in.
 

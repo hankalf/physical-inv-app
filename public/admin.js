@@ -113,8 +113,9 @@
     },
     plan: {
       file: 'plan-template.csv',
-      required: [['Team', 'team number'], ['Aisle', 'the full aisle code from the bin list, e.g. F01 - a bare number is refused when it could mean two aisles (A01 / F01)']],
-      optional: [['Levels', 'which levels the team counts, e.g. A-C or D-F; blank = every level']],
+      required: [['Team', 'team number'], ['Aisle', 'the full aisle code from the bin list, e.g. F01 - a bare number is refused when it could mean two aisles (A01 / F01)'],
+                 ['Levels', 'which levels the team counts, by equipment: A-C, D-F, or A-F for every level']],
+      optional: [],
       note: 'One row per aisle, in the order each team should count. Upload the bin list first. Aisles can also be queued by hand in Team assignments below.',
     },
   };
@@ -444,14 +445,27 @@
       const b = bays.get(bay);
       const targets = [b];
       if (b.faces) targets.push(pos % 2 === 1 ? b.faces.front : b.faces.back);
-      for (const t of targets) { t.bins.push(code); if (lines > 0) t.counted++; if (flagged > 0) t.flagged++; }
+      for (const t of targets) { t.bins.push({ code, counted: lines > 0, flagged: flagged > 0 }); if (lines > 0) t.counted++; if (flagged > 0) t.flagged++; }
     }
     return byAisle;
   }
 
+  // Hover text for a cell, in the terms people use on the floor: the aisle, the
+  // face, the position numbers and levels in the cell, then which bins are done.
   function cellTitle(aisle, bay, b, face) {
-    const codes = b.bins.length > 12 ? b.bins.slice(0, 12).join(', ') + ` … (+${b.bins.length - 12})` : b.bins.join(', ');
-    return `${aisleLabel(aisle, zoneByAisle.get(aisle))}, bay ${bay}${face ? ' ' + face : ''}: ${b.counted}/${b.bins.length} counted` + (b.flagged ? `, ${b.flagged} flagged` : '') + '\n' + codes;
+    const parsed = b.bins.map((x) => ({ ...x, ...parseBinCode(x.code) }));
+    const positions = [...new Set(parsed.map((x) => x.bay))].sort(natural);
+    const levels = [...new Set(parsed.map((x) => x.level).filter(Boolean))].sort();
+    const lv = levels.length > 1 ? `levels ${levels[0]}–${levels[levels.length - 1]}` : levels.length ? `level ${levels[0]}` : '';
+    const list = (arr) => (arr.length > 14 ? arr.slice(0, 14).join(', ') + ` … +${arr.length - 14}` : arr.join(', ')) || '—';
+    const done = parsed.filter((x) => x.counted).map((x) => x.code).sort(natural);
+    const open = parsed.filter((x) => !x.counted).map((x) => x.code).sort(natural);
+    return [
+      `${aisleLabel(aisle, zoneByAisle.get(aisle))}${face ? ` — ${face === 'front' ? 'Front' : 'Back'} face` : ''}, bins ${positions.join(' & ')}${lv ? ' · ' + lv : ''}`,
+      `${b.counted} of ${b.bins.length} counted${b.flagged ? ` · ${b.flagged} flagged` : ''}`,
+      `Counted: ${list(done)}`,
+      `Still to count: ${list(open)}`,
+    ].join('\n');
   }
 
   /** Heat map drawn over a floor-plan drawing: each aisle has pixel boxes in the layout file. */
@@ -530,7 +544,7 @@
         const bx = horizontal ? x + 2 : x + w / 2 - bw / 2, by = horizontal ? y + h / 2 - bh / 2 : y + 2;
         svg.appendChild(svgEl('rect', { x: bx, y: by, width: bw, height: bh, rx: 7, fill: a.activeTeam ? '#2f81f7' : '#2ea043' }));
         const t = svgEl('text', { x: bx + bw / 2, y: by + bh - 3, 'text-anchor': 'middle', class: 'team' });
-        t.textContent = a.activeTeam ? 'T' + a.activeTeam : '✓';
+        t.textContent = a.activeTeam ? 'T' + String(a.activeTeam).split(',').join('+') : '✓';
         svg.appendChild(t);
       }
     }
@@ -581,7 +595,7 @@
       if (a.activeTeam || a.done || a.queuedTeams) {
         svg.appendChild(svgEl('rect', { x: cx + 2, y: 20, width: CW - 4, height: 16, rx: 8, fill: a.activeTeam ? '#2f81f7' : a.done ? '#2ea043' : '#30363d' }));
         const t = svgEl('text', { x: cx + CW / 2, y: 32, 'text-anchor': 'middle', class: 'team' });
-        t.textContent = a.activeTeam ? 'T' + a.activeTeam : a.done ? '✓' : 'T' + String(a.queuedTeams).split(',')[0].trim();
+        t.textContent = a.activeTeam ? 'T' + String(a.activeTeam).split(',').join('+') : a.done ? '✓' : 'T' + String(a.queuedTeams).split(',')[0].trim().replace(/ .*/, '');
         svg.appendChild(t);
       }
       keys.forEach((bay, i) => {
@@ -599,15 +613,31 @@
     return { counted, total, missing: [] };
   }
 
+  let mapLevel = '';
+  function renderLevelChips(levels) {
+    const box = $('mapLevels');
+    box.innerHTML = '';
+    for (const l of ['', ...levels]) {
+      const b = document.createElement('button');
+      b.className = 'chip-btn' + (l === mapLevel ? ' selected' : '');
+      b.textContent = l || 'All';
+      b.onclick = () => { mapLevel = l; refreshMap(); };
+      box.appendChild(b);
+    }
+  }
+
   async function refreshMap() {
     const data = await apiJson(`/api/admin/sessions/${sessionId}/map`);
     const svg = $('map');
     svg.innerHTML = '';
+    const levels = [...new Set(data.bins.map(([code]) => parseBinCode(code).level).filter(Boolean))].sort();
+    renderLevelChips(levels);
+    if (mapLevel) data.bins = data.bins.filter(([code]) => parseBinCode(code).level === mapLevel);
     $('btnLayoutBlocks').hidden = !data.layout;
     $('mapSub').textContent = data.layout ? data.layout.name : 'top-down, built from the bin codes · aisles that share racking are drawn back-to-back';
     if (!data.bins.length) { $('mapNote').textContent = 'Upload a bin list to draw the map.'; svg.setAttribute('height', 0); return; }
     const r = data.layout ? renderBlueprint(svg, data, data.layout) : renderSchematic(svg, data);
-    $('mapNote').textContent = `${r.counted.toLocaleString()} of ${r.total.toLocaleString()} bins have a count. Each cell is a bay; hover for the bins in it.` +
+    $('mapNote').textContent = `${mapLevel ? 'Level ' + mapLevel + ': ' : ''}${r.counted.toLocaleString()} of ${r.total.toLocaleString()} bins have a count. Each cell is a bay; hover for the bins in it.` +
       (r.missing.length ? ` Not on the drawing — ${r.missing.join(' · ')}.` : '');
   }
 
@@ -687,7 +717,7 @@
       const t = stats.totals;
       msg($('uploadMsg'), 'ok', `Imported ${stats.rows.toLocaleString()} rows from ${label}`,
         `Session now has ${t.bins.toLocaleString()} bins in ${t.aisles} aisles, ${t.pallets.toLocaleString()} pallets, ${t.assignments} planned aisle assignments` +
-        (stats.skipped ? ` · ${stats.skipped} row(s) skipped (missing required column, or unknown aisle)` : '') +
+        (stats.skipped ? ` · ${stats.skipped} row(s) skipped (${stats.skippedNoLevels ? stats.skippedNoLevels + ' with no levels; ' : ''}missing required column, or unknown aisle)` : '') +
         (stats.excluded ? ` · ${stats.excluded} bins left out (counted manually: ${stats.excludedGroups.join(', ')})` : ''));
       await refreshAll();
     } catch (err) { msg($('uploadMsg'), 'err', 'Upload failed', err.message); }
@@ -711,7 +741,7 @@
       const t = stats.totals;
       msg($('uploadMsg'), 'ok', `Imported ${stats.rows.toLocaleString()} rows from ${file.name}`,
         `Session now has ${t.bins.toLocaleString()} bins in ${t.aisles} aisles, ${t.pallets.toLocaleString()} pallets, ${t.assignments} planned aisle assignments` +
-        (stats.skipped ? ` · ${stats.skipped} row(s) skipped (missing required column, or unknown aisle)` : '') +
+        (stats.skipped ? ` · ${stats.skipped} row(s) skipped (${stats.skippedNoLevels ? stats.skippedNoLevels + ' with no levels; ' : ''}missing required column, or unknown aisle)` : '') +
         (stats.excluded ? ` · ${stats.excluded} bins left out (counted manually: ${stats.excludedGroups.join(', ')})` : ''));
       $('fFile').value = '';
       await refreshAll();
@@ -737,6 +767,7 @@
 
   $('btnAssign').onclick = async () => {
     if (!needSession($('assignMsg'))) return;
+    if (!$('fAssignLevels').value.trim()) { msg($('assignMsg'), 'err', 'Levels are required', 'Which levels does this team count? e.g. A-C, D-F, or A-F for every level.'); $('fAssignLevels').focus(); return; }
     try {
       const r = await postJson(`/api/admin/sessions/${sessionId}/assignments`, { team: $('fAssignTeam').value, aisles: $('fAssignAisles').value, levels: $('fAssignLevels').value });
       const parts = [];
