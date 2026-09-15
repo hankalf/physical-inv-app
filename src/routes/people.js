@@ -94,15 +94,28 @@ export function reachOf(equipmentList, cfg = getConfig()) {
   return [...levels].sort().join('');
 }
 
-/** Why a level is out of reach: the cheapest rule to satisfy, and what is missing. */
-export function missingFor(level, equipmentList, cfg = getConfig()) {
-  const have = new Set((equipmentList || []).map(norm));
-  const options = cfg.levelRules
-    .filter((r) => r.levels.includes(norm(level)))
-    .map((r) => r.requires.filter((e) => !have.has(norm(e))));
-  if (!options.length) return null;
-  options.sort((a, b) => a.length - b.length);
-  return options[0].map((e) => (cfg.equipment[e] || e).toLowerCase());
+/**
+ * The smallest set of extra equipment that would put all of `levels` in reach.
+ * Answering per level and merging would over-state it: level C can be had two
+ * ways, so "dock truck AND high reach" reads as if both were needed when either
+ * would do. Brute force over the catalogue - there are only ever a handful.
+ */
+export function missingForLevels(levels, equipmentList, cfg = getConfig()) {
+  const have = (equipmentList || []).map(norm);
+  const want = normLevels(levels);
+  const covers = (kit) => [...want].every((c) => reachOf(kit, cfg).includes(c));
+  if (covers(have)) return [];
+  const options = Object.keys(cfg.equipment).filter((k) => k !== 'FOOT' && !have.includes(k));
+  for (let size = 1; size <= options.length; size++) {
+    const combos = [];
+    const build = (start, acc) => {
+      if (acc.length === size) { combos.push([...acc]); return; }
+      for (let i = start; i < options.length; i++) { acc.push(options[i]); build(i + 1, acc); acc.pop(); }
+    };
+    build(0, []);
+    for (const combo of combos) if (covers([...have, ...combo])) return combo.map((e) => (cfg.equipment[e] || e).toLowerCase());
+  }
+  return null;   // no combination of known equipment reaches it
 }
 
 /* ------------------------------------------------------------- employees */
@@ -247,13 +260,56 @@ export function reachShortfall(teamName, levels) {
   const cfg = getConfig();
   const short = [...normLevels(levels)].filter((c) => !t.reach.includes(c));
   if (!short.length) return null;
-  const needs = new Set();
-  for (const c of short) for (const e of missingFor(c, t.equipment, cfg) || []) needs.add(e);
+  const needs = missingForLevels(short.join(''), t.equipment, cfg);
   const has = t.equipment.length ? t.equipment.map((e) => (cfg.equipment[e] || e).toLowerCase()).join(' and ') : 'no equipment';
   return {
     levels: short.join(', '),
-    needs: [...needs],
+    needs: needs || [],
     message: `Team ${norm(teamName)} cannot reach level${short.length > 1 ? 's' : ''} ${short.join(', ')}: ` +
-      `that needs ${[...needs].join(' and ') || 'equipment they do not have'}, and between them they have ${has} (${levelsLabel(t.reach)}).`,
+      `that needs ${needs && needs.length ? 'a ' + needs.join(' and a ') : 'equipment they do not have'}, and between them they have ${has} (${levelsLabel(t.reach)}).`,
+  };
+}
+
+/**
+ * What the people signing on add up to: who they are, who is not on the roster,
+ * what they can reach between them, and anyone rostered to a different team.
+ * Used at sign-on so a crew shuffled at shift change is caught before counting.
+ */
+export function crewCheck(badges, teamName) {
+  const cfg = getConfig();
+  const crew = [];
+  const unknown = [];
+  const elsewhere = [];
+  const equipment = new Set();
+  for (const raw of badges || []) {
+    const badge = norm(raw);
+    if (!badge) continue;
+    const e = getEmployee(badge);
+    if (!e) { unknown.push(badge); continue; }
+    crew.push({ badge: e.badge, name: e.name, dept: e.dept, equipment: e.equipment, reach: e.reach, team: e.team });
+    for (const k of e.equipment) equipment.add(k);
+    if (e.team && norm(e.team) !== norm(teamName)) elsewhere.push({ badge: e.badge, name: e.name, team: e.team });
+  }
+  return {
+    crew,
+    unknown,
+    elsewhere,
+    equipment: [...equipment],
+    equipmentLabels: [...equipment].map((k) => cfg.equipment[k] || k),
+    reach: crew.length ? reachOf([...equipment], cfg) : '',
+  };
+}
+
+/** Levels the signed-on crew cannot reach, as a sentence for the gun. */
+export function crewShortfall(check, levels) {
+  if (!check.crew.length || !levels) return null;
+  const cfg = getConfig();
+  const short = [...normLevels(levels)].filter((c) => !check.reach.includes(c));
+  if (!short.length) return null;
+  const needs = missingForLevels(short.join(''), check.equipment, cfg);
+  return {
+    levels: short.join(', '),
+    needs: needs || [],
+    message: `Nobody signed on can reach level${short.length > 1 ? 's' : ''} ${short.join(', ')} — that needs ${needs && needs.length ? 'a ' + needs.join(' and a ') : 'equipment nobody here has'}.`,
   };
 }

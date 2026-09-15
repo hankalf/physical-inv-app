@@ -70,6 +70,7 @@
     employees: [],
     session: null,     // { id, name, palletMode, guided, askComments, masterVersion }
     assignment: null,  // team-status payload from the server
+    crew: null,        // who signed on, and whether they can reach their levels
     steps: [],
     stepIndex: 0,
     draft: {},
@@ -389,6 +390,7 @@
             body: JSON.stringify({ deviceId: state.deviceId, deviceUid: state.deviceUid || null, team, employees: state.employees }),
           });
           await metaSet('assignment', state.assignment);
+          if (state.assignment.crew) { state.crew = state.assignment.crew; await metaSet('crew', state.crew); }
           await refreshRecounts();
         } catch (err) {
           feedback($('signonMsg'), 'warn', 'Signed on locally only', err.message);
@@ -396,6 +398,7 @@
       } else {
         state.assignment = (await metaGet('assignment')) || null;
         state.recounts = (await metaGet('recounts')) || [];
+        state.crew = (await metaGet('crew')) || null;
       }
       state.recountsDoneLocal = (await metaGet('recountsDoneLocal')) || [];
 
@@ -425,7 +428,9 @@
   async function refreshAssignment(silent) {
     if (!state.session || !online()) return;
     try {
-      state.assignment = await api(`/api/sessions/${state.session.id}/team-status?team=${encodeURIComponent(state.team)}`);
+      const q = `team=${encodeURIComponent(state.team)}&employees=${encodeURIComponent(state.employees.join(','))}`;
+      state.assignment = await api(`/api/sessions/${state.session.id}/team-status?${q}`);
+      if (state.assignment.crew) { state.crew = state.assignment.crew; await metaSet('crew', state.crew); }
       await metaSet('assignment', state.assignment);
       await refreshRecounts();
       renderAssignment();
@@ -440,7 +445,47 @@
     return new Set(all.filter((l) => l.sessionId === state.session.id && !l.voidedLocal && l.aisle === aisle && (!bins.size || bins.has(l.location))).map((l) => l.location));
   }
 
+  /**
+   * What the sign-on check found. A badge nobody recognises, somebody rostered
+   * to another team, or a crew that cannot reach the levels they were given -
+   * none of it stops the count, but the gun says so plainly.
+   */
+  function renderCrewBanner() {
+    const c = state.crew;
+    const el = $('crewBanner');
+    if (!c || (!c.shortfall && !c.unknown.length && !c.elsewhere.length)) {
+      if (c && c.crew.length) {
+        el.hidden = false;
+        el.className = 'feedback show ok';
+        el.innerHTML = '';
+        el.appendChild(document.createTextNode(`Signed on: ${c.crew.map((x) => x.name).join(', ')}`));
+        const d = document.createElement('div');
+        d.className = 'detail';
+        d.textContent = `${c.equipmentLabels.length ? c.equipmentLabels.join(' + ') : 'On foot'} · reaches ${levelsLabel(c.reach)}`;
+        el.appendChild(d);
+      } else el.hidden = true;
+      return;
+    }
+    el.hidden = false;
+    el.className = 'feedback show ' + (c.shortfall ? 'err' : 'warn');
+    el.innerHTML = '';
+    el.appendChild(document.createTextNode(c.shortfall ? 'Check your equipment' : 'Check the crew'));
+    const lines = [];
+    if (c.shortfall) lines.push(`${c.shortfall.message} Aisle ${c.forAisle} was given to team ${state.team} for ${levelsLabel(c.forLevels)}.`);
+    if (c.unknown.length) lines.push(`Not on the crew list: ${c.unknown.join(', ')} — check the badge, or ask a supervisor to add them.`);
+    for (const e of c.elsewhere) lines.push(`${e.name} (${e.badge}) is on team ${e.team} today, not team ${state.team}.`);
+    if (c.crew.length) lines.push(`Between you: ${c.equipmentLabels.length ? c.equipmentLabels.join(' + ') : 'on foot only'} — reaches ${levelsLabel(c.reach)}.`);
+    for (const t of lines) {
+      const d = document.createElement('div');
+      d.className = 'detail';
+      d.textContent = t;
+      el.appendChild(d);
+    }
+    beep(c.shortfall ? 'err' : 'warn');
+  }
+
   async function renderAssignment() {
+    renderCrewBanner();
     const a = state.assignment;
     const card = $('assignCard');
     const cycleMode = state.session && state.session.mode === 'cycle';
@@ -979,9 +1024,16 @@
     await syncQueue();
     const queued = await wrap(tx('lines', 'readonly').index('synced').count(0));
     if (queued > 0 && !confirm(`${queued} line(s) have not reached the server yet. Sign off anyway?`)) return;
+    // signing off ends the crew: the next team scans their own badges in
     state.team = '';
     state.session = null;
     state.assignment = null;
+    state.crew = null;
+    state.employees = [];
+    await metaSet('employees', []);
+    await metaSet('crew', null);
+    renderEmployees();
+    $('fTeam').value = '';
     updateChips();
     showScreen('scrSignon');
     describeCache();

@@ -24,6 +24,7 @@ import { generateBatch, previewBatch, listBatches, deleteBatch, coverage, runSch
 import {
   listEmployees, upsertEmployee, deleteEmployee, importEmployees, importHelpers,
   listTeams, createTeam, deleteTeam, assignMember, getConfig, setConfig, getEmployee,
+  crewCheck, crewShortfall,
 } from './routes/people.js';
 
 // people.js parses uploaded rosters with the shared CSV helpers
@@ -193,12 +194,28 @@ async function handleHandheld(req, res, url, m) {
       employees: Array.isArray(body.employees) ? body.employees.map((e) => norm(e)).filter(Boolean) : [],
     });
     if (body.deviceUid) touchDevice(body.deviceUid, { team: body.team, sessionId: m[1] });
-    return sendJson(req, res, 200, teamStatus(m[1], body.team));
+
+    // Who actually signed on, and can they reach what this team was given?
+    const status = teamStatus(m[1], body.team);
+    const check = crewCheck(body.employees, body.team);
+    const levels = status.active ? status.active.levels : (status.queuedDetail?.[0]?.levels || '');
+    const aisle = status.active ? status.active.aisle : (status.queued?.[0] || '');
+    return sendJson(req, res, 200, {
+      ...status,
+      crew: { ...check, forAisle: aisle, forLevels: levels, shortfall: crewShortfall(check, levels) },
+    });
   }
 
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/team-status$/)) && method === 'GET') {
     if (!getSession(m[1])) throw httpError(404, 'session not found');
-    return sendJson(req, res, 200, teamStatus(m[1], url.searchParams.get('team') || ''));
+    const team = url.searchParams.get('team') || '';
+    const status = teamStatus(m[1], team);
+    const badges = (url.searchParams.get('employees') || '').split(',').filter(Boolean);
+    if (!badges.length) return sendJson(req, res, 200, status);
+    const check = crewCheck(badges, team);
+    const levels = status.active ? status.active.levels : (status.queuedDetail?.[0]?.levels || '');
+    const aisle = status.active ? status.active.aisle : (status.queued?.[0] || '');
+    return sendJson(req, res, 200, { ...status, crew: { ...check, forAisle: aisle, forLevels: levels, shortfall: crewShortfall(check, levels) } });
   }
 
   // A team declares an aisle finished from the handheld; the block frees up.

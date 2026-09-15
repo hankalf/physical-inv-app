@@ -275,6 +275,14 @@ it asks for an ID.
 **Sign-on:** pick the session, enter the team number, scan or type each employee's badge
 (Enter after each), tap **Sign on & load list**.
 
+The badges are checked against the crew list, and the assignment screen says what it found:
+who signed on, what they have between them and how high it reaches. It calls out a badge
+that is not on the crew list, anybody rostered to a different team today, and — in red —
+a crew that cannot reach the levels their aisle was given, naming the machine they are
+short of. None of it blocks counting; it is there so a shift-change shuffle is caught at
+6am rather than at the variance report. Signing off clears the crew, so the next shift
+scans their own badges in.
+
 **Assignment screen** (guided sessions): shows the team's aisle, a grid of its bins
 coloured as they get a count, and what comes next. **Aisle complete** hands the aisle
 back and pulls the next one.
