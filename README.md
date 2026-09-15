@@ -77,6 +77,9 @@ Scanners need internet access for this option, not just warehouse Wi-Fi.
 | `BACKUP_KEEP` | `14` | How many backups to keep |
 | `SCANNER_AUTH` | `required` | `off` lets any client post counts — closed networks only |
 | `SHARED_PASSWORD_LOGIN` | `on` | `off` refuses `ADMIN_PASSWORD` — but only once an admin login exists (see below) |
+| `SUPERADMIN_USER` | — | Username of an admin login to create at startup, e.g. `SITEADMIN`. Unset, nothing is seeded |
+| `SUPERADMIN_NAME` | the username | The name shown for it, e.g. `Site Administrator` |
+| `SUPERADMIN_PASSWORD` | `ADMIN_PASSWORD` | Its password, if you want it different from the shared one |
 | `SITE_TIMEZONE` | `America/New_York` | The warehouse's clock — dates a cycle batch is due, and the hour a schedule fires |
 
 ---
@@ -505,9 +508,37 @@ password — just your name, which is what the log then records. An existing use
 needs that account's own password, so the shared password can never open somebody else's
 account.
 
+### The superadmin
+
+Set `SUPERADMIN_USER` and the app puts a real admin login in the database the first time
+it starts, so nobody has to bootstrap through the shared password:
+
+```
+SUPERADMIN_USER     = SITEADMIN
+SUPERADMIN_NAME     = Site Administrator
+SUPERADMIN_PASSWORD = <a real password>      # optional; defaults to ADMIN_PASSWORD
+```
+
+Its password comes from the environment and is **never a literal in this repo**. A password
+committed here would be readable by anyone who can read the repo, could not be rotated
+without a redeploy, and would stay in the history for good.
+
+**Create only.** If the account is already there, startup leaves it completely alone. So a
+password you change in the app survives every restart, and a restart is never a way to put
+a known password back onto a live account — once you have changed it, the environment
+variable no longer opens it. Seeding it is recorded in the audit log.
+
+It refuses to create the account if the password would be `changeme`, if the username is
+malformed, or if the password is under 8 characters — and in every one of those cases it
+says so at startup and the app still comes up. A failed seed leaves you with no admin, so
+the shared password is held open (below) rather than locking you out.
+
 ### Switching the shared password off
 
-In this order, or you will lock yourselves out:
+With a superadmin seeded, set both at once and you are done — the account exists on the
+first boot, so `off` takes effect immediately.
+
+Without one, in this order:
 
 1. Set `ADMIN_PASSWORD` to something real. A fresh deployment warns at startup while it is
    still `changeme`.

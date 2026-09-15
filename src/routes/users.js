@@ -114,3 +114,34 @@ export function changeOwnPassword(username, currentPassword, newPassword) {
   db.prepare('UPDATE users SET password_hash = ?, must_change = 0 WHERE username = ?').run(hash(newPassword), u.username);
   return shape(getUser(u.username));
 }
+
+/**
+ * The seeded superadmin.
+ *
+ * A site should not have to bootstrap through the shared password: this puts a
+ * real admin login in the database on startup, from the environment. Its
+ * password is never a literal in this repo - a committed password is readable
+ * by anyone who can read the repo, cannot be rotated without a redeploy, and
+ * stays in the history for good.
+ *
+ * Create only. If the account is already there it is left completely alone, so
+ * a password changed in the app survives every restart, and a restart is never
+ * a way to put a known password back on a live account.
+ */
+export function ensureSuperadmin({ username, name, password }) {
+  const u = norm(username || '').replace(/\s+/g, '');
+  if (!u) return { status: 'not configured' };
+  if (!/^[A-Z0-9._-]{2,32}$/.test(u)) return { status: 'refused', why: `"${u}" is not a valid username: 2-32 characters, letters, digits, . _ -` };
+  const existing = getUser(u);
+  if (existing) {
+    return {
+      status: 'already there', username: existing.username,
+      note: existing.active && existing.role === 'admin' ? '' : `it is currently ${existing.active ? '' : 'deactivated'}${!existing.active && existing.role !== 'admin' ? ' and ' : ''}${existing.role !== 'admin' ? 'not an admin' : ''}`,
+    };
+  }
+  if (String(password || '').length < 8) {
+    return { status: 'refused', why: 'its password must be at least 8 characters - set SUPERADMIN_PASSWORD' };
+  }
+  const made = createUser({ username: u, name: name || u, password, role: 'admin', mustChange: false }, 'startup');
+  return { status: 'created', username: made.username };
+}

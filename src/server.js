@@ -35,7 +35,7 @@ import { siteTimezone, localDate, localHour } from './util/localtime.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards } from './routes/printing.js';
 import {
-  countUsers, countAdmins, listUsers, createUser, updateUser, deleteUser, authenticate, changeOwnPassword, getUser,
+  countUsers, countAdmins, listUsers, createUser, updateUser, deleteUser, authenticate, changeOwnPassword, getUser, ensureSuperadmin,
 } from './routes/users.js';
 import { listFormats, saveFormat, buildExport, availableFields } from './routes/erp.js';
 
@@ -50,6 +50,12 @@ const SCANNER_AUTH = String(process.env.SCANNER_AUTH || 'required').toLowerCase(
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'changeme';
+/* A real admin login, seeded from the environment so a site never has to
+   bootstrap through the shared password. The password falls back to
+   ADMIN_PASSWORD when SUPERADMIN_PASSWORD is not set separately. */
+const SUPERADMIN_USER = process.env.SUPERADMIN_USER || '';
+const SUPERADMIN_NAME = process.env.SUPERADMIN_NAME || '';
+const SUPERADMIN_PASSWORD = process.env.SUPERADMIN_PASSWORD || ADMIN_PASSWORD;
 const PUBLIC_DIR = resolve(fileURLToPath(new URL('../public', import.meta.url)));
 const MAX_BODY = Number(process.env.MAX_UPLOAD_MB || 64) * 1024 * 1024;
 
@@ -862,6 +868,31 @@ server.listen(PORT, HOST, () => {
   console.log(`  scanner:   http://<server-ip>:${PORT}/`);
   console.log(`  dashboard: http://<server-ip>:${PORT}/admin`);
   console.log(`  office board: http://<server-ip>:${PORT}/board`);
+
+  /* Seed the superadmin before reporting the state, so the two agree. Never with
+     the default password: that would put a live admin account behind a password
+     published in this repo's README. */
+  if (SUPERADMIN_USER) {
+    if (SUPERADMIN_PASSWORD === 'changeme') {
+      console.warn(`[warn] SUPERADMIN_USER=${SUPERADMIN_USER} not created: its password would be "changeme".`);
+      console.warn('       Set SUPERADMIN_PASSWORD (or ADMIN_PASSWORD) to something real and restart.');
+    } else {
+      try {
+        const seeded = ensureSuperadmin({ username: SUPERADMIN_USER, name: SUPERADMIN_NAME, password: SUPERADMIN_PASSWORD });
+        if (seeded.status === 'created') {
+          console.log(`  superadmin: created ${seeded.username} - sign in with it and change its password`);
+          audit('startup', 'created the superadmin account', `${seeded.username} from SUPERADMIN_USER`);
+        } else if (seeded.status === 'already there') {
+          console.log(`  superadmin: ${seeded.username} already exists, left untouched${seeded.note ? ' - ' + seeded.note : ''}`);
+        } else if (seeded.status === 'refused') {
+          console.warn(`[warn] SUPERADMIN_USER=${SUPERADMIN_USER} not created: ${seeded.why}`);
+        }
+      } catch (err) {
+        // a bad value here must never stop the app coming up
+        console.warn(`[warn] could not create SUPERADMIN_USER=${SUPERADMIN_USER}: ${err.message}`);
+      }
+    }
+  }
 
   // Say plainly how somebody signs in, because getting this wrong locks people out.
   const admins = countAdmins();
