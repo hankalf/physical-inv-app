@@ -75,6 +75,7 @@ Scanners need internet access for this option, not just warehouse Wi-Fi.
 | `MAX_UPLOAD_MB` | `64` | Upload size cap |
 | `BACKUP_DIR` | `<DB_PATH>/../backups` | Where daily backups are written |
 | `BACKUP_KEEP` | `14` | How many backups to keep |
+| `SCANNER_AUTH` | `required` | `off` lets any client post counts — closed networks only |
 | `SITE_TIMEZONE` | `America/New_York` | The warehouse's clock — dates a cycle batch is due, and the hour a schedule fires |
 
 ---
@@ -343,12 +344,12 @@ launches full-screen and the app shell is cached so it starts with no signal.
 
 ## API
 
-Handheld (no auth — the team and scanner ID identify the counter):
+Handheld (every call carries `Authorization: Device <token>`):
 
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/api/sessions` | Open sessions |
-| `GET` | `/api/devices/:uid` | Which scanner a registered link belongs to |
+| `POST` | `/api/devices/:uid` | Trade a scanner's link for its token (the only call without one) |
 | `GET` | `/api/sessions/:id/master?have=<v>` | Bin + pallet lists; `have` skips an unchanged download |
 | `POST` | `/api/sessions/:id/signon` | Record who is on which scanner; returns the team's assignment |
 | `GET` | `/api/sessions/:id/team-status?team=` | Current aisle, bins, queue, or who the team is waiting on |
@@ -374,6 +375,7 @@ Supervisor (`Authorization: Bearer <token>` from `POST /api/admin/login`):
 | `POST` | `/api/admin/people/assign` | Move someone onto a team |
 | `POST` | `/api/admin/people/equipment` | Save the equipment and level rules |
 | `GET`/`POST` | `/api/admin/devices` | List / register scanners |
+| `POST` | `/api/admin/devices/:uid/reset` | New link, old token dead |
 | `POST`/`DELETE` | `/api/admin/devices/:uid` | Rename / remove a scanner |
 | `GET`/`POST` | `/api/admin/sessions` | List / create (`mode: full \| cycle`) |
 | `GET`/`POST` | `/api/admin/sessions/:id/cycle/batches` | List / generate cycle batches |
@@ -420,10 +422,25 @@ through `POST /api/admin/erp/formats` and export it immediately, without a deplo
 
 ## Security
 
-Sized for a private warehouse network, not the open internet: one shared supervisor
-password, and handheld endpoints open to anyone who can reach the server. If it is
-exposed publicly, put it behind a VPN or an authenticating proxy, and set a real
-`ADMIN_PASSWORD`. Admin tokens are in-memory, so a restart signs supervisors out.
+**Scanners sign in.** Every handheld endpoint requires a token, so a stray request cannot
+inject count lines. A scanner's link (`/?d=<uid>`) is its enrolment secret: opening it once
+trades it for a long random token the scanner keeps and sends on every call. The server
+stamps each count with the scanner that token proves — a payload claiming to be some other
+scanner is ignored.
+
+Treat a link like a key. **Reset link** issues a new one and kills the old token
+immediately; **Remove** stops the scanner entirely. The dashboard shows when each scanner
+signed in and flags a link used more than once — normal after a scanner is wiped, worth a
+look otherwise. A scanner that gets cut off mid-count says so plainly and keeps its queued
+lines until it is authorised again.
+
+`SCANNER_AUTH=off` disables this, for a closed network where anyone who can reach the
+server is already trusted. The app warns at startup when it is off.
+
+**Supervisors** share one password and give a name at sign-in, which is what the audit log
+records. Tokens are in-memory, so a restart signs supervisors out. If the app is exposed
+publicly, still put it behind a VPN or an authenticating proxy and set a real
+`ADMIN_PASSWORD` — the shared password is the weak part now, not the scanners.
 
 ---
 

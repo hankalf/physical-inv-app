@@ -1,5 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { loadLayout } from './util/layouts.js';
 import { mkdirSync, accessSync, constants } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -166,6 +166,9 @@ CREATE TABLE IF NOT EXISTS devices (
   uid          TEXT PRIMARY KEY,
   name         TEXT NOT NULL UNIQUE,
   notes        TEXT,
+  token_hash   TEXT,                       -- sha256 of the token this scanner sends
+  enrolled_at  TEXT,
+  enrol_count  INTEGER NOT NULL DEFAULT 0,
   created_at   TEXT NOT NULL,
   last_seen    TEXT,
   last_team    TEXT,
@@ -258,6 +261,11 @@ const hasCol = (t, c) => db.prepare(`PRAGMA table_info('${t}')`).all().some((x) 
 if (!hasCol('sessions', 'layout')) db.exec('ALTER TABLE sessions ADD COLUMN layout TEXT');
 if (!hasCol('locations', 'level')) db.exec('ALTER TABLE locations ADD COLUMN level TEXT');
 if (!hasCol('counts', 'empty_bin')) db.exec('ALTER TABLE counts ADD COLUMN empty_bin INTEGER NOT NULL DEFAULT 0');
+if (!hasCol('devices', 'token_hash')) {
+  db.exec('ALTER TABLE devices ADD COLUMN token_hash TEXT');
+  db.exec('ALTER TABLE devices ADD COLUMN enrolled_at TEXT');
+  db.exec('ALTER TABLE devices ADD COLUMN enrol_count INTEGER NOT NULL DEFAULT 0');
+}
 if (!hasCol('locations', 'last_counted')) db.exec('ALTER TABLE locations ADD COLUMN last_counted TEXT');
 if (!hasCol('sessions', 'mode')) db.exec("ALTER TABLE sessions ADD COLUMN mode TEXT NOT NULL DEFAULT 'full'");
 if (!hasCol('sessions', 'cycle_schedule')) db.exec('ALTER TABLE sessions ADD COLUMN cycle_schedule TEXT');
@@ -475,6 +483,44 @@ export function updateDevice(uid, { name, notes }) {
 }
 
 export const deleteDevice = (uid) => db.prepare('DELETE FROM devices WHERE uid = ?').run(String(uid || '')).changes;
+
+const hashToken = (t) => createHash('sha256').update(String(t)).digest('hex');
+
+/**
+ * Trade the enrolment link for a token this scanner keeps and sends on every
+ * call. Re-enrolment is allowed - a scanner gets wiped, a battery dies mid-setup
+ * - but it is counted and timestamped so a leaked link shows up in the dashboard.
+ */
+export function enrollDevice(uid) {
+  const d = getDevice(uid);
+  if (!d) return null;
+  const token = randomBytes(32).toString('base64url');
+  db.prepare('UPDATE devices SET token_hash = ?, enrolled_at = ?, enrol_count = enrol_count + 1 WHERE uid = ?')
+    .run(hashToken(token), new Date().toISOString(), d.uid);
+  return { uid: d.uid, name: d.name, token };
+}
+
+/** The scanner a token belongs to, or null. Constant-time on the hash. */
+export function deviceByToken(token) {
+  if (!token) return null;
+  const want = Buffer.from(hashToken(token), 'hex');
+  for (const d of db.prepare('SELECT * FROM devices WHERE token_hash IS NOT NULL').all()) {
+    const have = Buffer.from(d.token_hash, 'hex');
+    if (have.length === want.length && timingSafeEqual(have, want)) return d;
+  }
+  return null;
+}
+
+/** New link and new token: use when a link leaks or a scanner is lost. */
+export function resetDevice(uid) {
+  const d = getDevice(uid);
+  if (!d) throw Object.assign(new Error('scanner not found'), { status: 404 });
+  const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
+  let fresh = '';
+  for (const b of randomBytes(8)) fresh += alphabet[b % alphabet.length];
+  db.prepare('UPDATE devices SET uid = ?, token_hash = NULL, enrolled_at = NULL, enrol_count = 0 WHERE uid = ?').run(fresh, d.uid);
+  return getDevice(fresh);
+}
 
 export function touchDevice(uid, { team, sessionId } = {}) {
   if (!uid) return;

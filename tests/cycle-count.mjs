@@ -32,6 +32,16 @@ await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=pallets`, { metho
 await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'a full count too' }) });
 const dev = await j(await fetch(`${BASE}/api/admin/devices`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'CYCLE-01' }) }));
 
+
+// Scanners authenticate: enrol one the way a gun does, and use its token for any
+// handheld call this suite makes directly.
+async function enrolScanner(name, adminHeaders) {
+  const d = await (await fetch(`${BASE}/api/admin/devices`, { method: 'POST', headers: adminHeaders, body: JSON.stringify({ name }) })).json();
+  const e = await (await fetch(`${BASE}/api/devices/${d.uid}`, { method: 'POST' })).json();
+  return { uid: d.uid, token: e.token, headers: { 'content-type': 'application/json', authorization: 'Device ' + e.token } };
+}
+const api = await enrolScanner('SUITE-API', A);
+
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 const errors = [];
 const admin = await browser.newPage({ viewport: { width: 1600, height: 950 }, deviceScaleFactor: 1.25 });
@@ -63,7 +73,7 @@ await shot(await admin.$('#coverageCard'), 'admin-coverage');
 // generating again must not re-pick the same bins
 await admin.fill('#fCycBins', '10'); await admin.click('#btnCycGenerate'); await admin.waitForTimeout(1200);
 const all = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/cycle/batches`, { headers: A }));
-const tasks = await j(await fetch(`${BASE}/api/sessions/${sess.id}/recounts?team=7`));
+const tasks = await j(await fetch(`${BASE}/api/sessions/${sess.id}/recounts?team=7`, { headers: api.headers }));
 const binSet = new Set(tasks.tasks.map((t) => t.bin));
 check('Cycle: a second batch never re-picks a bin already on an open list', tasks.tasks.length === 35 && binSet.size === 35, `${tasks.tasks.length} tasks, ${binSet.size} distinct bins`);
 check('Cycle: the gun is told it is a cycle count', tasks.tasks.every((t) => t.kind === 'cycle' && t.reason === 'Cycle count'));
@@ -110,7 +120,7 @@ check('Cycle: coverage CSV lists every bin oldest-first', cov.split('\n').length
 
 // the two counted bins must not come back in the next batch
 await admin.fill('#fCycBins', '5'); await admin.click('#btnCycGenerate'); await admin.waitForTimeout(1200);
-const t2 = await j(await fetch(`${BASE}/api/sessions/${sess.id}/recounts?team=7`));
+const t2 = await j(await fetch(`${BASE}/api/sessions/${sess.id}/recounts?team=7`, { headers: api.headers }));
 check('Cycle: bins counted today are not picked again', !t2.tasks.some((t) => t.bin === firstBin || t.bin === secondBin), `${t2.tasks.length} open`);
 
 // schedule
@@ -125,7 +135,7 @@ check('Cycle: the schedule generates once for a due date, never twice', run1.gen
 
 /* the same equipment check, against the levels of the bins on the list */
 await fetch(`${BASE}/api/admin/people/employees`, { method: 'POST', headers: A, body: JSON.stringify({ badge: 'C001', name: 'Pat Lowe', dept: 'Freezer', equipment: ['SCISSOR LIFT'] }) });
-const t7 = await j(await fetch(`${BASE}/api/sessions/${sess.id}/recounts?team=7`));
+const t7 = await j(await fetch(`${BASE}/api/sessions/${sess.id}/recounts?team=7`, { headers: api.headers }));
 const levels = [...new Set(t7.tasks.map((t) => t.bin.replace(/^[A-Z]+\d+/, '')[0]))].sort().join('');
 await gun.goto(`${BASE}/?d=${dev.uid}`); await gun.waitForSelector('#scrSignon.active'); await gun.waitForTimeout(400);
 for (const chip of await gun.$$('#employeeChips button')) await chip.click();

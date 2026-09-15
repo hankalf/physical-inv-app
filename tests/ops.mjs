@@ -20,8 +20,17 @@ const csv = (kind, body) => fetch(`${BASE}/api/admin/sessions/${sess.id}/master?
 await csv('bins', readFileSync(new URL('../public/templates/front-royal-bins.csv', import.meta.url).pathname, 'utf8'));
 await csv('pallets', readFileSync(`${S}fixtures/pallets.csv`, 'utf8'));
 await fetch(`${BASE}/api/admin/sessions/${sess.id}/assignments`, { method: 'POST', headers: A, body: JSON.stringify({ team: '1', aisles: 'F03', levels: 'A-C' }) });
+
+// Scanners authenticate: enrol one the way a gun does, and use its token for any
+// handheld call this suite makes directly.
+async function enrolScanner(name, adminHeaders) {
+  const d = await (await fetch(`${BASE}/api/admin/devices`, { method: 'POST', headers: adminHeaders, body: JSON.stringify({ name }) })).json();
+  const e = await (await fetch(`${BASE}/api/devices/${d.uid}`, { method: 'POST' })).json();
+  return { uid: d.uid, token: e.token, headers: { 'content-type': 'application/json', authorization: 'Device ' + e.token } };
+}
+const api = await enrolScanner('OPS-01', A);
 // a few counts, one of them short, so the ERP file has something to say
-await fetch(`${BASE}/api/sessions/${sess.id}/counts`, { method: 'POST', headers: hdr, body: JSON.stringify([
+await fetch(`${BASE}/api/sessions/${sess.id}/counts`, { method: 'POST', headers: api.headers, body: JSON.stringify([
   { clientId: 'o1', palletId: 'PLT01001A', qty: 40, location: 'F01A001', team: '1', employees: ['E1001'], deviceId: 'D1' },
   { clientId: 'o2', palletId: 'PLT01002A', qty: 30, location: 'F01A002', team: '1', employees: ['E1001'], deviceId: 'D1' },
   { clientId: 'o3', emptyBin: 1, palletId: '', qty: 0, location: 'F01A003', team: '1', employees: ['E1001'], deviceId: 'D1' },
@@ -31,8 +40,11 @@ await fetch(`${BASE}/api/sessions/${sess.id}/counts`, { method: 'POST', headers:
 const log = await j(await fetch(`${BASE}/api/admin/audit?limit=50`, { headers: A }));
 const actions = log.map((r) => r.action);
 check('The log records every dashboard change, attributed to a person',
-  log.every((r) => r.actor === 'Dana') && actions.includes('created session') && actions.includes('uploaded bins') && actions.includes('assigned aisles'),
+  log.filter((r) => r.action !== 'scanner enrolled').every((r) => r.actor === 'Dana')
+    && actions.includes('created session') && actions.includes('uploaded bins') && actions.includes('assigned aisles'),
   actions.slice(0, 8).join(' · '));
+check('A scanner signing itself in is logged against the scanner, not a supervisor',
+  log.some((r) => r.action === 'scanner enrolled' && r.actor === 'OPS-01'), log.find((r) => r.action === 'scanner enrolled')?.detail || '');
 const assignEntry = log.find((r) => r.action === 'assigned aisles');
 check('A log entry says what was done, not just that something was', /team 1: F03 \(ABC\)/.test(assignEntry.detail), assignEntry.detail);
 await fetch(`${BASE}/api/admin/people/employees`, { method: 'POST', headers: A, body: JSON.stringify({ badge: 'E1002', name: 'Jordan', equipment: ['SCISSOR LIFT'] }) });

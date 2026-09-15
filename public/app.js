@@ -66,6 +66,8 @@
   const state = {
     deviceId: '',
     deviceUid: '',   // set when this scanner was opened from its registered link
+    deviceToken: '', // what it proves itself with from then on
+    deviceRejected: '',
     team: '',
     employees: [],
     session: null,     // { id, name, palletMode, guided, askComments, masterVersion }
@@ -183,16 +185,37 @@
   const online = () => navigator.onLine !== false;
 
   async function api(path, options = {}) {
-    const res = await fetch(path, { headers: { 'content-type': 'application/json' }, cache: 'no-store', ...options });
+    const headers = { 'content-type': 'application/json', ...(options.headers || {}) };
+    if (state.deviceToken) headers.authorization = 'Device ' + state.deviceToken;
+    const res = await fetch(path, { cache: 'no-store', ...options, headers });
     if (!res.ok) {
       let msg = res.status + ' ' + res.statusText;
-      try { msg = (await res.json()).error || msg; } catch { /* keep status text */ }
-      throw new Error(msg);
+      let code = '';
+      try { const body = await res.json(); msg = body.error || msg; code = body.code || ''; } catch { /* keep status text */ }
+      // the scanner was removed, or its link was reset: say so, keep the lines
+      if (res.status === 401 && code === 'device') state.deviceRejected = msg;
+      throw Object.assign(new Error(msg), { code, status: res.status });
     }
     return res.json();
   }
 
+  /** A scanner the server will not accept is not a network problem - say which. */
+  function renderDeviceProblem() {
+    const el = $('deviceProblem');
+    if (!el) return;
+    el.hidden = !state.deviceRejected;
+    if (!state.deviceRejected) return;
+    el.className = 'feedback show err';
+    el.innerHTML = '';
+    el.appendChild(document.createTextNode('This scanner is not signed in'));
+    const d = document.createElement('div');
+    d.className = 'detail';
+    d.textContent = `${state.deviceRejected} Anything already counted is still saved on this scanner and will send once it is authorised again.`;
+    el.appendChild(d);
+  }
+
   async function updateChips() {
+    renderDeviceProblem();
     const queued = await wrap(tx('lines', 'readonly').index('synced').count(0));
     $('chipQueue').hidden = queued === 0;
     $('chipQueue').textContent = queued + ' queued';
@@ -257,8 +280,10 @@
     if (!id) { feedback($('deviceMsg'), 'err', 'Enter a scanner ID'); return; }
     await metaSet('deviceId', id);
     await metaSet('deviceUid', '');
+    await metaSet('deviceToken', '');
     state.deviceId = id;
     state.deviceUid = '';
+    state.deviceToken = '';
     $('deviceInfo').textContent = `Scanner ID ${id} was typed on this device (not registered).`;
     updateChips();
     showScreen('scrSignon');
@@ -1129,14 +1154,18 @@
     if (!uid) return null;
     const cachedUid = await metaGet('deviceUid');
     try {
-      const dev = await api('/api/devices/' + encodeURIComponent(uid));
+      // the link is traded for a token; from here on that token is the identity
+      const dev = await api('/api/devices/' + encodeURIComponent(uid), { method: 'POST' });
       await metaSet('deviceId', dev.name);
       await metaSet('deviceUid', dev.uid);
+      await metaSet('deviceToken', dev.token);
+      state.deviceToken = dev.token;
+      state.deviceRejected = '';
       return { ok: true, name: dev.name };
     } catch (err) {
       if (/not registered/.test(err.message)) {
         // removed in the dashboard: forget it so nobody counts under a dead id
-        if (cachedUid === uid) { await metaSet('deviceId', ''); await metaSet('deviceUid', ''); }
+        if (cachedUid === uid) { await metaSet('deviceId', ''); await metaSet('deviceUid', ''); await metaSet('deviceToken', ''); }
         return { ok: false, reason: 'This scanner link was removed by a supervisor. Ask for a new one.' };
       }
       if (cachedUid === uid) return { ok: true, name: await metaGet('deviceId'), offline: true };
@@ -1147,6 +1176,7 @@
   /* ------------------------------------------------------------ boot */
   (async () => {
     idb = await openDb();
+    state.deviceToken = (await metaGet('deviceToken')) || '';
     const linked = await identifyFromLink();
     state.deviceId = (await metaGet('deviceId')) || '';
     state.deviceUid = (await metaGet('deviceUid')) || '';

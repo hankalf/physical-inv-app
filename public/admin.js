@@ -151,9 +151,13 @@
   const deviceUrl = (uid) => `${location.origin}/?d=${uid}`;
 
   async function refreshDevices() {
-    const rows = await apiJson('/api/admin/devices');
+    const data = await apiJson('/api/admin/devices');
+    const rows = data.devices;
+    $('authChip').hidden = false;
+    $('authChip').textContent = data.authRequired ? 'scanners must sign in' : 'scanner sign-in OFF';
+    $('authChip').className = 'chip ' + (data.authRequired ? 'online' : 'offline');
     table($('deviceTable'),
-      [{ label: 'Scanner' }, { label: 'Link' }, { label: '' }, { label: 'Last seen' }, { label: 'Team' }, { label: 'Notes' }, { label: '' }],
+      [{ label: 'Scanner' }, { label: 'Link' }, { label: '' }, { label: 'Signed in' }, { label: 'Last seen' }, { label: 'Team' }, { label: 'Notes' }, { label: '' }],
       rows,
       (d) => {
         const tr = document.createElement('tr');
@@ -167,8 +171,29 @@
         const qr = document.createElement('button'); qr.className = 'sm'; qr.textContent = 'QR'; qr.style.marginLeft = '4px';
         qr.onclick = () => showQr(d);
         tdBtns.append(copy, qr); tr.appendChild(tdBtns);
+        const tdEnrol = document.createElement('td');
+        if (d.enrolled_at) {
+          tdEnrol.append(new Date(d.enrolled_at).toLocaleDateString());
+          if (d.enrol_count > 1) {
+            const w = document.createElement('span');
+            w.className = 'tag'; w.style.marginLeft = '6px'; w.style.color = 'var(--warn)'; w.style.borderColor = '#5c4813';
+            w.textContent = `${d.enrol_count}×`;
+            w.title = `This link has been used ${d.enrol_count} times. Normal after a scanner is wiped — otherwise reset it.`;
+            tdEnrol.appendChild(w);
+          }
+        } else { const n = document.createElement('span'); n.className = 'muted'; n.textContent = 'not yet'; tdEnrol.appendChild(n); }
+        tr.appendChild(tdEnrol);
         tr.append(cell(d.last_seen ? new Date(d.last_seen).toLocaleString() : 'never'), cell(d.last_team || '—'), cell(d.notes || '', 'wrap'));
         const tdDel = document.createElement('td');
+        const reset = document.createElement('button');
+        reset.className = 'sm'; reset.textContent = 'Reset link'; reset.style.marginRight = '4px';
+        reset.title = 'Issue a new link and stop the old one working — use if a link leaks or a scanner is lost';
+        reset.onclick = async () => {
+          if (!confirm(`Reset ${d.name}? Its current link stops working immediately and the scanner must open the new one.`)) return;
+          try { await postJson(`/api/admin/devices/${d.uid}/reset`, {}); await refreshDevices(); msg($('deviceMsg'), 'ok', `${d.name} has a new link`, 'Open it on the scanner, then add it to the home screen again.'); }
+          catch (err) { msg($('deviceMsg'), 'err', err.message); }
+        };
+        tdDel.appendChild(reset);
         const del = document.createElement('button'); del.className = 'sm danger'; del.textContent = 'Remove';
         del.onclick = async () => {
           if (!confirm(`Remove ${d.name}? Its link will stop working on the device.`)) return;

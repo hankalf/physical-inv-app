@@ -4,6 +4,14 @@ const S = new URL('.', import.meta.url).pathname;
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
 const results = [];
 const hdrJson = () => ({ 'content-type': 'application/json' });
+// Scanners authenticate: enrol one the way a gun does, and use its token for any
+// handheld call this suite makes directly.
+async function enrolScanner(name, adminHeaders) {
+  const d = await (await fetch(`${BASE}/api/admin/devices`, { method: 'POST', headers: adminHeaders, body: JSON.stringify({ name }) })).json();
+  const e = await (await fetch(`${BASE}/api/devices/${d.uid}`, { method: 'POST' })).json();
+  return { uid: d.uid, token: e.token, headers: { 'content-type': 'application/json', authorization: 'Device ' + e.token } };
+}
+
 const check = (step, ok, detail = '') => { results.push({ step, ok: !!ok, detail }); console.log(`${ok ? 'PASS' : 'FAIL'}  ${step}${detail ? ' — ' + detail : ''}`); };
 const clean = (t) => (t || '').replace(/\s+/g, ' ').trim();
 let shotN = 0;
@@ -33,7 +41,7 @@ for (const [n, notes] of [['scanner-01', 'freezer unit A'], ['SCANNER-02', ''], 
 }
 await admin.fill('#fDevName', 'SCANNER-01'); await admin.click('#btnAddDevice'); await admin.waitForTimeout(300);
 check('Admin: duplicate scanner name refused', /already exists/.test(clean(await admin.textContent('#deviceMsg'))), clean(await admin.textContent('#deviceMsg')));
-const devices = await (await fetch(`${BASE}/api/admin/devices`, { headers: { authorization: 'Bearer ' + (await admin.evaluate(() => sessionStorage.getItem('admToken'))) } })).json();
+const devices = (await (await fetch(`${BASE}/api/admin/devices`, { headers: { authorization: 'Bearer ' + (await admin.evaluate(() => sessionStorage.getItem('admToken'))) } })).json()).devices;
 const devLink = Object.fromEntries(devices.map((d) => [d.name, `${BASE}/?d=${d.uid}`]));
 check('Admin: three scanners registered with unique links', devices.length === 3 && new Set(devices.map((d) => d.uid)).size === 3, devices.map((d) => `${d.name}=${d.uid}`).join(' '));
 await admin.click('#deviceTable tbody tr:nth-child(1) button:nth-child(2)'); await admin.waitForTimeout(1500);
@@ -42,8 +50,10 @@ await (await card('#deviceTable')).asElement().screenshot({ path: `${S}screensho
 await admin.click('#btnQrClose');
 const del99 = (await admin.$$('#deviceTable tbody tr')).length;
 
-await admin.click('#deviceTable tbody tr:nth-child(3) td:last-child button'); await admin.waitForTimeout(400);
+await admin.click('#deviceTable tbody tr:nth-child(3) button:text-is("Remove")'); await admin.waitForTimeout(400);
 check('Admin: remove a scanner', (await admin.$$('#deviceTable tbody tr')).length === del99 - 1);
+check('Admin: every scanner can have its link reset without being removed',
+  (await admin.$$('#deviceTable tbody tr button:text-is("Reset link")')).length === (await admin.$$('#deviceTable tbody tr')).length);
 const gone = await fetch(devLink['SCANNER-99'].replace('/?d=', '/api/devices/'));
 check('API: removed scanner link no longer resolves (404)', gone.status === 404);
 
@@ -93,6 +103,7 @@ const aisleRow = clean(await admin.$eval('#aisleTable tbody tr:nth-child(5)', (t
 check('Admin: aisle table shows both teams in F01 with their levels', /active team 1 \(ABC\), 4 \(DEF\)/.test(aisleRow), aisleRow);
 check('Admin: map badge for two teams in one aisle reads T1+T4', await admin.$$eval('#map text.team', (t) => t.some((x) => x.textContent === 'T1+T4')), (await admin.$$eval('#map text.team', (t) => t.map((x) => x.textContent))).join(' '));
 
+const api = await enrolScanner('SUITE-API', { 'content-type': 'application/json', authorization: 'Bearer ' + (await admin.evaluate(() => sessionStorage.getItem('admToken'))) });
 /* ================= HANDHELD helpers ================= */
 async function scanner(tag) {
   const ctx = await browser.newContext({ viewport: { width: 480, height: 800 }, deviceScaleFactor: 2 });
@@ -261,12 +272,12 @@ check('Recounts: raised automatically from team 1\'s first-count variances, each
   !!qtyTask && !!dupTask && !!unkTask && recs.every((r) => r.source === 'auto') && noTeam.length === 0,
   [...new Set(recs.map((r) => r.reason))].join(', ') + ` (${recs.length} bins)` + (noTeam.length ? ` · no first team: ${noTeam.map((r) => r.bin + '/' + r.reason).join(', ')}` : ''));
 check('Recounts: supervisor sees the numbers behind it', /expected \d+, first count \d+/.test(qtyTask.detail), `${qtyTask.bin}: ${qtyTask.detail}`);
-const t1tasks = await (await fetch(`${BASE}/api/sessions/1/recounts?team=1`)).json();
-const t2tasks = await (await fetch(`${BASE}/api/sessions/1/recounts?team=2`)).json();
+const t1tasks = await (await fetch(`${BASE}/api/sessions/1/recounts?team=1`, { headers: api.headers })).json();
+const t2tasks = await (await fetch(`${BASE}/api/sessions/1/recounts?team=2`, { headers: api.headers })).json();
 check('Recounts: team 1 is not offered its own first counts; team 2 is', !t1tasks.tasks.some((t) => t.bin === qtyTask.bin) && t2tasks.tasks.some((t) => t.bin === qtyTask.bin), `t1:${t1tasks.tasks.length} t2:${t2tasks.tasks.length}`);
 const shown = t2tasks.tasks.find((t) => t.bin === qtyTask.bin).reason;
 check('Recounts: the gun is told the reason, never the numbers', /Quantity differs from the inventory report/.test(shown) && !/\d/.test(shown), shown);
-const takeBy1 = await fetch(`${BASE}/api/sessions/1/recounts/${qtyTask.id}/take`, { method: 'POST', headers: hdrJson(), body: JSON.stringify({ team: '1' }) });
+const takeBy1 = await fetch(`${BASE}/api/sessions/1/recounts/${qtyTask.id}/take`, { method: 'POST', headers: api.headers, body: JSON.stringify({ team: '1' }) });
 check('Recounts: team 1 cannot take the second count of its own first count (409)', takeBy1.status === 409);
 // a bin nobody has touched, requested by hand and assigned to team 2
 await admin.fill('#fRecBin', 'F02A012'); await admin.fill('#fRecNote', 'supervisor spot check'); await admin.fill('#fRecTeam', '2'); await admin.click('#btnRecAdd'); await admin.waitForTimeout(700);
@@ -379,13 +390,13 @@ await admin.waitForFunction(() => /Imported|failed/.test(document.getElementById
 await admin.selectOption('#fSessionPick', '1'); await admin.waitForTimeout(800);
 // close session -> scanner rejected -> reopen
 await admin.click('#btnCloseSession'); await admin.waitForTimeout(600);
-const closedPost = await fetch(`${BASE}/api/sessions/1/counts`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify([{ clientId: 'x1', palletId: 'P', qty: 1, location: 'F01A001', team: '1', deviceId: 'D' }]) });
+const closedPost = await fetch(`${BASE}/api/sessions/1/counts`, { method: 'POST', headers: api.headers, body: JSON.stringify([{ clientId: 'x1', palletId: 'P', qty: 1, location: 'F01A001', team: '1', deviceId: 'D' }]) });
 check('Admin: closed session refuses new counts (409)', closedPost.status === 409);
 await admin.click('#btnCloseSession'); await admin.waitForTimeout(600);
 check('Admin: reopen session', /\(open\)/.test(await admin.$eval('#fSessionPick', (s) => s.options[s.selectedIndex].textContent)));
 // idempotent resend
-const dup = await (await fetch(`${BASE}/api/sessions/1/counts`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify([{ clientId: 'idem-1', palletId: 'PLT06001A', qty: 1, location: 'F06A001', team: '9', deviceId: 'X' }, { clientId: 'idem-1', palletId: 'PLT06001A', qty: 1, location: 'F06A001', team: '9', deviceId: 'X' }]) })).json();
-const cnt = (await (await fetch(`${BASE}/api/sessions/1/counted-pallets`)).json()).pallets.filter((p) => p[0] === 'PLT06001A').length;
+const dup = await (await fetch(`${BASE}/api/sessions/1/counts`, { method: 'POST', headers: api.headers, body: JSON.stringify([{ clientId: 'idem-1', palletId: 'PLT06001A', qty: 1, location: 'F06A001', team: '9', deviceId: 'X' }, { clientId: 'idem-1', palletId: 'PLT06001A', qty: 1, location: 'F06A001', team: '9', deviceId: 'X' }]) })).json();
+const cnt = (await (await fetch(`${BASE}/api/sessions/1/counted-pallets`, { headers: api.headers })).json()).pallets.filter((p) => p[0] === 'PLT06001A').length;
 check('API: resending the same clientId never double-counts', cnt === 1, `stored ${cnt}×`);
 
 console.log('\nconsole/page errors:', errors.length ? errors : 'none');

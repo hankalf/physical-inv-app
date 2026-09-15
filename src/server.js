@@ -9,6 +9,7 @@ import {
   db, listSessions, getSession, createSession, publicSession, masterPayload,
   saveCounts, countedPallets, recordSignon, norm,
   listDevices, getDevice, createDevice, updateDevice, deleteDevice, touchDevice,
+  enrollDevice, deviceByToken, resetDevice,
 } from './db.js';
 import { importMaster, pruneAreaAisles } from './routes/master.js';
 import {
@@ -38,6 +39,10 @@ import { listFormats, saveFormat, buildExport, availableFields } from './routes/
 importHelpers.parseRecords = parseRecords;
 importHelpers.pick = pick;
 
+// Scanners authenticate by default. Set SCANNER_AUTH=off only on a network
+// where anyone who can reach the server is already trusted.
+const SCANNER_AUTH = String(process.env.SCANNER_AUTH || 'required').toLowerCase() !== 'off';
+
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'changeme';
@@ -46,6 +51,9 @@ const MAX_BODY = Number(process.env.MAX_UPLOAD_MB || 64) * 1024 * 1024;
 
 if (ADMIN_PASSWORD === 'changeme') {
   console.warn('[warn] ADMIN_PASSWORD is unset - the dashboard password is "changeme".');
+}
+if (!SCANNER_AUTH) {
+  console.warn('[warn] SCANNER_AUTH=off - anyone who can reach this server can post counts.');
 }
 
 const MIME = {
@@ -133,6 +141,22 @@ function requireAdmin(req, url) {
   return adminTokens.get(token) || 'supervisor';
 }
 
+/* ------------------------------------------------------- scanner auth */
+
+/**
+ * A scanner proves itself with the token it got when its link was first opened.
+ * The 'device' code tells the gun to say so plainly rather than looking broken.
+ */
+function requireDevice(req) {
+  if (!SCANNER_AUTH) return null;
+  const auth = String(req.headers.authorization || '');
+  const token = auth.startsWith('Device ') ? auth.slice(7) : '';
+  if (!token) throw Object.assign(httpError(401, 'this scanner is not signed in - open its link again'), { code: 'device' });
+  const d = deviceByToken(token);
+  if (!d) throw Object.assign(httpError(401, 'this scanner is no longer authorised - ask a supervisor for its link'), { code: 'device' });
+  return d;
+}
+
 /* ------------------------------------------------------------ static */
 
 async function serveStatic(req, res, pathname) {
@@ -189,16 +213,22 @@ async function handleHandheld(req, res, url, m) {
   const method = req.method;
   const p = url.pathname;
 
-  if (p === '/api/sessions' && method === 'GET') {
-    return sendJson(req, res, 200, listSessions('open').map(publicSession));
-  }
-
-  // A scanner opening its own link asks who it is.
-  if ((m = p.match(/^\/api\/devices\/([a-z0-9]{4,32})$/)) && method === 'GET') {
+  // A scanner opening its own link trades it for a token it keeps. This is the
+  // only handheld route without one, and the link is the secret that gets it.
+  if ((m = p.match(/^\/api\/devices\/([a-z0-9]{4,32})$/)) && (method === 'GET' || method === 'POST')) {
     const d = getDevice(m[1]);
     if (!d) throw httpError(404, 'this scanner link is not registered - ask a supervisor');
     touchDevice(d.uid);
-    return sendJson(req, res, 200, { uid: d.uid, name: d.name });
+    const enrolled = enrollDevice(d.uid);
+    audit(d.name, 'scanner enrolled', `attempt ${(getDevice(d.uid).enrol_count)} for this link`);
+    return sendJson(req, res, 200, { uid: d.uid, name: d.name, token: enrolled.token, authRequired: SCANNER_AUTH });
+  }
+
+  // past this point a scanner must prove which scanner it is
+  const device = requireDevice(req);
+
+  if (p === '/api/sessions' && method === 'GET') {
+    return sendJson(req, res, 200, listSessions('open').map(publicSession));
   }
 
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/master$/)) && method === 'GET') {
@@ -222,7 +252,7 @@ async function handleHandheld(req, res, url, m) {
       team: body.team,
       employees: Array.isArray(body.employees) ? body.employees.map((e) => norm(e)).filter(Boolean) : [],
     });
-    if (body.deviceUid) touchDevice(body.deviceUid, { team: body.team, sessionId: m[1] });
+    touchDevice(device ? device.uid : body.deviceUid, { team: body.team, sessionId: m[1] });
 
     // Who actually signed on, and can they reach what this team was given?
     const status = teamStatus(m[1], body.team);
@@ -260,7 +290,8 @@ async function handleHandheld(req, res, url, m) {
     const body = await readJson(req);
     const rows = Array.isArray(body) ? body : body.counts;
     if (!Array.isArray(rows)) throw httpError(400, 'expected an array of counts');
-    const result = saveCounts(m[1], rows);
+    // the device is whoever the token says, not whatever the payload claims
+    const result = saveCounts(m[1], device ? rows.map((r) => ({ ...r, deviceId: device.name })) : rows);
     if (result.firstCountPallets.length) result.recounts = autoAfterCounts(m[1], result.firstCountPallets);
     return sendJson(req, res, 200, result);
   }
@@ -310,7 +341,7 @@ async function handleAdmin(req, res, url, m) {
   const actor = requireAdmin(req, url);
 
   // --- scanners
-  if (p === '/api/admin/devices' && method === 'GET') return sendJson(req, res, 200, listDevices());
+  if (p === '/api/admin/devices' && method === 'GET') return sendJson(req, res, 200, { devices: listDevices(), authRequired: SCANNER_AUTH });
   if (p === '/api/admin/devices' && method === 'POST') {
     const body = await readJson(req);
     const dev = createDevice(body);
@@ -320,6 +351,12 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/devices\/([a-z0-9]+)$/)) && method === 'POST') {
     const body = await readJson(req);
     return sendJson(req, res, 200, updateDevice(m[1], body));
+  }
+  if ((m = p.match(/^\/api\/admin\/devices\/([a-z0-9]+)\/reset$/)) && method === 'POST') {
+    const before = getDevice(m[1]);
+    const after = resetDevice(m[1]);
+    audit(actor, 'reset a scanner link', `${before?.name}: the old link and token no longer work`);
+    return sendJson(req, res, 200, after);
   }
   if ((m = p.match(/^\/api\/admin\/devices\/([a-z0-9]+)$/)) && method === 'DELETE') {
     audit(actor, 'removed a scanner', getDevice(m[1])?.name || m[1]);
@@ -682,7 +719,8 @@ const server = http.createServer(async (req, res) => {
   } catch (err) {
     const status = err.status || 500;
     if (status >= 500) console.error(err);
-    return sendJson(req, res, status, { error: err.message || 'server error' });
+    // a code lets the gun tell "your scanner was pulled" from "the Wi-Fi died"
+    return sendJson(req, res, status, err.code ? { error: err.message, code: err.code } : { error: err.message || 'server error' });
   }
 });
 

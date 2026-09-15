@@ -20,10 +20,12 @@
 
 <main>
 
+  <div class="feedback" id="deviceProblem" hidden></div>
+
   <!-- ---------------- device setup (once per scanner) ---------------- -->
   <section class="screen" id="scrDevice">
     <h2 class="prompt">Set up this scanner</h2>
-    <div class="muted">The normal way: a supervisor registers this scanner in the dashboard and you open its link here once (then add it to the home screen). If you have no link, type an ID — it is stamped on every count so we know which scanner was used.</div>
+    <div class="muted">A supervisor registers this scanner in the dashboard; you open its link here once and add it to the home screen. That link is what signs the scanner in — without it the server will not accept counts.</div>
     <label for="fDeviceId">Scanner ID</label>
     <input id="fDeviceId" class="big" autocomplete="off" autocapitalize="characters" placeholder="e.g. SCANNER-04">
     <button class="primary" id="btnSaveDevice">Save</button>

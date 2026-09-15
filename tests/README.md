@@ -16,6 +16,7 @@ runs the suite in a real Chromium, and exits non-zero if anything fails. Nothing
 | `cycle-count.mjs` | batch generation and strategies, the last-counted clock, scheduling, coverage, working a batch on the gun |
 | `roster.mjs` | crew import, teams, drag and drop, equipment reach rules, assignment enforcement, the sign-on check |
 | `ops.mjs` | the audit log, backups, ERP layouts and exports, printable count sheets |
+| `scanner-auth.mjs` | enrolment, refusing untokened and forged calls, link reset and removal, and what a cut-off scanner does mid-count |
 
 Screenshots land in `tests/screenshots/` (gitignored) — useful when a check fails.
 

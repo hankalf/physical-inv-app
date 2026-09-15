@@ -176,7 +176,8 @@
 
     <!-- ============ scanners ============ -->
     <div class="card">
-      <h2>Scanners <span class="muted">each scanner gets its own link — open it once on the device and add it to the home screen</span></h2>
+      <h2>Scanners <span class="chip" id="authChip" hidden></span>
+        <span class="muted">each scanner gets its own link — open it once on the device and add it to the home screen</span></h2>
       <div class="inline">
         <div class="auto"><label for="fDevName">Scanner name</label><input id="fDevName" class="sm" style="width:160px" placeholder="SCANNER-05"></div>
         <div><label for="fDevNotes">Notes (optional)</label><input id="fDevNotes" placeholder="e.g. asset tag, freezer unit"></div>
@@ -184,7 +185,12 @@
       </div>
       <div class="feedback" id="deviceMsg"></div>
       <div class="scroll" style="margin-top:10px"><table id="deviceTable"></table></div>
-      <div class="hint">On the device: open the link in Chrome (or scan the QR into the address bar), then menu → <b>Add to Home screen</b>. Removing a scanner here stops its link working.</div>
+      <div class="hint">
+        On the device: open the link in Chrome (or scan the QR into the address bar), then menu → <b>Add to Home screen</b>.
+        Opening the link signs that scanner in — the server accepts counts from signed-in scanners only. Treat a link like a key:
+        <b>Reset link</b> issues a new one and kills the old, and removing a scanner stops it entirely. A link used more than
+        once is flagged, which is normal after a scanner is wiped and worth a look otherwise.
+      </div>
     </div>
     <div id="qrModal" class="modal" hidden>
       <div class="modal-box">
