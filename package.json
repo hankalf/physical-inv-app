@@ -7,9 +7,14 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node --no-warnings=ExperimentalWarning src/server.js",
-    "dev": "node --no-warnings=ExperimentalWarning --watch src/server.js"
+    "dev": "node --no-warnings=ExperimentalWarning --watch src/server.js",
+    "test": "node tests/run-all.mjs",
+    "test:one": "node tests/run-all.mjs"
   },
   "engines": {
     "node": "22.x"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.63.0"
   }
 }

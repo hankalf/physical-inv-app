@@ -5,3 +5,4 @@ data/*.db-wal
 data/*.db-shm
 .env
 .DS_Store
+tests/screenshots/
