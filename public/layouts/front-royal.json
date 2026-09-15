@@ -467,8 +467,8 @@
   }
  ],
  "zones": {
-  "F": "Frozen",
-  "A": "Ambient"
+  "F": "Freezer",
+  "A": "Dry Dock"
  },
  "areas": [
   "AREAS",

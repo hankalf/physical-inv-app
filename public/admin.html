@@ -8,7 +8,17 @@
 <link rel="stylesheet" href="/styles.css">
 <style>
   body { font-size: 15px; }
-  main { max-width: 1200px; margin: 0 auto; width: 100%; }
+  main { width: 100%; padding: 14px 18px; }
+  .hero { display: grid; grid-template-columns: minmax(220px, 1fr) 3fr; gap: 18px; align-items: center; }
+  .hero .pct { font-size: 72px; font-weight: 900; line-height: 1; letter-spacing: -.02em; }
+  .hero .pct small { font-size: 18px; color: var(--muted); font-weight: 600; margin-left: 6px; }
+  .bigbar { height: 34px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; position: relative; }
+  .bigbar i { display: block; height: 100%; background: linear-gradient(90deg, #1f6feb, #2ea043); transition: width .6s ease; }
+  .bigbar span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; text-shadow: 0 1px 2px #000a; }
+  .subbar { height: 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin-top: 10px; }
+  .subbar i { display: block; height: 100%; background: #2ea043; }
+  .barlabel { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-top: 4px; }
+  @media (max-width: 800px) { .hero { grid-template-columns: 1fr; } .hero .pct { font-size: 52px; } }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
   .card h2 { margin: 0 0 8px; font-size: 17px; display: flex; align-items: center; gap: 10px; }
   .card h2 .muted { font-weight: 400; font-size: 13px; }
@@ -100,6 +110,22 @@
 
   <section class="screen" id="scrMain">
 
+    <!-- ============ progress ============ -->
+    <div class="card">
+      <h2>Count progress <span class="muted" id="refreshedAt"></span></h2>
+      <div class="hero">
+        <div><div class="pct"><span id="heroPct">0</span><small>% counted</small></div><div class="muted" id="heroSub">—</div></div>
+        <div>
+          <div class="bigbar"><i id="heroBar" style="width:0%"></i><span id="heroBarText"></span></div>
+          <div class="barlabel"><span>Bins with a count</span><span id="heroBins"></span></div>
+          <div class="subbar"><i id="aisleBar" style="width:0%"></i></div>
+          <div class="barlabel"><span>Aisles handed back as complete</span><span id="heroAisles"></span></div>
+        </div>
+      </div>
+      <div class="grid" id="stats" style="margin-top:16px"></div>
+      <div class="scroll" style="margin-top:14px"><table id="teamTable"></table></div>
+    </div>
+
     <!-- ============ sessions ============ -->
     <div class="card">
       <h2>Count session</h2>
@@ -176,13 +202,6 @@
         <div class="hint" style="margin:0">The ERP bin export: racks F01–F24 and A01–A04 plus WIP, the NIL bin and other areas. Staging lanes and dock doors are counted manually and are left out.</div>
       </div>
       <div class="feedback" id="uploadMsg"></div>
-    </div>
-
-    <!-- ============ progress ============ -->
-    <div class="card">
-      <h2>Progress <span class="muted" id="refreshedAt"></span></h2>
-      <div class="grid" id="stats"></div>
-      <div class="scroll" style="margin-top:14px"><table id="teamTable"></table></div>
     </div>
 
     <!-- ============ warehouse map ============ -->

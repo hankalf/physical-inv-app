@@ -68,6 +68,11 @@
     } catch (err) { msg($('loginMsg'), 'err', err.message); }
   }
 
+  // "Freezer – Aisle F01": the zone comes from the bins in the aisle
+  const titleCase = (z) => String(z || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  const aisleLabel = (aisle, zone) => (zone ? `${titleCase(zone)} – Aisle ${aisle}` : `Aisle ${aisle}`);
+  let zoneByAisle = new Map();
+
   /* ------------------------------------------------------------ table helpers */
   const cell = (text, cls) => { const td = document.createElement('td'); if (cls) td.className = cls; td.textContent = text ?? ''; return td; };
   const tag = (text) => { const s = document.createElement('span'); s.className = 'tag ' + text; s.textContent = text; return s; };
@@ -228,10 +233,18 @@
   async function refreshProgress() {
     const p = await apiJson(`/api/admin/sessions/${sessionId}/progress`);
     const pct = p.bins_total ? Math.round((p.bins_counted / p.bins_total) * 100) : 0;
+    const aislesDone = p.byAisle.filter((a) => a.done_count > 0).length;
+    const aislePct = p.byAisle.length ? Math.round((aislesDone / p.byAisle.length) * 100) : 0;
+    $('heroPct').textContent = pct;
+    $('heroBar').style.width = pct + '%';
+    $('heroBarText').textContent = pct >= 100 ? 'COUNT COMPLETE' : `${pct}%`;
+    $('heroBins').textContent = `${p.bins_counted.toLocaleString()} of ${p.bins_total.toLocaleString()}`;
+    $('aisleBar').style.width = aislePct + '%';
+    $('heroAisles').textContent = `${aislesDone} of ${p.byAisle.length} (${aislePct}%)`;
+    $('heroSub').textContent = `${p.pallets_counted.toLocaleString()} of ${p.pallets_total.toLocaleString()} listed pallets found` + (p.exceptions ? ` · ${p.exceptions} flagged` : '');
     $('stats').innerHTML = '';
     for (const [n, l] of [
       [p.lines.toLocaleString(), 'Count lines'],
-      [`${p.bins_counted.toLocaleString()} / ${p.bins_total.toLocaleString()}`, `Bins with a count (${pct}%)`],
       [`${p.pallets_counted.toLocaleString()} / ${p.pallets_total.toLocaleString()}`, `Listed pallets found${p.pallets_unknown ? ` (+${p.pallets_unknown} not on list)` : ''}`],
       [p.teams, 'Teams counting'],
       [p.devices, 'Scanners'],
@@ -245,6 +258,7 @@
       $('stats').appendChild(d);
     }
 
+    renderAisles(p.byAisle);
     // Merge sign-ons (who is on which scanner) with counting activity.
     const byTeam = new Map();
     for (const s of p.signedOn) byTeam.set(s.team, { team: s.team, devices: s.devices, employees: JSON.parse(s.employees || '[]').join(', '), lines: 0, bins: 0 });
@@ -254,23 +268,23 @@
       [...byTeam.values()].sort((a, b) => String(a.team).localeCompare(String(b.team), undefined, { numeric: true })),
       (t) => {
         const tr = document.createElement('tr');
-        tr.append(cell(t.team), cell(t.devices || '—'), cell(t.employees || '—', 'wrap'), cell(t.active_aisle || '—'),
+        tr.append(cell(t.team), cell(t.devices || '—'), cell(t.employees || '—', 'wrap'), cell(t.active_aisle ? aisleLabel(t.active_aisle, zoneByAisle.get(t.active_aisle)) : '—'),
           cell(t.lines || 0, 'num'), cell(t.bins || 0, 'num'), cell(t.last_scan ? new Date(t.last_scan).toLocaleTimeString() : '—'));
         return tr;
       }, 'No team has signed on yet.');
 
-    renderAisles(p.byAisle);
     $('refreshedAt').textContent = 'updated ' + new Date().toLocaleTimeString();
   }
 
   /* ------------------------------------------------------------ aisles */
   function renderAisles(aisles) {
+    zoneByAisle = new Map(aisles.map((a) => [a.aisle, a.zone]));
     table($('aisleTable'),
       [{ label: 'Aisle' }, { label: 'Block' }, { label: 'Bins', num: true }, { label: 'Counted', num: true }, { label: 'Progress' }, { label: 'Status' }],
       aisles,
       (a) => {
         const tr = document.createElement('tr');
-        tr.append(cell(a.aisle));
+        tr.append(cell(aisleLabel(a.aisle, a.zone)));
         const tdBlock = document.createElement('td');
         const inp = document.createElement('input');
         inp.className = 'sm';
@@ -321,7 +335,7 @@
       const active = items.find((i) => i.status === 'active');
       head.innerHTML = `<span>Team <b></b></span><span class="muted"></span>`;
       head.querySelector('b').textContent = team;
-      head.querySelector('.muted').textContent = active ? `in aisle ${active.aisle}` : (items.every((i) => i.status === 'done') ? 'finished' : 'waiting');
+      head.querySelector('.muted').textContent = active ? `in ${aisleLabel(active.aisle, zoneByAisle.get(active.aisle))}` : (items.every((i) => i.status === 'done') ? 'finished' : 'waiting');
       box.appendChild(head);
 
       const seq = document.createElement('div');
@@ -333,7 +347,7 @@
         const blocked = it.status === 'queued' && holder && holder !== team;
         if (blocked) a.classList.add('blocked');
         a.title = blocked ? `Held: team ${holder} is active in this block` : it.status;
-        a.append(it.aisle);
+        a.append(aisleLabel(it.aisle, zoneByAisle.get(it.aisle)));
         if (blocked) a.append(' ⏳');
         const act = (label, status) => {
           const b = document.createElement('button');
@@ -427,7 +441,7 @@
 
   function cellTitle(aisle, bay, b, face) {
     const codes = b.bins.length > 12 ? b.bins.slice(0, 12).join(', ') + ` … (+${b.bins.length - 12})` : b.bins.join(', ');
-    return `${aisle} bay ${bay}${face ? ' ' + face : ''}: ${b.counted}/${b.bins.length} counted` + (b.flagged ? `, ${b.flagged} flagged` : '') + '\n' + codes;
+    return `${aisleLabel(aisle, zoneByAisle.get(aisle))}, bay ${bay}${face ? ' ' + face : ''}: ${b.counted}/${b.bins.length} counted` + (b.flagged ? `, ${b.flagged} flagged` : '') + '\n' + codes;
   }
 
   /** Heat map drawn over a floor-plan drawing: each aisle has pixel boxes in the layout file. */

@@ -81,6 +81,9 @@
 
   const $ = (id) => document.getElementById(id);
   const norm = (v) => String(v == null ? '' : v).trim().toUpperCase();
+  const titleCase = (z) => String(z || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  const aisleLabel = (aisle, zone) => (zone ? `${titleCase(zone)} – Aisle ${aisle}` : `Aisle ${aisle}`);
+  const zoneFor = (aisle) => (state.assignment && state.assignment.zones && state.assignment.zones[aisle]) || '';
   const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
     : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
         const r = (Math.random() * 16) | 0; return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
@@ -408,10 +411,11 @@
       card.innerHTML = '';
       const box = document.createElement('div');
       box.className = 'assign';
-      box.innerHTML = `<div class="sub">Team ${a.team} — your aisle</div><div class="aisle"></div><div class="sub bins-sub"></div><div class="bins"></div>`;
+      box.innerHTML = `<div class="sub">Team ${a.team} — your aisle</div><div class="aisle"></div><div class="sub zone-sub"></div><div class="sub bins-sub"></div><div class="bins"></div>`;
       box.querySelector('.aisle').textContent = a.active.aisle;
+      box.querySelector('.zone-sub').textContent = aisleLabel(a.active.aisle, a.active.zone);
       box.querySelector('.bins-sub').textContent = `${counted.size} of ${total} bins have a count` +
-        (a.queued.length ? ` · next: ${a.queued.join(', ')}` : ' · last aisle in your plan');
+        (a.queued.length ? ` · next: ${a.queued.map((q) => aisleLabel(q, zoneFor(q))).join(', ')}` : ' · last aisle in your plan');
       const grid = box.querySelector('.bins');
       for (const b of a.bins) {
         const s = document.createElement('span');
@@ -420,7 +424,7 @@
         grid.appendChild(s);
       }
       card.appendChild(box);
-      $('btnCount').textContent = `Count aisle ${a.active.aisle}`;
+      $('btnCount').textContent = `Count ${aisleLabel(a.active.aisle, a.active.zone)}`;
       return;
     }
     if (a.waitingOn) {
@@ -428,10 +432,11 @@
       card.innerHTML = '';
       const box = document.createElement('div');
       box.className = 'assign waiting';
-      box.innerHTML = `<div class="sub">Team ${a.team} — next aisle</div><div class="aisle"></div><div class="sub why"></div>`;
+      box.innerHTML = `<div class="sub">Team ${a.team} — next aisle</div><div class="aisle"></div><div class="sub zone-sub"></div><div class="sub why"></div>`;
       box.querySelector('.aisle').textContent = w.aisle;
+      box.querySelector('.zone-sub').textContent = aisleLabel(w.aisle, zoneFor(w.aisle));
       box.querySelector('.why').textContent = w.blockedByTeam
-        ? `Waiting: team ${w.blockedByTeam} is still in aisle ${w.blockedByAisle}, which shares racking with ${w.aisle}. Refresh when they finish.`
+        ? `Waiting: team ${w.blockedByTeam} is still in ${aisleLabel(w.blockedByAisle, zoneFor(w.blockedByAisle))}, which shares racking with ${w.aisle}. Refresh when they finish.`
         : 'Waiting for a supervisor to release this aisle.';
       card.appendChild(box);
       $('btnCount').textContent = 'Count anyway (flagged)';
@@ -442,7 +447,7 @@
     box.className = 'assign done';
     box.innerHTML = `<div class="sub">Team ${a.team}</div><div class="aisle">All done</div><div class="sub"></div>`;
     box.querySelector('.sub:last-child').textContent = a.done.length
-      ? `Finished: ${a.done.join(', ')}. Check with a supervisor for more.`
+      ? `Finished: ${a.done.map((q) => aisleLabel(q, zoneFor(q))).join(', ')}. Check with a supervisor for more.`
       : 'No aisles assigned to this team yet. Check with a supervisor.';
     card.appendChild(box);
     $('btnCount').textContent = 'Count without an assignment';
@@ -513,7 +518,7 @@
   function renderContext() {
     const d = state.draft;
     const rows = [];
-    if (state.session?.guided && state.assignment?.active) rows.push(['Your aisle', state.assignment.active.aisle]);
+    if (state.session?.guided && state.assignment?.active) rows.push(['Your aisle', aisleLabel(state.assignment.active.aisle, state.assignment.active.zone)]);
     if (d.palletId) rows.push(['Pallet', d.palletId]);
     if (d.description || d.sku) rows.push(['Contents', [d.sku, d.description].filter(Boolean).join(' — ')]);
     if (d.qty != null) rows.push(['Qty', String(d.qty)]);

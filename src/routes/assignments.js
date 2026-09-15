@@ -18,6 +18,9 @@ export function aisleOverview(sessionId) {
     .prepare(
       `SELECT a.aisle,
               a.block,
+              (SELECT l.zone FROM locations l
+                WHERE l.session_id = a.session_id AND l.aisle = a.aisle AND COALESCE(l.zone, '') != ''
+                GROUP BY l.zone ORDER BY COUNT(*) DESC LIMIT 1) AS zone,
               (SELECT COUNT(*) FROM locations l WHERE l.session_id = a.session_id AND l.aisle = a.aisle) AS bins,
               (SELECT COUNT(DISTINCT c.location_code)
                  FROM counts c JOIN locations l
@@ -257,9 +260,16 @@ export function teamStatus(sessionId, team) {
       : { aisle: queued[0].aisle, blockedByTeam: null, blockedByAisle: null };
   }
 
+  const zoneOf = (aisle) => db.prepare(
+    `SELECT zone FROM locations WHERE session_id = ? AND aisle = ? AND COALESCE(zone, '') != ''
+      GROUP BY zone ORDER BY COUNT(*) DESC LIMIT 1`).get(id, aisle)?.zone || '';
+  const zones = {};
+  for (const a of [active?.aisle, ...queued.map((q) => q.aisle), ...done, waitingOn?.blockedByAisle].filter(Boolean)) zones[a] = zoneOf(a);
+
   return {
     team: t,
-    active: active ? { id: active.id, aisle: active.aisle, startedAt: active.started_at } : null,
+    zones,
+    active: active ? { id: active.id, aisle: active.aisle, zone: zoneOf(active.aisle), startedAt: active.started_at } : null,
     bins,
     progress,
     queued: queued.map((q) => q.aisle),
