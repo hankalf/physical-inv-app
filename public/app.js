@@ -60,7 +60,8 @@
   }
 
   /* ------------------------------------------------------------ state */
-  const LARGE_QTY = Number(localStorage.getItem('largeQtyThreshold') || 1000);
+  // the re-key threshold is a site setting now; localStorage stays as an override
+  const largeQty = () => Number(localStorage.getItem('largeQtyThreshold') || layoutCfg().confirmOver || 0);
   /* The one-tap reasons and how long the comments step waits are site settings,
      edited in the admin panel. These are only the fallback for a gun that has
      not synced a session yet. */
@@ -70,6 +71,8 @@
     commentTimeout: 5,
   };
   const prompts = () => state.session?.prompts || FALLBACK_PROMPTS;
+  const LAYOUT_FALLBACK = { showContents: true, showNextBin: true, confirmOver: 1000, vibrate: true };
+  const layoutCfg = () => state.session?.layout_cfg || LAYOUT_FALLBACK;
 
   const state = {
     deviceId: '',
@@ -158,7 +161,7 @@
         osc.stop(now + at + 0.16);
       }
     } catch { /* audio is a nicety, never a blocker */ }
-    try { if (navigator.vibrate) navigator.vibrate(kind === 'err' ? [90, 60, 90] : 40); } catch { /* ignore */ }
+    try { if (navigator.vibrate && layoutCfg().vibrate !== false) navigator.vibrate(kind === 'err' ? [90, 60, 90] : 40); } catch { /* ignore */ }
   }
 
   function feedback(el, kind, text, detail) {
@@ -446,7 +449,9 @@
 
       state.team = team;
       state.session = session;
-      state.steps = ['pallet', 'qty', 'bin', ...(session.askComments ? ['comments'] : [])];
+      const cfg = session.layout_cfg || {};
+      state.steps = [...(cfg.order || ['pallet', 'qty', 'bin']), ...(session.askComments ? ['comments'] : [])];
+      document.body.classList.toggle('big-text', cfg.textSize === 'large');
       state.draft = {};
       state.stepIndex = 0;
       $('hdrTitle').textContent = `#${session.id} · ${session.name}`;
@@ -865,7 +870,7 @@
     const el = $('nextBin');
     const a = state.assignment;
     const onTask = !!state.recount;
-    if (onTask || !a || !a.active || !state.session?.guided) { el.hidden = true; return; }
+    if (onTask || !a || !a.active || !state.session?.guided || !layoutCfg().showNextBin) { el.hidden = true; return; }
     const total = (a.bins || []).length;
     const next = nextBinCode();
     el.hidden = false;
@@ -901,7 +906,7 @@
     const rows = [];
     if (state.session?.guided && state.assignment?.active) rows.push(['Your aisle', `${aisleLabel(state.assignment.active.aisle, state.assignment.active.zone)} · ${levelsLabel(state.assignment.active.levels)}`]);
     if (d.palletId) rows.push(['Pallet', d.palletId]);
-    if (d.description || d.sku) rows.push(['Contents', [d.sku, d.description].filter(Boolean).join(' — ')]);
+    if ((d.description || d.sku) && layoutCfg().showContents !== false) rows.push(['Contents', [d.sku, d.description].filter(Boolean).join(' — ')]);
     if (d.qty != null) rows.push(['Qty', String(d.qty)]);
     if (d.location) rows.push(['Bin', `${d.location}${describeBin(d.location) ? ' — ' + describeBin(d.location) : ''}`]);
     kv($('ctx'), rows);
@@ -949,7 +954,13 @@
         });
       }
       applyPallet();
-      advance('ok', pal ? (pal.desc || pal.sku || value) : `Pallet ${value}`, pal ? `Pallet ${value}${pal.sku ? ' · ' + pal.sku : ''}` : 'Not in the pallet list');
+      /* If the bin was scanned first, this is where a misplaced pallet shows up,
+         because the expected location is only known once the pallet is known. */
+      const early = state.draft.location && state.draft.expectedLocation && state.draft.expectedLocation !== state.draft.location;
+      await advance(early ? 'warn' : 'ok',
+        pal ? (pal.desc || pal.sku || value) : `Pallet ${value}`,
+        early ? `System expected this pallet in ${state.draft.expectedLocation}, not ${state.draft.location}`
+          : (pal ? `Pallet ${value}${pal.sku ? ' · ' + pal.sku : ''}` : 'Not in the pallet list'));
       return;
     }
 
@@ -964,7 +975,7 @@
       }
       const qty = Number(cleaned);
       // Fat-finger guard: a big number has to be entered twice.
-      if (qty >= LARGE_QTY && state.qtyConfirm !== qty) {
+      if (largeQty() > 0 && qty >= largeQty() && state.qtyConfirm !== qty) {
         state.qtyConfirm = qty;
         feedback($('scanMsg'), 'warn', `Confirm quantity ${qty}`, 'That is unusually large. Enter it again to accept, or type the correct number.');
         $('fScan').value = '';
@@ -973,7 +984,7 @@
       }
       state.qtyConfirm = null;
       state.draft.qty = qty;
-      advance('ok', `Qty ${qty}`);
+      await advance('ok', `Qty ${qty}`);
       return;
     }
 
@@ -1024,8 +1035,7 @@
       const where = describeBin(value);
       const misplaced = state.draft.expectedLocation && state.draft.expectedLocation !== value;
       const detail = [where, misplaced ? `System expected this pallet in ${state.draft.expectedLocation}` : ''].filter(Boolean).join(' — ');
-      advance(misplaced ? 'warn' : 'ok', `Bin ${value}`, detail);
-      if (state.stepIndex >= state.steps.length) await commitLine();
+      await advance(misplaced ? 'warn' : 'ok', `Bin ${value}`, detail);
       return;
     }
 
@@ -1042,10 +1052,13 @@
     state.draft.overrideReason = state.draft.overrideReason ? `${state.draft.overrideReason} | ${reason}` : reason;
   }
 
-  function advance(kind, text, detail) {
+  async function advance(kind, text, detail) {
     feedback($('scanMsg'), kind, text, detail);
     state.stepIndex++;
+    // the steps are configurable, so whichever one is last has to be the one
+    // that commits - not 'bin' because it happened to be last once
     if (state.stepIndex < state.steps.length) renderStep();
+    else await commitLine();
   }
 
   function askOverride(spec) {

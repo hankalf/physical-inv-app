@@ -14,7 +14,7 @@ import {
 import { importMaster, pruneAreaAisles } from './routes/master.js';
 import { boardData } from './routes/board.js';
 import { setupState } from './routes/setup.js';
-import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, defaultSessionId, setDefaultSessionId } from './routes/scanner-prompts.js';
+import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId } from './routes/scanner-prompts.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks,
@@ -654,6 +654,18 @@ async function handleAdmin(req, res, url, m) {
     });
     audit(actor, 'printed a count sheet', [...q].map(([k, v]) => `${k}=${v}`).join(' ') || 'whole site', m[1]);
     return send(req, res, 200, html, { 'content-type': 'text/html; charset=utf-8' });
+  }
+
+  // --- how the counting screen is put together
+  if (p === '/api/admin/scanner-layout' && method === 'GET') {
+    return sendJson(req, res, 200, { ...scannerLayout(), defaults: defaultScannerLayout() });
+  }
+  if (p === '/api/admin/scanner-layout' && method === 'POST') {
+    const body = await readJson(req);
+    const saved = saveScannerLayout(body);
+    audit(actor, 'changed the scanner screen layout',
+      `${saved.order.join(' → ')}${saved.textSize === 'large' ? ', large text' : ''}${saved.showContents ? '' : ', contents hidden'}${saved.showNextBin ? '' : ', bin guide off'}`);
+    return sendJson(req, res, 200, saved);
   }
 
   // --- which count the scanners land on

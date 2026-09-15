@@ -248,6 +248,168 @@
   };
 
 
+
+  /* ------------------------------------------------- the scanner screen
+     The preview is an iframe loading the gun's own stylesheet, at the real
+     pixel size of the device. Same CSS as the handheld, so it cannot drift
+     from what a counter actually sees. */
+  const DEVICES = {
+    mc9090: { w: 240, h: 320, name: 'MC9090', note: '3.8" QVGA · 240 × 320' },
+    mc9200: { w: 480, h: 640, name: 'MC9200', note: '3.7" VGA · 480 × 640' },
+  };
+  const STEP_INFO = {
+    pallet: { what: 'Pallet ID', sub: 'scan the label on the pallet or container', prompt: 'Scan PALLET ID', ph: '' },
+    qty:    { what: 'Quantity',  sub: 'how many are on it',                        prompt: 'Enter QUANTITY', ph: '' },
+    bin:    { what: 'Bin',       sub: 'scan the location label',                   prompt: 'Scan BIN LOCATION', ph: '' },
+    comments: { what: 'Comments', sub: 'optional — turned on per count',           prompt: 'Comments (optional)', ph: 'Type a note or tap one below' },
+  };
+  let gunCfg = null;
+
+  function renderStepOrder() {
+    const box = $('stepOrder');
+    box.innerHTML = '';
+    gunCfg.order.forEach((key, i) => {
+      const li = document.createElement('li');
+      li.draggable = true;
+      li.dataset.step = key;
+      const n = document.createElement('span'); n.className = 'n'; n.textContent = i + 1;
+      const mid = document.createElement('div');
+      const w = document.createElement('div'); w.className = 'what'; w.textContent = STEP_INFO[key].what;
+      const sub = document.createElement('div'); sub.className = 'sub'; sub.textContent = STEP_INFO[key].sub;
+      mid.append(w, sub);
+      const grip = document.createElement('span'); grip.className = 'grip'; grip.textContent = '⋮⋮';
+      li.append(n, mid, grip);
+      li.addEventListener('dragstart', () => { li.classList.add('dragging'); });
+      li.addEventListener('dragend', () => { li.classList.remove('dragging'); saveOrderFromDom(); });
+      li.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const dragging = box.querySelector('.dragging');
+        if (!dragging || dragging === li) return;
+        const r = li.getBoundingClientRect();
+        box.insertBefore(dragging, e.clientY < r.top + r.height / 2 ? li : li.nextSibling);
+      });
+      box.appendChild(li);
+    });
+  }
+  function saveOrderFromDom() {
+    gunCfg.order = [...$('stepOrder').querySelectorAll('li')].map((li) => li.dataset.step);
+    renderStepOrder();
+    renderPreviewChoices();
+    drawPreview();
+  }
+
+  function renderPreviewChoices() {
+    const sel = $('fPreviewStep');
+    const prior = sel.value;
+    sel.innerHTML = '';
+    for (const k of [...gunCfg.order, 'comments']) {
+      const o = document.createElement('option');
+      o.value = k;
+      o.textContent = `${STEP_INFO[k].what}${k === 'comments' ? '' : ` (step ${gunCfg.order.indexOf(k) + 1})`}`;
+      sel.appendChild(o);
+    }
+    if ([...sel.options].some((o) => o.value === prior)) sel.value = prior;
+  }
+
+  /** The gun's own markup and stylesheet, at the device's real pixel size. */
+  function drawPreview() {
+    const dev = DEVICES[gunCfg.device] || DEVICES.mc9090;
+    const frame = $('gunFrame');
+    frame.width = dev.w;
+    frame.height = dev.h;
+    $('deviceNote').textContent = `${dev.name} · ${dev.note}`;
+
+    const step = $('fPreviewStep').value || gunCfg.order[0];
+    const info = STEP_INFO[step];
+    const idx = step === 'comments' ? gunCfg.order.length : gunCfg.order.indexOf(step);
+    const total = gunCfg.order.length + 1;
+    const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    const known = { pallet: 'PLT01001A', qty: '96', bin: 'F01A001' };
+    const ctx = [];
+    for (const k of gunCfg.order.slice(0, idx)) {
+      if (k === 'pallet') {
+        ctx.push(['Pallet', known.pallet]);
+        if (gunCfg.showContents) ctx.push(['Contents', 'SKU-2044 — Peas 12x2lb']);
+      }
+      if (k === 'qty') ctx.push(['Qty', known.qty]);
+      if (k === 'bin') ctx.push(['Bin', 'F01A001 — Level A · Position 001 · FRONT']);
+    }
+
+    const nextBin = gunCfg.showNextBin
+      ? `<div class="nextbin"><span class="nb-lead">Next bin</span><b class="nb-code">F01A00${idx + 1}</b><span class="nb-prog">${idx} of 94</span></div>` : '';
+    const chips = step === 'comments'
+      ? `<div class="chips">${(promptState.comments || []).slice(0, 4).map((c) => `<button class="chip-btn">${esc(c)}</button>`).join('')}</div>` : '';
+
+    frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8">
+      <link rel="stylesheet" href="/styles.css">
+      <style>body{padding:8px;overflow:hidden}header{padding:6px 8px}.title{font-size:13px}</style>
+      </head><body class="${gunCfg.textSize === 'large' ? 'big-text' : ''}">
+      <header><span class="title">Team 1 · F01</span><span class="chip">0 queued</span></header>
+      <div style="padding:8px">
+        ${nextBin}
+        <div class="step">Step ${idx + 1} of ${total}</div>
+        <div class="prompt">${esc(info.prompt)}</div>
+        <input class="big" placeholder="${esc(info.ph)}" value="">
+        ${chips}
+        ${ctx.length ? `<div class="context">${ctx.map(([k, v]) => `<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join('')}</div>` : ''}
+        <div class="row" style="margin-top:8px"><button class="ghost">Keyboard</button><button class="ghost">Back</button>${step === 'comments' ? '<button class="primary">Skip</button>' : ''}</div>
+      </div></body></html>`;
+  }
+
+  function renderGun() {
+    $('fTextSize').value = gunCfg.textSize;
+    $('fShowContents').checked = gunCfg.showContents;
+    $('fShowNextBin').checked = gunCfg.showNextBin;
+    $('fVibrate').checked = gunCfg.vibrate;
+    $('fConfirmOver').value = gunCfg.confirmOver;
+    $('fDevice').value = gunCfg.device;
+    const chip = $('gunChip');
+    chip.hidden = false;
+    chip.className = 'chip' + (gunCfg.isDefault ? '' : ' online');
+    chip.textContent = gunCfg.isDefault ? 'the defaults' : 'set for this site';
+    renderStepOrder();
+    renderPreviewChoices();
+    drawPreview();
+  }
+
+  async function refreshGun() {
+    gunCfg = await api.json('/api/admin/scanner-layout');
+    renderGun();
+  }
+
+  for (const id of ['fTextSize', 'fShowContents', 'fShowNextBin', 'fVibrate', 'fConfirmOver', 'fDevice']) {
+    $(id).addEventListener('change', () => {
+      gunCfg.textSize = $('fTextSize').value;
+      gunCfg.showContents = $('fShowContents').checked;
+      gunCfg.showNextBin = $('fShowNextBin').checked;
+      gunCfg.vibrate = $('fVibrate').checked;
+      gunCfg.confirmOver = Number($('fConfirmOver').value) || 0;
+      gunCfg.device = $('fDevice').value;
+      drawPreview();
+    });
+  }
+  $('fPreviewStep').addEventListener('change', drawPreview);
+
+  $('btnSaveGun').onclick = async () => {
+    try {
+      const keep = gunCfg.defaults;
+      gunCfg = await api.post('/api/admin/scanner-layout', {
+        order: gunCfg.order, textSize: gunCfg.textSize, showContents: gunCfg.showContents,
+        showNextBin: gunCfg.showNextBin, confirmOver: gunCfg.confirmOver, vibrate: gunCfg.vibrate, device: gunCfg.device,
+      });
+      gunCfg.defaults = keep;
+      renderGun();
+      msg($('gunMsg'), 'ok', 'Saved.', `Scanners will ask ${gunCfg.order.map((k) => STEP_INFO[k].what.toLowerCase()).join(' → ')} at their next sign-on.`);
+    } catch (err) { msg($('gunMsg'), 'err', err.message); }
+  };
+  $('btnResetGun').onclick = () => {
+    if (!confirm('Put the scanner screen back to the shipped defaults?')) return;
+    gunCfg = { ...gunCfg, ...(gunCfg.defaults || {}) };
+    renderGun();
+    msg($('gunMsg'), 'warn', 'Defaults loaded — press Save to keep them.');
+  };
+
   /* ------------------------------------------------- what the scanners offer */
   let promptState = { comments: [], overrides: [], commentTimeout: 5, defaults: null };
 
@@ -447,16 +609,18 @@
     },
   };
 
-  function renderGuide() {
-    const g = FILE_GUIDE[$('fKind').value];
-    const box = $('colGuide');
+  /* Each list gets its own card: they are different jobs, done at different
+     times, by people who should not have to know which one a dropdown is on. */
+  function renderGuide(kind) {
+    const g = FILE_GUIDE[kind];
+    const box = $('colGuide-' + kind);
     box.innerHTML = '';
     const head = document.createElement('div');
     head.innerHTML = '<b>Columns</b> — matched by name, any order, extra columns ignored. &nbsp; <a></a>';
     const a = head.querySelector('a');
     a.href = '/templates/' + g.file;
     a.download = g.file;
-    a.textContent = '⬇ Download sample ' + g.file;
+    a.textContent = '⬇ Download a sample ' + g.file;
     box.appendChild(head);
     const cols = document.createElement('div');
     cols.className = 'cols';
@@ -465,41 +629,43 @@
     box.appendChild(cols);
     const list = document.createElement('div');
     list.className = 'note';
-    list.innerHTML = [...g.required, ...g.optional].filter(([, why]) => why).map(([n, why]) => `<b>${n}</b>: ${why}`).join(' · ') + '<br>' + g.note;
+    list.innerHTML = [...g.required, ...g.optional].filter(([, why]) => why).map(([n, why]) => `<b>${n}</b>: ${why}`).join(' · ');
     box.appendChild(list);
   }
-  $('fKind').onchange = renderGuide;
-  renderGuide();
 
   async function uploadText(kind, text, label) {
-    if (!needSession($('uploadMsg'))) return;
-    msg($('uploadMsg'), 'warn', `Uploading ${label}…`);
+    const out = $('uploadMsg-' + kind);
+    if (!needSession(out)) return;
+    msg(out, 'warn', `Uploading ${label}…`);
     try {
-      const stats = await api.json(`/api/admin/sessions/${sessionId}/master?kind=${kind}&replace=${$('fReplace').checked ? 1 : 0}`,
+      const stats = await api.json(`/api/admin/sessions/${sessionId}/master?kind=${kind}&replace=${$('fReplace-' + kind).checked ? 1 : 0}`,
         { method: 'POST', headers: { 'content-type': 'text/csv' }, body: text });
       const t = stats.totals;
-      msg($('uploadMsg'), 'ok', `Imported ${stats.rows.toLocaleString()} rows from ${label}`,
-        `Session now has ${t.bins.toLocaleString()} bins in ${t.aisles} aisles, ${t.pallets.toLocaleString()} pallets, ${t.assignments} planned aisle assignments` +
+      msg(out, 'ok', `Imported ${stats.rows.toLocaleString()} rows from ${label}`,
+        `This count now has ${t.bins.toLocaleString()} bins in ${t.aisles} aisles, ${t.pallets.toLocaleString()} pallets, ${t.assignments} planned aisle assignments` +
         (stats.skipped ? ` · ${stats.skipped} row(s) skipped (${stats.skippedNoLevels ? stats.skippedNoLevels + ' with no levels; ' : ''}missing required column, or unknown aisle)` : '') +
         (stats.excluded ? ` · ${stats.excluded} bins left out (counted manually: ${stats.excludedGroups.join(', ')})` : ''));
       await refreshAisles();
       await refreshSetup().catch(() => {});
-    } catch (err) { msg($('uploadMsg'), 'err', 'Upload failed', err.message); }
+    } catch (err) { msg(out, 'err', 'Upload failed', err.message); }
   }
 
-  $('btnUpload').onclick = async () => {
-    const file = $('fFile').files[0];
-    if (!file) return msg($('uploadMsg'), 'err', 'Choose a file first');
-    if (!needSession($('uploadMsg'))) return;
-    msg($('uploadMsg'), 'warn', `Reading ${file.name}…`);
-    try {
-      await uploadText($('fKind').value, await fileToCsv(file), file.name);
-      $('fFile').value = '';
-    } catch (err) { msg($('uploadMsg'), 'err', 'Upload failed', err.message); }
-  };
+  for (const kind of Object.keys(FILE_GUIDE)) {
+    renderGuide(kind);
+    $('btnUpload-' + kind).onclick = async () => {
+      const file = $('fFile-' + kind).files[0];
+      if (!file) return msg($('uploadMsg-' + kind), 'err', 'Choose a file first');
+      if (!needSession($('uploadMsg-' + kind))) return;
+      msg($('uploadMsg-' + kind), 'warn', `Reading ${file.name}…`);
+      try {
+        await uploadText(kind, await fileToCsv(file), file.name);
+        $('fFile-' + kind).value = '';
+      } catch (err) { msg($('uploadMsg-' + kind), 'err', 'Upload failed', err.message); }
+    };
+  }
 
   $('btnLoadSiteBins').onclick = async () => {
-    if (!needSession($('uploadMsg'))) return;
+    if (!needSession($('uploadMsg-bins'))) return;
     const res = await fetch('/templates/front-royal-bins.csv');
     await uploadText('bins', await res.text(), 'the Front Royal bin list');
   };
@@ -677,6 +843,7 @@
   async function load() {
     await refreshMe();
     await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts()]);
+    await refreshGun().catch(() => {});
     await loadSessions();
     await refreshSetup().catch(() => {});
   }

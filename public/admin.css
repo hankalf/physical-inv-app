@@ -343,3 +343,31 @@ ol.steps li.done .st-detail { color: var(--ok); }
   ol.steps li { grid-template-columns: 26px 1fr; }
   ol.steps li > button { grid-column: 2; justify-self: start; }
 }
+
+/* ------------------------------------------------- the scanner screen preview */
+.gunwrap { display: grid; grid-template-columns: 1fr auto; gap: 26px; align-items: start; }
+@media (max-width: 1100px) { .gunwrap { grid-template-columns: 1fr; } }
+
+ol.steporder { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-width: 460px; }
+ol.steporder li {
+  display: flex; align-items: center; gap: 12px; cursor: grab;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px; padding: 11px 13px;
+}
+ol.steporder li:hover { background: var(--surface-3); }
+ol.steporder li.dragging { opacity: .4; }
+ol.steporder li.over { border-color: var(--accent); }
+ol.steporder .n { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+ol.steporder .what { font-weight: 700; font-size: 14px; }
+ol.steporder .sub { font-size: 12px; color: var(--muted); }
+ol.steporder .grip { margin-left: auto; color: var(--muted); font-size: 16px; letter-spacing: 2px; }
+
+.gunpreview { justify-self: center; }
+.device {
+  background: #1a1d21; border: 3px solid #2b3038; border-radius: 16px;
+  padding: 14px 12px 26px; box-shadow: var(--shadow); position: relative;
+}
+.device::after {
+  content: ''; position: absolute; left: 50%; bottom: 9px; transform: translateX(-50%);
+  width: 34px; height: 5px; border-radius: 3px; background: #3a4150;
+}
+.device iframe { display: block; border: 0; background: #0d1117; border-radius: 3px; }

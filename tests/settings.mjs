@@ -132,7 +132,7 @@ check('Shell: the sidebar links all four pages, with this one marked',
   (await page.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/cycle,/teams,/settings'
     && (await page.$eval('#navTabs .tab.current', (a) => a.getAttribute('href'))) === '/settings');
 check('Shell: Settings is split into sub-tabs',
-  (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.replace(/\d+$/, '').trim()))).join(' | ') === 'Getting started | Logins | Scanners | Lists & racking | ERP & backups',
+  (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.replace(/\d+$/, '').trim()))).join(' | ') === 'Getting started | Scanner screen | Logins | Scanners | Lists & racking | ERP & backups',
   (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.trim()))).join(' | '));
 check('Shell: exactly one pane is on screen at a time',
   (await page.$$eval('[data-sub]', (p) => p.filter((x) => x.classList.contains('active')).length)) === 1);
@@ -156,8 +156,9 @@ check('Shell: the open sub-tab survives a reload',
 await page.click('#subTabs button:text-is("Logins")'); await page.waitForTimeout(600);
 
 const headings = await page.$$eval('#scrMain .card > h2', (h) => h.map((x) => x.firstChild.textContent.trim()));
-check('Settings: the six setup cards are all on this page',
-  ['Supervisor logins', 'Scanner setup', 'Upload lists (CSV)', 'Aisles & racking blocks', 'Send to the ERP', 'Backups & log']
+check('Settings: every setup card is on this page, each list its own',
+  ['Supervisor logins', 'Scanner setup', 'Bin list', 'Inventory report', 'Counting plan',
+   'Aisles & racking blocks', 'Send to the ERP', 'Backups & log']
     .every((t) => headings.some((h) => h.startsWith(t))), headings.join(' | '));
 
 const dash = await browser.newPage({ viewport: { width: 1400, height: 900 } });

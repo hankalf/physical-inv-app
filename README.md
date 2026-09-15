@@ -201,6 +201,7 @@ Per-session settings:
 
 ### 2. Upload the lists — Settings
 
+Three lists, each with its own card — they are different jobs, done at different times.
 Columns are matched by name, so most ERP exports work unchanged.
 
 | File | Columns it looks for | What it is |
@@ -309,6 +310,21 @@ then `F01A003` — with where it is (level, position, front or back) and how far
 aisle they are. Nobody has to keep their own place down a 650-bin run. Counting out of
 order is still fine: the guide just points at the next one still open. It appears only on a
 guided count with an aisle assigned, since otherwise there is no aisle to walk.
+
+### The scanner screen — Settings
+
+How the counting screen is put together, with a **preview drawn at the real screen size**
+of the device — 240 × 320 for an MC9090, 480 × 640 for an MC9200. The preview is an iframe
+loading the handheld's own stylesheet, so it cannot drift from what a counter actually
+sees, and it redraws as you change things.
+
+**The order of the questions** is draggable. Counting location-first — bin, then what is in
+it — suits a team working a bay at a time; the default asks for the pallet first. A
+question can never be dropped by accident: leave one out and it is put back at the end.
+
+Also here: text size (large for gloves and a freezer), whether the SKU and description show
+after a pallet scan, whether the next-bin guide appears, whether the gun buzzes, and the
+quantity at which a counter is made to key the number twice.
 
 ### What the scanners offer — Settings
 

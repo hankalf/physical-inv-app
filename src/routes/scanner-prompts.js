@@ -73,3 +73,61 @@ export function saveScannerPrompts(body = {}) {
 }
 
 export const defaultScannerPrompts = () => ({ ...DEFAULTS, commentTimeout: DEFAULT_TIMEOUT });
+
+/* ------------------------------------------------------------ gun layout
+ * How the counting screen is put together: which questions, in what order,
+ * and how much the gun shows. A site that counts location-first wants bin
+ * before pallet; a freezer crew in gloves wants bigger text.
+ */
+const STEPS = ['pallet', 'qty', 'bin'];
+const LAYOUT_DEFAULTS = {
+  order: ['pallet', 'qty', 'bin'],
+  textSize: 'normal',      // normal | large
+  showContents: true,      // the SKU and description after a pallet scan
+  showNextBin: true,       // the next bin in the aisle
+  confirmOver: 1000,       // re-key a quantity at least this big
+  vibrate: true,
+  device: 'mc9090',        // which screen the admin preview draws
+};
+
+function cleanOrder(list) {
+  const want = (Array.isArray(list) ? list : []).map((x) => String(x || '').trim().toLowerCase()).filter((x) => STEPS.includes(x));
+  const out = [...new Set(want)];
+  for (const s of STEPS) if (!out.includes(s)) out.push(s);   // never lose a question
+  return out;
+}
+
+export function scannerLayout() {
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'scannerLayout'").get();
+  let saved = {};
+  try { saved = row ? JSON.parse(row.value) : {}; } catch { saved = {}; }
+  return {
+    order: saved.order ? cleanOrder(saved.order) : LAYOUT_DEFAULTS.order,
+    textSize: saved.textSize === 'large' ? 'large' : 'normal',
+    showContents: saved.showContents === undefined ? true : !!saved.showContents,
+    showNextBin: saved.showNextBin === undefined ? true : !!saved.showNextBin,
+    confirmOver: saved.confirmOver === undefined ? LAYOUT_DEFAULTS.confirmOver
+      : Math.max(0, Math.min(1e7, Number(saved.confirmOver) || 0)),
+    vibrate: saved.vibrate === undefined ? true : !!saved.vibrate,
+    device: saved.device === 'mc9200' ? 'mc9200' : 'mc9090',
+    isDefault: !row,
+  };
+}
+
+export function saveScannerLayout(body = {}) {
+  const now = scannerLayout();
+  const next = {
+    order: body.order === undefined ? now.order : cleanOrder(body.order),
+    textSize: body.textSize === undefined ? now.textSize : (body.textSize === 'large' ? 'large' : 'normal'),
+    showContents: body.showContents === undefined ? now.showContents : !!body.showContents,
+    showNextBin: body.showNextBin === undefined ? now.showNextBin : !!body.showNextBin,
+    confirmOver: body.confirmOver === undefined ? now.confirmOver : Math.max(0, Math.min(1e7, Number(body.confirmOver) || 0)),
+    vibrate: body.vibrate === undefined ? now.vibrate : !!body.vibrate,
+    device: body.device === undefined ? now.device : (body.device === 'mc9200' ? 'mc9200' : 'mc9090'),
+  };
+  db.prepare("INSERT INTO settings (key, value) VALUES ('scannerLayout', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+    .run(JSON.stringify(next));
+  return { ...next, isDefault: false };
+}
+
+export const defaultScannerLayout = () => ({ ...LAYOUT_DEFAULTS });

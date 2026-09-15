@@ -69,6 +69,72 @@
     </div>
       </div>
 
+      <div data-sub="gun" data-sub-label="Scanner screen">
+    <div class="card">
+      <h2>How the counting screen is put together <span class="chip" id="gunChip" hidden></span></h2>
+      <div class="hint" style="margin-top:0">
+        The order the questions are asked, and how much the gun shows. Changes reach a scanner
+        at its next sign-on. The preview is drawn at the real screen size, so what you see is
+        what a counter sees.
+      </div>
+
+      <div class="gunwrap">
+        <div>
+          <h3 style="margin-top:14px">The questions, in order</h3>
+          <div class="hint" style="margin-top:0">Drag to reorder. Counting location-first — bin, then what is in it — suits a team working a bay at a time.</div>
+          <ol class="steporder" id="stepOrder"></ol>
+
+          <h3>What the gun shows</h3>
+          <div class="inline" style="gap:14px">
+            <div class="auto"><label class="cb"><input type="checkbox" id="fShowContents"> Show contents after a pallet scan</label></div>
+            <div class="auto"><label class="cb"><input type="checkbox" id="fShowNextBin"> Show the next bin in the aisle</label></div>
+            <div class="auto"><label class="cb"><input type="checkbox" id="fVibrate"> Buzz on a good or bad scan</label></div>
+          </div>
+          <div class="inline" style="margin-top:12px">
+            <div class="auto">
+              <label for="fTextSize">Text size</label>
+              <select id="fTextSize">
+                <option value="normal">Normal</option>
+                <option value="large">Large — for gloves and a freezer</option>
+              </select>
+            </div>
+            <div class="auto">
+              <label for="fConfirmOver">Re-key a quantity of at least</label>
+              <input id="fConfirmOver" class="sm" type="number" min="0" style="width:96px">
+              <span class="muted"> · 0 never asks twice</span>
+            </div>
+          </div>
+
+          <div class="inline" style="margin-top:16px">
+            <div class="auto"><button class="primary fit" id="btnSaveGun">Save</button></div>
+            <div class="auto"><button class="fit" id="btnResetGun">Restore the defaults</button></div>
+          </div>
+          <div class="feedback" id="gunMsg"></div>
+        </div>
+
+        <div class="gunpreview">
+          <div class="inline" style="margin-bottom:10px">
+            <div class="auto">
+              <label for="fDevice">Preview on</label>
+              <select id="fDevice">
+                <option value="mc9090">MC9090 — 240 × 320</option>
+                <option value="mc9200">MC9200 — 480 × 640</option>
+              </select>
+            </div>
+            <div class="auto">
+              <label for="fPreviewStep">Showing</label>
+              <select id="fPreviewStep"></select>
+            </div>
+          </div>
+          <div class="device" id="deviceShell">
+            <iframe id="gunFrame" title="Scanner screen preview"></iframe>
+          </div>
+          <div class="muted" id="deviceNote" style="text-align:center;margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+      </div>
+
       <div data-sub="logins" data-sub-label="Logins">
     <div class="card">
       <h2>Supervisor logins <span class="chip" id="sharedChip" hidden></span>
@@ -192,28 +258,45 @@
 
       <div data-sub="lists" data-sub-label="Lists &amp; racking">
 
-    <!-- ============ uploads ============ -->
-    <div class="card">
-      <h2>Upload lists (CSV) <span class="muted">columns are matched by name</span></h2>
-      <div class="inline">
-        <div>
-          <label for="fKind">File</label>
-          <select id="fKind">
-            <option value="bins">Bin list — bin location, zone, aisle (validation list for question 3)</option>
-            <option value="pallets">Pallet list — pallet id, sku, description, qty, location (validation + contents for question 1)</option>
-            <option value="plan">Counting plan — team, aisle (one row per aisle, in the order each team should count)</option>
-          </select>
-        </div>
-        <div><label for="fFile">CSV or Excel file</label><input type="file" id="fFile" accept=".csv,.tsv,.txt,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
-        <div class="auto"><label class="cb"><input type="checkbox" id="fReplace"> Replace existing</label></div>
-        <div class="auto"><button class="primary fit" id="btnUpload">Upload</button></div>
+    <!-- ============ uploads: one card per list ============ -->
+    <div class="card" data-kind="bins">
+      <h2>Bin list <span class="muted">every location in the warehouse</span></h2>
+      <div class="hint" style="margin-top:0">What a scanned bin is checked against, and what defines the aisles teams get assigned to. Upload this one first.</div>
+      <div class="inline" style="margin-top:12px">
+        <div><label for="fFile-bins">CSV or Excel file</label><input type="file" id="fFile-bins" accept=".csv,.tsv,.txt,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fReplace-bins"> Replace what is there</label></div>
+        <div class="auto"><button class="primary fit" id="btnUpload-bins">Upload</button></div>
       </div>
-      <div class="colguide" id="colGuide"></div>
+      <div class="colguide" id="colGuide-bins"></div>
       <div class="inline" style="margin-top:10px">
-        <div class="auto"><button class="fit" id="btnLoadSiteBins">Load Front Royal bin list</button></div>
-        <div class="hint" style="margin:0">The ERP bin export: racks F01–F24 and A01–A04 plus WIP, the NIL bin and other areas. Staging lanes and dock doors are counted manually and are left out.</div>
+        <div class="auto"><button class="fit" id="btnLoadSiteBins">Load the Front Royal bin list</button></div>
+        <div class="hint" style="margin:0">The ERP bin export that ships with the app: racks F01–F24 and A01–A04 plus WIP, the NIL bin and other areas. Staging lanes and dock doors are counted manually and are left out.</div>
       </div>
-      <div class="feedback" id="uploadMsg"></div>
+      <div class="feedback" id="uploadMsg-bins"></div>
+    </div>
+
+    <div class="card" data-kind="pallets">
+      <h2>Inventory report <span class="muted">what the system thinks is on hand</span></h2>
+      <div class="hint" style="margin-top:0">What the count is compared against — it is where variances, second counts and the ERP adjustments come from. Re-upload it whenever the ERP moves on.</div>
+      <div class="inline" style="margin-top:12px">
+        <div><label for="fFile-pallets">CSV or Excel file</label><input type="file" id="fFile-pallets" accept=".csv,.tsv,.txt,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fReplace-pallets"> Replace what is there</label></div>
+        <div class="auto"><button class="primary fit" id="btnUpload-pallets">Upload</button></div>
+      </div>
+      <div class="colguide" id="colGuide-pallets"></div>
+      <div class="feedback" id="uploadMsg-pallets"></div>
+    </div>
+
+    <div class="card" data-kind="plan">
+      <h2>Counting plan <span class="muted">which team takes which aisle</span></h2>
+      <div class="hint" style="margin-top:0">One row per aisle, in the order each team should count it, with the levels their equipment reaches. Optional — aisles can be queued by hand on the Dashboard.</div>
+      <div class="inline" style="margin-top:12px">
+        <div><label for="fFile-plan">CSV or Excel file</label><input type="file" id="fFile-plan" accept=".csv,.tsv,.txt,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fReplace-plan"> Replace what is there</label></div>
+        <div class="auto"><button class="primary fit" id="btnUpload-plan">Upload</button></div>
+      </div>
+      <div class="colguide" id="colGuide-plan"></div>
+      <div class="feedback" id="uploadMsg-plan"></div>
     </div>
 
     <!-- ============ aisles & racking blocks ============ -->

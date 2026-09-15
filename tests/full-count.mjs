@@ -78,19 +78,20 @@ check('API: removed scanner link no longer resolves (404)', gone.status === 404)
 
 await admin.click('#btnLoadSiteBins'); await admin.waitForTimeout(6000);
 {
-  const m = clean(await admin.textContent('#uploadMsg'));
+  const m = clean(await admin.textContent('#uploadMsg-bins'));
   check('Settings: one-click Front Royal bin list: 13,673 bins in 28 aisles, 61 staging/door bins left out', /Imported 13,734 rows/.test(m) && /13,673 bins in 28 aisles/.test(m) && /61 bins left out \(counted manually: STAGING, DOORS\)/.test(m), m.slice(0, 200));
 }
+check('Settings: each list gets its own card, not a dropdown',
+  (await admin.$$('[data-kind]')).length === 3 && (await admin.$('#fKind')) === null,
+  (await admin.$$eval('[data-kind]', (c) => c.map((x) => x.dataset.kind))).join(', '));
 for (const [kind, file] of [['pallets', 'pallets.csv'], ['plan', 'plan.csv']]) {
-  await admin.selectOption('#fKind', kind);
-  await admin.setInputFiles('#fFile', `${S}fixtures/${file}`);
-  await admin.click('#btnUpload'); await admin.waitForTimeout(kind === 'bins' ? 2500 : 900);
-  const m = clean(await admin.textContent('#uploadMsg'));
+  await admin.setInputFiles(`#fFile-${kind}`, `${S}fixtures/${file}`);
+  await admin.click(`#btnUpload-${kind}`); await admin.waitForTimeout(kind === 'bins' ? 2500 : 900);
+  const m = clean(await admin.textContent(`#uploadMsg-${kind}`));
   check(`Settings: upload ${kind}`, /Imported \d/.test(m), m.slice(0, 120));
-  if (kind === 'pallets') await (await card('#fKind')).asElement().screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-upload.png` });
+  if (kind === 'pallets') await (await card(`#fFile-${kind}`)).asElement().screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-upload.png` });
 }
-await admin.selectOption('#fKind', 'plan');
-const [dl0] = await Promise.all([admin.waitForEvent('download'), admin.click('#colGuide a')]);
+const [dl0] = await Promise.all([admin.waitForEvent('download'), admin.click('#colGuide-plan a')]);
 check('Settings: sample CSV download', dl0.suggestedFilename() === 'plan-template.csv', dl0.suggestedFilename());
 
 await admin.click('#btnLayoutBlocks'); await admin.waitForTimeout(700);
@@ -451,10 +452,10 @@ await toSettings();
 check('Settings: the session picker follows the dashboard to the newest session',
   /xlsx check/.test(await admin.$eval('#fSessionPick', (s) => s.options[s.selectedIndex].textContent)),
   await admin.$eval('#fSessionPick', (s) => s.options[s.selectedIndex].textContent));
-await admin.selectOption('#fKind', 'bins'); await admin.setInputFiles('#fFile', `${S}fixtures/Bins.xlsx`); await admin.click('#btnUpload');
-await admin.waitForFunction(() => /Imported|failed/.test(document.getElementById('uploadMsg').textContent), null, { timeout: 60000 }).catch(() => {});
+await admin.setInputFiles('#fFile-bins', `${S}fixtures/Bins.xlsx`); await admin.click('#btnUpload-bins');
+await admin.waitForFunction(() => /Imported|failed/.test(document.getElementById('uploadMsg-bins').textContent), null, { timeout: 60000 }).catch(() => {});
 {
-  const m = clean(await admin.textContent('#uploadMsg'));
+  const m = clean(await admin.textContent('#uploadMsg-bins'));
   check('Settings: raw ERP Bins.xlsx uploads as-is: 13,673 bins in 28 aisles', /Imported 13,734 rows/.test(m) && /13,673 bins in 28 aisles/.test(m), m.slice(0, 140));
 }
 await toDashboard();

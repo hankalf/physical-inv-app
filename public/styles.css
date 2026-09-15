@@ -193,3 +193,13 @@ button.fit { flex: 0 0 auto; width: auto; }
 .nextbin .nb-where { font-size: 13px; color: var(--muted); }
 .nextbin .nb-prog { margin-left: auto; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .nextbin.done { background: #10281a; border-color: #1d572a; color: #7ee29a; font-weight: 700; font-size: 14px; }
+
+/* a freezer crew in gloves, on a 240px screen: everything a size up */
+body.big-text .prompt { font-size: 28px; }
+body.big-text input.big { font-size: 30px; }
+body.big-text .context { font-size: 16px; }
+body.big-text .context .v { font-size: 17px; }
+body.big-text button { font-size: 19px; padding: 16px; }
+body.big-text .chip-btn { font-size: 15px; padding: 10px 14px; }
+body.big-text .feedback { font-size: 16px; }
+body.big-text .nextbin .nb-code { font-size: 30px; }
