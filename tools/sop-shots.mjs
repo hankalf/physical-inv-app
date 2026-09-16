@@ -177,6 +177,12 @@ try {
     }
   }
 
+  /* a couple of words from the office, one of them already read - so the manual
+     shows the card doing its job rather than empty */
+  const note1 = await post(`/api/admin/sessions/${sess.id}/messages`, { team: '2', body: 'Skip F04 level D — the forklift is in it until 11' });
+  await post(`/api/admin/sessions/${sess.id}/messages`, { body: 'Fifteen minute break at 10:30, leave the guns on charge', urgent: true });
+  await post(`/api/sessions/${sess.id}/messages/${note1.id}/ack`, { team: '2' }, gunOf[2].H).catch(() => {});
+
   // the two finished aisles are handed back from the gun, which frees the racking
   const live = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/assignments`, { headers: A }));
   for (const [team, aisle] of [['1', 'F01'], ['2', 'F03']]) {
@@ -298,7 +304,9 @@ try {
   await desk.click('#map g.aisle-g[data-aisle="F02"]').catch(() => {});
   await wait(1200);
   await saveCard(desk, '#mapSub', 'dashboard-map-aisle');
-  await sub('teams');  await saveCard(desk, '#teamList', 'dashboard-team-plan');
+  await sub('teams');
+  await saveCard(desk, '#teamList', 'dashboard-team-plan');
+  await saveCard(desk, '#msgTable', 'dashboard-message-floor', 6);
   await sub('second'); await saveCard(desk, '#recountTable', 'dashboard-second-counts', 10);
   await sub('reports');
   // a lot that really is in the seeded report, on a pallet in every aisle
@@ -394,6 +402,18 @@ try {
     await save(gun, 'gun-override-reason');
   }
   await gun.click('#btnOverrideCancel'); await wait(600);
+
+  // a word from the office, waiting on the counting screen
+  await post(`/api/admin/sessions/${sess.id}/messages`, { team: '1', urgent: true,
+    body: 'Bring the pallet jack back to the dock when you finish this aisle' });
+  await gun.evaluate(() => window.dispatchEvent(new Event('online')));
+  await gun.waitForFunction(() => {
+    const el = document.getElementById('msgBar');
+    return el && !el.hidden;
+  }, null, { timeout: 40000, polling: 700 }).catch(() => {});
+  await save(gun, 'gun-message');
+  await gun.click('#btnMsgAck').catch(() => {});
+  await wait(900);
 
   // two labels on one pallet
   await gun.click('#btnSameLabel'); await wait(500);

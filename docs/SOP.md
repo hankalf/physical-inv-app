@@ -272,6 +272,14 @@ own stylesheet, so it cannot drift from reality.
 - **Show the next bin in the aisle** — once a team starts a section, the gun tells them
   which bin comes next (001 → 002 → 003), so nothing is skipped. A bin holding several
   pallets keeps the guide until every tag in it is accounted for — see step 15.
+- **The on-screen keyboard never appears by itself**, on any screen — not for the
+  quantity, not for a clock-in number. The scanner is the keyboard. The **Keyboard**
+  button on the counting screen, and **Type it instead** on the sign-on screen, bring one
+  up for whoever has to type.
+- **The app asks the device to stay upright.** An installed app gets portrait from the
+  manifest; a browser tab only gets it once the app owns the screen. If the handheld
+  still rotates, turn auto-rotate off on the device — it is an Android setting, not an
+  app one.
 - **Take the whole screen** — off unless you turn it on. It makes the app fill the display
   at sign-on, but the browser announces that with a bar carrying the site's address, right
   over the counting screen. **Installing the app** on the handheld (step 8) is the quiet
@@ -490,6 +498,18 @@ second tag is not on the inventory report, the gun offers the same answer in the
 |:--:|:--:|
 | ![](images/gun-second-label-ask.png)<br>The gun asks for the other label and names the pallet it will belong to | ![](images/gun-second-label-done.png)<br>Recorded as the same pallet, with no quantity — so the stock is not counted twice |
 
+**A message from the office**
+
+A supervisor can put a line on this team's scanners from the dashboard — *"come to
+the dock when you finish this aisle"*, *"leave F12, the forklift is in it"*. It arrives
+within about twenty seconds, buzzes, and sits on the screen until somebody taps
+**Got it**. An urgent one is red. Tapping Got it tells the dashboard who read it.
+
+<img src="images/gun-message.png" width="300">
+
+*A message waiting on the counting screen. Nothing else is blocked — the scan box is
+still live underneath it.*
+
 **The other buttons**
 
 | Button | When to use it |
@@ -538,7 +558,16 @@ seconds.
 
 *Dashboard &rarr; Map, with an aisle picked: 240 of 618 bins, level by level, and which team holds that racking block.*
 
-- **Team plan** — who is where, queue the next aisles, hand an aisle back.
+- **Team plan** — who is where, queue the next aisles, hand an aisle back. It also holds
+  **Message the floor**: type a line, pick one team or all of them, tick **Urgent** if it
+  cannot wait. The table underneath shows who has read each one — *2 of 3* means a
+  scanner has not seen it yet, so do not assume. **Take it down** removes a message from
+  the handhelds without losing what was said.
+
+![](images/dashboard-message-floor.png)
+
+*Message the floor, under Team plan. "1 of 1" with the scanner named is a message that
+landed; "0 of 3" is one nobody has looked at yet.*
 - **Second counts** — see step 17.
 - **Reports** — see step 18.
 
@@ -697,6 +726,8 @@ a handful of bins are counted every day.
 | Gun says `OFFLINE` with lines queued | Normal in a dead spot | Nothing. They upload when it gets a signal. Do not wipe the device |
 | A scan does nothing | DataWedge is not sending a suffix | DataWedge → Basic data formatting → send **ENTER** (or TAB) |
 | A keypad covers the screen | Somebody left the **Keyboard** button on | Tap **Keyboard** again. It is off by default and never comes up by itself |
+| The screen keeps rotating | Auto-rotate is on, and a browser tab cannot lock the orientation | Install the app (it asks for portrait), or turn auto-rotate off on the handheld |
+| A team says they never got a message | Look at **Read by** on the dashboard | It shows which scanners have tapped Got it. A scanner that is offline gets it on its next sync |
 | A scan seems to land on a button instead of the box | Something else took the focus | Nothing — the app puts the keystrokes in the box and carries on. Tell us if it still happens |
 | The guide is a bin or two ahead of the team | The bins hold several pallets each | Fixed: the guide now stays on a bin until its tags are counted. Check **Show the next bin in the aisle** is on |
 | A scan opens the address bar and the text goes into it | The page has lost the keyboard — either the scanner sends a TAB that used to move focus out of the page, or somebody tapped the browser's own bar | Fixed: TAB now ends a scan like ENTER and the focus never leaves the box. If it ever happens again the app shows a red **Tap here to scan** bar — one tap puts it right |

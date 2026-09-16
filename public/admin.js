@@ -794,8 +794,76 @@
 
   async function refreshAll() {
     if (!sessionId) return;
-    await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts(), refreshPicker()]);
+    await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts(), refreshPicker(), refreshMessages()]);
   }
+
+  /* ------------------------------------------------- a word to the floor
+     Addressed to one team or all of them, and the table says who has read it -
+     a supervisor should not have to walk out and ask. */
+  async function refreshMessages() {
+    const [data, prog] = await Promise.all([
+      apiJson(`/api/admin/sessions/${sessionId}/messages`),
+      apiJson(`/api/admin/sessions/${sessionId}/progress`),
+    ]);
+    // the teams to choose from are the ones signed on, plus any with a plan
+    const teams = [...new Set([
+      ...(prog.signedOn || []).map((t) => t.team),
+      ...(prog.byTeam || []).map((t) => t.team),
+    ])].filter(Boolean).sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true }));
+    const sel = $('fMsgTeam');
+    const keep = sel.value;
+    sel.innerHTML = '<option value="">Every team</option>'
+      + teams.map((t) => `<option value="${t}">Team ${t}</option>`).join('');
+    sel.value = teams.includes(keep) ? keep : '';
+
+    table($('msgTable'),
+      [{ label: 'Sent' }, { label: 'To' }, { label: 'Message' }, { label: 'Read by' }, { label: '' }],
+      data.messages || [],
+      (m) => {
+        const tr = document.createElement('tr');
+        tr.append(cell(new Date(m.created_at).toLocaleTimeString()), cell(m.audience));
+        const body = document.createElement('td');
+        body.className = 'wrap';
+        body.append(m.body);
+        if (m.urgent) { const t = tag('MISSING'); t.textContent = 'urgent'; t.style.marginLeft = '6px'; body.appendChild(t); }
+        if (m.cleared_at) { const t = tag('supervisor'); t.textContent = 'taken down'; t.style.marginLeft = '6px'; body.appendChild(t); }
+        tr.appendChild(body);
+        const read = document.createElement('td');
+        read.append(`${m.acks} of ${m.sent_to || 0}`);
+        if (m.ack_devices) { read.append(' '); const t = tag('MATCH'); t.textContent = m.ack_devices; read.appendChild(t); }
+        tr.appendChild(read);
+        const act = document.createElement('td');
+        if (!m.cleared_at) {
+          const b = document.createElement('button');
+          b.className = 'sm ghost';
+          b.textContent = 'Take it down';
+          b.onclick = async () => {
+            try { await apiJson(`/api/admin/sessions/${sessionId}/messages/${m.id}`, { method: 'DELETE' }); await refreshMessages(); }
+            catch (err) { msg($('msgMsg'), 'err', err.message); }
+          };
+          act.appendChild(b);
+        }
+        tr.appendChild(act);
+        return tr;
+      }, 'Nothing sent to the floor yet.');
+  }
+
+  $('btnSendMsg').onclick = async () => {
+    if (!needSession($('msgMsg'))) return;
+    const body = $('fMsgBody').value.trim();
+    if (!body) { msg($('msgMsg'), 'err', 'Type the message first'); return; }
+    try {
+      const sent = await postJson(`/api/admin/sessions/${sessionId}/messages`, {
+        team: $('fMsgTeam').value, body, urgent: $('fMsgUrgent').checked,
+      });
+      $('fMsgBody').value = '';
+      $('fMsgUrgent').checked = false;
+      msg($('msgMsg'), 'ok', `Sent to ${sent.team ? 'team ' + sent.team : 'every team'}.`,
+        'It is on their scanners within about twenty seconds, and stays until somebody taps Got it.');
+      await refreshMessages();
+    } catch (err) { msg($('msgMsg'), 'err', err.message); }
+  };
+  $('fMsgBody').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnSendMsg').click(); });
 
   // The map is the expensive one and it is usually off-screen, so redraw it when
   // its tab is opened rather than every thirty seconds behind the user's back.

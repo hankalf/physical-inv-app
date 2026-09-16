@@ -46,13 +46,14 @@
     <select id="fSession"><option value="">Loading…</option></select>
 
     <label for="fTeam">Team number</label>
-    <input id="fTeam" class="big" inputmode="numeric" autocomplete="off" placeholder="e.g. 3">
+    <input id="fTeam" class="big" inputmode="none" autocomplete="off" placeholder="e.g. 3">
 
-    <label for="fEmployee">Clock In Numbers — scan or type, then Enter</label>
+    <label for="fEmployee">Clock In Numbers — scan them, then Enter</label>
     <div class="row">
-      <input id="fEmployee" autocomplete="off" autocapitalize="characters" placeholder="Clock in number">
+      <input id="fEmployee" inputmode="none" autocomplete="off" autocapitalize="characters" placeholder="Scan a badge">
       <button id="btnAddEmployee" class="fit" style="margin-top:0">Add</button>
     </div>
+    <button class="link" id="btnSignonKeyboard">Type it instead — show the keyboard</button>
     <div class="chips" id="employeeChips"></div>
     <div class="hint">Everyone on the crew — tap a number to remove it.</div>
 
@@ -75,6 +76,11 @@
 
   <!-- ---------------- assignment (guided) ---------------- -->
   <section class="screen" id="scrAssign">
+    <div class="msgbar" id="msgBarAssign" hidden>
+      <div class="msg-from" id="msgFromAssign"></div>
+      <div class="msg-body" id="msgBodyAssign"></div>
+      <button class="primary" id="btnMsgAckAssign">Got it</button>
+    </div>
     <div class="feedback" id="crewBanner" hidden></div>
     <div id="assignCard"></div>
     <button class="primary" id="btnCount">Start counting</button>
@@ -95,6 +101,11 @@
 
   <!-- ---------------- counting ---------------- -->
   <section class="screen" id="scrScan">
+    <div class="msgbar" id="msgBar" hidden>
+      <div class="msg-from" id="msgFrom"></div>
+      <div class="msg-body" id="msgBody"></div>
+      <button class="primary" id="btnMsgAck">Got it</button>
+    </div>
     <button class="armbar" id="armBar" hidden>
       <b>Tap here to scan</b>
       <span>The keyboard is not pointed at this app — a scan would go to the browser instead.</span>

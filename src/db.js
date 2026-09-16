@@ -135,6 +135,29 @@ CREATE TABLE IF NOT EXISTS signons (
 );
 CREATE INDEX IF NOT EXISTS idx_signon_session ON signons(session_id, started_at);
 
+/* A word from the office to the floor: "come to the dock", "skip aisle 12, the
+   forklift is in it". Addressed to one team or to everybody, and acknowledged
+   from the handheld so a supervisor knows it was read rather than hoping. */
+CREATE TABLE IF NOT EXISTS messages (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  team       TEXT,                          -- NULL: every team on this count
+  body       TEXT    NOT NULL,
+  sent_by    TEXT    NOT NULL,
+  urgent     INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT    NOT NULL,
+  cleared_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, id DESC);
+
+CREATE TABLE IF NOT EXISTS message_acks (
+  message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  device_id  TEXT    NOT NULL,
+  team       TEXT,
+  at         TEXT    NOT NULL,
+  PRIMARY KEY (message_id, device_id)
+);
+
 CREATE TABLE IF NOT EXISTS counts (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
   client_id        TEXT    NOT NULL UNIQUE,

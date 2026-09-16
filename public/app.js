@@ -154,6 +154,8 @@
   function showScreen(name) {
     for (const s of SCREENS) $(s).classList.toggle('active', s === name);
     if (name === 'scrScan') focusScan();
+    // a badge is scanned, not typed: put the cursor where the scan should land
+    if (name === 'scrSignon') setTimeout(() => { try { $('fEmployee').focus({ preventScroll: true }); } catch { /* ignore */ } }, 60);
   }
 
   /* ------------------------------------------------------------ feedback */
@@ -314,6 +316,7 @@
       await pullCountedPallets();
       await flushRecountsDone();
       await refreshSiteSettings();
+      await refreshMessages();
       if ($('scrScan').classList.contains('active') || $('scrAssign').classList.contains('active')) await refreshNextBin();
     } catch (err) {
       console.warn('sync deferred:', err.message);
@@ -495,10 +498,12 @@
       await metaSet('employees', state.employees);
 
       await goFullScreen();
+      await lockPortrait();
       await keepAwake();
       state.team = team;
       state.session = session;
       state.steps = stepsFor(session);
+      refreshMessages().catch(() => {});
       document.body.classList.toggle('big-text', (session.layout_cfg || {}).textSize === 'large');
       state.draft = {};
       state.stepIndex = 0;
@@ -856,6 +861,19 @@
   });
   window.addEventListener('appinstalled', () => { installPrompt = null; $('btnInstall').hidden = true; });
 
+  /*
+   * Upright, and staying upright.
+   *
+   * These are portrait devices held one-handed; a screen that flips to
+   * landscape halfway down an aisle is unusable. The manifest asks for portrait
+   * (which an installed app gets for free) and this asks the device directly,
+   * which browsers only allow once the app owns the screen. Neither is
+   * guaranteed - if the device says no, the app says so rather than pretending.
+   */
+  async function lockPortrait() {
+    try { await screen.orientation?.lock?.('portrait'); } catch { /* not allowed unless installed or full screen */ }
+  }
+
   let wakeLock = null;
   async function keepAwake() {
     if (layoutCfg().keepAwake === false || !('wakeLock' in navigator)) return;
@@ -864,6 +882,54 @@
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && !wakeLock) keepAwake();
   });
+
+  /* ------------------------------------------------------- word from the office
+     A supervisor can put a line on the screen of one team's scanners, or all of
+     them: "come to the dock", "leave F12, the forklift is in it". It sits there
+     until somebody taps Got it, and the dashboard shows who has. */
+  let showingMessage = null;
+
+  async function refreshMessages() {
+    if (!state.session || !state.team || !online()) return;
+    try {
+      const q = `team=${encodeURIComponent(state.team)}&device=${encodeURIComponent(state.deviceId)}`;
+      const r = await api(`/api/sessions/${state.session.id}/messages?${q}`);
+      const next = (r.messages || [])[0] || null;
+      if (next && (!showingMessage || showingMessage.id !== next.id)) {
+        beep(next.urgent ? 'err' : 'warn');
+        try { if (layoutCfg().vibrate !== false && navigator.vibrate) navigator.vibrate([120, 80, 120]); } catch { /* ignore */ }
+      }
+      showingMessage = next;
+      renderMessage();
+    } catch { /* offline: whatever is on screen stays on screen */ }
+  }
+
+  function renderMessage() {
+    for (const [bar, from, body] of [['msgBar', 'msgFrom', 'msgBody'], ['msgBarAssign', 'msgFromAssign', 'msgBodyAssign']]) {
+      const el = $(bar);
+      if (!el) continue;
+      el.hidden = !showingMessage;
+      if (!showingMessage) continue;
+      el.className = 'msgbar' + (showingMessage.urgent ? ' urgent' : '');
+      $(from).textContent = `${showingMessage.urgent ? 'URGENT · ' : ''}${showingMessage.sent_by || 'the office'}`
+        + (showingMessage.team ? ` → team ${showingMessage.team}` : ' → every team');
+      $(body).textContent = showingMessage.body;
+    }
+  }
+
+  async function ackMessage() {
+    const m = showingMessage;
+    if (!m) return;
+    showingMessage = null;
+    renderMessage();
+    focusScan();
+    try {
+      await api(`/api/sessions/${state.session.id}/messages/${m.id}/ack`, {
+        method: 'POST', body: JSON.stringify({ team: state.team, deviceId: state.deviceId }),
+      });
+    } catch { /* it will come back on the next sync, which is the right failure */ }
+    await refreshMessages();
+  }
 
   /*
    * Is the keyboard actually pointed at this app?
@@ -1590,8 +1656,11 @@
   $('btnSaveDevice').onclick = saveDevice;
   $('fDeviceId').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveDevice(); });
   $('armBar').onclick = () => { $('armBar').hidden = true; focusScan(); };
+  $('btnMsgAck').onclick = ackMessage;
+  $('btnMsgAckAssign').onclick = ackMessage;
   $('btnFullScreen').onclick = async () => {
     try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch { /* the device decides */ }
+    await lockPortrait();
     await keepAwake();
     renderInstallHint();
   };
@@ -1629,8 +1698,20 @@
   $('btnModeFull').onclick = () => pickMode('full');
   $('btnModeCycle').onclick = () => pickMode('cycle');
   $('btnAddEmployee').onclick = addEmployee;
-  $('fEmployee').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addEmployee(); } });
-  $('fTeam').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('fEmployee').focus(); } });
+  /* Badges and team numbers are scanned, so the sign-on fields ask the device
+     for no keyboard either. Whoever has to type one says so first. */
+  $('btnSignonKeyboard').onclick = () => {
+    const on = $('fTeam').inputMode !== 'numeric';
+    $('fTeam').inputMode = on ? 'numeric' : 'none';
+    $('fEmployee').inputMode = on ? 'text' : 'none';
+    $('btnSignonKeyboard').textContent = on
+      ? 'Keyboard on — tap to put it away'
+      : 'Type it instead — show the keyboard';
+    if (on) setTimeout(() => { try { $('fEmployee').focus(); $('fEmployee').click(); } catch { /* ignore */ } }, 40);
+    else $('fEmployee').blur();
+  };
+  $('fEmployee').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); addEmployee(); } });
+  $('fTeam').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); $('fEmployee').focus(); } });
 
   $('btnCount').onclick = async () => {
     state.recount = null;

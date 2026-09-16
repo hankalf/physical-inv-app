@@ -233,6 +233,25 @@
       <div class="feedback" id="assignMsg"></div>
       <div class="team-list" id="teamList" style="margin-top:10px"></div>
     </div>
+
+    <div class="card">
+      <h2>Message the floor <span class="muted">a line on the scanners of one team, or all of them</span></h2>
+      <div class="hint" style="margin-top:0">
+        It lands on the handheld within about twenty seconds and stays on the screen until a counter
+        taps <b>Got it</b> — so this shows who has actually read it, not who was told.
+      </div>
+      <div class="inline" style="margin-top:10px">
+        <div class="auto">
+          <label for="fMsgTeam">To</label>
+          <select id="fMsgTeam"><option value="">Every team</option></select>
+        </div>
+        <div><label for="fMsgBody">Message</label><input id="fMsgBody" maxlength="400" placeholder="e.g. Come to the dock when you finish this aisle"></div>
+        <div class="auto"><label class="cb" title="Red on the handheld, and it buzzes twice."><input type="checkbox" id="fMsgUrgent"> Urgent</label></div>
+        <div class="auto"><button class="primary fit" id="btnSendMsg">Send</button></div>
+      </div>
+      <div class="feedback" id="msgMsg"></div>
+      <div class="scroll" style="margin-top:10px"><table id="msgTable"></table></div>
+    </div>
       </div>
 
       <div data-sub="second" data-sub-label="Second counts">

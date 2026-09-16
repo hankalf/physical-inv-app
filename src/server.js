@@ -13,6 +13,7 @@ import {
 } from './db.js';
 import { importMaster, pruneAreaAisles } from './routes/master.js';
 import { boardData } from './routes/board.js';
+import { sendMessage, listMessages, messagesFor, ackMessage, clearMessage } from './routes/messages.js';
 import { setupState } from './routes/setup.js';
 import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId } from './routes/scanner-prompts.js';
 import {
@@ -343,6 +344,19 @@ async function handleHandheld(req, res, url, m) {
     setAssignmentStatus(m[1], m[2], 'done');
     autoAfterAisle(m[1], row.aisle, row.levels, row.team);
     return sendJson(req, res, 200, teamStatus(m[1], body.team));
+  }
+
+  /* Messages from the office. The gun asks on its sync tick and puts anything
+     live on the screen; acknowledging is what takes it off. */
+  if ((m = p.match(/^\/api\/sessions\/(\d+)\/messages$/)) && method === 'GET') {
+    if (!getSession(m[1])) throw httpError(404, 'session not found');
+    const who = device ? device.name : url.searchParams.get('device') || '';
+    return sendJson(req, res, 200, { messages: messagesFor(m[1], url.searchParams.get('team') || '', who) });
+  }
+  if ((m = p.match(/^\/api\/sessions\/(\d+)\/messages\/(\d+)\/ack$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const who = device ? device.name : body.deviceId;
+    return sendJson(req, res, 200, ackMessage(m[1], m[2], { deviceId: who, team: body.team }));
   }
 
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/counted-pallets$/)) && method === 'GET') {
@@ -896,6 +910,21 @@ async function handleAdmin(req, res, url, m) {
     return sendCsv(req, res, `second-counts-session-${m[1]}.csv`, toCsv(listRecounts(m[1]), [
       'id', 'bin', 'pallet_id', 'reason', 'detail', 'source', 'first_team', 'team', 'status', 'first_result', 'second_result', 'created_at', 'done_at',
     ]));
+  }
+
+  // --- messages to the floor
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/messages$/)) && method === 'GET') {
+    return sendJson(req, res, 200, { messages: listMessages(m[1]) });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/messages$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const sent = sendMessage(m[1], { team: body.team, body: body.body, urgent: body.urgent, sentBy: actor });
+    audit(actor, 'sent a message to the floor', `${sent.team ? 'team ' + sent.team : 'every team'}: ${sent.body}`, m[1]);
+    return sendJson(req, res, 200, sent);
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/messages\/(\d+)$/)) && method === 'DELETE') {
+    audit(actor, 'took a message off the scanners', `message ${m[2]}`, m[1]);
+    return sendJson(req, res, 200, clearMessage(m[1], m[2]));
   }
 
   // --- reports

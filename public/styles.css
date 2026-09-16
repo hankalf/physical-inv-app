@@ -197,6 +197,17 @@ button.fit { flex: 0 0 auto; width: auto; }
 .nextbin .nb-code { font-size: 26px; font-weight: 900; letter-spacing: .02em; line-height: 1.1; }
 .nextbin .nb-where { font-size: 13px; color: var(--muted); }
 .nextbin .nb-prog { margin-left: auto; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* A message from the office. Loud enough to be seen with the gun at waist
+   height, and it does not go away until somebody says they have read it. */
+.msgbar {
+  margin: 0 0 10px; padding: 12px 14px; border-radius: 10px;
+  background: #10233f; border: 2px solid var(--accent);
+}
+.msgbar.urgent { background: #3a1418; border-color: var(--err); }
+.msgbar .msg-from { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; }
+.msgbar .msg-body { font-size: 19px; font-weight: 700; margin: 6px 0 10px; line-height: 1.3; }
+.msgbar button { margin: 0; }
+
 /* The page has lost the keyboard: on Android that means the next scan is typed
    into the browser's address bar, which is what a counter sees as "it opened
    the URL bar". Say so, and take a tap to put it right. */
@@ -217,6 +228,21 @@ button.fit { flex: 0 0 auto; width: auto; }
 .nextbin .nb-done {
   flex-basis: 100%; margin: 8px 0 0; padding: 10px 12px; font-size: 15px; font-weight: 700;
   border-radius: 8px; border: 1px solid #8a6a1f; background: #3a2c12; color: #ffd479;
+}
+
+/* Held sideways when the device would not take the lock: the app still works,
+   and says which way up it wants to be rather than leaving a counter to guess
+   why everything is cramped. */
+@media (orientation: landscape) and (max-height: 500px) {
+  body::before {
+    content: "Hold the scanner upright";
+    display: block; padding: 6px 10px; text-align: center; font-size: 13px; font-weight: 700;
+    color: #0d1117; background: var(--warn);
+  }
+  main { padding: 6px 10px; }
+  .prompt { font-size: 20px; margin: 4px 0; }
+  input.big { font-size: 22px; padding: 8px 10px; }
+  .nextbin .nb-code { font-size: 20px; }
 }
 
 /* a freezer crew in gloves, on a 240px screen: everything a size up */
