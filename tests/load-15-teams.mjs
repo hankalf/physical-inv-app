@@ -168,10 +168,13 @@ check('Every pallet the teams reached matches the report', rep.rows.filter((r) =
   `${rep.rows.filter((r) => r.status === 'MATCH').length} of ${TOTAL}`);
 
 const raw = await (await fetch(`${BASE}/api/admin/sessions/${sess.id}/export/counts.csv`, { headers: A })).text();
+const head = raw.trim().split('\n')[0].split(',');
 const lines = raw.trim().split('\n').slice(1);
 check('The export holds one row per count, no more', lines.length === TOTAL, `${lines.length} rows`);
+// by column name, not by counting commas: the export grows a column now and then
+const col = (name) => head.indexOf(name);
 const teamOf = new Map();
-for (const l of lines) { const c = l.split(','); teamOf.set(c[1], c[10]); }
+for (const l of lines) { const c = l.split(','); teamOf.set(c[col('pallet_id')], c[col('team')]); }
 check('Every line is filed under the team that counted it',
   plan.every((p) => p.lines.every((ln) => teamOf.get(ln.palletId) === p.team)));
 

@@ -320,14 +320,14 @@ async function handleHandheld(req, res, url, m) {
     touchDevice(device ? device.uid : body.deviceUid, { team: body.team, sessionId: m[1] });
 
     // Who actually signed on, and can they reach what this team was given?
-    const status = teamStatus(m[1], body.team);
+    const status = teamStatus(m[1], body.team, { exceptDevice: device ? device.name : body.deviceId });
     return sendJson(req, res, 200, { ...status, crew: crewFor(m[1], body.team, body.employees, status) });
   }
 
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/team-status$/)) && method === 'GET') {
     if (!getSession(m[1])) throw httpError(404, 'session not found');
     const team = url.searchParams.get('team') || '';
-    const status = teamStatus(m[1], team);
+    const status = teamStatus(m[1], team, { exceptDevice: device ? device.name : url.searchParams.get('device') || '' });
     const badges = (url.searchParams.get('employees') || '').split(',').filter(Boolean);
     if (!badges.length) return sendJson(req, res, 200, status);
     return sendJson(req, res, 200, { ...status, crew: crewFor(m[1], team, badges, status) });
@@ -935,7 +935,7 @@ async function handleAdmin(req, res, url, m) {
   }
 
   const COUNT_COLS = [
-    'id', 'pallet_id', 'qty', 'location_code', 'aisle', 'sku', 'description', 'lot', 'expiry', 'comments',
+    'id', 'pallet_id', 'qty', 'location_code', 'aisle', 'sku', 'description', 'lot', 'expiry', 'alias_of', 'comments',
     'team', 'employees', 'device_id', 'unknown_pallet', 'unknown_location', 'off_assignment',
     'duplicate_pallet', 'empty_bin', 'pass', 'recount_id', 'override_reason', 'voided', 'scanned_at', 'received_at',
   ];
@@ -943,7 +943,7 @@ async function handleAdmin(req, res, url, m) {
     'pallet_id', 'sku', 'description', 'uom', 'expected_qty', 'counted_qty', 'variance_qty',
     'expected_location', 'found_location', 'times_counted', 'teams', 'comments', 'last_scan', 'status',
     'recounted', 'first_count_qty', 'open_recounts',
-    'expected_lot', 'found_lot', 'lot_status', 'expiry', 'expiry_status',
+    'expected_lot', 'found_lot', 'lot_status', 'expiry', 'expiry_status', 'alias_of', 'also_tagged',
   ];
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/counts\.csv$/))) {
     return sendCsv(req, res, `counts-session-${m[1]}.csv`, toCsv(rawCounts(m[1]), COUNT_COLS));

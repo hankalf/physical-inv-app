@@ -290,7 +290,22 @@
       data.rows,
       (r) => {
         const tr = document.createElement('tr');
-        tr.append(cell(r.pallet_id), cell(r.sku), cell(r.description, 'wrap'), cell(r.expected_qty, 'num'), cell(r.recounted ? r.first_count_qty : '', 'num'), cell(r.counted_qty, 'num'),
+        /* a pallet wearing two labels: say which tag belongs to which pallet,
+           so nobody reads the second one as stock that is missing */
+        const tdPallet = document.createElement('td');
+        tdPallet.append(r.pallet_id);
+        if (r.alias_of) {
+          const t = tag('SECOND LABEL');
+          t.textContent = `2nd label of ${r.alias_of}`;
+          t.style.marginLeft = '5px';
+          tdPallet.appendChild(t);
+        } else if (r.also_tagged) {
+          const t = tag('SECOND LABEL');
+          t.textContent = `also tagged ${r.also_tagged}`;
+          t.style.marginLeft = '5px';
+          tdPallet.appendChild(t);
+        }
+        tr.append(tdPallet, cell(r.sku), cell(r.description, 'wrap'), cell(r.expected_qty, 'num'), cell(r.recounted ? r.first_count_qty : '', 'num'), cell(r.counted_qty, 'num'),
           cell(r.expected_location), cell(r.found_location));
         // lot and expiry are blank unless the site tracks them, so they cost nothing when it does not
         const tdLot = document.createElement('td');
@@ -321,7 +336,7 @@
         if (r.recounted) { td.append(' '); const t2 = tag('2nd'); t2.className = 'tag MATCH'; t2.textContent = '2nd count'; td.appendChild(t2); }
         tr.appendChild(td);
         const tdBtn = document.createElement('td');
-        if (r.status !== 'MATCH' && !r.open_recounts) {
+        if (r.status !== 'MATCH' && r.status !== 'SECOND LABEL' && !r.open_recounts) {
           const b = document.createElement('button'); b.className = 'sm ghost'; b.textContent = 'Recount';
           b.onclick = async () => { try { await postJson(`/api/admin/sessions/${sessionId}/recounts`, { palletId: r.pallet_id, note: `from pallet report: ${r.status}` }); await refreshAll(); } catch (err) { alert(err.message); } };
           tdBtn.appendChild(b);
@@ -491,6 +506,10 @@
     queued:  { stroke: '#8957e5', label: 'queued to a team' },
     idle:    { stroke: '#8b949e', label: 'not started' },
   };
+  /* The ring colour is right for a 2px line on a pale drawing and too dark for
+     8px type: the aisle codes of every untouched aisle were unreadable. Text
+     gets a lighter shade of the same idea. */
+  const RING_TEXT = { done: '#7ee2a0', active: '#79b8ff', partial: '#f2c057', queued: '#c0a6ff', idle: '#cdd9e5' };
   const ringState = (a) => (a.done ? 'done' : a.activeTeam ? 'active'
     : a.counted > 0 ? 'partial' : a.queuedTeams ? 'queued' : 'idle');
   const GUTTER = 46;   // room to the left of the drawing for the aisle labels
@@ -540,7 +559,7 @@
     const code = svgEl('text', { x: cx, y: cy + 0.5, 'text-anchor': anchor, class: 'aisle-label' });
     code.textContent = a.aisle;
     g.appendChild(code);
-    const sub = svgEl('text', { x: cx, y: cy + 8.5, 'text-anchor': anchor, class: 'aisle-sub', fill: ring.stroke });
+    const sub = svgEl('text', { x: cx, y: cy + 8.5, 'text-anchor': anchor, class: 'aisle-sub', fill: RING_TEXT[state] || '#cdd9e5' });
     sub.textContent = a.bins ? `${a.zone ? zoneShort(a.zone) + ' · ' : ''}${pct}%` : (a.zone ? zoneShort(a.zone) : '');
     g.appendChild(sub);
 

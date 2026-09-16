@@ -238,7 +238,7 @@ export function deleteAssignment(sessionId, assignmentId) {
 }
 
 /** What a handheld shows after sign-on: this team's current aisle and queue. */
-export function teamStatus(sessionId, team) {
+export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
   const id = Number(sessionId);
   const t = norm(team);
   autoActivate(id);
@@ -260,16 +260,31 @@ export function teamStatus(sessionId, team) {
     bins = db
       .prepare('SELECT code, level FROM locations WHERE session_id = ? AND aisle = ? ORDER BY code')
       .all(id, active.aisle).filter((r) => inLevels(r.level)).map((r) => r.code);
-    // Which bins already have a count, from any scanner, so a second device on
-    // the same team sees the same picture.
-    const countedBins = db
+    /* How many pallet tags each bin already has, from any scanner, so a second
+       device on the same team sees the same picture - and so the handheld knows
+       a bin with four tags in it is not finished after the first one. */
+    const rows = db
       .prepare(
-        `SELECT DISTINCT c.location_code AS code, l.level
+        `SELECT c.location_code AS code, l.level, COUNT(*) AS tags,
+                SUM(CASE WHEN c.device_id = ? THEN 1 ELSE 0 END) AS mine,
+                SUM(c.empty_bin) AS empties
            FROM counts c JOIN locations l ON l.session_id = c.session_id AND l.code = c.location_code
-          WHERE c.session_id = ? AND c.voided = 0 AND l.aisle = ?`
+          WHERE c.session_id = ? AND c.voided = 0 AND l.aisle = ?
+          GROUP BY c.location_code`
       )
-      .all(id, active.aisle).filter((r) => inLevels(r.level)).map((r) => r.code);
-    progress = { bins: bins.length, counted: countedBins.length, countedBins };
+      .all(norm(exceptDevice), id, active.aisle).filter((r) => inLevels(r.level));
+    const countedBins = rows.map((r) => r.code);
+    progress = {
+      bins: bins.length,
+      counted: countedBins.length,
+      countedBins,
+      binTags: Object.fromEntries(rows.map((r) => [r.code, r.tags])),
+      /* The asking scanner counts its own lines from what it holds, including
+         the ones still queued, so the server hands it everyone else's - added
+         together that is each tag once, never twice. */
+      binTagsOthers: Object.fromEntries(rows.filter((r) => r.tags - r.mine > 0).map((r) => [r.code, r.tags - r.mine])),
+      emptyBins: rows.filter((r) => r.empties > 0).map((r) => r.code),
+    };
   }
 
   // If nothing is active, say who the team is waiting on rather than just "none".

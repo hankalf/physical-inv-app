@@ -127,6 +127,7 @@ export function generateFromVariances(sessionId, { onlyPallets = null, includeMi
 
   for (const r of rows) {
     if (r.recounted) continue; // a second count already settled this bin
+    if (r.status === 'SECOND LABEL') continue;   // a tag on a pallet that was counted, not a variance
     if (r.status === 'MISSING') {
       if (!includeMissing || !r.expected_location) continue;
       if (!lookedIn(r.expected_location)) { skippedUnworked++; continue; }

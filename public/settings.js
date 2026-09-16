@@ -366,6 +366,8 @@
     $('fShowContents').checked = gunCfg.showContents;
     $('fShowNextBin').checked = gunCfg.showNextBin;
     $('fVibrate').checked = gunCfg.vibrate;
+    $('fFullScreen').checked = gunCfg.fullScreen !== false;
+    $('fKeepAwake').checked = gunCfg.keepAwake !== false;
     $('fConfirmOver').value = gunCfg.confirmOver;
     $('fDevice').value = gunCfg.device;
     const chip = $('gunChip');
@@ -382,12 +384,14 @@
     renderGun();
   }
 
-  for (const id of ['fTextSize', 'fShowContents', 'fShowNextBin', 'fVibrate', 'fConfirmOver', 'fDevice']) {
+  for (const id of ['fTextSize', 'fShowContents', 'fShowNextBin', 'fVibrate', 'fFullScreen', 'fKeepAwake', 'fConfirmOver', 'fDevice']) {
     $(id).addEventListener('change', () => {
       gunCfg.textSize = $('fTextSize').value;
       gunCfg.showContents = $('fShowContents').checked;
       gunCfg.showNextBin = $('fShowNextBin').checked;
       gunCfg.vibrate = $('fVibrate').checked;
+      gunCfg.fullScreen = $('fFullScreen').checked;
+      gunCfg.keepAwake = $('fKeepAwake').checked;
       gunCfg.confirmOver = Number($('fConfirmOver').value) || 0;
       gunCfg.device = $('fDevice').value;
       drawPreview();

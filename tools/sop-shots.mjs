@@ -61,21 +61,30 @@ try {
   const day = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
   const AISLES = ['F01', 'F02', 'F03', 'F04', 'F05', 'F06'];
   const binsOf = (a) => bins.filter((b) => b.startsWith(a));
-  const PALLETS_PER_AISLE = 300;         // a freezer aisle is never full to the roof
+  const BINS_WITH_STOCK = 300;           // a freezer aisle is never full to the roof
+  // most positions hold one pallet, some hold two, a few hold three or four
+  const palletsIn = (i) => (i % 23 === 7 ? 4 : i % 11 === 3 ? 3 : i % 5 === 2 ? 2 : 1);
 
   let report = 'Pallet ID,SKU,Description,Qty,Location,Lot Code,Best Before\n';
   const expected = new Map();
-  const palletAt = new Map();            // bin -> pallet id
+  const palletAt = new Map();            // bin -> the pallet ids in it
+  let seq = 0;
   for (const a of AISLES) {
-    binsOf(a).slice(0, PALLETS_PER_AISLE).forEach((bin, i) => {
-      const [sku, desc] = ITEMS[i % ITEMS.length];
-      const id = `${a}-${String(i + 1).padStart(3, '0')}`;
-      const qty = 24 + ((i * 7) % 40);
-      const lot = `L2026${String(100 + ((i * 13) % 800))}`;
-      const exp = day(i % 17 === 0 ? -20 : i % 11 === 0 ? 12 : 120 + (i % 400));
-      expected.set(id, { bin, qty, sku, desc, lot, exp });
-      palletAt.set(bin, id);
-      report += `${id},${sku},"${desc}",${qty},${bin},${lot},${exp}\n`;
+    seq = 0;
+    binsOf(a).slice(0, BINS_WITH_STOCK).forEach((bin, i) => {
+      const here = [];
+      for (let k = 0; k < palletsIn(i); k++) {
+        const n = ++seq;
+        const [sku, desc] = ITEMS[(i + k) % ITEMS.length];
+        const id = `${a}-${String(n).padStart(3, '0')}`;
+        const qty = 24 + ((n * 7) % 40);
+        const lot = `L2026${String(100 + ((i * 13) % 800))}`;
+        const exp = day(n % 17 === 0 ? -20 : n % 11 === 0 ? 12 : 120 + (n % 400));
+        expected.set(id, { bin, qty, sku, desc, lot, exp });
+        here.push(id);
+        report += `${id},${sku},"${desc}",${qty},${bin},${lot},${exp}\n`;
+      }
+      palletAt.set(bin, here);
     });
   }
   await post(`/api/admin/sessions/${sess.id}/master?kind=pallets`, report, csv);
@@ -135,18 +144,19 @@ try {
     const list = binsOf(aisle).slice(0, upTo || undefined);
     const lines = [];
     for (const bin of list) {
-      const id = palletAt.get(bin);
+      const here = (palletAt.get(bin) || []).filter((id) => !SKIP.has(id));
       n++;
       const at = new Date(Date.now() - endsMinAgo * 60000 - (list.length - list.indexOf(bin)) * 11000).toISOString();
-      if (!id || SKIP.has(id)) {
-        if (id) continue;                                          // a pallet nobody found
+      if (!(palletAt.get(bin) || []).length) {
         lines.push({ clientId: `seed-${n}`, palletId: 'EMPTY', qty: 0, emptyBin: 1, location: bin,
           aisle, team, employees: crewOf(team), deviceId: gun.name, scannedAt: at });
         continue;
       }
-      const e = expected.get(id);
-      lines.push({ clientId: `seed-${n}`, palletId: id, qty: e.qty, location: bin, aisle, sku: e.sku,
-        team, employees: crewOf(team), deviceId: gun.name, lot: e.lot, expiry: e.exp, scannedAt: at });
+      for (const id of here) {                                     // every tag in the position
+        const e = expected.get(id);
+        lines.push({ clientId: `seed-${n}-${id}`, palletId: id, qty: e.qty, location: bin, aisle, sku: e.sku,
+          team, employees: crewOf(team), deviceId: gun.name, lot: e.lot, expiry: e.exp, scannedAt: at });
+      }
     }
     // what a real count turns up: a short pallet, an over-count, one in the wrong
     // bin, one with a hand-written label nobody can match to the report
@@ -155,7 +165,7 @@ try {
       withPallet[7].qty -= 14;
       withPallet[23].qty += 9;
       withPallet[38].comments = 'Shrink wrap torn';
-      withPallet[51].location = binsOf(aisle)[PALLETS_PER_AISLE + 12];
+      withPallet[51].location = binsOf(aisle)[BINS_WITH_STOCK + 12];
       withPallet[51].comments = 'Found on the wrong side of the bay';
       if (aisle === 'F02') {
         Object.assign(withPallet[60], { palletId: `HANDWRITTEN-${aisle}`, unknownPallet: 1,
@@ -340,10 +350,27 @@ try {
     await gun.click('#btnSkip').catch(() => {});
     await wait(700);
   };
-  for (let i = 241; i <= 244; i++) await countOne(`F02-${String(i).padStart(3, '0')}`);
+  const f02 = binsOf('F02');
+  // the first uncounted position in this team's aisle, and one that holds more
+  // than a single pallet, so the manual can show both banners
+  const firstOpen = f02.slice(240).find((b) => (palletAt.get(b) || []).length === 1);
+  const multi = f02.slice(240).find((b) => (palletAt.get(b) || []).length > 2);
+  for (const id of palletAt.get(firstOpen) || []) await countOne(id);
   await save(gun, 'gun-step-pallet-mid');
 
-  const nextId = 'F02-245';
+  // a position with three tags in it: the guide stays put until they are all in
+  const stack = palletAt.get(multi) || [];
+  {
+    const p1 = expected.get(stack[0]);
+    await scan(stack[0]); await scan(String(p1.qty)); await scan(p1.lot); await scan(p1.exp); await scan(p1.bin);
+    await gun.click('#btnSkip').catch(() => {});
+    await wait(800);
+    await save(gun, 'gun-bin-more-tags');
+    for (const id of stack.slice(1)) await countOne(id);
+    await wait(600);
+  }
+
+  const nextId = (palletAt.get(f02.slice(240).find((b) => (palletAt.get(b) || []).length === 1 && !(b === firstOpen))) || [])[0];
   const e = expected.get(nextId);
   await scan(nextId);
   await save(gun, 'gun-pallet-scanned');
@@ -367,6 +394,14 @@ try {
     await save(gun, 'gun-override-reason');
   }
   await gun.click('#btnOverrideCancel'); await wait(600);
+
+  // two labels on one pallet
+  await gun.click('#btnSameLabel'); await wait(500);
+  await save(gun, 'gun-second-label-ask');
+  await scan('OLD-TAG-88');
+  await wait(900);
+  await save(gun, 'gun-second-label-done');
+
   await gun.click('#btnHistory'); await wait(1200);
   if (await gun.$('#scrHistory.active')) await save(gun, 'gun-history');
   await gun.close();

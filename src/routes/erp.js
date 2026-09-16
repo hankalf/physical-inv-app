@@ -113,6 +113,8 @@ function sourceRows(sessionId, rowsOf) {
       zone: b.zone || '', aisle: b.aisle || '', level: b.level || '', reference,
     };
   });
+  // a second label is a tag on a pallet already in this file, never its own adjustment
+  rows = rows.filter((r) => r.status !== 'SECOND LABEL');
   if (rowsOf === 'variances') rows = rows.filter((r) => r.status !== 'MATCH');
   return rows;
 }

@@ -100,6 +100,9 @@
     steps: [],
     stepIndex: 0,
     draft: {},
+    lastBin: '',       // the bin being worked, so the guide stays on it while tags remain
+    lastPallet: null,  // { id, bin } - what a second label would belong to
+    awaitingLabel: null,
     override: null,    // { title, why, rows, apply(reasonText) }
     recounts: [],      // second-count tasks offered to this team
     recount: null,     // the task being worked, if any
@@ -293,7 +296,7 @@
             deviceId: l.deviceId, aisle: l.aisle, unknownPallet: l.unknownPallet,
             unknownLocation: l.unknownLocation, offAssignment: l.offAssignment,
             duplicatePallet: l.duplicatePallet, emptyBin: l.emptyBin || 0, pass: l.pass || 1, recountId: l.recountId || null, overrideReason: l.overrideReason,
-            lot: l.lot || null, expiry: l.expiry || null, scannedAt: l.ts,
+            lot: l.lot || null, expiry: l.expiry || null, aliasOf: l.aliasOf || null, scannedAt: l.ts,
           }))),
         });
         const ok = new Set(result.accepted || []);
@@ -311,6 +314,7 @@
       await pullCountedPallets();
       await flushRecountsDone();
       await refreshSiteSettings();
+      if ($('scrScan').classList.contains('active') || $('scrAssign').classList.contains('active')) await refreshNextBin();
     } catch (err) {
       console.warn('sync deferred:', err.message);
     } finally {
@@ -490,6 +494,8 @@
       await metaSet('team', team);
       await metaSet('employees', state.employees);
 
+      await goFullScreen();
+      await keepAwake();
       state.team = team;
       state.session = session;
       state.steps = stepsFor(session);
@@ -551,16 +557,31 @@
       if (state.assignment.crew) { state.crew = state.assignment.crew; await metaSet('crew', state.crew); }
       await metaSet('assignment', state.assignment);
       await refreshRecounts();
+      // what the aisle looks like now, including tags the team's other gun counted
+      await refreshNextBin();
       renderAssignment();
     } catch (err) {
       if (!silent) feedback($('assignMsg'), 'warn', 'Could not refresh', err.message);
     }
   }
 
-  async function localCountedBins(aisle) {
+  /** Every line this scanner holds for the aisle, synced or not. */
+  async function localLinesFor(aisle) {
     const all = await wrap(tx('lines', 'readonly').getAll());
     const bins = new Set(state.assignment?.bins || []);
-    return new Set(all.filter((l) => l.sessionId === state.session.id && !l.voidedLocal && l.aisle === aisle && (!bins.size || bins.has(l.location))).map((l) => l.location));
+    return all.filter((l) => l.sessionId === state.session.id && !l.voidedLocal && l.aisle === aisle
+      && (!bins.size || bins.has(l.location)));
+  }
+
+  async function localCountedBins(aisle) {
+    return new Set((await localLinesFor(aisle)).map((l) => l.location));
+  }
+
+  /** bin -> how many pallet tags this scanner has counted in it. */
+  async function localBinTags(aisle) {
+    const tags = new Map();
+    for (const l of await localLinesFor(aisle)) tags.set(l.location, (tags.get(l.location) || 0) + 1);
+    return tags;
   }
 
   /**
@@ -806,6 +827,31 @@
     return other ? { loc: other.loc, team: other.team, here: false } : null;
   }
 
+  /*
+   * The whole screen, and a screen that stays on.
+   *
+   * A counter in a freezer should not be able to tap a browser tab, an address
+   * bar or a back button by accident, and the display going to sleep between
+   * bays costs a wake-up on every pallet. Installed from its own link the app
+   * already launches full screen; asked for from inside, it takes the screen on
+   * any browser. Both are site settings, and neither is fatal if the device
+   * says no - the app just carries on in a window.
+   */
+  async function goFullScreen() {
+    if (layoutCfg().fullScreen === false) return;
+    if (document.fullscreenElement) return;
+    try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch { /* the device decides */ }
+  }
+
+  let wakeLock = null;
+  async function keepAwake() {
+    if (layoutCfg().keepAwake === false || !('wakeLock' in navigator)) return;
+    try { wakeLock = await navigator.wakeLock.request('screen'); } catch { /* battery saver, or no support */ }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && !wakeLock) keepAwake();
+  });
+
   /* ------------------------------------------------------------ scan flow */
   function focusScan() {
     setTimeout(() => { try { $('fScan').focus(); } catch { /* ignore */ } }, 30);
@@ -826,6 +872,9 @@
     // lot and expiry can be missing on a real pallet, so they are skippable
     $('btnSkip').hidden = !['comments', 'lot', 'expiry'].includes(step);
     $('btnEmpty').hidden = step !== 'pallet';
+    // a second label belongs to the pallet just counted, so it is offered at the
+    // start of the next line rather than in the middle of this one
+    $('btnSameLabel').hidden = step !== 'pallet' || !state.lastPallet || !!state.recount;
     $('commentChips').hidden = step !== 'comments';
     if (state.draft.emptyBin && step === 'bin') $('prompt').textContent = 'EMPTY bin — scan its LOCATION';
     if (step === 'comments') {
@@ -893,14 +942,70 @@
   /* --------------------------------------------------- the next bin to count
      Once a team is in an aisle, walking it is a sequence: 001, 002, 003 ... and
      the gun should say which one is next rather than leaving a counter to keep
-     their own place down a 650-bin aisle. Scanning something else is still
-     fine - the next one is just recomputed. */
-  let countedInAisle = new Set();
+     their own place down a 650-bin aisle.
+
+     A bin is not finished because it has *a* count in it. Bins hold several
+     pallets - four tags in one position is ordinary - and a guide that moved on
+     after the first tag put the whole team a couple of bins out of step. So the
+     gun counts tags per bin and stays put until the report's pallets for that
+     bin are all accounted for, or the counter says there is nothing more there.
+     Scanning something else is still fine; the guide just recomputes. */
+  let countedInAisle = new Set();     // bins with at least one line, for the aisle total
+  let tagsInBin = new Map();          // bin -> pallet tags counted in it, by anyone
+  let expectInBin = new Map();        // bin -> pallets the inventory report puts there
+  let closedBins = new Set();         // bins recorded EMPTY, or closed by the counter
+
+  /** What the report expects in each bin of this aisle, read from the cached list. */
+  async function expectedPerBin(bins) {
+    const want = new Map();
+    if (!bins || !bins.length) return want;
+    const mine = new Set(bins);
+    const all = await wrap(tx('pal', 'readonly').getAll());
+    for (const p of all) if (p.expLoc && mine.has(p.expLoc)) want.set(p.expLoc, (want.get(p.expLoc) || 0) + 1);
+    return want;
+  }
+
+  const closedKey = () => `closedBins:${state.session?.id}:${state.assignment?.active?.aisle || ''}`;
 
   async function refreshCounted() {
     const a = state.assignment;
-    if (!a || !a.active) { countedInAisle = new Set(); return; }
-    countedInAisle = new Set([...(a.progress?.countedBins || []), ...(await localCountedBins(a.active.aisle))]);
+    if (!a || !a.active) { countedInAisle = new Set(); tagsInBin = new Map(); expectInBin = new Map(); closedBins = new Set(); return; }
+    /* Everyone else's tags come from the server; this scanner's come from what it
+       holds, queued lines included. Added together that is each tag once, never
+       twice - and never fewer than the server has seen, which is what a scanner
+       reinstalled mid-count would otherwise report. */
+    const all = a.progress?.binTags || {};
+    const others = a.progress?.binTagsOthers || all;
+    const local = await localBinTags(a.active.aisle);
+    tagsInBin = new Map(Object.entries(others));
+    for (const [code, n] of local) tagsInBin.set(code, (tagsInBin.get(code) || 0) + n);
+    for (const [code, n] of Object.entries(all)) if ((tagsInBin.get(code) || 0) < n) tagsInBin.set(code, n);
+    countedInAisle = new Set(tagsInBin.keys());
+    expectInBin = await expectedPerBin(a.bins);
+    const localEmpty = (await localLinesFor(a.active.aisle)).filter((l) => l.emptyBin).map((l) => l.location);
+    closedBins = new Set([
+      ...(a.progress?.emptyBins || []),
+      ...localEmpty,
+      ...((await metaGet(closedKey())) || []),
+    ]);
+  }
+
+  /** Nothing more to do in this bin: the report is satisfied, or somebody said so. */
+  function binFinished(code) {
+    if (closedBins.has(code)) return true;
+    const got = tagsInBin.get(code) || 0;
+    if (!got) return false;
+    const want = expectInBin.get(code) || 0;
+    // a bin the report does not list is left open: there may be more on the floor
+    return want > 0 && got >= want;
+  }
+
+  async function closeBin(code) {
+    if (!code) return;
+    closedBins.add(code);
+    const key = closedKey();
+    await metaSet(key, [...new Set([...((await metaGet(key)) || []), code])]);
+    renderNextBin();
   }
 
   function nextBinCode() {
@@ -908,7 +1013,16 @@
     if (!a || !a.active || !Array.isArray(a.bins)) return null;
     // a.bins is the assigned aisle and levels already; code order is 001, 002, 003 ...
     const ordered = [...a.bins].sort((x, y) => String(x).localeCompare(String(y), undefined, { numeric: true }));
-    return ordered.find((b) => !countedInAisle.has(b)) || null;
+    return ordered.find((b) => !binFinished(b)) || null;
+  }
+
+  /** The bin being worked right now: the last one counted, while it is unfinished. */
+  function openBinCode() {
+    const bin = state.lastBin;
+    if (!bin) return null;
+    const a = state.assignment;
+    if (!a || !Array.isArray(a.bins) || !a.bins.includes(bin)) return null;
+    return binFinished(bin) ? null : bin;
   }
 
   function renderNextBin() {
@@ -917,26 +1031,48 @@
     const onTask = !!state.recount;
     if (onTask || !a || !a.active || !state.session?.guided || !layoutCfg().showNextBin) { el.hidden = true; return; }
     const total = (a.bins || []).length;
+    const open = openBinCode();
     const next = nextBinCode();
     el.hidden = false;
     el.innerHTML = '';
-    if (!next) {
+    if (!open && !next) {
       el.className = 'nextbin done';
       el.append(`Every bin in ${a.active.aisle} has a count — tap "Aisle complete" when you are happy.`);
       return;
     }
-    el.className = 'nextbin';
-    const lead = document.createElement('span');
-    lead.className = 'nb-lead';
-    lead.textContent = 'Next bin';
+
     const code = document.createElement('b');
     code.className = 'nb-code';
-    code.textContent = next;
     const where = document.createElement('span');
     where.className = 'nb-where';
-    where.textContent = describeBin(next) || '';
+    const lead = document.createElement('span');
+    lead.className = 'nb-lead';
     const prog = document.createElement('span');
     prog.className = 'nb-prog';
+
+    if (open) {
+      /* Still in this bin. Say how many tags are in it and how many the report
+         puts there, so nobody walks away from a bin with a label left in it. */
+      const got = tagsInBin.get(open) || 0;
+      const want = expectInBin.get(open) || 0;
+      el.className = 'nextbin staying';
+      lead.textContent = 'Still in this bin';
+      code.textContent = open;
+      where.textContent = describeBin(open) || '';
+      prog.textContent = want ? `${got} of ${want} tags` : `${got} tag${got === 1 ? '' : 's'}`;
+      const done = document.createElement('button');
+      done.className = 'nb-done';
+      done.id = 'btnBinDone';
+      done.textContent = 'Nothing more here →';
+      done.onclick = async () => { await closeBin(open); focusScan(); };
+      el.append(lead, code, where, prog, done);
+      return;
+    }
+
+    el.className = 'nextbin';
+    lead.textContent = 'Next bin';
+    code.textContent = next;
+    where.textContent = describeBin(next) || '';
     prog.textContent = `${countedInAisle.size} of ${total}`;
     el.append(lead, code, where, prog);
   }
@@ -960,6 +1096,12 @@
   async function handleEntry(raw) {
     const value = norm(raw);
     const step = state.steps[state.stepIndex];
+    if (state.awaitingLabel) {
+      if (!value) return;
+      clearFeedback($('scanMsg'));
+      await saveSecondLabel(value);
+      return;
+    }
     if (!value && step !== 'comments') return;
     clearFeedback($('scanMsg'));
 
@@ -995,6 +1137,8 @@
           title: 'Pallet not on the list',
           why: `${value} is not in the uploaded pallet file.`,
           rows: [['Scanned', value]],
+          scanned: value,
+          offerSecondLabel: true,
           apply: (reason) => { applyPallet(); addReason(reason); },
           feedbackText: 'Unknown pallet accepted',
         });
@@ -1192,6 +1336,10 @@
     state.override = spec;
     beep('err');
     renderOverrideReasons();
+    $('btnOverrideSame').hidden = !(spec.offerSecondLabel && state.lastPallet);
+    if (!$('btnOverrideSame').hidden) {
+      $('btnOverrideSame').textContent = `It is a second label on ${state.lastPallet.id}`;
+    }
     $('ovTitle').textContent = spec.title;
     $('ovWhy').textContent = spec.why;
     kv($('ovCtx'), spec.rows);
@@ -1219,6 +1367,54 @@
     }
   }
 
+  /*
+   * Two labels on one pallet.
+   *
+   * It happens: a pallet is re-tagged and the old label stays on, or a wrapped
+   * pallet carries the label of each of the two it was built from. Counting the
+   * second tag as its own pallet doubles the stock; ignoring it leaves a live
+   * label that the next team, or the next count, will pick up as uncounted. So
+   * the tag is recorded as a line of its own with no quantity, pointing at the
+   * pallet it is stuck to.
+   */
+  function startSecondLabel() {
+    const last = state.lastPallet;
+    if (!last) {
+      feedback($('scanMsg'), 'err', 'Count the pallet first', 'Scan the pallet, then its second label.');
+      return;
+    }
+    state.awaitingLabel = { of: last.id, bin: last.bin };
+    $('prompt').textContent = `Scan the OTHER label on ${last.id}`;
+    $('fScan').value = '';
+    $('btnSameLabel').hidden = true;
+    feedback($('scanMsg'), 'warn', `Second label on ${last.id}`,
+      `It will be recorded in ${last.bin} with no quantity of its own. Tap Back to cancel.`);
+    focusScan();
+  }
+
+  async function saveSecondLabel(tag) {
+    const { of, bin } = state.awaitingLabel;
+    state.awaitingLabel = null;
+    if (tag === of) {
+      feedback($('scanMsg'), 'err', 'That is the same label', `Scan the other tag on ${of}, or tap Back.`);
+      renderStep();
+      return;
+    }
+    const dup = await alreadyCounted(tag);
+    if (dup && dup.loc !== bin) {
+      feedback($('scanMsg'), 'err', `${tag} was counted in ${dup.loc}`, 'That tag belongs to another pallet — tell a supervisor.');
+      renderStep();
+      return;
+    }
+    state.draft = {
+      palletId: tag, qty: 0, location: bin, aliasOf: of,
+      aisle: (await lookupLocation(bin))?.aisle || state.assignment?.active?.aisle || '',
+      comments: `second label on ${of}`,
+    };
+    await commitLine();
+    feedback($('scanMsg'), 'ok', `${tag} is the same pallet as ${of}`, 'Recorded with no quantity, so nothing is counted twice.');
+  }
+
   async function commitLine() {
     const d = state.draft;
     const line = {
@@ -1244,6 +1440,7 @@
       overrideReason: d.overrideReason || null,
       lot: d.lot || null,
       expiry: d.expiry || null,
+      aliasOf: d.aliasOf || null,
       ts: new Date().toISOString(),
       synced: 0,
       voidedLocal: false,
@@ -1251,7 +1448,14 @@
     await wrap(tx('lines', 'readwrite').put(line));
     if (!line.emptyBin) await wrap(tx('dup', 'readwrite').put({ p: line.palletId, loc: line.location, team: line.team }));
     updateChips();
-    if (line.location) countedInAisle.add(line.location);
+    if (line.location) {
+      countedInAisle.add(line.location);
+      tagsInBin.set(line.location, (tagsInBin.get(line.location) || 0) + 1);
+      // an EMPTY line is the counter saying there is nothing in this bin at all
+      if (line.emptyBin) closedBins.add(line.location);
+      state.lastBin = line.location;
+      if (!line.emptyBin && !line.aliasOf) state.lastPallet = { id: line.palletId, bin: line.location };
+    }
     renderNextBin();
     syncQueue();
 
@@ -1332,7 +1536,12 @@
   $('fEmployee').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addEmployee(); } });
   $('fTeam').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('fEmployee').focus(); } });
 
-  $('btnCount').onclick = () => { state.recount = null; showScreen('scrScan'); renderStep(); };
+  $('btnCount').onclick = async () => {
+    state.recount = null;
+    showScreen('scrScan');
+    renderStep();
+    await refreshNextBin();   // the guide starts from what the whole team has counted
+  };
   $('btnRecounts').onclick = async () => { const t = nextRecountTask(); if (t) await startRecount(t); };
   $('btnRecountDone').onclick = () => finishRecount(false);
   $('btnRecountSkip').onclick = () => {
@@ -1363,7 +1572,12 @@
     describeCache();
   };
 
-  $('btnBack').onclick = stepBack;
+  $('btnBack').onclick = () => {
+    // waiting for the other label: Back is how you change your mind
+    if (state.awaitingLabel) { state.awaitingLabel = null; clearFeedback($('scanMsg')); renderStep(); return; }
+    stepBack();
+  };
+  $('btnSameLabel').onclick = startSecondLabel;
   $('btnEmpty').onclick = () => {
     // jump straight to the bin scan; the line is saved with no pallet and qty 0
     state.draft = { emptyBin: 1 };
@@ -1381,6 +1595,20 @@
   };
   $('btnOverrideAccept').onclick = acceptOverride;
   $('btnOverrideCancel').onclick = () => { state.override = null; showScreen('scrScan'); renderStep(); };
+  /* A tag the report has never heard of is often the second label on the pallet
+     just counted, so the dialog offers that answer rather than making somebody
+     accept an unknown pallet they do not have. */
+  $('btnOverrideSame').onclick = async () => {
+    const tag = state.override?.scanned;
+    state.override = null;
+    showScreen('scrScan');
+    state.draft = {};
+    state.stepIndex = 0;
+    renderStep();
+    if (!tag || !state.lastPallet) return;
+    state.awaitingLabel = { of: state.lastPallet.id, bin: state.lastPallet.bin };
+    await saveSecondLabel(tag);
+  };
   $('btnKeyboard').onclick = () => {
     state.keyboardOn = !state.keyboardOn;
     $('btnKeyboard').textContent = state.keyboardOn ? 'Keyboard on' : 'Keyboard';
@@ -1399,6 +1627,46 @@
   $('scrScan').addEventListener('click', (e) => { if (e.target.tagName !== 'BUTTON') focusScan(); });
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && $('scrScan').classList.contains('active')) focusScan();
+  });
+
+  /*
+   * Keeping the scan box in focus.
+   *
+   * A scanner is a keyboard. If anything else on the screen holds focus - and
+   * tapping a button is enough - the scan goes into that button instead of the
+   * box, and its Enter presses the button. On the floor that looked like the
+   * gun "jumping to the Keyboard button" and swallowing a scan.
+   *
+   * Three guards: buttons on the counting screen never take focus, focus comes
+   * straight back if it wanders, and a keystroke that lands anywhere else while
+   * the counting screen is up is put into the box by hand.
+   */
+  for (const b of $('scrScan').querySelectorAll('button')) {
+    b.tabIndex = -1;
+    b.addEventListener('mousedown', (e) => e.preventDefault());
+  }
+  const scanning = () => $('scrScan').classList.contains('active');
+  $('fScan').addEventListener('blur', () => {
+    if (scanning() && !state.override) setTimeout(() => { if (scanning() && document.activeElement !== $('fScan')) focusScan(); }, 60);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (!scanning() || e.target === $('fScan')) return;
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    const f = $('fScan');
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const v = f.value;
+      f.value = '';
+      handleEntry(v);
+      return;
+    }
+    if (e.key.length === 1) {          // a character of a scan that missed the box
+      e.preventDefault();
+      f.value += e.key;
+      f.focus();
+    }
   });
 
   window.addEventListener('online', () => { updateChips(); syncQueue(); });

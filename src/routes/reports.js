@@ -95,6 +95,8 @@ export function palletReport(sessionId, { only = null } = {}) {
                 GROUP_CONCAT(DISTINCT c.location_code) AS found_locations,
                 GROUP_CONCAT(DISTINCT c.team) AS teams,
                 GROUP_CONCAT(DISTINCT c.lot) AS counted_lots,
+                SUM(CASE WHEN c.alias_of IS NULL THEN 0 ELSE 1 END) AS alias_lines,
+                MAX(c.alias_of) AS alias_of,
                 MIN(c.expiry) AS counted_expiry,
                 MAX(c.scanned_at) AS last_scan,
                 GROUP_CONCAT(c.comments, ' | ') AS comments,
@@ -116,7 +118,9 @@ export function palletReport(sessionId, { only = null } = {}) {
               p.sku, p.description, p.uom,
               p.expected_qty, p.expected_location, p.lot AS expected_lot, p.expiry AS expected_expiry,
               c.times_counted, c.counted_qty, c.found_locations, c.teams, c.last_scan, c.comments, c.max_pass,
-              c.counted_lots, c.counted_expiry,
+              c.counted_lots, c.counted_expiry, c.alias_lines, c.alias_of,
+              (SELECT GROUP_CONCAT(DISTINCT a.pallet_id) FROM counts a
+                WHERE a.session_id = ? AND a.voided = 0 AND a.alias_of = k.pallet_id) AS also_tagged,
               f.first_qty, f.first_locations,
               (SELECT COUNT(*) FROM recounts r WHERE r.session_id = ? AND r.pallet_id = k.pallet_id AND r.status != 'done') AS open_recounts,
               CASE WHEN p.pallet_id IS NULL THEN 1 ELSE 0 END AS not_in_master
@@ -126,7 +130,7 @@ export function palletReport(sessionId, { only = null } = {}) {
          LEFT JOIN firstpass f ON f.pallet_id = k.pallet_id
         ORDER BY k.pallet_id`
     )
-    .all(...(ids ? [id, ...ids, id, ...ids, id, ...ids, id, id] : [id, id, id, id, id]));
+    .all(...(ids ? [id, ...ids, id, ...ids, id, ...ids, id, id, id] : [id, id, id, id, id, id]));
 
   return rows.map((r) => {
     const counted = r.times_counted > 0;
@@ -152,8 +156,14 @@ export function palletReport(sessionId, { only = null } = {}) {
       expiryStatus = expiry < today ? 'EXPIRED' : expiry <= soon ? 'EXPIRES SOON' : 'IN DATE';
     }
 
+    /* A pallet whose every line is a second label is not a pallet that was
+       counted: it is a tag on one that was. Saying so beats MISSING, which
+       would send somebody back to look for a pallet that is right there. */
+    const aliasOnly = counted && r.alias_lines > 0 && r.alias_lines === r.times_counted;
+
     let status;
-    if (!counted) status = 'MISSING';
+    if (aliasOnly) status = 'SECOND LABEL';
+    else if (!counted) status = 'MISSING';
     else if (r.not_in_master) status = 'NOT IN MASTER';
     else if (r.times_counted > 1) status = 'COUNTED TWICE';
     else if (misplaced) status = 'WRONG BIN';
@@ -167,7 +177,7 @@ export function palletReport(sessionId, { only = null } = {}) {
       uom: r.uom || '',
       expected_qty: expectedQty ?? '',
       counted_qty: counted ? r.counted_qty : '',
-      variance_qty: variance ?? '',
+      variance_qty: aliasOnly ? '' : (variance ?? ''),
       expected_location: r.expected_location || '',
       found_location: r.found_locations || '',
       times_counted: r.times_counted || 0,
@@ -177,6 +187,8 @@ export function palletReport(sessionId, { only = null } = {}) {
       recounted: r.max_pass === 2 ? 1 : 0,
       first_count_qty: r.max_pass === 2 ? (r.first_qty ?? '') : '',
       open_recounts: r.open_recounts || 0,
+      alias_of: r.alias_of || '',
+      also_tagged: r.also_tagged || '',
       expected_lot: r.expected_lot || '',
       found_lot: foundLot,
       lot_status: lotStatus,
@@ -207,7 +219,7 @@ export function rawCounts(sessionId) {
     .prepare(
       `SELECT c.id, c.pallet_id, c.qty, c.location_code, c.aisle, c.sku,
               COALESCE(p.description, '') AS description,
-              c.lot, c.expiry,
+              c.lot, c.expiry, c.alias_of,
               c.comments, c.team, c.employees, c.device_id,
               c.unknown_pallet, c.unknown_location, c.off_assignment, c.duplicate_pallet, c.empty_bin,
               c.pass, c.recount_id, c.override_reason, c.voided, c.scanned_at, c.received_at

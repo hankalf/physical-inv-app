@@ -193,6 +193,14 @@ button.fit { flex: 0 0 auto; width: auto; }
 .nextbin .nb-where { font-size: 13px; color: var(--muted); }
 .nextbin .nb-prog { margin-left: auto; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .nextbin.done { background: #10281a; border-color: #1d572a; color: #7ee29a; font-weight: 700; font-size: 14px; }
+/* still working this bin: a different colour, so a glance tells you whether the
+   code on the banner is where you are or where you are going next */
+.nextbin.staying { background: #2a2110; border-color: #8a6a1f; }
+.nextbin.staying .nb-code { color: #ffd479; }
+.nextbin .nb-done {
+  flex-basis: 100%; margin: 8px 0 0; padding: 10px 12px; font-size: 15px; font-weight: 700;
+  border-radius: 8px; border: 1px solid #8a6a1f; background: #3a2c12; color: #ffd479;
+}
 
 /* a freezer crew in gloves, on a 240px screen: everything a size up */
 body.big-text .prompt { font-size: 28px; }

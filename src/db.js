@@ -309,6 +309,12 @@ if (!hasCol('sessions', 'ask_lot')) {
 }
 db.exec('CREATE INDEX IF NOT EXISTS idx_counts_lot ON counts(session_id, lot)');
 
+/* One physical pallet, two labels on it. The second tag is recorded as a line
+   of its own so nobody counts it again and the report can explain it - but with
+   no quantity, because the pallet under it has already been counted. */
+if (!hasCol('counts', 'alias_of')) db.exec('ALTER TABLE counts ADD COLUMN alias_of TEXT');
+db.exec('CREATE INDEX IF NOT EXISTS idx_counts_alias ON counts(session_id, alias_of)');
+
 /* A second count should be raised for a variance that matters, not for every
    unit of difference - otherwise the list buries the ones worth walking to. */
 if (!hasCol('sessions', 'recount_min_qty')) {
@@ -515,8 +521,8 @@ const insertCount = db.prepare(`
 INSERT INTO counts (client_id, session_id, pallet_id, qty, location_code, comments, sku,
                     team, employees, device_id, aisle, unknown_pallet, unknown_location,
                     off_assignment, duplicate_pallet, empty_bin, pass, recount_id, override_reason,
-                    lot, expiry, scanned_at, received_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    lot, expiry, alias_of, scanned_at, received_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(client_id) DO NOTHING
 `);
 
@@ -534,7 +540,8 @@ export function saveCounts(sessionId, rows) {
     for (const r of rows) {
       if (!r || !r.clientId) { rejected.push({ clientId: r?.clientId ?? null, reason: 'missing clientId' }); continue; }
       const empty = !!r.emptyBin;
-      const qty = empty ? 0 : Number(r.qty);
+      // a second label on a pallet already counted adds a tag, never a quantity
+      const qty = empty || r.aliasOf ? 0 : Number(r.qty);
       if (!Number.isFinite(qty)) { rejected.push({ clientId: r.clientId, reason: 'invalid qty' }); continue; }
       if (!empty && !norm(r.palletId)) { rejected.push({ clientId: r.clientId, reason: 'missing pallet id' }); continue; }
       if (!norm(r.location)) { rejected.push({ clientId: r.clientId, reason: 'missing location' }); continue; }
@@ -552,6 +559,7 @@ export function saveCounts(sessionId, rows) {
         r.overrideReason ? String(r.overrideReason) : null,
         r.lot ? norm(r.lot).slice(0, 64) : null,
         r.expiry ? String(r.expiry).slice(0, 10) : null,
+        r.aliasOf ? norm(r.aliasOf) : null,
         r.scannedAt || now, now
       );
       accepted.push(r.clientId);

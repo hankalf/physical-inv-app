@@ -18,14 +18,14 @@
   #mapLevels .chip-btn { padding: 5px 13px; font-size: 13px; }
   #map { display: block; font-family: inherit; }
   #map text { fill: var(--text); }
-  #map .aisle-label { font-size: 12px; font-weight: 700; }
+  #map .aisle-label { font-size: 12px; font-weight: 700; fill: #f4f8fd; }
   #map .bay-label { font-size: 9px; fill: var(--muted); }
   #map .team { font-size: 10px; font-weight: 700; fill: #fff; }
   #map rect.cell:hover { stroke: #fff; stroke-width: 2; }
   #map .aisle-g { cursor: pointer; }
   #map .aisle-g:hover .ring { stroke-width: 3.5; }
   #map .aisle-g:hover .ring-fill { opacity: .12 !important; }
-  #map .aisle-sub { font-size: 8px; font-weight: 700; letter-spacing: .02em; }
+  #map .aisle-sub { font-size: 8.5px; font-weight: 700; letter-spacing: .02em; }
   #map.blueprint .aisle-label { fill: #e9eff7; font-size: 11px; font-weight: 800; }
   .legend b { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin-right: 2px; }
   .legend i.ringkey { background: none; border: 2px solid; border-radius: 3px; }
@@ -35,7 +35,9 @@
   .aisle-panel .spacer { flex: 1; }
   .aisle-panel .bar { height: 9px; }
   #map.blueprint { max-width: 100%; height: auto; background: #fff; border-radius: 8px; }
-  #map.blueprint .aisle-label { fill: #10151c; font-size: 11px; }
+  /* The label sits on a dark pill over the drawing, so it is light whatever the
+     map behind it - it was being drawn near-black on near-black. */
+  #map.blueprint .aisle-label { fill: #f4f8fd; font-size: 11px; }
   #map.blueprint .bay-label { display: none; }
 
   .team-list { display: flex; flex-direction: column; gap: 10px; }

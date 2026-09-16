@@ -214,6 +214,8 @@ td.wrap { white-space: normal; }
 .tag.blocked, .tag.auto { color: var(--warn); border-color: #5c4813; background: var(--warn-ink); }
 .tag.MISSING, .tag.COUNTED.TWICE, .tag.off { color: var(--err); border-color: #6e2c2f; background: var(--err-ink); }
 .tag.NOT.IN.MASTER, .tag.taken, .tag.active, .tag.admin { color: #cfe3ff; background: #1b3c68; border-color: #2c5a9c; }
+/* a second label is an explanation, not a problem: neutral, not red */
+.tag.SECOND.LABEL { color: #cdd9e5; background: #26303c; border-color: #3c4a5a; }
 .tag.supervisor { color: var(--muted); }
 
 .chip {

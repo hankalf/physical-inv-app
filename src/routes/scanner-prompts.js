@@ -88,6 +88,8 @@ const LAYOUT_DEFAULTS = {
   confirmOver: 1000,       // re-key a quantity at least this big
   vibrate: true,
   device: 'mc9090',        // which screen the admin preview draws
+  fullScreen: true,        // take the whole screen at sign-on, so there is no browser to tap
+  keepAwake: true,         // hold the screen on while a team is counting
 };
 
 function cleanOrder(list) {
@@ -109,6 +111,8 @@ export function scannerLayout() {
     confirmOver: saved.confirmOver === undefined ? LAYOUT_DEFAULTS.confirmOver
       : Math.max(0, Math.min(1e7, Number(saved.confirmOver) || 0)),
     vibrate: saved.vibrate === undefined ? true : !!saved.vibrate,
+    fullScreen: saved.fullScreen === undefined ? true : !!saved.fullScreen,
+    keepAwake: saved.keepAwake === undefined ? true : !!saved.keepAwake,
     device: saved.device === 'mc9200' ? 'mc9200' : 'mc9090',
     isDefault: !row,
   };
@@ -123,6 +127,8 @@ export function saveScannerLayout(body = {}) {
     showNextBin: body.showNextBin === undefined ? now.showNextBin : !!body.showNextBin,
     confirmOver: body.confirmOver === undefined ? now.confirmOver : Math.max(0, Math.min(1e7, Number(body.confirmOver) || 0)),
     vibrate: body.vibrate === undefined ? now.vibrate : !!body.vibrate,
+    fullScreen: body.fullScreen === undefined ? now.fullScreen : !!body.fullScreen,
+    keepAwake: body.keepAwake === undefined ? now.keepAwake : !!body.keepAwake,
     device: body.device === undefined ? now.device : (body.device === 'mc9200' ? 'mc9200' : 'mc9090'),
   };
   db.prepare("INSERT INTO settings (key, value) VALUES ('scannerLayout', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")

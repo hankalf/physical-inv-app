@@ -217,7 +217,10 @@ after that the server accepts counts from it and stamps its name on every line.
 1. Open Chrome, scan the QR code from its card into the address bar (or type the link).
 2. Chrome menu → **Add to Home screen**. It then launches full-screen and starts even
    with no signal.
-3. Set up **DataWedge** so scans arrive as keystrokes:
+3. The app takes the whole screen once a counter signs on. For a device that should do
+   nothing else at all, lock it down with Zebra's **Enterprise Home Screen**, pointing it
+   at this app — that is a device setting, not an app one.
+4. Set up **DataWedge** so scans arrive as keystrokes:
    - the profile associated with Chrome → **Keystroke output: enabled**
    - **Basic data formatting → Send ENTER key: enabled** *(without this the app never
      sees the end of a scan)*
@@ -248,7 +251,12 @@ own stylesheet, so it cannot drift from reality.
 - **Show contents after a pallet scan** — shows the SKU and description the ERP has for
   that pallet, so the counter can see they are at the right one.
 - **Show the next bin in the aisle** — once a team starts a section, the gun tells them
-  which bin comes next (001 → 002 → 003), so nothing is skipped.
+  which bin comes next (001 → 002 → 003), so nothing is skipped. A bin holding several
+  pallets keeps the guide until every tag in it is accounted for — see step 15.
+- **Take the whole screen** — the app fills the display when a team signs on, so there is
+  no address bar, tab or back button to hit by accident. Leave it on.
+- **Keep the screen awake** — holds the display on while a team is counting, instead of
+  it sleeping between bays.
 - **Buzz on a good or bad scan** — useful with ear defenders.
 - **Text size: Large** — for gloves and a freezer.
 - **Re-key a quantity of at least** — anything this big has to be typed twice. 0 never
@@ -416,6 +424,50 @@ many lines are still queued.
 |:--:|:--:|:--:|
 | ![](images/gun-your-aisle.png)<br>**After sign-on** — the aisle this team has been given, what is queued behind it, and any second counts waiting | ![](images/gun-step-pallet-mid.png)<br>**Question 1** — *Next bin* tells the team which bin comes next in the aisle, so nothing gets skipped | ![](images/gun-pallet-scanned.png)<br>**Question 2** — the gun shows what the ERP says is on that pallet, so the counter can see they are at the right one |
 | ![](images/gun-step-lot.png)<br>**Questions 3 and 4** — only on counts that ask for them. A lot that disagrees with the report is called out here, not a week later in a report | ![](images/gun-step-bin.png)<br>**The last required question** — the gun says where that bin is and which face it is on | ![](images/gun-step-comments.png)<br>**Comments** — tap a reason rather than type one. Left alone, the gun counts down and moves to the next bin by itself |
+
+**A bin with more than one pallet in it**
+
+Four pallet tags in one position is ordinary, and the guide stays put until they are all
+counted. After the first tag the banner turns amber and reads **Still in this bin** with
+a tally — *2 of 4 tags* — taken from the inventory report, so the team knows what is left
+to find before they walk on.
+
+- Scan the next tag in the same bin. The tally goes up; when the report's pallets are all
+  accounted for, the banner turns back to **Next bin** on its own.
+- If the report is wrong and there is nothing more there, tap **Nothing more here →**.
+  The bin is closed and the guide moves on.
+- A bin the report lists nothing for stays open after a count, for the same reason — there
+  may be a second pallet in it that the ERP has never heard of. Tap **Nothing more here →**
+  when it is clear.
+- **Bin is EMPTY** closes a bin outright.
+
+The tally counts what the whole team has done, not just this scanner, so two handhelds
+working the same aisle never double-walk a bay or leave one half counted.
+
+<img src="images/gun-bin-more-tags.png" width="300">
+
+*One tag into a position that holds three: the banner turns amber and stays on the bin
+until the other two are counted, or somebody says there is nothing more there.*
+
+**A pallet with two labels on it**
+
+A re-tagged pallet that kept its old label, or one built from two, has two barcodes and is
+one pallet. Counting both as pallets doubles the stock; ignoring one leaves a live label
+for the next team to find.
+
+1. Count the pallet once, as normal.
+2. Tap **Second label on the same pallet**.
+3. Scan the other label.
+
+The tag is recorded against the pallet it is stuck to, with no quantity of its own. It
+shows on the pallet report as **SECOND LABEL**, the pallet it belongs to says *also tagged*,
+nobody is sent back for it, and it never reaches the ERP file as an adjustment. If the
+second tag is not on the inventory report, the gun offers the same answer in the
+"Pallet not on the list" screen.
+
+| | |
+|:--:|:--:|
+| ![](images/gun-second-label-ask.png)<br>The gun asks for the other label and names the pallet it will belong to | ![](images/gun-second-label-done.png)<br>Recorded as the same pallet, with no quantity — so the stock is not counted twice |
 
 **The other buttons**
 
@@ -622,6 +674,9 @@ a handful of bins are counted every day.
 | Gun: *"Offline and no list cached for this session"* | The handheld has never downloaded this count | Carry it into Wi-Fi once and sign on again |
 | Gun says `OFFLINE` with lines queued | Normal in a dead spot | Nothing. They upload when it gets a signal. Do not wipe the device |
 | A scan does nothing | DataWedge is not sending the Enter key | DataWedge → Basic data formatting → **Send ENTER key** |
+| A scan seems to land on a button instead of the box | Something else took the focus | Nothing — the app puts the keystrokes in the box and carries on. Tell us if it still happens |
+| The guide is a bin or two ahead of the team | The bins hold several pallets each | Fixed: the guide now stays on a bin until its tags are counted. Check **Show the next bin in the aisle** is on |
+| The browser's address bar is in the way | The app is not running full screen | Settings → Scanner screen → **Take the whole screen**, then sign on again. For a locked-down device use Zebra's Enterprise Home Screen |
 | Gun: *"Team N is counting aisle X"* | Another team holds that racking block | Wait, or hand the other aisle back first |
 | Second-count list is enormous | Thresholds are at 0 | Set **Recount over** and **or over %**, and a **cap** (Part 3, step 13) |
 | The map is a schematic, not your drawing | No rack drawing on this count | Dashboard → Progress → Count session → **Map drawing** |
