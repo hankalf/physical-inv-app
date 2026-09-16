@@ -916,7 +916,11 @@
     f.value = '';
     f.placeholder = step === 'comments' ? 'Type a note or tap one below'
       : step === 'expiry' ? 'e.g. 2027-03-15' : '';
-    f.inputMode = step === 'qty' ? 'decimal' : (step === 'comments' || step === 'expiry') ? 'text' : (state.keyboardOn ? 'text' : 'none');
+    /* The scanner is the keyboard. An on-screen keypad is never brought up by
+       the app - not for the quantity, not for a date, not for a comment - it
+       covers half a 240px screen and the counter did not ask for it. The
+       Keyboard button turns it on for whoever really does need to type. */
+    f.inputMode = !state.keyboardOn ? 'none' : (step === 'qty' ? 'decimal' : 'text');
     // lot and expiry can be missing on a real pallet, so they are skippable
     $('btnSkip').hidden = !['comments', 'lot', 'expiry'].includes(step);
     $('btnEmpty').hidden = step !== 'pallet';
@@ -1704,8 +1708,16 @@
   $('btnKeyboard').onclick = () => {
     state.keyboardOn = !state.keyboardOn;
     $('btnKeyboard').textContent = state.keyboardOn ? 'Keyboard on' : 'Keyboard';
-    $('fScan').blur();
+    const f = $('fScan');
+    const keep = f.value;                 // renderStep clears the box; a half-typed entry should survive
+    f.blur();
     renderStep();
+    f.value = keep;
+    /* Android decides whether to show the keyboard when a field takes focus, so
+       the field has to be focused again after inputmode changes - that is what
+       makes the keypad appear on the tap that asked for it, and only then. */
+    if (state.keyboardOn) setTimeout(() => { try { f.focus(); f.click(); } catch { /* ignore */ } }, 40);
+    else focusScan();
   };
 
   /* Wedge scanners are configured with either an ENTER or a TAB suffix, and a

@@ -47,6 +47,8 @@ if (await gun.$('#scrAssign.active')) await gun.click('#btnCount');
 await gun.waitForSelector('#scrScan.active', { timeout: 20000 }); await gun.waitForTimeout(600);
 
 check('Gun: it asks for the bin first now', /BIN LOCATION/.test(await gun.textContent('#prompt')), clean(await gun.textContent('#prompt')));
+check('Gun: no keypad on the bin step either — the scanner is the keyboard',
+  (await gun.$eval('#fScan', (f) => f.inputMode || f.getAttribute('inputmode'))) === 'none');
 check('Gun: large text is applied', await gun.evaluate(() => document.body.classList.contains('big-text')));
 const pallets = readFileSync(`${S}fixtures/pallets.csv`, 'utf8').trim().split('\n').slice(1).map((l) => l.split(','));
 const p1 = pallets.find((c) => /^F01/.test(c[5] || ''));
@@ -55,6 +57,17 @@ await scan(p1[5]);
 check('Gun: then the pallet', /PALLET ID/.test(await gun.textContent('#prompt')), clean(await gun.textContent('#prompt')));
 await scan(p1[0]);
 check('Gun: then the quantity', /QUANTITY/.test(await gun.textContent('#prompt')), clean(await gun.textContent('#prompt')));
+
+/* The keypad is what the device shows for inputmode; on the quantity step it
+   used to be asked for outright, which put a keyboard over half the screen of
+   somebody holding a pallet in the other hand. */
+const inputMode = () => gun.$eval('#fScan', (f) => f.inputMode || f.getAttribute('inputmode'));
+check('Gun: the quantity step does not ask the device for a keypad', (await inputMode()) === 'none', await inputMode());
+await gun.click('#btnKeyboard'); await gun.waitForTimeout(400);
+check('Gun: the Keyboard button asks for one, and a number pad at that',
+  (await inputMode()) === 'decimal' && /Keyboard on/i.test(await gun.textContent('#btnKeyboard')), await inputMode());
+await gun.click('#btnKeyboard'); await gun.waitForTimeout(400);
+check('Gun: and turns it off again', (await inputMode()) === 'none', await inputMode());
 await scan(String(p1[4]));
 await gun.waitForTimeout(1800);
 check('Gun: and the line commits on the last question, whichever one that is',
