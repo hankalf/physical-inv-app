@@ -33,6 +33,7 @@ P-5,SKU-5,Chicken 40lb,12,A01A003
 P-6,SKU-6,Salmon 10lb,30,A01A003
 P-7,SKU-7,Blueberry 30lb,22,A01A005
 P-8,SKU-8,Fries 6x5lb,35,A01A011
+P-9,SKU-9,Peas 12x2lb,17,A01A011
 `;
 
 const sess = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'multi-tag bins' }) }));
@@ -182,6 +183,27 @@ if (erp) check('The ERP file does not carry a second label as its own adjustment
 await scan('https://count.example.com/?d=abc123');
 check('Gun: scanning the app\'s own setup card says so rather than counting a web address',
   /link, not a pallet/i.test(clean(await gun.textContent('#scanMsg'))), clean(await gun.textContent('#scanMsg')).slice(0, 90));
+
+/* ---- a wedge that ends a scan with TAB must not tab out of the page ---- */
+{
+  await gun.fill('#fScan', 'P-9');
+  await gun.press('#fScan', 'Tab');          // the other suffix a wedge is set to send
+  await gun.waitForTimeout(700);
+  check('Gun: a scanner that ends a scan with TAB is taken the same as one that sends ENTER',
+    /QUANTITY/i.test(await gun.textContent('#prompt')), clean(await gun.textContent('#prompt')));
+  check('Gun: and the focus stays in the scan box, so the rest of a scan cannot go to the browser',
+    await gun.evaluate(() => document.activeElement && document.activeElement.id === 'fScan'),
+    await gun.evaluate(() => (document.activeElement || {}).id || 'nothing'));
+  await gun.fill('#fScan', '17'); await gun.press('#fScan', 'Tab'); await gun.waitForTimeout(400);
+  await gun.fill('#fScan', 'A01A011'); await gun.press('#fScan', 'Tab'); await gun.waitForTimeout(700);
+  check('Gun: a whole line can be counted by a TAB-suffix scanner',
+    /PALLET/i.test(await gun.textContent('#prompt')) && /Counted P-9/i.test(clean(await gun.textContent('#scanMsg'))),
+    clean(await gun.textContent('#scanMsg')).slice(0, 70));
+}
+
+/* ---- and it says so when the keyboard is pointed somewhere else ---- */
+check('Gun: the "tap here to scan" warning is out of the way while the app has the keyboard',
+  await gun.$eval('#armBar', (b) => b.hidden));
 
 /* ---- the scan box keeps the focus, whatever gets tapped ---- */
 await gun.click('#btnHistory'); await gun.waitForTimeout(500);

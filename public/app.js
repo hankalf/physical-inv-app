@@ -865,6 +865,27 @@
     if (!document.hidden && !wakeLock) keepAwake();
   });
 
+  /*
+   * Is the keyboard actually pointed at this app?
+   *
+   * In a browser tab the address bar can take the focus - a TAB out of the page,
+   * a stray tap on the browser's own chrome - and from then on every scan is
+   * typed into the omnibox instead of the count. The page can see that
+   * (document.hasFocus() goes false) even though it cannot fix it by itself, so
+   * it says so in red and takes one tap to put right.
+   */
+  function armState() {
+    const bar = $('armBar');
+    if (!bar) return;
+    const counting = $('scrScan').classList.contains('active');
+    const lost = counting && !document.hasFocus();
+    bar.hidden = !lost;
+    if (!lost && counting) focusScan();
+  }
+  setInterval(armState, 700);
+  window.addEventListener('focus', () => { armState(); focusScan(); });
+  window.addEventListener('blur', armState);
+
   /* ------------------------------------------------------------ scan flow */
   /*
    * Putting the cursor back in the scan box without dragging the browser in
@@ -1564,6 +1585,12 @@
   /* ------------------------------------------------------------ wiring */
   $('btnSaveDevice').onclick = saveDevice;
   $('fDeviceId').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveDevice(); });
+  $('armBar').onclick = () => { $('armBar').hidden = true; focusScan(); };
+  $('btnFullScreen').onclick = async () => {
+    try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch { /* the device decides */ }
+    await keepAwake();
+    renderInstallHint();
+  };
   $('btnInstall').onclick = async () => {
     if (!installPrompt) return;
     installPrompt.prompt();
@@ -1572,6 +1599,26 @@
     $('btnInstall').hidden = true;
   };
   $('btnChangeDevice').onclick = () => { $('fDeviceId').value = state.deviceId; showScreen('scrDevice'); };
+
+  /* Running as a page in Chrome, not as the installed app: that is where the
+     address bar comes from, and the only real fix is to install it. */
+  const standalone = () => window.matchMedia('(display-mode: standalone)').matches
+    || window.matchMedia('(display-mode: fullscreen)').matches
+    || window.matchMedia('(display-mode: minimal-ui)').matches
+    || navigator.standalone === true;
+  function renderInstallHint() {
+    const el = $('installHint');
+    if (!el) return;
+    const inTab = !standalone();
+    el.hidden = !inTab;
+    /* Until somebody installs it, one tap takes the browser bar off the screen
+       for the rest of the shift. The browser says so once, with a banner
+       carrying the address - that is the price, and it beats the bar coming
+       back on every pallet. */
+    $('btnFullScreen').hidden = !inTab || !document.documentElement.requestFullscreen;
+  }
+  renderInstallHint();
+  window.matchMedia('(display-mode: standalone)').addEventListener?.('change', renderInstallHint);
 
   $('btnStart').onclick = signon;
   $('btnRefreshSessions').onclick = loadSessions;
@@ -1661,8 +1708,13 @@
     renderStep();
   };
 
+  /* Wedge scanners are configured with either an ENTER or a TAB suffix, and a
+     TAB out of the last field takes the focus out of the page altogether - on
+     Android straight into the browser's address bar, where the rest of the scan
+     is typed. Both end a scan here, and neither moves the focus. */
+  const SCAN_ENTER = new Set(['Enter', 'Tab', 'NumpadEnter']);
   $('fScan').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
+    if (SCAN_ENTER.has(e.key)) {
       e.preventDefault();
       const v = $('fScan').value;
       $('fScan').value = '';
@@ -1700,7 +1752,7 @@
     if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
     if (e.ctrlKey || e.altKey || e.metaKey) return;
     const f = $('fScan');
-    if (e.key === 'Enter') {
+    if (SCAN_ENTER.has(e.key)) {
       e.preventDefault();
       const v = f.value;
       f.value = '';

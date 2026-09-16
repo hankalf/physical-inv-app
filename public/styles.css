@@ -197,6 +197,18 @@ button.fit { flex: 0 0 auto; width: auto; }
 .nextbin .nb-code { font-size: 26px; font-weight: 900; letter-spacing: .02em; line-height: 1.1; }
 .nextbin .nb-where { font-size: 13px; color: var(--muted); }
 .nextbin .nb-prog { margin-left: auto; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* The page has lost the keyboard: on Android that means the next scan is typed
+   into the browser's address bar, which is what a counter sees as "it opened
+   the URL bar". Say so, and take a tap to put it right. */
+.armbar {
+  display: block; width: 100%; margin: 0 0 10px; padding: 14px 12px; text-align: left;
+  border-radius: 10px; border: 2px solid var(--err); background: #3a1418; color: var(--text);
+  font: inherit; animation: armpulse 1.4s ease-in-out infinite;
+}
+.armbar b { display: block; font-size: 20px; color: #ffb4ab; }
+.armbar span { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); }
+@keyframes armpulse { 50% { border-color: #7a2a2f; } }
+
 .nextbin.done { background: #10281a; border-color: #1d572a; color: #7ee29a; font-weight: 700; font-size: 14px; }
 /* still working this bin: a different colour, so a glance tells you whether the
    code on the banner is where you are or where you are going next */

@@ -215,18 +215,35 @@ after that the server accepts counts from it and stamps its name on every line.
 **On each handheld, once:**
 
 1. Open Chrome, scan the QR code from its card into the address bar (or type the link).
-2. Chrome menu → **Add to Home screen** (or tap **Install on this scanner** on the app's
-   own sign-on screen). **Do this — do not leave it running as a browser tab.** Installed,
-   it launches with no browser around it and starts even with no signal; left as a tab,
-   Chrome slides its address bar over the counting screen every time the page moves.
-3. The app takes the whole screen once a counter signs on. For a device that should do
-   nothing else at all, lock it down with Zebra's **Enterprise Home Screen**, pointing it
-   at this app — that is a device setting, not an app one.
-4. Set up **DataWedge** so scans arrive as keystrokes:
+2. **Install it. Do not leave it running as a browser tab.** Chrome menu →
+   **Install app** / **Add to Home screen**, or tap **Install on this scanner** on the
+   app's own sign-on screen. Installed, it runs in its own window — no address bar at
+   all — and starts even with no signal.
+
+   A browser tab is the one setup that causes trouble: Chrome keeps its address bar
+   above the page, brings it back whenever the page moves, and if the keyboard focus
+   ever leaves the page a scan is typed into that bar instead of into the count. The app
+   warns you when it is running in a tab and offers **Hide the browser bar for this
+   shift** as a stopgap.
+
+   *Still want a locked-down device?* See **Kiosk mode** at the end of this step.
+3. Set up **DataWedge** so scans arrive as keystrokes:
    - the profile associated with Chrome → **Keystroke output: enabled**
-   - **Basic data formatting → Send ENTER key: enabled** *(without this the app never
-     sees the end of a scan)*
+   - **Basic data formatting** → send a suffix: **ENTER** *(or TAB — the app takes
+     either as the end of a scan, and neither moves the cursor off the box)*
    - **Barcode input** → enable the symbologies your labels use.
+
+**Kiosk mode.** Three levels, strongest last:
+
+| | What it takes | What the counter sees |
+|---|---|---|
+| **Installed app** (do this) | Chrome menu → Install app, once per device | Its own window. No address bar, no tabs, no back button |
+| **Full screen for a shift** | The button on the sign-on screen, one tap | The bar goes away until the app is closed. The browser says so once, with a banner carrying the address |
+| **Locked device** | Zebra **Enterprise Home Screen** (built into the device) or your MDM, set to launch this app and nothing else | The handheld does nothing but count. Survives a reboot |
+
+The first two are inside the app. The third is a device setting — it is configured on the
+handheld or through your MDM, not here, and it is the only one that stops somebody
+leaving the app altogether.
 
 **Treat a scanner link like a key.** **Reset link** issues a new one and kills the old —
 use it if a device is lost or a link gets out. Removing a scanner stops it entirely. A
@@ -680,7 +697,8 @@ a handful of bins are counted every day.
 | A scan does nothing | DataWedge is not sending the Enter key | DataWedge → Basic data formatting → **Send ENTER key** |
 | A scan seems to land on a button instead of the box | Something else took the focus | Nothing — the app puts the keystrokes in the box and carries on. Tell us if it still happens |
 | The guide is a bin or two ahead of the team | The bins hold several pallets each | Fixed: the guide now stays on a bin until its tags are counted. Check **Show the next bin in the aisle** is on |
-| A bar with the web address appears on every scan | The app is being run as a page in Chrome rather than installed, so Chrome shows its address bar whenever the page moves | Install it: Chrome menu → **Add to Home screen**, or the **Install on this scanner** button on the sign-on screen, then open it from the home-screen icon |
+| A scan opens the address bar and the text goes into it | The page has lost the keyboard — either the scanner sends a TAB that used to move focus out of the page, or somebody tapped the browser's own bar | Fixed: TAB now ends a scan like ENTER and the focus never leaves the box. If it ever happens again the app shows a red **Tap here to scan** bar — one tap puts it right |
+| A bar with the web address appears on every scan | The app is being run as a page in Chrome rather than installed | Install it: Chrome menu → **Install app**, or the **Install on this scanner** button on the sign-on screen, then open it from the home-screen icon |
 | The browser's address bar is in the way | Same thing — the app is not installed | As above. For a device that should run nothing else, use Zebra's Enterprise Home Screen |
 | Gun: *"Team N is counting aisle X"* | Another team holds that racking block | Wait, or hand the other aisle back first |
 | Second-count list is enormous | Thresholds are at 0 | Set **Recount over** and **or over %**, and a **cap** (Part 3, step 13) |

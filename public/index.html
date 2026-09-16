@@ -58,7 +58,13 @@
 
     <button class="primary" id="btnStart">Sign on &amp; load list</button>
     <button class="ghost" id="btnRefreshSessions">Refresh sessions</button>
+    <div class="feedback show warn" id="installHint" hidden>
+      <b>Running in the browser</b>
+      <div>Scans can land in the address bar. Install it — Chrome menu → <b>Add to Home screen</b>,
+      or the button below — then open it from the home-screen icon.</div>
+    </div>
     <button class="link" id="btnInstall" hidden>Install on this scanner</button>
+    <button class="link" id="btnFullScreen" hidden>Hide the browser bar for this shift</button>
     <button class="link" id="btnChangeDevice">Change scanner ID</button>
     <div class="muted" id="deviceInfo"></div>
 
@@ -89,6 +95,10 @@
 
   <!-- ---------------- counting ---------------- -->
   <section class="screen" id="scrScan">
+    <button class="armbar" id="armBar" hidden>
+      <b>Tap here to scan</b>
+      <span>The keyboard is not pointed at this app — a scan would go to the browser instead.</span>
+    </button>
     <div class="feedback show warn" id="recountBanner" hidden></div>
     <div class="nextbin" id="nextBin" hidden></div>
     <div class="context" id="ctx"></div>
