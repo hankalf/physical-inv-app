@@ -11,8 +11,9 @@ wrong.
 > **About the screenshots.** Every picture below is the real application, photographed
 > against a count part-way through a morning: the actual Front Royal bin list, three
 > teams, four scanners, two aisles finished and three being counted. The names, pallet
-> IDs and lot codes are made up. If a screen changes, `node tools/sop-shots.mjs` rebuilds
-> every picture in this manual from scratch.
+> IDs and lot codes are made up. If a screen changes, `npm run docs` rebuilds every
+> picture in this manual from scratch and re-prints
+> **[SOP.pdf](SOP.pdf)** — the same manual typeset for paper.
 
 ---
 
@@ -413,10 +414,8 @@ many lines are still queued.
 
 | | | |
 |:--:|:--:|:--:|
-| ![](images/gun-your-aisle.png) | ![](images/gun-step-pallet-mid.png) | ![](images/gun-pallet-scanned.png) |
-| **After sign-on** — the aisle this team has been given, what is queued behind it, and any second counts waiting | **Question 1** — *Next bin* tells the team which bin comes next in the aisle, so nothing gets skipped | **Question 2** — the gun shows what the ERP says is on that pallet, so the counter can see they are at the right one |
-| ![](images/gun-step-lot.png) | ![](images/gun-step-bin.png) | ![](images/gun-step-comments.png) |
-| **Questions 3 and 4** — only on counts that ask for them. A lot that disagrees with the report is called out here, not a week later in a report | **The last required question** — the gun says where that bin is and which face it is on | **Comments** — tap a reason rather than type one. Left alone, the gun counts down and moves to the next bin by itself |
+| ![](images/gun-your-aisle.png)<br>**After sign-on** — the aisle this team has been given, what is queued behind it, and any second counts waiting | ![](images/gun-step-pallet-mid.png)<br>**Question 1** — *Next bin* tells the team which bin comes next in the aisle, so nothing gets skipped | ![](images/gun-pallet-scanned.png)<br>**Question 2** — the gun shows what the ERP says is on that pallet, so the counter can see they are at the right one |
+| ![](images/gun-step-lot.png)<br>**Questions 3 and 4** — only on counts that ask for them. A lot that disagrees with the report is called out here, not a week later in a report | ![](images/gun-step-bin.png)<br>**The last required question** — the gun says where that bin is and which face it is on | ![](images/gun-step-comments.png)<br>**Comments** — tap a reason rather than type one. Left alone, the gun counts down and moves to the next bin by itself |
 
 **The other buttons**
 
@@ -442,8 +441,7 @@ wrong barcode.
 
 | | |
 |:--:|:--:|
-| ![](images/gun-override.png) | ![](images/gun-override-reason.png) |
-| A pallet that is not on the inventory report: the gun will not take the line until somebody says why | The reasons in that list are the ones set in Settings, so they are your site's words. **Other** is always offered |
+| ![](images/gun-override.png)<br>A pallet that is not on the inventory report: the gun will not take the line until somebody says why | ![](images/gun-override-reason.png)<br>The reasons in that list are the ones set in Settings, so they are your site's words. **Other** is always offered |
 
 ### Step 16 — The supervisor's procedure (on the dashboard)
 

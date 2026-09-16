@@ -22,8 +22,9 @@ third-party runtime dependencies: Node 22's built-in HTTP server and `node:sqlit
 > who has never opened the app: deployment and logins, uploading the lists, registering
 > scanners, every option on a count explained, what a counter does on the handheld,
 > and how a count is finished and sent to the ERP. Thirty-odd screenshots of the real
-> app, rebuilt from scratch by `node tools/sop-shots.mjs`. This README is the reference
-> behind it.
+> app. There is a printable copy at **[docs/SOP.pdf](docs/SOP.pdf)** — 35 pages, and
+> `npm run docs` rebuilds both the screenshots and the PDF from scratch. This README is
+> the reference behind it.
 
 ---
 

@@ -88,14 +88,16 @@ try {
   await post('/api/admin/default-session', { sessionId: sess.id }).catch(() => {});
 
   // a crew, so the team plan and the equipment-reach check have something to show
+  /* Between them a team has to reach every level it is given: a dock truck and
+     a scissor lift for B and C, a high reach for D to F. */
   const CREW = [
-    ['E1043', 'Marcus Obi', 'HIGH REACH', '1'], ['E1088', 'Priya Raman', 'FOOT', '1'],
-    ['E1102', 'Tom Zielinski', 'HIGH REACH', '2'], ['E1157', 'Ava Delgado', 'DOCK TRUCK', '2'],
-    ['E1163', 'Luis Ferreira', 'SCISSOR LIFT', '3'], ['E1190', 'Grace Kim', 'FOOT', '3'],
-    ['E1204', 'Nadia Haddad', 'FOOT', ''], ['E1219', 'Owen Blackwell', 'DOCK TRUCK', ''],
+    ['E1043', 'Marcus Obi', ['HIGH REACH', 'SCISSOR LIFT'], '1'], ['E1088', 'Priya Raman', ['DOCK TRUCK', 'FOOT'], '1'],
+    ['E1102', 'Tom Zielinski', ['HIGH REACH', 'SCISSOR LIFT'], '2'], ['E1157', 'Ava Delgado', ['DOCK TRUCK', 'FOOT'], '2'],
+    ['E1163', 'Luis Ferreira', ['HIGH REACH', 'SCISSOR LIFT'], '3'], ['E1190', 'Grace Kim', ['DOCK TRUCK', 'FOOT'], '3'],
+    ['E1204', 'Nadia Haddad', ['FOOT'], ''], ['E1219', 'Owen Blackwell', ['DOCK TRUCK'], ''],
   ];
   for (const [badge, name, equipment] of CREW) {
-    await post('/api/admin/people/employees', { badge, name, dept: 'Warehouse', equipment: [equipment] }).catch(() => {});
+    await post('/api/admin/people/employees', { badge, name, dept: 'Warehouse', equipment }).catch(() => {});
   }
   for (const name of ['1', '2', '3']) {
     const team = await post('/api/admin/people/teams', { name }).catch(() => null);
