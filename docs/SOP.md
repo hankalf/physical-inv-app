@@ -8,6 +8,12 @@ and Part 2 once, when the app is first set up. Parts 3 to 5 are what you do for 
 count. Part 6 is the cycle-count programme, Part 7 is what to do when something goes
 wrong.
 
+> **About the screenshots.** Every picture below is the real application, photographed
+> against a count part-way through a morning: the actual Front Royal bin list, three
+> teams, four scanners, two aisles finished and three being counted. The names, pallet
+> IDs and lot codes are made up. If a screen changes, `node tools/sop-shots.mjs` rebuilds
+> every picture in this manual from scratch.
+
 ---
 
 ## Contents
@@ -38,6 +44,10 @@ on a PC.
 | **Settings** | `/settings` | Whoever sets the count up | Supervisor login |
 | **Office board** | `/board` | Anyone — put it on the office TV | **None.** Read-only |
 | **Cycle counts** | `/cycle` | Whoever runs the daily programme | Supervisor login |
+
+![](images/sign-in.png)
+
+*Every supervisor page opens on the same sign-in. Signing in on one carries to all four.*
 
 **What the system does.** It holds a list of every bin in the warehouse and a list of
 what the ERP thinks is in them. Counters scan pallets into bins on the handhelds. The
@@ -124,6 +134,10 @@ empty), or with the superadmin username and password if you set one.
 If somebody forgets their password, an admin presses **Reset password** on their row and
 gives them the new starter password. The same forced change happens again.
 
+![](images/settings-logins.png)
+
+*Settings &rarr; Logins. Each person has their own login and their own password; the starter password is shown once.*
+
 ### Step 5 — Turn the shared password off
 
 Once at least one admin login exists, set `SHARED_PASSWORD_LOGIN=off` in the server
@@ -157,6 +171,10 @@ else.**
 
 The card reports what it read: how many bins, how many aisles, and anything it skipped.
 
+![](images/settings-bin-list.png)
+
+*Settings &rarr; Lists &amp; racking. Each list has its own card, and each reports exactly what it read.*
+
 ### Step 7 — Pair the aisles into racking blocks
 
 **Settings → Lists & racking → Aisles & racking blocks.**
@@ -172,6 +190,10 @@ same racking from both sides.
 If you have uploaded a rack drawing, **Pair from drawing** uses it instead — more
 reliable than counting aisles off by hand.
 
+![](images/settings-racking-blocks.png)
+
+*Aisles paired into racking blocks. F01+F02 share racking, so only one team works that block at a time.*
+
 ### Step 8 — Register the scanners
 
 **Settings → Scanners → Scanner setup.**
@@ -184,6 +206,10 @@ after that the server accepts counts from it and stamps its name on every line.
 2. Press **Add scanner**. Repeat for every handheld.
 3. Press **Print setup cards**. You get one card per scanner with its own QR code. Cut
    them up and tape one inside each cradle.
+
+![](images/settings-scanners.png)
+
+*Settings &rarr; Scanners. One row per handheld: its link, when it was last seen, Reset link and Remove.*
 
 **On each handheld, once:**
 
@@ -200,6 +226,10 @@ after that the server accepts counts from it and stamps its name on every line.
 use it if a device is lost or a link gets out. Removing a scanner stops it entirely. A
 link used on more than one device is flagged in the table; that is normal after a
 scanner is wiped and worth asking about otherwise.
+
+![](images/scanner-setup-cards.png)
+
+*Print setup cards: one per scanner, each with its own QR code and the three steps to do on the device.*
 
 ### Step 9 — Set up the counting screen
 
@@ -226,6 +256,10 @@ own stylesheet, so it cannot drift from reality.
 Press **Save**. Scanners pick the change up within about half a minute, between pallets
 — nobody has to sign out.
 
+![](images/settings-scanner-screen.png)
+
+*Settings &rarr; Scanner screen. Drag the questions into the order your site counts in; the preview is the real MC9090 screen size.*
+
 ### Step 10 — Set the one-tap reasons
 
 **Settings → Scanners → What the scanners offer.**
@@ -243,6 +277,10 @@ something here and nothing anywhere else.
   wait for the counter.
 
 Press **Save**; again, scanners pick it up within about half a minute.
+
+![](images/settings-reason-codes.png)
+
+*Settings &rarr; Scanners &rarr; What the scanners offer. These are the buttons a counter taps instead of typing.*
 
 ---
 
@@ -266,6 +304,10 @@ Press **Save**; again, scanners pick it up within about half a minute.
 
 The new count inherits the rack drawing the last one used, so the map works immediately.
 
+![](images/dashboard-session-picker.png)
+
+*The count is picked in the header, on every supervisor page. Each row carries its own progress, so two counts are never confused.*
+
 ### Step 12 — Check the guided setup
 
 **Settings → Getting started.**
@@ -274,6 +316,14 @@ A checklist worked out from what is actually in the database, not from a box som
 ticked. It tells you what is still missing and takes you straight to the screen that
 fixes it. For a full count it wants: the bin list, the inventory report, registered
 scanners, the scanner screen, racking blocks, a crew roster and a team plan.
+
+![](images/settings-getting-started-new.png)
+
+*A new count: two things stop anybody scanning, the rest are recommended. Every step links to the screen that fixes it.*
+
+![](images/settings-getting-started.png)
+
+*The same checklist once that count is ready to run: every step green, and the count already running.*
 
 ### Step 13 — Set the count's options
 
@@ -299,6 +349,10 @@ questions it asks change between pallets, never mid-line.
 > one-unit difference, and by mid-morning the second-count list is longer than the count.
 > Set them once and the list stays short enough that people actually walk it.
 
+![](images/dashboard-count-options.png)
+
+*Dashboard &rarr; Progress &rarr; Count session: every option above, on one card, for the count picked in the header.*
+
 ### Step 14 — Give the teams their aisles
 
 **Dashboard → Team plan.**
@@ -313,6 +367,14 @@ or queue aisles by hand here.
   foot, they will not be queued onto level D. A supervisor can override this.
 - Two teams **can** share one aisle as long as their levels do not overlap — a forklift
   crew high and a crew on foot low.
+
+![](images/dashboard-team-plan.png)
+
+*Dashboard &rarr; Team plan: each team's aisles in counting order — what they are on now, and what is queued behind it.*
+
+![](images/teams-and-crew.png)
+
+*Teams &amp; crew (`/teams`): the crew list and who is on which team. Equipment is what decides which levels a team can be sent to.*
 
 ---
 
@@ -329,6 +391,9 @@ or queue aisles by hand here.
    number to remove it.
 5. Press **Sign on & load list**. The handheld downloads the bin and pallet lists for
    that count and can work from then on **with no signal**.
+<img src="images/gun-sign-on.png" width="300">
+
+*Signing on: the count, the team number, and every clock-in number on the crew.*
 
 **Counting a pallet**
 
@@ -346,6 +411,13 @@ The line is saved on the handheld the moment the last question is answered, and 
 to the server whenever there is a signal. The header shows `online` / `OFFLINE` and how
 many lines are still queued.
 
+| | | |
+|:--:|:--:|:--:|
+| ![](images/gun-your-aisle.png) | ![](images/gun-step-pallet-mid.png) | ![](images/gun-pallet-scanned.png) |
+| **After sign-on** — the aisle this team has been given, what is queued behind it, and any second counts waiting | **Question 1** — *Next bin* tells the team which bin comes next in the aisle, so nothing gets skipped | **Question 2** — the gun shows what the ERP says is on that pallet, so the counter can see they are at the right one |
+| ![](images/gun-step-lot.png) | ![](images/gun-step-bin.png) | ![](images/gun-step-comments.png) |
+| **Questions 3 and 4** — only on counts that ask for them. A lot that disagrees with the report is called out here, not a week later in a report | **The last required question** — the gun says where that bin is and which face it is on | **Comments** — tap a reason rather than type one. Left alone, the gun counts down and moves to the next bin by itself |
+
 **The other buttons**
 
 | Button | When to use it |
@@ -356,6 +428,9 @@ many lines are still queued.
 | **My aisle** | Back to the assignment screen |
 | **History** | The last 50 lines from this scanner. **Void** removes a wrong line from the totals |
 | **Aisle complete — next aisle** | Only when the aisle is finished. It frees the racking block and releases the team's next aisle |
+<img src="images/gun-history.png" width="300">
+
+*History: the last 50 lines this scanner counted. **Void** takes a wrong one out of the totals.*
 
 **When the gun asks for a reason**
 
@@ -365,6 +440,11 @@ from the list (or **Other**), add a note if it helps, and press **Accept and con
 The line is saved and flagged for a supervisor. **Cancel — rescan** if it was simply the
 wrong barcode.
 
+| | |
+|:--:|:--:|
+| ![](images/gun-override.png) | ![](images/gun-override-reason.png) |
+| A pallet that is not on the inventory report: the gun will not take the line until somebody says why | The reasons in that list are the ones set in Settings, so they are your site's words. **Other** is always offered |
+
 ### Step 16 — The supervisor's procedure (on the dashboard)
 
 **Dashboard**, with the count picked in the header. It refreshes itself every 30
@@ -373,9 +453,19 @@ seconds.
 - **Progress** — lines, bins counted, pallets, exceptions; and a row per team with what
   they are counting right now and when they last scanned. A team whose last scan was 40
   minutes ago is a team with a problem.
+
+![](images/dashboard-progress.png)
+
+*Dashboard &rarr; Progress. The row per team is the one to watch: what they are on, how much they have done, and when they last scanned.*
+
 - **Map** — the warehouse from above. Aisles are outlined by state: not started, being
   counted now (with the team's number), done. Click an aisle for its bins, who counted
   it and what is flagged.
+
+![](images/dashboard-map-aisle.png)
+
+*Dashboard &rarr; Map, with an aisle picked: 240 of 618 bins, level by level, and which team holds that racking block.*
+
 - **Team plan** — who is where, queue the next aisles, hand an aisle back.
 - **Second counts** — see step 17.
 - **Reports** — see step 18.
@@ -395,6 +485,10 @@ and no clock-in numbers.
 
 It follows the newest open count on its own. To pin it to a particular one, add the
 session to the address: `/board?session=12`.
+
+![](images/office-board.png)
+
+*The office board, for the TV: percentage counted, aisles complete, every team, and every aisle coloured by state.*
 
 ---
 
@@ -418,6 +512,10 @@ supervisor.
 Work these down before you close the count. A count closed with open second counts is a
 count with known-wrong numbers in it.
 
+![](images/dashboard-second-counts.png)
+
+*Dashboard &rarr; Second counts. The counter is told the bin and the reason type, never the numbers — and never the team that counted it first.*
+
 ### Step 19 — Read the reports
 
 **Dashboard → Reports.**
@@ -428,9 +526,19 @@ count with known-wrong numbers in it.
   columns, because the right count of the wrong lot is still wrong. **Only exceptions**
   narrows it to what needs attention — including a wrong lot or a date about to run out,
   even when the quantity is right.
+
+![](images/dashboard-pallet-report.png)
+
+*The pallet report with **Hide matching pallets** ticked: a short pallet, an expired date, one expiring soon. This is the list to work down.*
+
 - **Find a lot** — after a recall notice: type part of a lot code and get every case of
   it, both where it was actually counted and where the report expected it, so a pallet
   nobody found still shows up.
+
+![](images/dashboard-find-a-lot.png)
+
+*A recall: five cases of the lot found on the floor, and a sixth the report still expects in an aisle nobody has reached.*
+
 - **Count sheets** — printable paper sheets by aisle and level, for a dead battery or an
   auditor.
 - **Exports** — the full count (every line as scanned), exceptions only, uncounted bins,
@@ -444,6 +552,10 @@ count with known-wrong numbers in it.
    are configuration — add a layout rather than editing the file by hand afterwards.
 2. **Preview** and read the first rows.
 3. **Download CSV** and import it into the ERP.
+
+![](images/settings-erp.png)
+
+*Settings &rarr; ERP &amp; backups. Preview before you download; the layout decides the column names and which rows are included.*
 
 ### Step 21 — Close the count
 
@@ -464,6 +576,10 @@ against it goes with it. Close counts; delete only the ones created by mistake.
   overrode what, who raised second counts, who searched for a lot. **Export the log** for
   an auditor.
 
+![](images/settings-backups.png)
+
+*Backups on the left, the log on the right. Both export.*
+
 ---
 
 ## Part 6 — The cycle-count programme
@@ -482,12 +598,21 @@ a handful of bins are counted every day.
    - **which bins**: *longest since it was counted*, *never counted*, or a *random sample*,
    - optionally a **zone, aisle or levels** to stay inside.
 4. **Preview**, then **Generate**. The bins appear on the handhelds as tasks.
+
+![](images/cycle-counts.png)
+
+*`/cycle` &rarr; Today's bins: how many, which ones, and optionally the zone or aisles to stay inside.*
+
 5. Counters pick **Cycle count** at sign-on and work the list. Each bin is counted as it
    stands — it is *the* count for that bin, not a second opinion.
 6. **Coverage** shows how much of the warehouse has been counted in the period, and what
    has not been touched. Export it for the auditors.
 7. A **schedule** generates the batch automatically each day or week so nobody has to
    remember.
+
+![](images/cycle-batches.png)
+
+*The batches that have been generated, and the programme's own bin list and inventory report.*
 
 ---
 

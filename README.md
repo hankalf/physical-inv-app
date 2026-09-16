@@ -18,10 +18,11 @@ Runs from one Docker image either on Railway or on a PC inside the warehouse. No
 third-party runtime dependencies: Node 22's built-in HTTP server and `node:sqlite`.
 
 > **Setting it up for the first time, or running a count?** Read
-> **[docs/SOP.md](docs/SOP.md)** — the working manual, written for somebody who has
-> never opened the app: deployment and logins, uploading the lists, registering
+> **[docs/SOP.md](docs/SOP.md)** — the illustrated working manual, written for somebody
+> who has never opened the app: deployment and logins, uploading the lists, registering
 > scanners, every option on a count explained, what a counter does on the handheld,
-> and how a count is finished and sent to the ERP. This README is the reference
+> and how a count is finished and sent to the ERP. Thirty-odd screenshots of the real
+> app, rebuilt from scratch by `node tools/sop-shots.mjs`. This README is the reference
 > behind it.
 
 ---
