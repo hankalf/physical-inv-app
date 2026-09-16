@@ -16,6 +16,11 @@
 [hidden] { display: none !important; }
 html, body {
   margin: 0; padding: 0; height: 100%;
+  /* dvh follows the browser's own chrome, so the app is never taller than what
+     is actually visible - and with the document unable to scroll, Chrome has no
+     reason to slide its address bar in over the counting screen */
+  height: 100dvh;
+  overflow: hidden;
   background: var(--bg); color: var(--text);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 17px; overscroll-behavior: none;

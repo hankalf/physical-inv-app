@@ -104,6 +104,8 @@ await page.click('#btnSaveGun'); await page.waitForTimeout(900);
 check('Settings: saving says what the scanners will ask', /bin → pallet id → quantity/.test(await page.textContent('#gunMsg')), clean(await page.textContent('#gunMsg')).slice(0, 100));
 const saved = await j(await fetch(`${BASE}/api/admin/scanner-layout`, { headers: A }));
 check('Settings: and it is stored', saved.order.slice(0, 3).join(',') === 'bin,pallet,qty' && saved.showNextBin === false, JSON.stringify({ o: saved.order.join(','), n: saved.showNextBin }));
+check('Taking the whole screen is off unless a site asks for it — the browser announces it with a banner carrying the site address',
+  def.fullScreen === false && def.keepAwake === true, `fullScreen ${def.fullScreen}, keepAwake ${def.keepAwake}`);
 check('Changing it is recorded in the log',
   (await j(await fetch(`${BASE}/api/admin/audit?limit=20`, { headers: A }))).some((r) => r.action === 'changed the scanner screen layout'));
 await page.click('#btnResetGun'); await page.waitForTimeout(500);

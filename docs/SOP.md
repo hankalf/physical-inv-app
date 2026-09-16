@@ -215,8 +215,10 @@ after that the server accepts counts from it and stamps its name on every line.
 **On each handheld, once:**
 
 1. Open Chrome, scan the QR code from its card into the address bar (or type the link).
-2. Chrome menu → **Add to Home screen**. It then launches full-screen and starts even
-   with no signal.
+2. Chrome menu → **Add to Home screen** (or tap **Install on this scanner** on the app's
+   own sign-on screen). **Do this — do not leave it running as a browser tab.** Installed,
+   it launches with no browser around it and starts even with no signal; left as a tab,
+   Chrome slides its address bar over the counting screen every time the page moves.
 3. The app takes the whole screen once a counter signs on. For a device that should do
    nothing else at all, lock it down with Zebra's **Enterprise Home Screen**, pointing it
    at this app — that is a device setting, not an app one.
@@ -253,8 +255,10 @@ own stylesheet, so it cannot drift from reality.
 - **Show the next bin in the aisle** — once a team starts a section, the gun tells them
   which bin comes next (001 → 002 → 003), so nothing is skipped. A bin holding several
   pallets keeps the guide until every tag in it is accounted for — see step 15.
-- **Take the whole screen** — the app fills the display when a team signs on, so there is
-  no address bar, tab or back button to hit by accident. Leave it on.
+- **Take the whole screen** — off unless you turn it on. It makes the app fill the display
+  at sign-on, but the browser announces that with a bar carrying the site's address, right
+  over the counting screen. **Installing the app** on the handheld (step 8) is the quiet
+  way to lose the browser, and the one to prefer.
 - **Keep the screen awake** — holds the display on while a team is counting, instead of
   it sleeping between bays.
 - **Buzz on a good or bad scan** — useful with ear defenders.
@@ -676,7 +680,8 @@ a handful of bins are counted every day.
 | A scan does nothing | DataWedge is not sending the Enter key | DataWedge → Basic data formatting → **Send ENTER key** |
 | A scan seems to land on a button instead of the box | Something else took the focus | Nothing — the app puts the keystrokes in the box and carries on. Tell us if it still happens |
 | The guide is a bin or two ahead of the team | The bins hold several pallets each | Fixed: the guide now stays on a bin until its tags are counted. Check **Show the next bin in the aisle** is on |
-| The browser's address bar is in the way | The app is not running full screen | Settings → Scanner screen → **Take the whole screen**, then sign on again. For a locked-down device use Zebra's Enterprise Home Screen |
+| A bar with the web address appears on every scan | The app is being run as a page in Chrome rather than installed, so Chrome shows its address bar whenever the page moves | Install it: Chrome menu → **Add to Home screen**, or the **Install on this scanner** button on the sign-on screen, then open it from the home-screen icon |
+| The browser's address bar is in the way | Same thing — the app is not installed | As above. For a device that should run nothing else, use Zebra's Enterprise Home Screen |
 | Gun: *"Team N is counting aisle X"* | Another team holds that racking block | Wait, or hand the other aisle back first |
 | Second-count list is enormous | Thresholds are at 0 | Set **Recount over** and **or over %**, and a **cap** (Part 3, step 13) |
 | The map is a schematic, not your drawing | No rack drawing on this count | Dashboard → Progress → Count session → **Map drawing** |

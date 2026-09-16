@@ -88,7 +88,11 @@ const LAYOUT_DEFAULTS = {
   confirmOver: 1000,       // re-key a quantity at least this big
   vibrate: true,
   device: 'mc9090',        // which screen the admin preview draws
-  fullScreen: true,        // take the whole screen at sign-on, so there is no browser to tap
+  /* Off by default: Chrome announces a page taking the screen with a banner
+     carrying the site's address, which on a handheld lands over the counting
+     screen. Installing the app from its own link is the quiet way to get the
+     same thing, so this is opt-in for sites that want it anyway. */
+  fullScreen: false,       // take the whole screen at sign-on
   keepAwake: true,         // hold the screen on while a team is counting
 };
 
@@ -111,7 +115,7 @@ export function scannerLayout() {
     confirmOver: saved.confirmOver === undefined ? LAYOUT_DEFAULTS.confirmOver
       : Math.max(0, Math.min(1e7, Number(saved.confirmOver) || 0)),
     vibrate: saved.vibrate === undefined ? true : !!saved.vibrate,
-    fullScreen: saved.fullScreen === undefined ? true : !!saved.fullScreen,
+    fullScreen: saved.fullScreen === undefined ? LAYOUT_DEFAULTS.fullScreen : !!saved.fullScreen,
     keepAwake: saved.keepAwake === undefined ? true : !!saved.keepAwake,
     device: saved.device === 'mc9200' ? 'mc9200' : 'mc9090',
     isDefault: !row,

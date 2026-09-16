@@ -838,10 +838,23 @@
    * says no - the app just carries on in a window.
    */
   async function goFullScreen() {
-    if (layoutCfg().fullScreen === false) return;
+    // opt-in only: the browser announces this with a banner carrying the site
+    // address, and on a handheld that lands right over the counting screen
+    if (layoutCfg().fullScreen !== true) return;
     if (document.fullscreenElement) return;
     try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch { /* the device decides */ }
   }
+
+  /* Chrome offers to install the app in a bar that shows its address. Useful on
+     a desk, in the way of a counter with a pallet in front of them - so it is
+     held back until the gun is idle on the sign-on screen. */
+  let installPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    installPrompt = e;
+    $('btnInstall').hidden = false;      // offered on the sign-on screen instead
+  });
+  window.addEventListener('appinstalled', () => { installPrompt = null; $('btnInstall').hidden = true; });
 
   let wakeLock = null;
   async function keepAwake() {
@@ -853,8 +866,22 @@
   });
 
   /* ------------------------------------------------------------ scan flow */
+  /*
+   * Putting the cursor back in the scan box without dragging the browser in
+   * with it.
+   *
+   * Chrome on Android slides its address bar into view when a page scrolls an
+   * input into focus - and this app re-focuses the box after every scan, which
+   * on a handheld meant a bar with the site's address popping up over the
+   * counting screen on every single pallet. `preventScroll` stops the scroll
+   * that triggers it, and a box that already has the focus is left alone.
+   */
   function focusScan() {
-    setTimeout(() => { try { $('fScan').focus(); } catch { /* ignore */ } }, 30);
+    setTimeout(() => {
+      const f = $('fScan');
+      if (!f || document.activeElement === f) return;
+      try { f.focus({ preventScroll: true }); } catch { try { f.focus(); } catch { /* ignore */ } }
+    }, 30);
   }
 
   function renderStep() {
@@ -1104,6 +1131,17 @@
     }
     if (!value && step !== 'comments') return;
     clearFeedback($('scanMsg'));
+
+    /* The setup card is taped to the cradle, so its QR gets scanned by mistake.
+       It is this app's own link, not a pallet - say so rather than filing a
+       count against a web address. */
+    if (/^HTTPS?:\/\//i.test(value)) {
+      feedback($('scanMsg'), 'err', 'That is a link, not a pallet',
+        /[?&]D=/i.test(value) ? 'It looks like this scanner\'s setup card. Scan the label on the pallet.' : 'Scan the label on the pallet.');
+      $('fScan').value = '';
+      focusScan();
+      return;
+    }
 
     if (step === 'pallet') {
       const dup = await alreadyCounted(value);
@@ -1526,6 +1564,13 @@
   /* ------------------------------------------------------------ wiring */
   $('btnSaveDevice').onclick = saveDevice;
   $('fDeviceId').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveDevice(); });
+  $('btnInstall').onclick = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    try { await installPrompt.userChoice; } catch { /* they can decide later */ }
+    installPrompt = null;
+    $('btnInstall').hidden = true;
+  };
   $('btnChangeDevice').onclick = () => { $('fDeviceId').value = state.deviceId; showScreen('scrDevice'); };
 
   $('btnStart').onclick = signon;
@@ -1665,7 +1710,7 @@
     if (e.key.length === 1) {          // a character of a scan that missed the box
       e.preventDefault();
       f.value += e.key;
-      f.focus();
+      if (document.activeElement !== f) { try { f.focus({ preventScroll: true }); } catch { f.focus(); } }
     }
   });
 

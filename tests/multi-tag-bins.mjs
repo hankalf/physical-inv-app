@@ -32,6 +32,7 @@ P-4,SKU-4,Fries 6x5lb,60,A01A001
 P-5,SKU-5,Chicken 40lb,12,A01A003
 P-6,SKU-6,Salmon 10lb,30,A01A003
 P-7,SKU-7,Blueberry 30lb,22,A01A005
+P-8,SKU-8,Fries 6x5lb,35,A01A011
 `;
 
 const sess = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'multi-tag bins' }) }));
@@ -160,6 +161,27 @@ check('No second count is raised for a second label', !list.some((t) => t.pallet
 
 const erp = await (await fetch(`${BASE}/api/admin/sessions/${sess.id}/export/erp.csv`, { headers: A })).text().catch(() => '');
 if (erp) check('The ERP file does not carry a second label as its own adjustment', !/P-6-OLD-TAG/.test(erp));
+
+/* ---- nothing about a scan should invite the browser's own UI in ---- */
+{
+  // Chrome slides its address bar in when a page scrolls an input into view, so
+  // a scan must not move the document or re-focus a box that is already focused
+  await gun.evaluate(() => { window.__refocus = 0; const f = document.getElementById('fScan'); f.addEventListener('focus', () => { window.__refocus++; }); });
+  const before = await gun.evaluate(() => ({ x: window.scrollX, y: window.scrollY, h: document.documentElement.scrollHeight, v: window.innerHeight }));
+  await countOne('P-8', 35, 'A01A011');
+  const after = await gun.evaluate(() => ({ x: window.scrollX, y: window.scrollY, refocus: window.__refocus }));
+  check('Gun: counting a pallet never scrolls the page', after.x === before.x && after.y === before.y,
+    `${before.x},${before.y} -> ${after.x},${after.y}`);
+  check('Gun: the page is never taller than the screen, so there is nothing to scroll',
+    before.h <= before.v + 1, `${before.h}px of content in ${before.v}px`);
+  check('Gun: and the scan box that already has the focus is not focused again',
+    after.refocus === 0, `${after.refocus} refocus(es)`);
+}
+
+/* ---- the setup card taped to the cradle is not a pallet ---- */
+await scan('https://count.example.com/?d=abc123');
+check('Gun: scanning the app\'s own setup card says so rather than counting a web address',
+  /link, not a pallet/i.test(clean(await gun.textContent('#scanMsg'))), clean(await gun.textContent('#scanMsg')).slice(0, 90));
 
 /* ---- the scan box keeps the focus, whatever gets tapped ---- */
 await gun.click('#btnHistory'); await gun.waitForTimeout(500);
