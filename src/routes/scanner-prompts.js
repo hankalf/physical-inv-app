@@ -46,6 +46,32 @@ export function setDefaultSessionId(id) {
   return defaultSessionId();
 }
 
+/*
+ * The comments step used to wait five seconds and now waits two.
+ *
+ * A site that had ever saved its reason codes carried the old five in its
+ * settings row, so the new default would never have reached it: the number a
+ * counter actually waits would still be five, and somebody would have to know
+ * to go and change it. This moves that one value once, and leaves a marker so
+ * a site that deliberately chooses five keeps it.
+ */
+export function migrateCommentTimeout() {
+  const done = db.prepare("SELECT value FROM settings WHERE key = 'commentTimeoutMovedTo2'").get();
+  if (done) return { moved: false, reason: 'already done' };
+  db.prepare("INSERT INTO settings (key, value) VALUES ('commentTimeoutMovedTo2', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+    .run(new Date().toISOString());
+
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'scannerPrompts'").get();
+  if (!row) return { moved: false, reason: 'nothing saved - it takes the new default anyway' };
+  let saved = {};
+  try { saved = JSON.parse(row.value); } catch { return { moved: false, reason: 'unreadable' }; }
+  if (Number(saved.commentTimeout) !== 5) return { moved: false, reason: `left at ${saved.commentTimeout}` };
+
+  saved.commentTimeout = DEFAULT_TIMEOUT;
+  db.prepare("UPDATE settings SET value = ? WHERE key = 'scannerPrompts'").run(JSON.stringify(saved));
+  return { moved: true, from: 5, to: DEFAULT_TIMEOUT };
+}
+
 export function scannerPrompts() {
   const row = db.prepare("SELECT value FROM settings WHERE key = 'scannerPrompts'").get();
   let saved = {};

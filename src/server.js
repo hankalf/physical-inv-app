@@ -15,7 +15,7 @@ import { importMaster, pruneAreaAisles } from './routes/master.js';
 import { boardData } from './routes/board.js';
 import { sendMessage, listMessages, messagesFor, ackMessage, clearMessage } from './routes/messages.js';
 import { setupState } from './routes/setup.js';
-import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId } from './routes/scanner-prompts.js';
+import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout } from './routes/scanner-prompts.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks,
@@ -1054,6 +1054,17 @@ server.listen(PORT, HOST, () => {
         console.warn(`[warn] could not create SUPERADMIN_USER=${SUPERADMIN_USER}: ${err.message}`);
       }
     }
+  }
+
+  /* Settings that changed shape between versions, moved once on the way up. */
+  try {
+    const moved = migrateCommentTimeout();
+    if (moved.moved) {
+      console.log(`  comments step: moved from ${moved.from}s to ${moved.to}s (the new default) - change it under Settings → Scanner screen`);
+      audit('startup', 'changed the scanner reasons', `comments step moved from ${moved.from}s to ${moved.to}s on upgrade`);
+    }
+  } catch (err) {
+    console.warn(`[warn] could not move the comments timeout: ${err.message}`);
   }
 
   // Say plainly how somebody signs in, because getting this wrong locks people out.
