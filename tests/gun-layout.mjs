@@ -117,6 +117,26 @@ await page.click('#btnSaveGun'); await page.waitForTimeout(900);
 check('Settings: saving says what the scanners will ask', /bin → pallet id → quantity/.test(await page.textContent('#gunMsg')), clean(await page.textContent('#gunMsg')).slice(0, 100));
 const saved = await j(await fetch(`${BASE}/api/admin/scanner-layout`, { headers: A }));
 check('Settings: and it is stored', saved.order.slice(0, 3).join(',') === 'bin,pallet,qty' && saved.showNextBin === false, JSON.stringify({ o: saved.order.join(','), n: saved.showNextBin }));
+/* ---- how long the comments step waits, set where the screen is set ---- */
+check('The comments step ships moving on after two seconds, not standing there',
+  (await j(await fetch(`${BASE}/api/admin/scanner-prompts`, { headers: A }))).commentTimeout === 2,
+  String((await j(await fetch(`${BASE}/api/admin/scanner-prompts`, { headers: A }))).commentTimeout));
+await page.click('#btnCommentMore'); await page.click('#btnCommentMore'); await page.waitForTimeout(200);
+check('Settings: the seconds can be nudged up without a keyboard',
+  (await page.$eval('#fCommentTimeout', (el) => el.value)) === '4', await page.$eval('#fCommentTimeout', (el) => el.value));
+await page.click('#btnCommentLess'); await page.waitForTimeout(200);
+check('Settings: ...and down', (await page.$eval('#fCommentTimeout', (el) => el.value)) === '3');
+await page.click('#btnSaveGun'); await page.waitForTimeout(900);
+check('Settings: saving the screen saves the wait with it',
+  (await j(await fetch(`${BASE}/api/admin/scanner-prompts`, { headers: A }))).commentTimeout === 3,
+  String((await j(await fetch(`${BASE}/api/admin/scanner-prompts`, { headers: A }))).commentTimeout));
+check('Settings: and says what the counter will get', /moves on after 3 seconds/.test(await page.textContent('#gunMsg')),
+  clean(await page.textContent('#gunMsg')).slice(0, 120));
+for (let i = 0; i < 4; i++) await page.click('#btnCommentLess');
+await page.waitForTimeout(200);
+check('Settings: it cannot be nudged below zero, which is the setting that waits for the counter',
+  (await page.$eval('#fCommentTimeout', (el) => el.value)) === '0');
+
 check('Taking the whole screen is off unless a site asks for it — the browser announces it with a banner carrying the site address',
   def.fullScreen === false && def.keepAwake === true, `fullScreen ${def.fullScreen}, keepAwake ${def.keepAwake}`);
 check('Changing it is recorded in the log',

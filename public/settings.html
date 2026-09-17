@@ -93,6 +93,17 @@
             <div class="auto"><label class="cb" title="Holds the display on while a team is counting, so it does not sleep between bays."><input type="checkbox" id="fKeepAwake"> Keep the screen awake</label></div>
           </div>
           <div class="inline" style="margin-top:12px">
+            <div>
+              <label for="fCommentTimeout">Comments step moves on after</label>
+              <div class="row" style="gap:6px;align-items:center">
+                <button class="fit sm" id="btnCommentLess" title="A second less" style="margin:0;width:42px">−</button>
+                <input id="fCommentTimeout" class="sm" type="number" min="0" max="120" style="flex:0 0 74px;width:74px;text-align:center">
+                <button class="fit sm" id="btnCommentMore" title="A second more" style="margin:0;width:42px">+</button>
+                <span class="muted" style="white-space:nowrap">seconds &middot; 0 waits for the counter</span>
+              </div>
+            </div>
+          </div>
+          <div class="inline" style="margin-top:12px">
             <div class="auto">
               <label for="fTextSize">Text size</label>
               <select id="fTextSize">
@@ -218,11 +229,9 @@
       </div>
       <hr>
       <div class="inline">
-        <div class="auto">
-          <label for="fCommentTimeout">Comments step moves on after</label>
-          <input id="fCommentTimeout" class="sm" type="number" min="0" max="120" style="width:80px">
-          <span class="muted"> seconds · 0 waits for the counter</span>
-        </div>
+        <div class="hint" style="margin:0">How long the comments step waits before moving on by itself is set
+          on the <a href="#" data-goto="gun" style="color:var(--accent)">Scanner screen</a> tab, with the rest
+          of what the counting screen does.</div>
         <div class="auto"><button class="primary fit" id="btnSavePrompts">Save</button></div>
         <div class="auto"><button class="fit" id="btnResetPrompts">Restore the defaults</button></div>
       </div>

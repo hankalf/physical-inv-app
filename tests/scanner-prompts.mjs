@@ -22,7 +22,8 @@ const dev = await j(await fetch(`${BASE}/api/admin/devices`, { method: 'POST', h
 
 /* ---------------- the API ---------------- */
 const def = await j(await fetch(`${BASE}/api/admin/scanner-prompts`, { headers: A }));
-check('It ships with sensible defaults', def.isDefault === true && def.comments.includes('Damaged') && def.commentTimeout === 5,
+check('It ships with sensible defaults, and a comments step that does not keep anybody waiting',
+  def.isDefault === true && def.comments.includes('Damaged') && def.commentTimeout === 2,
   `${def.comments.length} comments, timeout ${def.commentTimeout}`);
 const saved = await j(await fetch(`${BASE}/api/admin/scanner-prompts`, { method: 'POST', headers: A,
   body: JSON.stringify({ comments: ['Frozen to the rack', '  Frozen to the rack ', 'Shrink wrap torn', ''], commentTimeout: 3 }) }));
@@ -176,12 +177,13 @@ await page.fill('#fNewComment', 'pallet on its side'); await page.click('#btnAdd
 check('Settings: adding the same one twice is refused', /already there/.test(await page.textContent('#promptMsg')), clean(await page.textContent('#promptMsg')));
 await page.click('#commentList .chip-btn'); await page.waitForTimeout(300);
 check('Settings: clicking one removes it', (await page.$$('#commentList .chip-btn')).length === 2);
-await page.fill('#fCommentTimeout', '7');
 await page.click('#btnSavePrompts'); await page.waitForTimeout(800);
-check('Settings: saving reports what the scanners will do',
-  /move on by itself after 7/.test(await page.textContent('#promptMsg')), clean(await page.textContent('#promptMsg')).slice(0, 90));
+check('Settings: saving says the scanners will pick it up', /Saved/.test(await page.textContent('#promptMsg')), clean(await page.textContent('#promptMsg')).slice(0, 90));
 const after = await j(await fetch(`${BASE}/api/admin/scanner-prompts`, { headers: A }));
-check('Settings: and it really is saved', after.commentTimeout === 7 && after.comments.includes('Pallet on its side'), after.comments.join('|'));
+check('Settings: and it really is saved', after.comments.includes('Pallet on its side'), after.comments.join('|'));
+check('Settings: the wait before the comments step moves on is set with the rest of the screen, not here',
+  (await page.$eval('#fCommentTimeout', (el) => el.closest('[data-sub]').dataset.sub)) === 'gun',
+  await page.$eval('#fCommentTimeout', (el) => el.closest('[data-sub]').dataset.sub));
 await page.screenshot({ path: `${S}screenshots/scanner-prompts.png`, clip: { x: 0, y: 0, width: 1500, height: 620 } });
 const log = await j(await fetch(`${BASE}/api/admin/audit?limit=20`, { headers: A }));
 check('Changing them is recorded in the log', log.some((r) => r.action === 'changed the scanner reasons'));

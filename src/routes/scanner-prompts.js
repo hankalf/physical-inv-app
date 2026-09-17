@@ -14,8 +14,10 @@ const DEFAULTS = {
   comments: ['Damaged', 'Partial pallet', 'Mixed pallet', 'Label unreadable', 'Needs recount', 'Blocked / could not reach'],
   overrides: ['Label unreadable', 'New receipt, not on the report', 'Relabelled', 'Hand-written ID', 'Supervisor said to count it'],
 };
-/** How long the comments step waits before moving itself on. 0 turns it off. */
-const DEFAULT_TIMEOUT = 5;
+/* How long the comments step waits before moving itself on. Two seconds is
+   long enough to tap a chip and short enough that a counter with nothing to say
+   is not standing there waiting; 0 turns it off and waits for them. */
+const DEFAULT_TIMEOUT = 2;
 
 const clean = (list, cap = 24) => [...new Set(
   (Array.isArray(list) ? list : [])

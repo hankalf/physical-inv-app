@@ -344,6 +344,10 @@
       ? `<div class="nextbin"><span class="nb-lead">Next bin</span><b class="nb-code">F01A00${idx + 1}</b><span class="nb-prog">${idx} of 94</span></div>` : '';
     const chips = step === 'comments'
       ? `<div class="chips">${(promptState.comments || []).slice(0, 4).map((c) => `<button class="chip-btn">${esc(c)}</button>`).join('')}</div>` : '';
+    // the countdown is part of what a counter sees, so the preview shows it too
+    const secs = Number(promptState?.commentTimeout || 0);
+    const moveOn = step === 'comments' && secs
+      ? `<div class="moveon">Moving on to the next bin in ${secs}…</div>` : '';
 
     frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8">
       <link rel="stylesheet" href="/styles.css">
@@ -356,6 +360,7 @@
         <div class="prompt">${esc(info.prompt)}</div>
         <input class="big" placeholder="${esc(info.ph)}" value="">
         ${chips}
+        ${moveOn}
         ${ctx.length ? `<div class="context">${ctx.map(([k, v]) => `<div><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join('')}</div>` : ''}
         <div class="row" style="margin-top:8px"><button class="ghost">Keyboard</button><button class="ghost">Back</button>${step === 'comments' ? '<button class="primary">Skip</button>' : ''}</div>
       </div></body></html>`;
@@ -369,6 +374,7 @@
     $('fFullScreen').checked = gunCfg.fullScreen !== false;
     $('fKeepAwake').checked = gunCfg.keepAwake !== false;
     $('fConfirmOver').value = gunCfg.confirmOver;
+    if (promptState) $('fCommentTimeout').value = promptState.commentTimeout;
     $('fDevice').value = gunCfg.device;
     const chip = $('gunChip');
     chip.hidden = false;
@@ -384,7 +390,18 @@
     renderGun();
   }
 
-  for (const id of ['fTextSize', 'fShowContents', 'fShowNextBin', 'fVibrate', 'fFullScreen', 'fKeepAwake', 'fConfirmOver', 'fDevice']) {
+  /* Seconds, by a button rather than a number pad: this gets set in an office
+     but it is read off a handheld, and one second either way is the whole
+     difference between a counter finishing a note and being cut off. */
+  const nudgeTimeout = (by) => {
+    const el = $('fCommentTimeout');
+    el.value = Math.max(0, Math.min(120, (Number(el.value) || 0) + by));
+    el.dispatchEvent(new Event('change'));
+  };
+  $('btnCommentLess').onclick = () => nudgeTimeout(-1);
+  $('btnCommentMore').onclick = () => nudgeTimeout(1);
+
+  for (const id of ['fTextSize', 'fShowContents', 'fShowNextBin', 'fVibrate', 'fFullScreen', 'fKeepAwake', 'fConfirmOver', 'fCommentTimeout', 'fDevice']) {
     $(id).addEventListener('change', () => {
       gunCfg.textSize = $('fTextSize').value;
       gunCfg.showContents = $('fShowContents').checked;
@@ -394,6 +411,7 @@
       gunCfg.keepAwake = $('fKeepAwake').checked;
       gunCfg.confirmOver = Number($('fConfirmOver').value) || 0;
       gunCfg.device = $('fDevice').value;
+      if (promptState) promptState.commentTimeout = Math.max(0, Math.min(120, Number($('fCommentTimeout').value) || 0));
       drawPreview();
     });
   }
@@ -402,18 +420,33 @@
   $('btnSaveGun').onclick = async () => {
     try {
       const keep = gunCfg.defaults;
-      gunCfg = await api.post('/api/admin/scanner-layout', {
-        order: gunCfg.order, textSize: gunCfg.textSize, showContents: gunCfg.showContents,
-        showNextBin: gunCfg.showNextBin, confirmOver: gunCfg.confirmOver, vibrate: gunCfg.vibrate, device: gunCfg.device,
-      });
+      const seconds = Math.max(0, Math.min(120, Number($('fCommentTimeout').value) || 0));
+      /* The screen's layout and the time the comments step waits are stored in
+         two places and set in one, because that is where somebody looks for
+         them: both are saved by this button. */
+      const [layout, prompts] = await Promise.all([
+        api.post('/api/admin/scanner-layout', {
+          order: gunCfg.order, textSize: gunCfg.textSize, showContents: gunCfg.showContents,
+          showNextBin: gunCfg.showNextBin, confirmOver: gunCfg.confirmOver, vibrate: gunCfg.vibrate,
+          fullScreen: gunCfg.fullScreen, keepAwake: gunCfg.keepAwake, device: gunCfg.device,
+        }),
+        api.post('/api/admin/scanner-prompts', { commentTimeout: seconds }),
+      ]);
+      gunCfg = layout;
+      promptState = prompts;
       gunCfg.defaults = keep;
       renderGun();
-      msg($('gunMsg'), 'ok', 'Saved.', `Scanners will ask ${gunCfg.order.map((k) => stepInfo(k).what.toLowerCase()).join(' → ')} — within about half a minute, without signing out.`);
+      renderPrompts();
+      msg($('gunMsg'), 'ok', 'Saved.',
+        `Scanners will ask ${gunCfg.order.map((k) => stepInfo(k).what.toLowerCase()).join(' → ')}`
+        + (seconds ? `, and the comments step moves on after ${seconds} second${seconds === 1 ? '' : 's'}` : ', and the comments step waits for the counter')
+        + ' — within about half a minute, without signing out.');
     } catch (err) { msg($('gunMsg'), 'err', err.message); }
   };
   $('btnResetGun').onclick = () => {
     if (!confirm('Put the scanner screen back to the shipped defaults?')) return;
     gunCfg = { ...gunCfg, ...(gunCfg.defaults || {}) };
+    if (promptState?.defaults) promptState.commentTimeout = promptState.defaults.commentTimeout;
     renderGun();
     msg($('gunMsg'), 'warn', 'Defaults loaded — press Save to keep them.');
   };
@@ -444,7 +477,8 @@
   const renderPrompts = () => {
     renderPromptList('comments', 'commentList');
     renderPromptList('overrides', 'overrideList');
-    $('fCommentTimeout').value = promptState.commentTimeout;
+    // the timer lives on the Scanner screen tab now, but it is the same setting
+    if (promptState) $('fCommentTimeout').value = promptState.commentTimeout;
     const chip = $('promptChip');
     chip.hidden = false;
     chip.className = 'chip' + (promptState.isDefault ? '' : ' online');
@@ -478,19 +512,15 @@
       promptState = await api.post('/api/admin/scanner-prompts', {
         comments: promptState.comments,
         overrides: promptState.overrides,
-        commentTimeout: $('fCommentTimeout').value,
       });
       promptState.defaults = promptState.defaults || null;
       renderPrompts();
-      const t = Number(promptState.commentTimeout || 0);
-      msg($('promptMsg'), 'ok', 'Saved.', t
-        ? `Scanners pick this up within about half a minute. The comments step will move on by itself after ${t} second(s).`
-        : 'Scanners pick this up within about half a minute. The comments step will wait for the counter.');
+      msg($('promptMsg'), 'ok', 'Saved.', 'Scanners pick this up within about half a minute.');
     } catch (err) { msg($('promptMsg'), 'err', err.message); }
   };
   $('btnResetPrompts').onclick = async () => {
     if (!confirm('Put the comment and override reasons back to the shipped defaults?')) return;
-    const d = promptState.defaults || { comments: [], overrides: [], commentTimeout: 5 };
+    const d = promptState.defaults || { comments: [], overrides: [] };
     promptState = { ...promptState, ...d };
     renderPrompts();
     msg($('promptMsg'), 'warn', 'Defaults loaded — press Save to keep them.');

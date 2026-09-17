@@ -290,6 +290,11 @@ own stylesheet, so it cannot drift from reality.
 - **Text size: Large** — for gloves and a freezer.
 - **Re-key a quantity of at least** — anything this big has to be typed twice. 0 never
   asks twice.
+- **Comments step moves on after N seconds** — how long the comments step waits before it
+  goes to the next bin by itself. It ships at **2 seconds**: long enough to tap a reason,
+  short enough that a counter with nothing to say is not standing there. Use **−** and
+  **+** to change it, or type a number. **0** turns the clock off and waits for the
+  counter. Typing or tapping a chip always stops the countdown, whatever it is set to.
 
 Press **Save**. Scanners pick the change up within about half a minute, between pallets
 — nobody has to sign out.
@@ -310,9 +315,8 @@ something here and nothing anywhere else.
 - **Override reasons** — offered when a pallet ID is not on the list and the counter is
   allowed to accept it anyway. **Other** is always offered on the gun as well, whatever
   you configure.
-- **Comments step moves on after N seconds** — the gun counts down and then moves to the
-  next bin by itself. Typing or tapping a chip stops the clock. Set it to 0 to make it
-  wait for the counter.
+The time the comments step waits before moving on is set with the rest of the counting
+screen — see step 9.
 
 Press **Save**; again, scanners pick it up within about half a minute.
 
@@ -442,8 +446,9 @@ The gun asks one question per screen, in the order the site configured:
 3. **Scan LOT CODE** / **Enter EXPIRY** — only on counts that ask for them. A lot that
    disagrees with the report, or a date already past, is called out on the spot.
 4. **Scan BIN LOCATION** — it says where that bin is and which face it is on.
-5. **Comments** — optional. Tap a reason or type a note; leave it and the gun moves on
-   by itself.
+5. **Comments** — optional. Tap a reason or type a note; leave it and the gun moves on by
+   itself after a couple of seconds (Settings → Scanner screen sets how long). Typing or
+   tapping a reason stops the countdown.
 
 The line is saved on the handheld the moment the last question is answered, and pushed
 to the server whenever there is a signal. The header shows `online` / `OFFLINE` and how
