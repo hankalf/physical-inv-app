@@ -118,8 +118,31 @@ async function signon(team, badges) {
   for (const chip of await gun.$$('#employeeChips button')) await chip.click();
   await gun.fill('#fTeam', team);
   for (const b of badges) { await gun.fill('#fEmployee', b); await gun.press('#fEmployee', 'Enter'); }
+  /*
+   * Signing on downloads the whole warehouse - 13,000 bins - and writes it to
+   * the handheld's own storage before the assignment screen appears. Two things
+   * used to fail a run here for reasons that were nothing to do with the crew
+   * being tested: a machine busy running every other suite took longer than the
+   * twenty seconds this allowed, and the download itself occasionally never
+   * finished, leaving the gun sitting on the sign-on screen with nothing said.
+   *
+   * So: room to be slow, one honest retry, and if it still has not moved, the
+   * message from the gun rather than a bare timeout. Either screen counts - a
+   * crew with no aisle queued lands straight on the counting screen.
+   */
+  const landed = async (ms) => {
+    try {
+      await gun.waitForSelector('#scrAssign.active, #scrScan.active', { timeout: ms });
+      return true;
+    } catch { return false; }
+  };
   await gun.click('#btnStart');
-  await gun.waitForSelector('#scrAssign.active', { timeout: 20000 });
+  if (!(await landed(45000))) {
+    await gun.click('#btnStart');
+    if (!(await landed(45000))) {
+      throw new Error(`the gun never left the sign-on screen: ${clean(await gun.textContent('#signonMsg'))}`);
+    }
+  }
   await gun.waitForTimeout(500);
 }
 

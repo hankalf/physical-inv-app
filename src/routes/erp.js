@@ -1,5 +1,6 @@
-import { db } from '../db.js';
+import { db, getSession } from '../db.js';
 import { palletReport } from './reports.js';
+import { approvedAdjustments, refreshAdjustments } from './adjustments.js';
 import { localDate } from '../util/localtime.js';
 import { toCsv } from '../util/csv.js';
 
@@ -31,6 +32,13 @@ const FIELDS = {
   level: (r) => r.level,
   reference: (r) => r.reference,
   adjustment: (r) => (r.expected === '' ? r.counted : Number(r.counted) - Number(r.expected || 0)),
+  /* Who signed for it, and why. On a count with approvals off these are blank
+     and the reason falls back to what the count found, which is what the file
+     carried before there was anything to sign. */
+  reasonCode: (r) => r.reasonCode || r.status,
+  approvedBy: (r) => r.approvedBy || '',
+  approvedAt: (r) => r.approvedAt || '',
+  approvalNote: (r) => r.approvalNote || '',
 };
 
 const BUILTIN = {
@@ -44,7 +52,8 @@ const BUILTIN = {
     label: 'Adjustments — only what differs from the report',
     rowsOf: 'variances',
     columns: [['Location', 'bin'], ['Item', 'sku'], ['Pallet', 'pallet'], ['System Qty', 'expected'],
-      ['Counted Qty', 'counted'], ['Adjustment', 'adjustment'], ['Reason', 'status'], ['Count Date', 'countDate']],
+      ['Counted Qty', 'counted'], ['Adjustment', 'adjustment'], ['Reason', 'reasonCode'],
+      ['Approved By', 'approvedBy'], ['Count Date', 'countDate']],
   },
   'bin-lines': {
     label: 'Bin lines — one row per count line, with who counted it',
@@ -115,8 +124,26 @@ function sourceRows(sessionId, rowsOf) {
   });
   // a second label is a tag on a pallet already in this file, never its own adjustment
   rows = rows.filter((r) => r.status !== 'SECOND LABEL');
-  if (rowsOf === 'variances') rows = rows.filter((r) => r.status !== 'MATCH');
-  return rows;
+  if (rowsOf !== 'variances') return rows;
+  rows = rows.filter((r) => r.status !== 'MATCH');
+
+  /* With approvals on, this file is the approved adjustments and nothing else.
+     A variance still waiting for a signature is held back rather than exported
+     quietly - and counted, so the dashboard can say how many are missing from
+     the file and why it is shorter than the variance list. */
+  const session = getSession(id);
+  if (!session || !session.require_approval) return rows;
+  refreshAdjustments(id);
+  const decided = approvedAdjustments(id);
+  const out = [];
+  let held = 0;
+  for (const r of rows) {
+    const d = decided.get(r.pallet);
+    if (!d) { held++; continue; }
+    out.push({ ...r, reasonCode: d.reason || r.status, approvedBy: d.decided_by || '', approvedAt: d.decided_at || '', approvalNote: d.note || '' });
+  }
+  out.held = held;
+  return out;
 }
 
 export function buildExport(sessionId, formatId) {
@@ -130,5 +157,5 @@ export function buildExport(sessionId, formatId) {
     for (const [header, field] of format.columns) o[header] = FIELDS[field] ? FIELDS[field](r) : '';
     return o;
   });
-  return { csv: toCsv(out, headers), rows: out.length, format };
+  return { csv: toCsv(out, headers), rows: out.length, held: rows.held || 0, format };
 }

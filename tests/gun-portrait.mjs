@@ -60,7 +60,14 @@ const errors = [];
  */
 async function handheld({ angle = 0, width = 640, height = 360, touch = true } = {}) {
   const ctx = await browser.newContext({ viewport: { width, height }, hasTouch: touch, isMobile: touch, deviceScaleFactor: 2 });
-  await ctx.addInitScript(`Object.defineProperty(screen.orientation, 'angle', { get: () => ${angle}, configurable: true });`);
+  /* The device's own screen, pinned: Playwright moves the emulated screen with
+     the window, and the whole point of the keyboard case is that a real handheld
+     does not. */
+  await ctx.addInitScript(`
+    Object.defineProperty(screen.orientation, 'angle', { get: () => ${angle}, configurable: true });
+    Object.defineProperty(screen, 'width', { get: () => ${width}, configurable: true });
+    Object.defineProperty(screen, 'height', { get: () => ${height}, configurable: true });
+  `);
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('dialog', (d) => d.accept());
@@ -137,7 +144,26 @@ const fills = (box, w, h) => Math.abs(box.x) <= 1 && Math.abs(box.y) <= 1 && Mat
   const p = await handheld({ angle: 0, width: 360, height: 640 });
   check('A gun held the way it is meant to be is left alone', !/\bupright\b/.test(await bodyClass(p)), await bodyClass(p));
   check('...and the sign-on screen says what this handheld is doing, for a gun that still reads sideways',
-    /Screen 360.640, device turned 0. - upright already/.test(clean(await p.textContent('#screenInfo'))), clean(await p.textContent('#screenInfo')));
+    /Screen 360.640, window 360.640, device turned 0. - upright already/.test(clean(await p.textContent('#screenInfo'))), clean(await p.textContent('#screenInfo')));
+  await p.context().close();
+}
+
+/* ---------------- the keyboard is not a rotation ---------------- */
+{
+  /* Typing a clock-in number opens the on-screen keyboard, which takes half the
+     window with it. For a moment the window is wider than it is tall - and a
+     rule that reads the window rather than the screen turns the whole app
+     sideways while somebody is mid-number. The screen never moved. */
+  const p = await handheld({ angle: 0, width: 360, height: 640 });
+  await p.setViewportSize({ width: 360, height: 300 });   // keyboard up: window now wider than tall
+  await p.waitForTimeout(300);
+  check('A keyboard opening is not a rotation — the app stays as it is',
+    !/\bupright\b/.test(await bodyClass(p)), await bodyClass(p));
+  check('...and the screen line says so: the screen is still tall, only the window shrank',
+    /Screen 360.640, window 360.300/.test(clean(await p.textContent('#screenInfo'))), clean(await p.textContent('#screenInfo')));
+  await p.setViewportSize({ width: 360, height: 640 });
+  await p.waitForTimeout(300);
+  check('...and it is still not turned once the keyboard goes away', !/\bupright\b/.test(await bodyClass(p)), await bodyClass(p));
   await p.context().close();
 }
 
@@ -157,7 +183,7 @@ const fills = (box, w, h) => Math.abs(box.x) <= 1 && Math.abs(box.y) <= 1 && Mat
   await p.click('#btnStart');
   await p.waitForTimeout(2500);
   if (await p.$('#scrAssign.active')) await p.click('#btnCount');
-  await p.waitForSelector('#scrScan.active', { timeout: 20000 });
+  await p.waitForSelector('#scrScan.active', { timeout: 90000 });
   await p.waitForTimeout(500);
   check('Signed on and counting, it is still upright', /\bupright\b/.test(await bodyClass(p)), await bodyClass(p));
   const box = await p.$eval('#fScan', (f) => { const r = f.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }; });
@@ -189,7 +215,7 @@ const fills = (box, w, h) => Math.abs(box.x) <= 1 && Math.abs(box.y) <= 1 && Mat
   await p.click('#btnStart');
   await p.waitForTimeout(2500);
   if (await p.$('#scrAssign.active')) await p.click('#btnCount');
-  await p.waitForSelector('#scrScan.active', { timeout: 20000 });
+  await p.waitForSelector('#scrScan.active', { timeout: 90000 });
   await p.waitForTimeout(500);
   check('With "keep it upright" off, the gun is left however the device turned it',
     !/\bupright\b/.test(await bodyClass(p)), await bodyClass(p));

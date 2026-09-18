@@ -393,6 +393,10 @@ questions it asks change between pallets, never mid-line.
 | **Recount over N units** | A difference smaller than this raises no second count. | 2–5 units |
 | **or over N %** | ...or at least this share of the expected quantity. Either threshold is enough. | 5–10 % |
 | **Cap open** | Stop raising automatic second counts once this many are open, so the list stays walkable. | 50–100 |
+| **Adjustments need approval** | Every difference from the report has to be approved, with a reason code, before it reaches the ERP file. Off by default. | On for a wall-to-wall that is audited |
+| **Approve over N units** | A difference smaller than this goes through without a signature. | 5–10 units |
+| **or over N %** | ...or at least this share of what the report expected. Either threshold is enough. | 5–10 % |
+| **ABC classes & accuracy** | Reports accuracy by ABC class against a target for each. Off by default. | On when somebody reports on accuracy |
 | **Map drawing** | Which rack drawing the map uses. *Schematic* builds one from the bin codes. | Your drawing |
 
 > **Why the thresholds matter.** With both at 0 the app sends somebody back for a
@@ -511,6 +515,29 @@ second tag is not on the inventory report, the gun offers the same answer in the
 |:--:|:--:|
 | ![](images/gun-second-label-ask.png)<br>The gun asks for the other label and names the pallet it will belong to | ![](images/gun-second-label-done.png)<br>Recorded as the same pallet, with no quantity — so the stock is not counted twice |
 
+**When a label will not scan**
+
+Freezer labels come off, ice over, get clipped by a forklift. The pallet is still there
+and still has to be counted, so the gun has a way out that keeps the count going and tells
+a supervisor where to send somebody with a label printer.
+
+On the **PALLET ID** step, tap **Label will not scan**, then pick one:
+
+| Choice | What happens |
+|---|---|
+| **I can read it — let me type it** | The keyboard comes up, the counter types the number off the label, and counting carries on as normal. The line is flagged as a barcode to replace |
+| **Nothing readable on it** | The pallet is counted anyway, under a name made from its bin — `NO-LABEL-F01A001-1`. Give the quantity and scan the bin as usual |
+
+<img src="images/gun-no-scan.png" width="300">
+
+*The counter says which kind of problem it is. Either way the pallet still gets counted —
+walking away from it is the one thing that would put the count out.*
+
+Either way the line is marked, and the bin turns up on **Dashboard → Reports → Labels to
+replace** with what was counted there. A pallet with nothing readable on it counts as a
+pallet not on the report, so it also shows on the pallet report as `NOT IN MASTER` — which
+is exactly what it is until somebody puts a label on it.
+
 **A message from the office**
 
 A supervisor can put a line on this team's scanners from the dashboard — *"come to
@@ -581,8 +608,10 @@ seconds.
 
 *Message the floor, under Team plan. "1 of 1" with the scanner named is a message that
 landed; "0 of 3" is one nobody has looked at yet.*
-- **Second counts** — see step 17.
-- **Reports** — see step 18.
+- **Second counts** — see step 18.
+- **Adjustments** — what this count would do to the ERP, and who signed for it. Only on
+  counts with approvals turned on; see step 20.
+- **Reports** — see step 19.
 
 **Watch for, during the count:**
 
@@ -599,6 +628,20 @@ and no clock-in numbers.
 
 It follows the newest open count on its own. To pin it to a particular one, add the
 session to the address: `/board?session=12`.
+
+![](images/board-note.png)
+
+*The note across the top of the board, above everything else — because it is the one thing
+somebody walking past is looking for.*
+
+**The note across the top.** *Dashboard → Progress → Note on the office board* writes one
+line that appears above the progress bar on the board, big enough to read from across the
+room: *"Lunch 11:30–12:00 · Team 4 breaks first"*, *"Dock 4 blocked until 2pm"*. It belongs
+to the count, it says who wrote it and when, and clearing the box takes it off the board.
+
+Use the note for anything the floor reads walking past. To reach the **scanners** instead —
+one team, or all of them, with a read receipt — use **Message the floor** under Team plan
+(step 16).
 
 ![](images/office-board.png)
 
@@ -653,25 +696,97 @@ count with known-wrong numbers in it.
 
 *A recall: five cases of the lot found on the floor, and a sixth the report still expects in an aisle nobody has reached.*
 
+- **Count accuracy** — on counts with **ABC classes & accuracy** turned on: one row per
+  class, and the whole count underneath. **Pallet accuracy** is how many pallets were
+  exactly what the report said — the number an auditor asks for. **Quantity accuracy** is
+  how many of the expected units were not in dispute. Each class is marked **MEETS** or
+  **UNDER** against its target (Settings → Scanners → Accuracy targets; 99 / 97 / 95 % as
+  shipped). Classes come from an **ABC** column on the inventory report; a report that has
+  none can have them worked out from it with one button — Pareto on the expected
+  quantities, the first 80 % of the stock A, the next 15 % B, the tail C. Anything the
+  report classified itself is left alone.
+
+> **Why by class.** A warehouse can be 98 % accurate overall and still be losing money,
+> because the misses are all on the fast movers. One number for the building hides that;
+> a line for class A does not.
+
+![](images/dashboard-accuracy.png)
+
+*Count accuracy by class, with the whole count on the bottom row. Each class is held to its
+own target and marked MEETS or UNDER — and the one pallet with no class is the tag that was
+not on the report at all.*
+
+- **Labels to replace** — every pallet whose label would not scan, with the bin to walk to,
+  what was counted there, and whether there was a readable number on it at all. This is the
+  walk-round with a label printer after the count.
+
+![](images/dashboard-labels.png)
+
+*The relabel list: which bin, what was counted there, and whether there was a number on it
+at all.*
 - **Count sheets** — printable paper sheets by aisle and level, for a dead battery or an
   auditor.
 - **Exports** — the full count (every line as scanned), exceptions only, uncounted bins,
-  the pallet report, second counts.
+  the pallet report, second counts, the accuracy scorecard, the relabel list, and the
+  adjustments with their reasons and signatures.
 
-### Step 20 — Send it to the ERP
+### Step 20 — Approve the adjustments
+
+**Dashboard → Adjustments.** Only on counts with **Adjustments need approval** turned on
+(step 13). With it off this tab says so, and every difference goes into the ERP file as it
+always did.
+
+A variance is not an adjustment until somebody owns it. This is where that happens.
+
+1. The list is every pallet that differs from the report, biggest first: what the system
+   says, what was counted, and what the ERP would move.
+2. Tick the ones you have satisfied yourself about. **Select all shown** takes the
+   screenful.
+3. Pick a **reason** — your site's list, set in Settings → Scanners → Adjustment reasons —
+   and add a note if it helps.
+4. **Approve selected**, or **Reject selected** if the count is wrong and the system should
+   keep its number.
+
+What the feature is actually for:
+
+- **Nothing unsigned reaches the ERP.** The Adjustments export holds back anything still
+  waiting, and the preview says how many it left out.
+- **Anything under the threshold goes through unsigned.** A two-case difference on a pallet
+  of 600 is noise; a count where every line needs a signature gets rubber-stamped, not read.
+- **Counted again means signed again.** If a second count changes a pallet after it was
+  approved, it comes back to this list with the approval cleared — the number somebody
+  signed for is no longer the number.
+- **A variance a second count clears disappears.** There is nothing left to adjust.
+- **It is all in the log**: who approved what, with which reason, and when. That is the
+  answer to "who authorised writing off 400 cases of chicken".
+
+A pallet nobody has reached yet is not on this list while the count is running. Once the
+count is **closed**, a pallet the report expected and nobody found becomes an adjustment
+like any other.
+
+![](images/dashboard-adjustments.png)
+
+*The adjustments waiting for a signature, biggest first. AUTO is under the threshold and
+goes through without anybody being asked; APPROVED carries the reason and the name.*
+
+### Step 21 — Send it to the ERP
 
 **Settings → ERP & backups → Send to the ERP.**
 
 1. Choose the **layout** that matches your ERP. Column names and which rows are included
    are configuration — add a layout rather than editing the file by hand afterwards.
-2. **Preview** and read the first rows.
+2. **Preview** and read the first rows. On a count with approvals on, the preview says how
+   many adjustments it left out because nobody has signed for them yet.
 3. **Download CSV** and import it into the ERP.
+
+The **Adjustments** layout carries the reason code and the name of whoever approved it, so
+the file the ERP gets is the same story the log tells.
 
 ![](images/settings-erp.png)
 
 *Settings &rarr; ERP &amp; backups. Preview before you download; the layout decides the column names and which rows are included.*
 
-### Step 21 — Close the count
+### Step 22 — Close the count
 
 **Dashboard → Progress → Count session → Close session.** A closed count is read-only:
 scanners can no longer post lines to it, and its reports stay available for ever.
@@ -680,7 +795,7 @@ scanners can no longer post lines to it, and its reports stay available for ever
 to type its name, and a backup is taken before anything is removed. Everything counted
 against it goes with it. Close counts; delete only the ones created by mistake.
 
-### Step 22 — Backups and the log
+### Step 23 — Backups and the log
 
 **Settings → ERP & backups → Backups & log.**
 
@@ -739,6 +854,11 @@ a handful of bins are counted every day.
 | Gun says `OFFLINE` with lines queued | Normal in a dead spot | Nothing. They upload when it gets a signal. Do not wipe the device |
 | A scan does nothing | DataWedge is not sending a suffix | DataWedge → Basic data formatting → send **ENTER** (or TAB) |
 | A keypad covers the screen | Somebody left the **Keyboard** button on | Tap **Keyboard** again. It is off by default and never comes up by itself |
+| The Adjustments tab is empty | Approvals are off for this count, or nothing differs from the report yet | Turn on **Adjustments need approval** under Count session. A pallet nobody has counted yet is not an adjustment until the count is closed |
+| The ERP file is shorter than the variance list | Adjustments are waiting for approval and are held back deliberately | Work the Adjustments tab, then export again. The preview says how many were left out |
+| Count accuracy says "no pallet has a class" | The inventory report has no ABC column | Add one (**ABC**, **Class**, **Velocity** — any of them is read), or press **Work out classes from the report** |
+| A pallet is on the report as `NOT IN MASTER` with a name like `NO-LABEL-F01A001-1` | Its label would not scan and nothing on it was readable, so it was counted under the bin's name | Send somebody to relabel it — **Reports → Labels to replace** has the list |
+| The note is not on the board | The board polls every 15 seconds by default, or the note is on a different count | Wait a few seconds; check the board is pinned to the same count (`/board?session=12`) |
 | The screen keeps rotating, or reads upside down | Auto-rotate is on, and a browser tab is never allowed to lock the orientation | The app turns itself back upright on its own, sideways or end over end. If it is not, check **Keep it upright** is ticked under Settings → Scanner screen, then read the grey line at the bottom of the sign-on screen — it says the screen size the handheld gave the app, how far the device says it has turned, and what the app did about it. To stop the device turning at all, install the app (it asks for one way up) or turn auto-rotate off on the handheld |
 | A team says they never got a message | Look at **Read by** on the dashboard | It shows which scanners have tapped Got it. A scanner that is offline gets it on its next sync |
 | A scan seems to land on a button instead of the box | Something else took the focus | Nothing — the app puts the keystrokes in the box and carries on. Tell us if it still happens |
@@ -809,6 +929,7 @@ upload card shows exactly which columns it recognised.
 | Location | *same names as the bin list* |
 | Lot | lot, lot code, lot no, lot number, batch, batch code, batch number |
 | Expiry | expiry, expiry date, expiration, expires, best before, use by, shelf life date |
+| ABC class | abc, abc class, abc code, class, item class, velocity, velocity code, movement class, category — `A`, `B` or `C`, upper or lower case |
 
 **Counting plan** — one row per aisle, in the order the team counts it.
 

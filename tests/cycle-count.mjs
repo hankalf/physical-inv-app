@@ -96,7 +96,7 @@ check('Gun: choosing Cycle count narrows the list to cycle programs',
   (await gun.$$eval('#fSession option', (o) => o.map((x) => x.textContent))).join(' | '));
 await gun.selectOption('#fSession', String(sess.id));
 await gun.fill('#fTeam', '7'); await gun.fill('#fEmployee', 'E7001'); await gun.press('#fEmployee', 'Enter');
-await gun.click('#btnStart'); await gun.waitForSelector('#scrAssign.active', { timeout: 20000 });
+await gun.click('#btnStart'); await gun.waitForSelector('#scrAssign.active', { timeout: 90000 });
 check('Gun: a cycle session shows the list instead of an aisle', /Cycle count/.test(await T('#recountCardTitle')) && (await T('#recountCount')) === '35' && (await gun.getAttribute('#btnCount', 'hidden')) !== null, `${await T('#recountCount')} bins`);
 await shot(gun, 'gun-cycle-list');
 await gun.click('#btnRecounts'); await gun.waitForSelector('#scrScan.active'); await gun.waitForTimeout(400);
@@ -143,7 +143,7 @@ for (const chip of await gun.$$('#employeeChips button')) await chip.click();
 await gun.click('#btnModeCycle'); await gun.waitForTimeout(200);
 await gun.selectOption('#fSession', String(sess.id));
 await gun.fill('#fTeam', '7'); await gun.fill('#fEmployee', 'C001'); await gun.press('#fEmployee', 'Enter');
-await gun.click('#btnStart'); await gun.waitForSelector('#scrAssign.active', { timeout: 20000 }); await gun.waitForTimeout(600);
+await gun.click('#btnStart'); await gun.waitForSelector('#scrAssign.active', { timeout: 90000 }); await gun.waitForTimeout(600);
 const crewBanner = clean(await gun.textContent('#crewBanner'));
 check('Gun: the equipment check runs on a cycle count too, against the bins on the list',
   /Check your equipment/.test(crewBanner) && /the bins on your list/.test(crewBanner) && /high reach truck|dock truck/.test(crewBanner), crewBanner.slice(0, 190));

@@ -158,6 +158,39 @@ CREATE TABLE IF NOT EXISTS message_acks (
   PRIMARY KEY (message_id, device_id)
 );
 
+/*
+ * What the count says the ERP should be told, and who said so.
+ *
+ * A variance is not an adjustment until somebody owns it. On a wall-to-wall
+ * count that is thousands of lines, and an auditor asking "who approved writing
+ * off 400 cases, and why" wants a name and a reason, not a spreadsheet. Each
+ * pallet whose count differs from the report gets a row here; a supervisor
+ * approves it with a reason code or rejects it, and only what was approved
+ * reaches the ERP file.
+ *
+ * Off unless a count turns it on, and then thresholds decide what is worth a
+ * signature - a one-case difference on a pallet of 600 is not.
+ */
+CREATE TABLE IF NOT EXISTS adjustments (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id   INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  pallet_id    TEXT    NOT NULL,
+  sku          TEXT,
+  location     TEXT,
+  expected_qty REAL,
+  counted_qty  REAL,
+  variance_qty REAL,
+  kind         TEXT    NOT NULL,                    -- QTY VARIANCE | MISSING | NOT IN MASTER | WRONG BIN | COUNTED TWICE
+  status       TEXT    NOT NULL DEFAULT 'pending',  -- pending | approved | rejected | auto (under the threshold)
+  reason       TEXT,
+  note         TEXT,
+  decided_by   TEXT,
+  decided_at   TEXT,
+  created_at   TEXT    NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_adjust_unique ON adjustments(session_id, pallet_id);
+CREATE INDEX IF NOT EXISTS idx_adjust_status ON adjustments(session_id, status);
+
 CREATE TABLE IF NOT EXISTS counts (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,
   client_id        TEXT    NOT NULL UNIQUE,
@@ -345,6 +378,29 @@ if (!hasCol('sessions', 'recount_min_qty')) {
   db.exec('ALTER TABLE sessions ADD COLUMN recount_min_pct REAL NOT NULL DEFAULT 0');
   db.exec('ALTER TABLE sessions ADD COLUMN recount_cap INTEGER NOT NULL DEFAULT 0');
 }
+/* Approvals on adjustments, and the ABC class an accuracy report is cut by.
+   Both off unless a count asks for them: a cycle count run by one supervisor
+   needs neither, and a wall-to-wall audited by a third party needs both. */
+if (!hasCol('sessions', 'require_approval')) {
+  db.exec('ALTER TABLE sessions ADD COLUMN require_approval INTEGER NOT NULL DEFAULT 0');
+  db.exec('ALTER TABLE sessions ADD COLUMN approval_min_qty INTEGER NOT NULL DEFAULT 0');
+  db.exec('ALTER TABLE sessions ADD COLUMN approval_min_pct REAL NOT NULL DEFAULT 0');
+}
+/* A label that will not scan is still a pallet that has to be counted. The line
+   says which it was - typed off a damaged barcode, or no readable ID at all -
+   so somebody can walk out with a label printer afterwards. */
+if (!hasCol('counts', 'label_issue')) db.exec("ALTER TABLE counts ADD COLUMN label_issue TEXT NOT NULL DEFAULT ''");
+
+/* A line on the office board: when lunch is, which dock is blocked. It belongs
+   to the count rather than the site - it is about today. */
+if (!hasCol('sessions', 'board_note')) {
+  db.exec('ALTER TABLE sessions ADD COLUMN board_note TEXT');
+  db.exec('ALTER TABLE sessions ADD COLUMN board_note_by TEXT');
+  db.exec('ALTER TABLE sessions ADD COLUMN board_note_at TEXT');
+}
+if (!hasCol('sessions', 'track_abc')) db.exec('ALTER TABLE sessions ADD COLUMN track_abc INTEGER NOT NULL DEFAULT 0');
+if (!hasCol('pallets', 'abc')) db.exec('ALTER TABLE pallets ADD COLUMN abc TEXT');
+
 // a login can be handed out with a starter password the person must replace
 if (!hasCol('users', 'must_change')) db.exec('ALTER TABLE users ADD COLUMN must_change INTEGER NOT NULL DEFAULT 0');
 if (!hasCol('assignments', 'levels')) {
@@ -544,8 +600,8 @@ const insertCount = db.prepare(`
 INSERT INTO counts (client_id, session_id, pallet_id, qty, location_code, comments, sku,
                     team, employees, device_id, aisle, unknown_pallet, unknown_location,
                     off_assignment, duplicate_pallet, empty_bin, pass, recount_id, override_reason,
-                    lot, expiry, alias_of, scanned_at, received_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    lot, expiry, alias_of, label_issue, scanned_at, received_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(client_id) DO NOTHING
 `);
 
@@ -583,6 +639,8 @@ export function saveCounts(sessionId, rows) {
         r.lot ? norm(r.lot).slice(0, 64) : null,
         r.expiry ? String(r.expiry).slice(0, 10) : null,
         r.aliasOf ? norm(r.aliasOf) : null,
+        // 'typed' - read off a damaged barcode; 'none' - nothing readable on it at all
+        ['typed', 'none'].includes(r.labelIssue) ? r.labelIssue : '',
         r.scannedAt || now, now
       );
       accepted.push(r.clientId);

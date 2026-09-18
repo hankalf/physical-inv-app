@@ -63,6 +63,17 @@
 
   .empty { color: var(--muted); text-align: center; padding: 4vh 0; font-size: clamp(14px, 1.3vw, 20px); }
   .stale-warn { color: var(--warn); }
+
+  /* The note from the office: breaks, lunch, a blocked dock. Above everything
+     else, because it is the one thing somebody walking past is looking for -
+     and big enough to read from where they are walking. */
+  .bnote {
+    display: flex; align-items: baseline; gap: 1vw;
+    background: var(--warn-ink, #3a2c12); border: 1px solid #8a6a1f; border-left: .6vw solid var(--warn);
+    border-radius: var(--radius); padding: 1.4vh 1.4vw;
+  }
+  .bnote .txt { font-size: clamp(18px, 2.2vw, 38px); font-weight: 800; color: #ffd479; line-height: 1.15; }
+  .bnote .who { margin-left: auto; color: var(--muted); font-size: clamp(11px, 1vw, 15px); font-weight: 600; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -71,6 +82,11 @@
     <h1 id="bTitle">Count progress</h1>
     <span class="sess" id="bSession"></span>
     <span class="clock" id="bClock"></span>
+  </div>
+
+  <div class="bnote" id="bNote" hidden>
+    <div class="txt" id="bNoteText"></div>
+    <div class="who" id="bNoteWho"></div>
   </div>
 
   <div class="headline">

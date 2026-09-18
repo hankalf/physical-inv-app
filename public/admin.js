@@ -83,6 +83,14 @@
     $('fRecCap').value = s.recount_cap || 0;
     $('fAskLot').checked = !!s.ask_lot;
     $('fAskExpiry').checked = !!s.ask_expiry;
+    $('fRequireApproval').checked = !!s.require_approval;
+    $('fApprMinQty').value = s.approval_min_qty || 0;
+    $('fApprMinPct').value = s.approval_min_pct || 0;
+    $('fTrackAbc').checked = !!s.track_abc;
+    $('fBoardNote').value = s.board_note || '';
+    $('noteWho').textContent = s.board_note
+      ? `On the board since ${new Date(s.board_note_at).toLocaleString()}${s.board_note_by ? ', put there by ' + s.board_note_by : ''}.`
+      : 'Nothing on the board at the moment.';
     $('fDefaultSession').checked = defaultSessionId === s.id;
     $('fDefaultSession').disabled = s.status === 'closed';
     $('fLayout').value = s.layout || '';
@@ -794,8 +802,224 @@
 
   async function refreshAll() {
     if (!sessionId) return;
-    await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts(), refreshPicker(), refreshMessages()]);
+    await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts(),
+      refreshPicker(), refreshMessages(), refreshAdjustments(), refreshAccuracy(), refreshLabels()]);
   }
+
+  /* ------------------------------------------------------- adjustments
+     What this count would do to the ERP, and who signed for it. The list is
+     rebuilt from the report every time it is read, so a variance a second count
+     has since cleared stops asking to be approved. */
+  let adjustState = { on: false, reasons: [], adjustments: [] };
+  const picked = new Set();
+
+  async function refreshAdjustments() {
+    const s = sessions.find((x) => x.id === sessionId);
+    const on = !!(s && s.require_approval);
+    $('adjustOff').hidden = on;
+    $('adjustBody').hidden = !on;
+    $('adjustSub').textContent = on ? 'what this count would do to the ERP' : 'off for this count';
+    if (!on) return;
+    const data = await apiJson(`/api/admin/sessions/${sessionId}/adjustments`);
+    adjustState = data;
+
+    const sel = $('fAdjReason');
+    const want = data.reasons.join('|');
+    if (sel.dataset.built !== want) {
+      sel.dataset.built = want;
+      sel.innerHTML = '';
+      for (const r of ['Choose a reason…', ...data.reasons, 'Other']) {
+        const o = document.createElement('option');
+        o.textContent = r;
+        if (r === 'Choose a reason…') o.value = '';
+        sel.appendChild(o);
+      }
+    }
+
+    const sum = data.summary;
+    $('adjustStats').innerHTML = '';
+    for (const [n, l] of [
+      [sum.pending, 'Waiting for approval'],
+      [sum.approved, 'Approved'],
+      [sum.rejected, 'Rejected — the system keeps its number'],
+      [sum.auto, `Under the threshold${data.thresholds.minQty || data.thresholds.minPct ? '' : ' (none set)'}`],
+      [Math.round(sum.units.pending).toLocaleString(), 'Units still unsigned'],
+    ]) {
+      const d = document.createElement('div');
+      d.className = 'stat';
+      d.innerHTML = '<div class="n"></div><div class="l"></div>';
+      d.querySelector('.n').textContent = n;
+      d.querySelector('.l').textContent = l;
+      $('adjustStats').appendChild(d);
+    }
+
+    const pendingOnly = $('fAdjPendingOnly').checked;
+    const rows = data.adjustments.filter((r) => !pendingOnly || r.status === 'pending');
+    for (const id of [...picked]) if (!rows.some((r) => r.pallet_id === id)) picked.delete(id);
+
+    table($('adjustTable'),
+      [{ label: '' }, { label: 'Pallet' }, { label: 'Item' }, { label: 'Bin' }, { label: 'Found' },
+        { label: 'System', num: true }, { label: 'Counted', num: true }, { label: 'Adjustment', num: true },
+        { label: 'Status' }, { label: 'Reason' }, { label: 'Signed by' }],
+      rows,
+      (r) => {
+        const tr = document.createElement('tr');
+        const box = document.createElement('input');
+        box.type = 'checkbox';
+        box.checked = picked.has(r.pallet_id);
+        /* Under the threshold: it goes to the ERP without anybody being asked,
+           so there is nothing here to sign. */
+        box.disabled = r.status === 'auto';
+        box.onchange = () => { if (box.checked) picked.add(r.pallet_id); else picked.delete(r.pallet_id); };
+        const td = document.createElement('td');
+        td.appendChild(box);
+        tr.append(td, cell(r.pallet_id), cell(r.sku || '—'), cell(r.location || '—'), cell(r.kind),
+          cell(r.expected_qty == null ? '—' : r.expected_qty, 'num'),
+          cell(r.counted_qty == null ? '—' : r.counted_qty, 'num'),
+          cell((r.variance_qty > 0 ? '+' : '') + r.variance_qty, 'num'));
+        const st = document.createElement('td');
+        st.appendChild(tag(r.status === 'auto' ? 'AUTO' : r.status.toUpperCase()));
+        tr.append(st, cell(r.reason || '—', 'wrap'), cell(r.decided_by || '—'));
+        return tr;
+      },
+      'Nothing differs from the report on this count.');
+
+    $('adjustNote').textContent = `${rows.length} shown of ${data.adjustments.length}`
+      + (data.thresholds.minQty || data.thresholds.minPct
+        ? ` · anything under ${data.thresholds.minQty} units and ${data.thresholds.minPct}% goes through unsigned`
+        : ' · every difference needs approving (no threshold set)')
+      + (data.reopened ? ` · ${data.reopened} came back for approval after being counted again` : '');
+  }
+
+  async function decide(decision) {
+    if (!needSession($('adjustMsg'))) return;
+    if (!picked.size) { msg($('adjustMsg'), 'err', 'Nothing selected', 'Tick the pallets to decide on first.'); return; }
+    const reason = $('fAdjReason').value;
+    const note = $('fAdjNote').value.trim();
+    if (!reason && !note) {
+      msg($('adjustMsg'), 'err', 'A reason is required', 'Pick one, or write one in the note — that is the point of approving it.');
+      return;
+    }
+    try {
+      const out = await postJson(`/api/admin/sessions/${sessionId}/adjustments/decide`,
+        { palletIds: [...picked], decision, reason, note });
+      picked.clear();
+      $('fAdjNote').value = '';
+      msg($('adjustMsg'), 'ok', `${out.decided} ${decision === 'reject' ? 'rejected' : 'approved'} — ${out.reason}`,
+        `${out.summary.pending} still waiting.`);
+      await refreshAdjustments();
+    } catch (err) { msg($('adjustMsg'), 'err', err.message); }
+  }
+
+  $('btnApprove').onclick = () => decide('approve');
+  $('btnReject').onclick = () => decide('reject');
+  $('fAdjPendingOnly').onchange = () => refreshAdjustments().catch(() => {});
+  $('btnAdjAll').onclick = () => {
+    for (const r of (adjustState.adjustments || [])) {
+      if (r.status !== 'auto' && (!$('fAdjPendingOnly').checked || r.status === 'pending')) picked.add(r.pallet_id);
+    }
+    refreshAdjustments().catch(() => {});
+  };
+  $('btnAdjNone').onclick = () => { picked.clear(); refreshAdjustments().catch(() => {}); };
+  $('btnExportAdjust').onclick = () =>
+    api.download(`/api/admin/sessions/${sessionId}/export/adjustments.csv`, `adjustments-session-${sessionId}.csv`);
+
+  /* ---------------------------------------------------------- accuracy
+     One row per ABC class: how much of it was exactly right, against the target
+     for that class. A warehouse can be 98% accurate overall and still be losing
+     money on the fast movers, which is the whole reason for cutting it this way. */
+  async function refreshAccuracy() {
+    const s = sessions.find((x) => x.id === sessionId);
+    const on = !!(s && s.track_abc);
+    $('accuracyOff').hidden = on;
+    $('accuracyBody').hidden = !on;
+    if (!on) return;
+    const a = await apiJson(`/api/admin/sessions/${sessionId}/accuracy`);
+    $('abcSub').textContent = a.classified
+      ? `${a.classified.toLocaleString()} of ${a.pallets_on_report.toLocaleString()} pallets have a class`
+      : 'no pallet on this count has an ABC class yet';
+    table($('accuracyTable'),
+      [{ label: 'Class' }, { label: 'Pallets', num: true }, { label: 'Exactly right', num: true },
+        { label: 'Pallet accuracy', num: true }, { label: 'Target', num: true }, { label: '' },
+        { label: 'Units expected', num: true }, { label: 'Units in dispute', num: true }, { label: 'Quantity accuracy', num: true },
+        { label: 'Missing', num: true }, { label: 'Not on report', num: true }, { label: 'Wrong bin', num: true }, { label: 'Qty variance', num: true }],
+      [...a.byClass, a.overall],
+      (r) => {
+        const tr = document.createElement('tr');
+        if (r.class === 'ALL') tr.style.fontWeight = '700';
+        tr.append(cell(r.label), cell(r.pallets.toLocaleString(), 'num'), cell(r.exact.toLocaleString(), 'num'),
+          cell(r.pallet_accuracy == null ? '—' : r.pallet_accuracy + '%', 'num'),
+          cell(r.target == null ? '—' : r.target + '%', 'num'));
+        const verdict = document.createElement('td');
+        if (r.meets != null) verdict.appendChild(tag(r.meets ? 'MEETS' : 'UNDER'));
+        tr.append(verdict,
+          cell(Math.round(r.expected_units).toLocaleString(), 'num'),
+          cell(Math.round(r.variance_units).toLocaleString(), 'num'),
+          cell(r.qty_accuracy == null ? '—' : r.qty_accuracy + '%', 'num'),
+          cell(r.missing, 'num'), cell(r.extra, 'num'), cell(r.wrong_bin, 'num'), cell(r.qty_variance, 'num'));
+        return tr;
+      },
+      'Nothing counted yet.');
+    $('accuracyNote').textContent =
+      `Bins with nothing odd in them: ${a.bins.clean.toLocaleString()} of ${a.bins.counted.toLocaleString()}`
+      + (a.bins.accuracy == null ? '' : ` (${a.bins.accuracy}%)`)
+      + (a.unclassified ? ` · ${a.unclassified.toLocaleString()} pallets have no class and are reported together` : '');
+  }
+
+  $('btnDeriveAbc').onclick = async () => {
+    if (!needSession($('accuracyMsg'))) return;
+    try {
+      const out = await postJson(`/api/admin/sessions/${sessionId}/abc/derive`, {});
+      msg($('accuracyMsg'), 'ok', `${out.classified.toLocaleString()} pallets classified`,
+        `A ${out.byClass.A.toLocaleString()} · B ${out.byClass.B.toLocaleString()} · C ${out.byClass.C.toLocaleString()}`
+        + (out.kept ? ` · ${out.kept.toLocaleString()} already had a class from the file and were left alone` : ''));
+      await refreshAccuracy();
+    } catch (err) { msg($('accuracyMsg'), 'err', err.message); }
+  };
+  $('btnExportAccuracy').onclick = () =>
+    api.download(`/api/admin/sessions/${sessionId}/export/accuracy.csv`, `accuracy-session-${sessionId}.csv`);
+
+  /* ----------------------------------------------------- labels to replace
+     A label that would not scan is a pallet the next person cannot scan either.
+     This is the walk-round afterwards, with a printer. */
+  async function refreshLabels() {
+    const { labels } = await apiJson(`/api/admin/sessions/${sessionId}/labels`);
+    $('labelSub').textContent = labels.length
+      ? `${labels.length} pallet${labels.length === 1 ? '' : 's'} to relabel`
+      : 'nothing reported — every label scanned';
+    table($('labelTable'),
+      [{ label: 'Bin' }, { label: 'Aisle' }, { label: 'Counted as' }, { label: 'Problem' }, { label: 'Item' },
+        { label: 'Qty', num: true }, { label: 'Team' }, { label: 'When' }],
+      labels,
+      (r) => {
+        const tr = document.createElement('tr');
+        tr.append(cell(r.location_code), cell(r.aisle || '—'), cell(r.pallet_id));
+        const t = document.createElement('td');
+        t.appendChild(tag(r.label_issue === 'none' ? 'NO ID' : 'BARCODE'));
+        tr.append(t, cell(r.description || r.sku || '—', 'wrap'), cell(r.qty, 'num'),
+          cell(r.team), cell(new Date(r.scanned_at).toLocaleString()));
+        return tr;
+      },
+      'No label problems reported on this count.');
+  }
+  $('btnExportLabels').onclick = () =>
+    api.download(`/api/admin/sessions/${sessionId}/export/labels.csv`, `labels-to-replace-session-${sessionId}.csv`);
+
+  /* --------------------------------------------------- a note on the board
+     One line across the top of the board screen: when lunch is, which dock is
+     blocked. The floor reads it walking past; the scanners have messages. */
+  async function saveNote(text) {
+    if (!needSession($('noteMsg'))) return;
+    try {
+      const out = await postJson(`/api/admin/sessions/${sessionId}/note`, { note: text });
+      msg($('noteMsg'), 'ok', out.note ? 'On the board.' : 'Taken off the board.',
+        out.note ? 'The board picks it up within a few seconds.' : '');
+      await loadSessions();
+    } catch (err) { msg($('noteMsg'), 'err', err.message); }
+  }
+  $('btnSaveNote').onclick = () => saveNote($('fBoardNote').value);
+  $('btnClearNote').onclick = () => { $('fBoardNote').value = ''; saveNote(''); };
+  $('fBoardNote').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveNote($('fBoardNote').value); });
 
   /* ------------------------------------------------- a word to the floor
      Addressed to one team or all of them, and the table says who has read it -
@@ -957,6 +1181,9 @@
         autoRecount: $('fAutoRecount').checked, layout: $('fLayout').value,
         recountMinQty: $('fRecMinQty').value, recountMinPct: $('fRecMinPct').value, recountCap: $('fRecCap').value,
         askLot: $('fAskLot').checked, askExpiry: $('fAskExpiry').checked,
+        requireApproval: $('fRequireApproval').checked,
+        approvalMinQty: $('fApprMinQty').value, approvalMinPct: $('fApprMinPct').value,
+        trackAbc: $('fTrackAbc').checked,
       });
       const wantDefault = $('fDefaultSession').checked;
       if (wantDefault !== (defaultSessionId === sessionId)) {

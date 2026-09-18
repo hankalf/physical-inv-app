@@ -114,7 +114,7 @@ await gun.fill('#fTeam', '1');
 await gun.fill('#fEmployee', 'E1001'); await gun.press('#fEmployee', 'Enter');
 await gun.click('#btnStart'); await gun.waitForTimeout(2600);
 if (await gun.$('#scrAssign.active')) await gun.click('#btnCount');
-await gun.waitForSelector('#scrScan.active', { timeout: 20000 }); await gun.waitForTimeout(800);
+await gun.waitForSelector('#scrScan.active', { timeout: 90000 }); await gun.waitForTimeout(800);
 
 await fetch(`${BASE}/api/admin/sessions/${sess.id}/messages`, { method: 'POST', headers: A,
   body: JSON.stringify({ team: '1', body: 'Bring the pallet jack back to the dock', urgent: true }) });

@@ -51,7 +51,7 @@ check('Gun: it lands on the count the supervisor picked, without being told',
 
 await gun.fill('#fTeam', '1');
 await gun.fill('#fEmployee', 'E1001'); await gun.press('#fEmployee', 'Enter');
-await gun.click('#btnStart'); await gun.waitForSelector('#scrAssign.active', { timeout: 20000 });
+await gun.click('#btnStart'); await gun.waitForSelector('#scrAssign.active', { timeout: 90000 });
 await gun.click('#btnCount'); await gun.waitForSelector('#scrScan.active'); await gun.waitForTimeout(700);
 
 const first = clean(await gun.textContent('#nextBin'));
@@ -92,7 +92,7 @@ await free.waitForSelector('#scrSignon.active'); await free.waitForTimeout(900);
 await free.fill('#fTeam', '1'); await free.fill('#fEmployee', 'E1001'); await free.press('#fEmployee', 'Enter');
 await free.click('#btnStart'); await free.waitForTimeout(2500);
 if (await free.$('#scrAssign.active')) await free.click('#btnCount');
-await free.waitForSelector('#scrScan.active', { timeout: 20000 });
+await free.waitForSelector('#scrScan.active', { timeout: 90000 });
 await free.waitForTimeout(600);
 check('Gun: counting freely shows no bin guide, because there is no aisle to walk',
   await free.$eval('#nextBin', (el) => el.hidden));

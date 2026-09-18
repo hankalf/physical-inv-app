@@ -221,7 +221,7 @@ export function rawCounts(sessionId) {
               COALESCE(p.description, '') AS description,
               c.lot, c.expiry, c.alias_of,
               c.comments, c.team, c.employees, c.device_id,
-              c.unknown_pallet, c.unknown_location, c.off_assignment, c.duplicate_pallet, c.empty_bin,
+              c.unknown_pallet, c.unknown_location, c.off_assignment, c.duplicate_pallet, c.empty_bin, c.label_issue,
               c.pass, c.recount_id, c.override_reason, c.voided, c.scanned_at, c.received_at
          FROM counts c
          LEFT JOIN pallets p ON p.session_id = c.session_id AND p.pallet_id = c.pallet_id
@@ -234,8 +234,34 @@ export function rawCounts(sessionId) {
 
 export const exceptions = (sessionId) =>
   rawCounts(sessionId).filter(
-    (r) => r.unknown_pallet || r.unknown_location || r.off_assignment || r.duplicate_pallet || r.override_reason
+    (r) => r.unknown_pallet || r.unknown_location || r.off_assignment || r.duplicate_pallet || r.override_reason || r.label_issue
   );
+
+/*
+ * Pallets whose label would not scan.
+ *
+ * A damaged barcode does not stop a count - the counter says so and carries on -
+ * but it does leave a pallet in the racking that the next person cannot scan
+ * either. This is the walk-round afterwards: which bin, what was counted, and
+ * whether there was a number on it at all.
+ */
+export function labelsToReplace(sessionId) {
+  return db
+    .prepare(
+      `SELECT c.pallet_id, c.location_code, c.aisle, c.qty, c.label_issue, c.sku,
+              COALESCE(p.description, '') AS description,
+              c.team, c.device_id, c.comments, c.scanned_at
+         FROM counts c
+         LEFT JOIN pallets p ON p.session_id = c.session_id AND p.pallet_id = c.pallet_id
+        WHERE c.session_id = ? AND c.voided = 0 AND c.label_issue != ''
+        ORDER BY c.location_code, c.scanned_at`
+    )
+    .all(Number(sessionId))
+    .map((r) => ({
+      ...r,
+      issue: r.label_issue === 'none' ? 'NO READABLE ID' : 'BARCODE WOULD NOT SCAN',
+    }));
+}
 
 /** Everything the warehouse map needs: each bin's count state, and each aisle's block and team. */
 export function mapData(sessionId) {

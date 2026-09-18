@@ -191,6 +191,21 @@ try {
   }
   await post(`/api/admin/sessions/${sess.id}/recounts/generate`, {});
 
+  /* Approvals and the accuracy report, so the manual can show both doing their
+     job. The threshold is what keeps the list readable, which is the point the
+     screenshot has to make. */
+  await post(`/api/admin/sessions/${sess.id}/settings`, { requireApproval: true, approvalMinQty: 5, approvalMinPct: 5, trackAbc: true });
+  await post(`/api/admin/sessions/${sess.id}/abc/derive`, {});
+  // one already signed for, so the table is not a screenful of the same word
+  const waiting = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/adjustments`, { headers: A }));
+  const first = (waiting.adjustments || []).find((r) => r.status === 'pending');
+  if (first) {
+    await post(`/api/admin/sessions/${sess.id}/adjustments/decide`,
+      { palletIds: [first.pallet_id], decision: 'approve', reason: 'Miscount — first count was wrong' });
+  }
+  // and a line on the office board, the way a shift actually starts
+  await post(`/api/admin/sessions/${sess.id}/note`, { note: 'Lunch 11:30–12:00 · Team 4 breaks first · Dock 4 blocked until 2pm' });
+
   // an untouched count as well, so the manual can show the checklist with
   // everything still to do, which is what a first-time user actually sees
   const blank = await post('/api/admin/sessions', { name: 'October spot check' });
@@ -276,6 +291,7 @@ try {
   await sub('scanners');
   await saveCard(desk, '#deviceTable', 'settings-scanners');
   await saveCard(desk, '#commentList', 'settings-reason-codes');
+  await saveCard(desk, '#reasonList', 'settings-adjustment-reasons');
   await sub('gun');    await saveCard(desk, '#stepOrder', 'settings-scanner-screen');
   await sub('lists');
   await saveCard(desk, '#fFile-bins', 'settings-bin-list');
@@ -308,7 +324,10 @@ try {
   await saveCard(desk, '#teamList', 'dashboard-team-plan');
   await saveCard(desk, '#msgTable', 'dashboard-message-floor', 6);
   await sub('second'); await saveCard(desk, '#recountTable', 'dashboard-second-counts', 10);
+  await sub('adjust'); await saveCard(desk, '#adjustTable', 'dashboard-adjustments', 10);
   await sub('reports');
+  await saveCard(desk, '#accuracyTable', 'dashboard-accuracy', 8);
+  await saveCard(desk, '#labelTable', 'dashboard-labels', 6);
   // a lot that really is in the seeded report, on a pallet in every aisle
   await desk.fill('#fLotSearch', expected.get('F01-005').lot);
   await desk.click('#btnFindLot'); await wait(1400);
@@ -331,6 +350,9 @@ try {
   const board = await browser.newPage({ viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1 });
   await board.goto(`${BASE}/board?session=${sess.id}`); await wait(2600);
   await save(board, 'office-board');
+  // the note strip on its own, which is the part the manual is talking about
+  const strip = await board.$('#bNote');
+  if (strip) await save(strip, 'board-note');
   await board.close();
 
   /* ---------- the handheld ---------- */
@@ -348,7 +370,7 @@ try {
   await gun.click('#btnStart'); await wait(3000);
   if (await gun.$('#scrAssign.active')) await save(gun, 'gun-your-aisle');
   if (await gun.$('#scrAssign.active')) await gun.click('#btnCount');
-  await gun.waitForSelector('#scrScan.active', { timeout: 20000 }); await wait(900);
+  await gun.waitForSelector('#scrScan.active', { timeout: 90000 }); await wait(900);
 
   /* count a few pallets first, so the screenshots show a gun mid-aisle rather
      than one that has just signed on */
@@ -421,6 +443,10 @@ try {
   await scan('OLD-TAG-88');
   await wait(900);
   await save(gun, 'gun-second-label-done');
+
+  // a label that will not scan
+  await gun.click('#btnNoScan'); await wait(600);
+  await save(gun, 'gun-no-scan');
 
   await gun.click('#btnHistory'); await wait(1200);
   if (await gun.$('#scrHistory.active')) await save(gun, 'gun-history');

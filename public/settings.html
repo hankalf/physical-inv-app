@@ -240,6 +240,38 @@
     </div>
 
     <div class="card">
+      <h2>Adjustment reasons <span class="chip" id="reasonChip" hidden></span>
+        <span class="muted">why a count differs from the system — picked when an adjustment is approved</span></h2>
+      <div class="hint" style="margin-top:0">
+        Used on the dashboard's <b>Adjustments</b> tab, on counts where <b>Adjustments need approval</b> is turned on.
+        They end up in the ERP file beside the number, and in the log — which is what an auditor asking
+        "who wrote off that pallet, and why" is actually asking for. "Other" is always offered with a free-text note.
+      </div>
+      <div class="chips" id="reasonList" style="margin-top:10px"></div>
+      <div class="row" style="margin-top:10px">
+        <input id="fNewReason" placeholder="e.g. Blown by the blast freezer fan" maxlength="60">
+        <button class="fit" id="btnAddReason">Add</button>
+      </div>
+      <hr>
+      <h3 style="margin-top:0">Accuracy targets</h3>
+      <div class="hint" style="margin-top:0">
+        What each class has to hit on the <b>Count accuracy</b> report, on counts with <b>ABC classes &amp; accuracy</b>
+        turned on. A items are the handful of SKUs that are most of the throughput, so they are held to the highest
+        number; C items are the long tail.
+      </div>
+      <div class="inline" style="margin-top:10px">
+        <div class="auto"><label for="fTargetA">Class A</label><input id="fTargetA" class="sm" type="number" min="0" max="100" step="0.1" style="width:84px"><span class="muted"> %</span></div>
+        <div class="auto"><label for="fTargetB">Class B</label><input id="fTargetB" class="sm" type="number" min="0" max="100" step="0.1" style="width:84px"><span class="muted"> %</span></div>
+        <div class="auto"><label for="fTargetC">Class C</label><input id="fTargetC" class="sm" type="number" min="0" max="100" step="0.1" style="width:84px"><span class="muted"> %</span></div>
+      </div>
+      <div class="inline" style="margin-top:14px">
+        <div class="auto"><button class="primary fit" id="btnSaveReasons">Save</button></div>
+        <div class="auto"><button class="fit" id="btnResetReasons">Restore the defaults</button></div>
+      </div>
+      <div class="feedback" id="reasonMsg"></div>
+    </div>
+
+    <div class="card">
       <h2>Scanner setup <span class="chip" id="authChip" hidden></span>
         <span class="muted">each scanner gets its own link — open it once on the device and add it to the home screen</span></h2>
       <div class="inline">

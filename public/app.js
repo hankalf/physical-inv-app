@@ -299,7 +299,8 @@
             deviceId: l.deviceId, aisle: l.aisle, unknownPallet: l.unknownPallet,
             unknownLocation: l.unknownLocation, offAssignment: l.offAssignment,
             duplicatePallet: l.duplicatePallet, emptyBin: l.emptyBin || 0, pass: l.pass || 1, recountId: l.recountId || null, overrideReason: l.overrideReason,
-            lot: l.lot || null, expiry: l.expiry || null, aliasOf: l.aliasOf || null, scannedAt: l.ts,
+            lot: l.lot || null, expiry: l.expiry || null, aliasOf: l.aliasOf || null,
+            labelIssue: l.labelIssue || '', scannedAt: l.ts,
           }))),
         });
         const ok = new Set(result.accepted || []);
@@ -901,10 +902,16 @@
            a screen wider than it is tall and say nothing, so a page that waits
            for a quarter-turn angle waits all shift. */
     const angle = Number(screen.orientation?.angle ?? window.orientation ?? 0);
-    const wide = window.innerWidth > window.innerHeight;
+    /* The SCREEN, not the window. An on-screen keyboard takes half the window
+       with it, and a gun whose window is suddenly wider than it is tall has not
+       been turned - somebody is typing a clock-in number. Asking the screen is
+       the difference between the two. */
+    const sw = Number(screen && screen.width) || window.innerWidth;
+    const sh = Number(screen && screen.height) || window.innerHeight;
+    const wide = sw > sh;
     /* Only a handheld is turned: somebody opening the gun page on a laptop is
        looking at a wide screen on purpose. */
-    const handheld = Math.min(window.innerWidth, window.innerHeight) <= 900 && matchMedia('(pointer: coarse)').matches;
+    const handheld = Math.min(sw, sh) <= 900 && matchMedia('(pointer: coarse)').matches;
     let turn = '';
     if (layoutCfg().portrait !== false && handheld) {
       /* Wide means sideways, whatever was reported: a quarter turn back, the way
@@ -929,7 +936,9 @@
     const did = heldTurn ? 'turned back upright by the app'
       : layoutCfg().portrait === false ? 'left alone - keeping it upright is off'
       : 'upright already';
-    el.textContent = `Screen ${window.innerWidth}\u00d7${window.innerHeight}, device turned ${angle}\u00b0 - ${did}.`;
+    const sw = Number(screen && screen.width) || window.innerWidth;
+    const sh = Number(screen && screen.height) || window.innerHeight;
+    el.textContent = `Screen ${sw}\u00d7${sh}, window ${window.innerWidth}\u00d7${window.innerHeight}, device turned ${angle}\u00b0 - ${did}.`;
   }
   /* Every way a device has of saying it moved, because they do not all fire and
      they do not all fire in the same order. Doing this twice costs nothing. */
@@ -1057,6 +1066,11 @@
     // a second label belongs to the pallet just counted, so it is offered at the
     // start of the next line rather than in the middle of this one
     $('btnSameLabel').hidden = step !== 'pallet' || !state.lastPallet || !!state.recount;
+    /* A barcode that will not read is not a reason to walk away from a pallet.
+       Offered on the pallet step only, and put away again as soon as the line
+       moves on. */
+    $('btnNoScan').hidden = step !== 'pallet' || !!state.awaitingLabel;
+    if (step !== 'pallet') $('noScanRow').hidden = true;
     $('commentChips').hidden = step !== 'comments';
     if (state.draft.emptyBin && step === 'bin') $('prompt').textContent = 'EMPTY bin — scan its LOCATION';
     if (step === 'comments') {
@@ -1608,8 +1622,59 @@
     feedback($('scanMsg'), 'ok', `${tag} is the same pallet as ${of}`, 'Recorded with no quantity, so nothing is counted twice.');
   }
 
+  /*
+   * A label that will not scan.
+   *
+   * Freezer labels come off, get scuffed by a forklift, ice over. The pallet is
+   * still there and still has to be counted, so the counter says which kind of
+   * problem it is and carries on: either the number is readable and they type
+   * it, or there is nothing readable on it at all and the app gives the pallet a
+   * name of its own for the bin it is in. Either way the line is marked, and the
+   * dashboard has the walk-round list for somebody with a label printer.
+   */
+  function askNoScan() {
+    $('noScanRow').hidden = !$('noScanRow').hidden;
+    if (!$('noScanRow').hidden) {
+      feedback($('scanMsg'), 'warn', 'Label will not scan',
+        'Can you read the number on it? Type it if you can — it is still that pallet.');
+    }
+    focusScan();
+  }
+
+  function noScanTyped() {
+    $('noScanRow').hidden = true;
+    state.draft.labelIssue = 'typed';
+    setKeyboard(true);
+    feedback($('scanMsg'), 'warn', 'Type the pallet ID', 'The line will be flagged so the label gets replaced.');
+    focusScan();
+  }
+
+  /* Nothing readable at all: the pallet still gets counted, and is named after
+     the bin it is in once that is known - NO-LABEL-F01A001-1 is a real thing
+     somebody can walk to, which "unknown" is not. */
+  function noScanNone() {
+    $('noScanRow').hidden = true;
+    state.draft.labelIssue = 'none';
+    state.draft.palletId = 'NO LABEL';          // the real name is made at commit, from the bin
+    state.draft.unknownPallet = 1;
+    state.draft.comments = [state.draft.comments, 'no readable label'].filter(Boolean).join('; ');
+    advance('warn', 'Counting it as a pallet with no label',
+      'Carry on as normal. It will be named after its bin, and a supervisor gets that bin on the relabel list.');
+  }
+
+  /* The name for a pallet nobody could read: its bin, and which one in that bin
+     it is, so two unlabelled pallets in the same rack do not collide. */
+  async function nameFromBin(bin) {
+    const base = `NO-LABEL-${bin || 'BIN'}`;
+    let n = 1;
+    while (await alreadyCounted(`${base}-${n}`)) n++;
+    return `${base}-${n}`;
+  }
+
   async function commitLine() {
     const d = state.draft;
+    // a pallet with no readable label takes its name from the bin it turned up in
+    if (d.labelIssue === 'none') d.palletId = await nameFromBin(d.location);
     const line = {
       clientId: uuid(),
       sessionId: state.session.id,
@@ -1634,6 +1699,7 @@
       lot: d.lot || null,
       expiry: d.expiry || null,
       aliasOf: d.aliasOf || null,
+      labelIssue: d.labelIssue || '',
       ts: new Date().toISOString(),
       synced: 0,
       voidedLocal: false,
@@ -1819,6 +1885,9 @@
     stepBack();
   };
   $('btnSameLabel').onclick = startSecondLabel;
+  $('btnNoScan').onclick = askNoScan;
+  $('btnNoScanType').onclick = noScanTyped;
+  $('btnNoScanNone').onclick = noScanNone;
   $('btnEmpty').onclick = () => {
     // jump straight to the bin scan; the line is saved with no pallet and qty 0
     state.draft = { emptyBin: 1 };
@@ -1850,8 +1919,8 @@
     state.awaitingLabel = { of: state.lastPallet.id, bin: state.lastPallet.bin };
     await saveSecondLabel(tag);
   };
-  $('btnKeyboard').onclick = () => {
-    state.keyboardOn = !state.keyboardOn;
+  function setKeyboard(on) {
+    state.keyboardOn = !!on;
     $('btnKeyboard').textContent = state.keyboardOn ? 'Keyboard on' : 'Keyboard';
     const f = $('fScan');
     const keep = f.value;                 // renderStep clears the box; a half-typed entry should survive
@@ -1863,7 +1932,8 @@
        makes the keypad appear on the tap that asked for it, and only then. */
     if (state.keyboardOn) setTimeout(() => { try { f.focus(); f.click(); } catch { /* ignore */ } }, 40);
     else focusScan();
-  };
+  }
+  $('btnKeyboard').onclick = () => setKeyboard(!state.keyboardOn);
 
   /* Wedge scanners are configured with either an ENTER or a TAB suffix, and a
      TAB out of the last field takes the focus out of the page altogether - on

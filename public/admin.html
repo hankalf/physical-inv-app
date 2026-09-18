@@ -100,6 +100,20 @@
       </div>
       <div class="grid" id="stats" style="margin-top:16px"></div>
       <div class="scroll" style="margin-top:14px"><table id="teamTable"></table></div>
+      <hr>
+      <h3 style="margin-top:0">Note on the office board</h3>
+      <div class="hint" style="margin-top:0">
+        One line across the top of the board screen (<b>/board</b>), above the progress bar — when lunch is,
+        which dock is blocked, when the next break starts. It belongs to this count, and clearing the box
+        takes it off the board. To reach the <b>scanners</b> instead, use <b>Message the floor</b> under Team plan.
+      </div>
+      <div class="inline" style="margin-top:10px">
+        <div><label for="fBoardNote">Note</label><input id="fBoardNote" maxlength="300" placeholder="e.g. Lunch 11:30–12:00 · Team 4 breaks first"></div>
+        <div class="auto"><button class="primary fit" id="btnSaveNote">Put it on the board</button></div>
+        <div class="auto"><button class="fit" id="btnClearNote">Clear</button></div>
+      </div>
+      <div class="feedback" id="noteMsg"></div>
+      <div class="muted" id="noteWho"></div>
     </div>
     <div class="card">
       <h2>Count session <span class="muted" id="sessionCardSub"></span></h2>
@@ -127,6 +141,10 @@
         <div class="auto"><label for="fRecMinQty" title="A quantity difference smaller than this and than the percentage below does not raise a second count. 0 raises every difference.">Recount over</label><input id="fRecMinQty" class="sm" type="number" min="0" style="width:74px" placeholder="0"><span class="muted"> units</span></div>
         <div class="auto"><label for="fRecMinPct" title="...or a difference of at least this percentage of the expected quantity. Either threshold is enough.">or over</label><input id="fRecMinPct" class="sm" type="number" min="0" max="100" style="width:66px" placeholder="0"><span class="muted"> %</span></div>
         <div class="auto"><label for="fRecCap" title="Stop raising automatic second counts once this many are open. 0 is no cap.">Cap open</label><input id="fRecCap" class="sm" type="number" min="0" style="width:74px" placeholder="0"></div>
+        <div class="auto"><label class="cb" title="Every difference from the report has to be approved with a reason code before it reaches the ERP file. Off by default."><input type="checkbox" id="fRequireApproval"> Adjustments need approval</label></div>
+        <div class="auto"><label for="fApprMinQty" title="Smaller than this and than the percentage beside it, an adjustment goes through without a signature. 0 and 0 means every one needs approving.">Approve over</label><input id="fApprMinQty" class="sm" type="number" min="0" style="width:74px" placeholder="0"><span class="muted"> units</span></div>
+        <div class="auto"><label for="fApprMinPct" title="...or at least this percentage of what the report expected. Either threshold is enough.">or over</label><input id="fApprMinPct" class="sm" type="number" min="0" max="100" style="width:66px" placeholder="0"><span class="muted"> %</span></div>
+        <div class="auto"><label class="cb" title="Reports accuracy by ABC class against a target for each. Off by default."><input type="checkbox" id="fTrackAbc"> ABC classes &amp; accuracy</label></div>
         <div class="auto">
           <label for="fLayout">Map drawing</label>
           <select id="fLayout"><option value="">Schematic (auto from bin codes)</option></select>
@@ -278,7 +296,82 @@
     </div>
       </div>
 
+      <div data-sub="adjust" data-sub-label="Adjustments">
+    <div class="card" id="adjustCard">
+      <h2>Adjustments <span class="muted" id="adjustSub">what this count would do to the ERP</span></h2>
+      <div class="hint" style="margin-top:0">
+        Every pallet that differs from the inventory report, biggest first. Approve one with a reason code
+        and it goes into the ERP file; reject it and the system keeps its number. Nothing leaves in the
+        <b>Adjustments</b> export until it has been signed for — and a line counted again after it was
+        approved comes back here, because the number somebody signed for is no longer the number.
+      </div>
+      <div class="feedback show warn" id="adjustOff" hidden>
+        <b>Approvals are off for this count.</b>
+        <div>Turn on <b>Adjustments need approval</b> under Count session (Progress tab) to use this.
+        With it off, every variance goes into the ERP file as it always did.</div>
+      </div>
+      <div id="adjustBody" hidden>
+        <div class="grid" id="adjustStats" style="margin-top:12px"></div>
+        <div class="inline" style="margin-top:12px">
+          <div>
+            <label for="fAdjReason">Reason</label>
+            <select id="fAdjReason"><option value="">Choose a reason…</option></select>
+          </div>
+          <div><label for="fAdjNote">Note (optional)</label><input id="fAdjNote" maxlength="300" placeholder="Free text — kept with the approval"></div>
+          <div class="auto"><button class="primary fit" id="btnApprove">Approve selected</button></div>
+          <div class="auto"><button class="danger fit" id="btnReject">Reject selected</button></div>
+          <div class="auto"><button class="fit" id="btnExportAdjust">Adjustments CSV</button></div>
+        </div>
+        <div class="inline" style="margin-top:6px">
+          <div class="auto"><label class="cb"><input type="checkbox" id="fAdjPendingOnly" checked> Only the ones still waiting</label></div>
+          <div class="auto"><button class="fit" id="btnAdjAll">Select all shown</button></div>
+          <div class="auto"><button class="fit" id="btnAdjNone">Select none</button></div>
+        </div>
+        <div class="feedback" id="adjustMsg"></div>
+        <div class="scroll" style="margin-top:10px"><table id="adjustTable"></table></div>
+        <div class="muted" id="adjustNote"></div>
+      </div>
+    </div>
+      </div>
+
       <div data-sub="reports" data-sub-label="Reports">
+    <div class="card" id="accuracyCard">
+      <h2>Count accuracy <span class="muted">by ABC class, against the target for each</span></h2>
+      <div class="feedback show warn" id="accuracyOff" hidden>
+        <b>ABC classes and the accuracy report are off for this count.</b>
+        <div>Turn on <b>ABC classes &amp; accuracy</b> under Count session (Progress tab) to use this.</div>
+      </div>
+      <div id="accuracyBody" hidden>
+        <div class="hint" style="margin-top:0">
+          <b>Pallet accuracy</b> is how many pallets were exactly what the report said, and is the number an
+          auditor asks for. <b>Quantity accuracy</b> is how many of the expected units were not in dispute.
+          Classes come from an ABC column on the pallet file; if it has none, work them out from the report.
+        </div>
+        <div class="inline" style="margin-top:12px">
+          <div class="auto"><button id="btnDeriveAbc" title="Pareto on the expected quantities: the first 80% is A, the next 15% B, the tail C. Anything the file already classified is left alone.">Work out classes from the report</button></div>
+          <div class="auto"><button id="btnExportAccuracy">Accuracy CSV</button></div>
+          <div class="auto"><span class="muted" id="abcSub"></span></div>
+        </div>
+        <div class="feedback" id="accuracyMsg"></div>
+        <div class="scroll" style="margin-top:10px"><table id="accuracyTable"></table></div>
+        <div class="muted" id="accuracyNote"></div>
+      </div>
+    </div>
+
+    <div class="card" id="labelCard">
+      <h2>Labels to replace <span class="muted">pallets whose label would not scan</span></h2>
+      <div class="hint" style="margin-top:0">
+        A counter who cannot scan a label says so on the gun and carries on counting. This is the walk-round
+        afterwards: which bin, what was counted there, and whether there was a readable number on it at all.
+        A pallet with nothing readable is counted under a name made from its bin, so it can be found again.
+      </div>
+      <div class="inline" style="margin-top:10px">
+        <div class="auto"><button id="btnExportLabels">Labels CSV</button></div>
+        <div class="auto"><span class="muted" id="labelSub"></span></div>
+      </div>
+      <div class="scroll" style="margin-top:10px"><table id="labelTable"></table></div>
+    </div>
+
     <div class="card">
       <h2>Find a lot <span class="muted">after a recall notice: where is every case of it</span></h2>
       <div class="hint" style="margin-top:0">

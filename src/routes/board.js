@@ -64,6 +64,12 @@ export function boardData(sessionId) {
   return {
     session: { id: session.id, name: session.name, mode: session.mode || 'full', status: session.status },
     sessions: listBoardSessions(),
+    /* The line the office writes for the floor: when lunch is, which dock is
+       blocked. It sits above everything else on the board because that is the
+       one thing somebody walking past is looking for. */
+    note: session.board_note || '',
+    noteBy: session.board_note_by || '',
+    noteAt: session.board_note_at || '',
     at: new Date().toISOString(),
     pct,
     bins: { counted: p.bins_counted, total: p.bins_total },

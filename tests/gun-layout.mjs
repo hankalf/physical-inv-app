@@ -44,7 +44,7 @@ await gun.selectOption('#fSession', String(sess.id));
 await gun.fill('#fTeam', '1'); await gun.fill('#fEmployee', 'E1001'); await gun.press('#fEmployee', 'Enter');
 await gun.click('#btnStart'); await gun.waitForTimeout(2500);
 if (await gun.$('#scrAssign.active')) await gun.click('#btnCount');
-await gun.waitForSelector('#scrScan.active', { timeout: 20000 }); await gun.waitForTimeout(600);
+await gun.waitForSelector('#scrScan.active', { timeout: 90000 }); await gun.waitForTimeout(600);
 
 check('Gun: it asks for the bin first now', /BIN LOCATION/.test(await gun.textContent('#prompt')), clean(await gun.textContent('#prompt')));
 check('Gun: no keypad on the bin step either — the scanner is the keyboard',

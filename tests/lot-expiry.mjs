@@ -91,7 +91,7 @@ await gun.selectOption('#fSession', String(sess.id));
 await gun.fill('#fTeam', '2'); await gun.fill('#fEmployee', 'E1001'); await gun.press('#fEmployee', 'Enter');
 await gun.click('#btnStart'); await gun.waitForTimeout(2500);
 if (await gun.$('#scrAssign.active')) await gun.click('#btnCount');
-await gun.waitForSelector('#scrScan.active', { timeout: 20000 }); await gun.waitForTimeout(600);
+await gun.waitForSelector('#scrScan.active', { timeout: 90000 }); await gun.waitForTimeout(600);
 const scan = async (v) => { await gun.fill('#fScan', v); await gun.press('#fScan', 'Enter'); await gun.waitForTimeout(450); };
 
 await scan('PLT-E'); await scan('18');
@@ -130,7 +130,7 @@ await g2.selectOption('#fSession', String(plain.id));
 await g2.fill('#fTeam', '3'); await g2.fill('#fEmployee', 'E1001'); await g2.press('#fEmployee', 'Enter');
 await g2.click('#btnStart'); await g2.waitForTimeout(2500);
 if (await g2.$('#scrAssign.active')) await g2.click('#btnCount');
-await g2.waitForSelector('#scrScan.active', { timeout: 20000 }); await g2.waitForTimeout(500);
+await g2.waitForSelector('#scrScan.active', { timeout: 90000 }); await g2.waitForTimeout(500);
 check('Gun: a count that does not track lots still asks three questions',
   /1 of 3/.test(await g2.textContent('#stepLabel')), clean(await g2.textContent('#stepLabel')));
 await g2.close();

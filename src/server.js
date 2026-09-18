@@ -14,13 +14,15 @@ import {
 import { importMaster, pruneAreaAisles } from './routes/master.js';
 import { boardData } from './routes/board.js';
 import { sendMessage, listMessages, messagesFor, ackMessage, clearMessage } from './routes/messages.js';
+import { listAdjustments, decideAdjustments, adjustmentReasons, saveAdjustmentReasons } from './routes/adjustments.js';
+import { accuracy, accuracyCsv, deriveAbc, accuracyTargets, saveAccuracyTargets } from './routes/accuracy.js';
 import { setupState } from './routes/setup.js';
 import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout } from './routes/scanner-prompts.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks,
 } from './routes/assignments.js';
-import { progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot } from './routes/reports.js';
+import { progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot, labelsToReplace } from './routes/reports.js';
 import {
   listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
   tasksForTeam, takeRecount, finishRecount, updateRecount, deleteRecount,
@@ -547,17 +549,25 @@ async function handleAdmin(req, res, url, m) {
     const minQty = num(body.recountMinQty, s.recount_min_qty, 1e6);
     const minPct = num(body.recountMinPct, s.recount_min_pct, 100);
     const cap = num(body.recountCap, s.recount_cap, 1e6);
-    audit(actor, 'changed session settings', JSON.stringify({ palletMode: mode, guided: body.guided, askComments: body.askComments, layout, autoRecount: body.autoRecount, recount: { minQty, minPct, cap } }), m[1]);
+    // how big an adjustment has to be before somebody has to sign for it
+    const apprQty = num(body.approvalMinQty, s.approval_min_qty, 1e6);
+    const apprPct = num(body.approvalMinPct, s.approval_min_pct, 100);
+    audit(actor, 'changed session settings', JSON.stringify({ palletMode: mode, guided: body.guided, askComments: body.askComments, layout, autoRecount: body.autoRecount, recount: { minQty, minPct, cap },
+      approvals: { on: body.requireApproval, minQty: apprQty, minPct: apprPct }, trackAbc: body.trackAbc }), m[1]);
     db.prepare(`UPDATE sessions SET pallet_mode = ?, guided = ?, ask_comments = ?, layout = ?, auto_recount = ?,
                   recount_min_qty = ?, recount_min_pct = ?, recount_cap = ?,
                   ask_lot = ?, ask_expiry = ?,
+                  require_approval = ?, approval_min_qty = ?, approval_min_pct = ?, track_abc = ?,
                   master_version = master_version + 1 WHERE id = ?`)
       .run(mode, body.guided == null ? s.guided : (body.guided ? 1 : 0),
            body.askComments == null ? s.ask_comments : (body.askComments ? 1 : 0), layout,
            body.autoRecount == null ? s.auto_recount : (body.autoRecount ? 1 : 0),
            minQty, minPct, cap,
            body.askLot == null ? s.ask_lot : (body.askLot ? 1 : 0),
-           body.askExpiry == null ? s.ask_expiry : (body.askExpiry ? 1 : 0), s.id);
+           body.askExpiry == null ? s.ask_expiry : (body.askExpiry ? 1 : 0),
+           body.requireApproval == null ? s.require_approval : (body.requireApproval ? 1 : 0),
+           apprQty, apprPct,
+           body.trackAbc == null ? s.track_abc : (body.trackAbc ? 1 : 0), s.id);
     return sendJson(req, res, 200, getSession(m[1]));
   }
 
@@ -718,12 +728,13 @@ async function handleAdmin(req, res, url, m) {
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/erp\/([a-z0-9-]+)\.csv$/))) {
     const built = buildExport(m[1], m[2]);
-    audit(actor, 'exported to the ERP', `${m[2]}: ${built.rows} rows`, m[1]);
+    audit(actor, 'exported to the ERP',
+      `${m[2]}: ${built.rows} rows${built.held ? `, ${built.held} held back waiting for approval` : ''}`, m[1]);
     return sendCsv(req, res, `${m[2]}-session-${m[1]}-${localDate()}.csv`, built.csv);
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/erp\/([a-z0-9-]+)\/preview$/)) && method === 'GET') {
     const built = buildExport(m[1], m[2]);
-    return sendJson(req, res, 200, { rows: built.rows, format: built.format, sample: built.csv.split('\r\n').slice(0, 6).join('\n') });
+    return sendJson(req, res, 200, { rows: built.rows, held: built.held || 0, format: built.format, sample: built.csv.split('\r\n').slice(0, 6).join('\n') });
   }
 
   // --- paper, for when the scanners are not an option
@@ -927,6 +938,80 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, clearMessage(m[1], m[2]));
   }
 
+  // --- a line on the office board: when lunch is, which dock is blocked
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/note$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const s = getSession(m[1]);
+    if (!s) throw httpError(404, 'session not found');
+    const note = String(body.note == null ? '' : body.note).replace(/\s+/g, ' ').trim().slice(0, 300);
+    db.prepare('UPDATE sessions SET board_note = ?, board_note_by = ?, board_note_at = ? WHERE id = ?')
+      .run(note || null, note ? actor : null, note ? new Date().toISOString() : null, s.id);
+    audit(actor, note ? 'put a note on the board' : 'cleared the board note', note, m[1]);
+    return sendJson(req, res, 200, { note, noteBy: note ? actor : '', noteAt: note ? new Date().toISOString() : '' });
+  }
+
+  // --- approvals on adjustments
+  if (p === '/api/admin/adjustment-reasons' && method === 'GET') {
+    return sendJson(req, res, 200, adjustmentReasons());
+  }
+  if (p === '/api/admin/adjustment-reasons' && method === 'POST') {
+    const body = await readJson(req);
+    const saved = saveAdjustmentReasons(body.reasons);
+    audit(actor, 'changed the adjustment reasons', saved.reasons.join(' | '));
+    return sendJson(req, res, 200, saved);
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/adjustments$/)) && method === 'GET') {
+    return sendJson(req, res, 200, listAdjustments(m[1], { status: url.searchParams.get('status') || '' }));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/adjustments\/decide$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const done = decideAdjustments(m[1], { ...body, actor });
+    audit(actor, done.status === 'rejected' ? 'rejected adjustments' : 'approved adjustments',
+      `${done.decided} pallet(s): ${done.reason}${body.note ? ' - ' + String(body.note).slice(0, 200) : ''}`, m[1]);
+    return sendJson(req, res, 200, done);
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/adjustments\.csv$/))) {
+    const rows = listAdjustments(m[1], { limit: 2000 }).adjustments;
+    return sendCsv(req, res, `adjustments-session-${m[1]}.csv`, toCsv(rows, [
+      'pallet_id', 'sku', 'location', 'kind', 'expected_qty', 'counted_qty', 'variance_qty',
+      'status', 'reason', 'note', 'decided_by', 'decided_at',
+    ]));
+  }
+
+  // --- ABC classes and the accuracy scorecard
+  if (p === '/api/admin/accuracy-targets' && method === 'GET') {
+    return sendJson(req, res, 200, accuracyTargets());
+  }
+  if (p === '/api/admin/accuracy-targets' && method === 'POST') {
+    const body = await readJson(req);
+    const saved = saveAccuracyTargets(body.targets || body);
+    audit(actor, 'changed the accuracy targets', JSON.stringify(saved.targets));
+    return sendJson(req, res, 200, saved);
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/accuracy$/)) && method === 'GET') {
+    return sendJson(req, res, 200, accuracy(m[1]));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/abc\/derive$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const out = deriveAbc(m[1], { force: !!body.force });
+    audit(actor, 'worked out ABC classes from the report',
+      `${out.classified} pallets classified (A ${out.byClass.A}, B ${out.byClass.B}, C ${out.byClass.C})`, m[1]);
+    return sendJson(req, res, 200, out);
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/accuracy\.csv$/))) {
+    return sendCsv(req, res, `accuracy-session-${m[1]}.csv`, accuracyCsv(m[1]));
+  }
+
+  // --- labels that would not scan
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/labels$/)) && method === 'GET') {
+    return sendJson(req, res, 200, { labels: labelsToReplace(m[1]) });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/labels\.csv$/))) {
+    return sendCsv(req, res, `labels-to-replace-session-${m[1]}.csv`, toCsv(labelsToReplace(m[1]), [
+      'location_code', 'aisle', 'pallet_id', 'issue', 'sku', 'description', 'qty', 'team', 'device_id', 'comments', 'scanned_at',
+    ]));
+  }
+
   // --- reports
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/pallets$/)) && method === 'GET') {
     let rows = palletReport(m[1]);
@@ -966,7 +1051,7 @@ async function handleAdmin(req, res, url, m) {
   const COUNT_COLS = [
     'id', 'pallet_id', 'qty', 'location_code', 'aisle', 'sku', 'description', 'lot', 'expiry', 'alias_of', 'comments',
     'team', 'employees', 'device_id', 'unknown_pallet', 'unknown_location', 'off_assignment',
-    'duplicate_pallet', 'empty_bin', 'pass', 'recount_id', 'override_reason', 'voided', 'scanned_at', 'received_at',
+    'duplicate_pallet', 'empty_bin', 'label_issue', 'pass', 'recount_id', 'override_reason', 'voided', 'scanned_at', 'received_at',
   ];
   const PALLET_COLS = [
     'pallet_id', 'sku', 'description', 'uom', 'expected_qty', 'counted_qty', 'variance_qty',

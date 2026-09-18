@@ -3,6 +3,7 @@ import { parseBinCode, normLevels } from '../util/bincode.js';
 import { autoActivate } from './assignments.js';
 import { loadLayout, classifyByRules } from '../util/layouts.js';
 import { parseRecords, pick } from '../util/csv.js';
+import { normClass } from './accuracy.js';
 
 const LOCATION_ALIASES = ['location', 'loc', 'bin', 'binlocation', 'locationcode', 'slot', 'code', 'warehouselocation', 'binlocationcode'];
 const AISLE_ALIASES = ['aisle', 'row', 'aisleno', 'aislenumber'];
@@ -16,6 +17,8 @@ const TEAM_ALIASES = ['team', 'teamnumber', 'teamno', 'crew', 'group'];
 const LEVEL_ALIASES = ['level', 'levels', 'tier', 'shelf'];
 const LOT_ALIASES = ['lot', 'lotcode', 'lotno', 'lotnumber', 'batch', 'batchcode', 'batchno', 'batchnumber'];
 const EXPIRY_ALIASES = ['expiry', 'expirydate', 'expiration', 'expirationdate', 'expires', 'bestbefore', 'bestbeforedate', 'useby', 'usebydate', 'shelflifedate'];
+/* The class an ERP calls A/B/C, and the dozen things it calls the column. */
+const ABC_ALIASES = ['abc', 'abcclass', 'abccode', 'class', 'itemclass', 'velocity', 'velocitycode', 'movement', 'movementclass', 'category'];
 const LASTCOUNT_ALIASES = ['lastphysinvtdate', 'lastphysicalinventorydate', 'lastcounted', 'lastcountdate', 'lastinventorydate', 'lastcount'];
 
 /**
@@ -57,8 +60,8 @@ const upAisle = db.prepare(
    ON CONFLICT(session_id, aisle) DO NOTHING`
 );
 const upPallet = db.prepare(
-  `INSERT INTO pallets (session_id, pallet_id, sku, description, uom, expected_qty, expected_location, lot, expiry)
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `INSERT INTO pallets (session_id, pallet_id, sku, description, uom, expected_qty, expected_location, lot, expiry, abc)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
    ON CONFLICT(session_id, pallet_id) DO UPDATE SET
      sku = COALESCE(NULLIF(excluded.sku, ''), pallets.sku),
      description = COALESCE(NULLIF(excluded.description, ''), pallets.description),
@@ -66,7 +69,8 @@ const upPallet = db.prepare(
      expected_qty = COALESCE(excluded.expected_qty, pallets.expected_qty),
      expected_location = COALESCE(NULLIF(excluded.expected_location, ''), pallets.expected_location),
      lot = COALESCE(NULLIF(excluded.lot, ''), pallets.lot),
-     expiry = COALESCE(NULLIF(excluded.expiry, ''), pallets.expiry)`
+     expiry = COALESCE(NULLIF(excluded.expiry, ''), pallets.expiry),
+     abc = COALESCE(NULLIF(excluded.abc, ''), pallets.abc)`
 );
 
 /**
@@ -145,10 +149,12 @@ export function importMaster(sessionId, kind, text, { replace = false } = {}) {
           qtyRaw !== '' && Number.isFinite(qty) ? qty : null,
           norm(pick(rec, LOCATION_ALIASES)),
           norm(pick(rec, LOT_ALIASES)),
-          parseDate(pick(rec, EXPIRY_ALIASES))
+          parseDate(pick(rec, EXPIRY_ALIASES)),
+          normClass(pick(rec, ABC_ALIASES))
         );
         if (norm(pick(rec, LOT_ALIASES))) stats.withLots = (stats.withLots || 0) + 1;
         if (parseDate(pick(rec, EXPIRY_ALIASES))) stats.withExpiry = (stats.withExpiry || 0) + 1;
+        if (normClass(pick(rec, ABC_ALIASES))) stats.withAbc = (stats.withAbc || 0) + 1;
         stats.pallets++;
         continue;
       }

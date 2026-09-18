@@ -528,6 +528,84 @@
     msg($('promptMsg'), 'warn', 'Defaults loaded — press Save to keep them.');
   };
 
+  /* ------------------------------------------- adjustment reasons & targets
+     The reason codes an approval carries, and what each ABC class has to hit.
+     Both are site settings rather than per-count ones: a warehouse's vocabulary
+     and its targets do not change between Tuesday's cycle count and the
+     wall-to-wall in March. */
+  let reasonState = { reasons: [], isDefault: true };
+  let targetState = { targets: {}, isDefault: true };
+
+  function renderReasons() {
+    const box = $('reasonList');
+    box.innerHTML = '';
+    if (!reasonState.reasons.length) {
+      const e = document.createElement('span');
+      e.className = 'muted';
+      e.textContent = 'none — the shipped list is used instead';
+      box.appendChild(e);
+    }
+    for (const text of reasonState.reasons) {
+      const b = button(text, 'chip-btn remove', () => {
+        reasonState.reasons = reasonState.reasons.filter((x) => x !== text);
+        renderReasons();
+      });
+      b.title = 'Remove it';
+      box.appendChild(b);
+    }
+    const chip = $('reasonChip');
+    chip.hidden = false;
+    chip.className = 'chip' + (reasonState.isDefault ? '' : ' online');
+    chip.textContent = reasonState.isDefault ? 'the defaults' : 'set for this site';
+    $('fTargetA').value = targetState.targets.A ?? '';
+    $('fTargetB').value = targetState.targets.B ?? '';
+    $('fTargetC').value = targetState.targets.C ?? '';
+  }
+
+  async function refreshReasons() {
+    const [r, t] = await Promise.all([
+      api.json('/api/admin/adjustment-reasons'),
+      api.json('/api/admin/accuracy-targets'),
+    ]);
+    reasonState = r;
+    targetState = t;
+    renderReasons();
+  }
+
+  $('btnAddReason').onclick = () => {
+    const v = $('fNewReason').value.replace(/\s+/g, ' ').trim().slice(0, 60);
+    if (!v) return;
+    if (reasonState.reasons.some((x) => x.toLowerCase() === v.toLowerCase())) {
+      msg($('reasonMsg'), 'warn', `"${v}" is already there`);
+      return;
+    }
+    reasonState.reasons = [...reasonState.reasons, v];
+    $('fNewReason').value = '';
+    clearMsg($('reasonMsg'));
+    renderReasons();
+  };
+  $('fNewReason').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnAddReason').click(); });
+
+  $('btnSaveReasons').onclick = async () => {
+    try {
+      reasonState = await api.post('/api/admin/adjustment-reasons', { reasons: reasonState.reasons });
+      targetState = await api.post('/api/admin/accuracy-targets', {
+        targets: { A: $('fTargetA').value, B: $('fTargetB').value, C: $('fTargetC').value },
+      });
+      renderReasons();
+      msg($('reasonMsg'), 'ok', 'Saved.', 'The dashboard picks these up on its next refresh.');
+    } catch (err) { msg($('reasonMsg'), 'err', err.message); }
+  };
+  $('btnResetReasons').onclick = async () => {
+    if (!confirm('Put the adjustment reasons and accuracy targets back to the shipped defaults?')) return;
+    try {
+      reasonState = await api.post('/api/admin/adjustment-reasons', { reasons: [] });
+      targetState = await api.post('/api/admin/accuracy-targets', { targets: {} });
+      renderReasons();
+      msg($('reasonMsg'), 'warn', 'Back to the defaults.');
+    } catch (err) { msg($('reasonMsg'), 'err', err.message); }
+  };
+
   /* ------------------------------------------------------------ scanners */
   const deviceUrl = (uid) => `${location.origin}/?d=${uid}`;
 
@@ -783,7 +861,10 @@
     if (!needSession($('erpMsg'))) return;
     try {
       const r = await api.json(`/api/admin/sessions/${sessionId}/erp/${$('fErpFormat').value}/preview`);
-      msg($('erpMsg'), 'ok', `${r.rows.toLocaleString()} rows — ${r.format.label}`, 'First few lines below. Nothing has been sent anywhere.');
+      msg($('erpMsg'), r.held ? 'warn' : 'ok', `${r.rows.toLocaleString()} rows — ${r.format.label}`,
+        r.held
+          ? `${r.held.toLocaleString()} adjustment${r.held === 1 ? '' : 's'} left out — still waiting for approval on the dashboard. First few lines below.`
+          : 'First few lines below. Nothing has been sent anywhere.');
       $('erpSample').style.display = 'block';
       $('erpSample').textContent = r.sample;
     } catch (err) { msg($('erpMsg'), 'err', err.message); }
@@ -882,7 +963,7 @@
 
   async function load() {
     await refreshMe();
-    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts()]);
+    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshReasons()]);
     await refreshGun().catch(() => {});
     await loadSessions();
     await refreshSetup().catch(() => {});

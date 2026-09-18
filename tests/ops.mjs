@@ -75,8 +75,13 @@ check('Three ERP layouts ship with the app', ['pallet-lines', 'adjustments', 'bi
 const adj = await (await fetch(`${BASE}/api/admin/sessions/${sess.id}/erp/adjustments.csv`, { headers: A })).text();
 const adjLines = adj.trim().split('\r\n');
 check('The adjustments file has only what differs, with a signed adjustment',
-  /^Location,Item,Pallet,System Qty,Counted Qty,Adjustment,Reason,Count Date/.test(adjLines[0]) && adjLines.some((l) => /,-18,/.test(l)),
+  /^Location,Item,Pallet,System Qty,Counted Qty,Adjustment,Reason,Approved By,Count Date/.test(adjLines[0]) && adjLines.some((l) => /,-18,/.test(l)),
   adjLines.find((l) => /PLT01002A/.test(l)) || adjLines[1]);
+/* The file has a column for who approved it whether or not this count asks for
+   approvals - blank here, because it does not. */
+check('...and a column for whoever signed for it, blank on a count that does not ask',
+  /Approved By/.test(adjLines[0]) && /,QTY VARIANCE,,/.test(adjLines.find((l) => /PLT01002A/.test(l)) || ''),
+  adjLines.find((l) => /PLT01002A/.test(l)) || '');
 const lines = await (await fetch(`${BASE}/api/admin/sessions/${sess.id}/erp/bin-lines.csv`, { headers: A })).text();
 check('The line-level file carries who counted it', /Clock In Numbers/.test(lines) && /E1001/.test(lines), lines.split('\r\n')[1]);
 // a site can define its own layout without a deploy

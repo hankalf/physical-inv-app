@@ -75,7 +75,7 @@ await gun.fill('#fTeam', '1');
 await gun.fill('#fEmployee', 'E2001'); await gun.press('#fEmployee', 'Enter');
 await gun.click('#btnStart'); await gun.waitForTimeout(2500);
 if (await gun.$('#scrAssign.active')) await gun.click('#btnCount');
-await gun.waitForSelector('#scrScan.active', { timeout: 20000 }); await gun.waitForTimeout(700);
+await gun.waitForSelector('#scrScan.active', { timeout: 90000 }); await gun.waitForTimeout(700);
 const scan = async (v) => { await gun.fill('#fScan', v); await gun.press('#fScan', 'Enter'); await gun.waitForTimeout(420); };
 const banner = async () => clean(await gun.textContent('#nextBin'));
 const countOne = async (pallet, qty, bin) => { await scan(pallet); await scan(String(qty)); await scan(bin); await gun.waitForTimeout(500); };

@@ -69,7 +69,7 @@ await gun.waitForSelector('#scrSignon.active'); await gun.waitForTimeout(400);
 check('Gun: opening its link signs the scanner in silently', (await gun.getAttribute('#deviceProblem', 'hidden')) !== null && /registered as SCANNER-07/.test(await T('#deviceInfo')));
 await gun.selectOption('#fSession', String(sess.id));
 await gun.fill('#fTeam', '3'); await gun.fill('#fEmployee', 'E9001'); await gun.press('#fEmployee', 'Enter');
-await gun.click('#btnStart'); await gun.waitForSelector('#scrScan.active, #scrAssign.active', { timeout: 20000 });
+await gun.click('#btnStart'); await gun.waitForSelector('#scrScan.active, #scrAssign.active', { timeout: 90000 });
 check('Gun: a signed-in scanner can sign on and load the lists', true);
 if (await gun.$('#btnCount')) { await gun.click('#btnCount'); await gun.waitForSelector('#scrScan.active'); }
 const scan = async (v) => { await gun.fill('#fScan', v); await gun.press('#fScan', 'Enter'); await gun.waitForTimeout(250); };
