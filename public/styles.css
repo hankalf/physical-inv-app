@@ -233,16 +233,40 @@ button.fit { flex: 0 0 auto; width: auto; }
 /* Held sideways when the device would not take the lock: the app still works,
    and says which way up it wants to be rather than leaving a counter to guess
    why everything is cramped. */
+/*
+ * Holding the app upright when the device will not.
+ *
+ * A browser tab cannot lock the screen - the orientation API only answers an
+ * app that owns the screen, which means installed or full screen. So when the
+ * device turns and nothing stopped it, the app turns itself back: the page is
+ * rotated a quarter turn and sized to the screen the other way round, which is
+ * what a counter wants on a portrait gun that Android decided to flip.
+ */
+body.upright {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vh;    /* the screen the other way round */
+  height: 100vw;
+  transform-origin: top left;
+  overflow: hidden;
+}
+/* Turned back by exactly what the device turned it by, so the app reads upright
+   however the handheld was tipped. */
+body.upright.turn-cw  { transform: rotate(90deg) translateY(-100%); }
+body.upright.turn-ccw { transform: rotate(-90deg) translateX(-100%); }
+
+/* Sideways on purpose, with the turning left off: keep it usable rather than
+   cramped, and say which way up it wants to be. */
 @media (orientation: landscape) and (max-height: 500px) {
-  body::before {
+  body:not(.upright)::before {
     content: "Hold the scanner upright";
     display: block; padding: 6px 10px; text-align: center; font-size: 13px; font-weight: 700;
     color: #0d1117; background: var(--warn);
   }
-  main { padding: 6px 10px; }
-  .prompt { font-size: 20px; margin: 4px 0; }
-  input.big { font-size: 22px; padding: 8px 10px; }
-  .nextbin .nb-code { font-size: 20px; }
+  body:not(.upright) main { padding: 6px 10px; }
+  body:not(.upright) .prompt { font-size: 20px; margin: 4px 0; }
+  body:not(.upright) input.big { font-size: 22px; padding: 8px 10px; }
+  body:not(.upright) .nextbin .nb-code { font-size: 20px; }
 }
 
 /* a freezer crew in gloves, on a 240px screen: everything a size up */

@@ -121,6 +121,7 @@ const LAYOUT_DEFAULTS = {
      screen. Installing the app from its own link is the quiet way to get the
      same thing, so this is opt-in for sites that want it anyway. */
   fullScreen: false,       // take the whole screen at sign-on
+  portrait: true,          // hold the app upright even when the device rotates
   keepAwake: true,         // hold the screen on while a team is counting
 };
 
@@ -144,6 +145,7 @@ export function scannerLayout() {
       : Math.max(0, Math.min(1e7, Number(saved.confirmOver) || 0)),
     vibrate: saved.vibrate === undefined ? true : !!saved.vibrate,
     fullScreen: saved.fullScreen === undefined ? LAYOUT_DEFAULTS.fullScreen : !!saved.fullScreen,
+    portrait: saved.portrait === undefined ? LAYOUT_DEFAULTS.portrait : !!saved.portrait,
     keepAwake: saved.keepAwake === undefined ? true : !!saved.keepAwake,
     device: saved.device === 'mc9200' ? 'mc9200' : 'mc9090',
     isDefault: !row,
@@ -160,6 +162,7 @@ export function saveScannerLayout(body = {}) {
     confirmOver: body.confirmOver === undefined ? now.confirmOver : Math.max(0, Math.min(1e7, Number(body.confirmOver) || 0)),
     vibrate: body.vibrate === undefined ? now.vibrate : !!body.vibrate,
     fullScreen: body.fullScreen === undefined ? now.fullScreen : !!body.fullScreen,
+    portrait: body.portrait === undefined ? now.portrait : !!body.portrait,
     keepAwake: body.keepAwake === undefined ? now.keepAwake : !!body.keepAwake,
     device: body.device === undefined ? now.device : (body.device === 'mc9200' ? 'mc9200' : 'mc9090'),
   };

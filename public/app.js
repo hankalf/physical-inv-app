@@ -71,7 +71,7 @@
     commentTimeout: 5,
   };
   const prompts = () => state.session?.prompts || FALLBACK_PROMPTS;
-  const LAYOUT_FALLBACK = { showContents: true, showNextBin: true, confirmOver: 1000, vibrate: true };
+  const LAYOUT_FALLBACK = { showContents: true, showNextBin: true, confirmOver: 1000, vibrate: true, portrait: true };
   const layoutCfg = () => state.session?.layout_cfg || LAYOUT_FALLBACK;
 
   /* Which questions this count asks, in the order the site configured.
@@ -279,6 +279,7 @@
     await metaSet('session', merged);
     state.steps = stepsFor(merged);
     document.body.classList.toggle('big-text', (merged.layout_cfg || {}).textSize === 'large');
+    holdUpright();
     renderStep();
   }
 
@@ -505,6 +506,7 @@
       state.steps = stepsFor(session);
       refreshMessages().catch(() => {});
       document.body.classList.toggle('big-text', (session.layout_cfg || {}).textSize === 'large');
+      holdUpright();          // now that this count's settings are in hand
       state.draft = {};
       state.stepIndex = 0;
       $('hdrTitle').textContent = `#${session.id} · ${session.name}`;
@@ -871,8 +873,35 @@
    * guaranteed - if the device says no, the app says so rather than pretending.
    */
   async function lockPortrait() {
-    try { await screen.orientation?.lock?.('portrait'); } catch { /* not allowed unless installed or full screen */ }
+    // Only an app that owns the screen may ask - installed, or full screen. In a
+    // browser tab this always refuses, which is what holdUpright() is for.
+    try { await screen.orientation?.lock?.('portrait'); } catch { /* the device decides */ }
+    holdUpright();
   }
+
+  /**
+   * Turn the app back upright when the device has turned and nothing stopped it.
+   * Purely visual: the page is rotated a quarter turn, so every scan, tap and
+   * countdown carries on exactly as before.
+   */
+  function holdUpright() {
+    /* How far the device has turned from the way it is built to be held. The app
+       turns back by exactly that, so a gun tipped at a low bin does not leave a
+       counter reading sideways. Zero means the device is upright - or is a
+       landscape device on purpose - and nothing is done. */
+    const angle = Number(screen.orientation?.angle ?? window.orientation ?? 0);
+    const turned = angle === 90 || angle === 270;
+    /* Only a handheld gets turned: a supervisor opening this page on a laptop is
+       looking at a wide screen on purpose. */
+    const handheld = Math.min(window.innerWidth, window.innerHeight) <= 600 && matchMedia('(pointer: coarse)').matches;
+    const on = layoutCfg().portrait !== false && turned && handheld && window.innerWidth > window.innerHeight;
+    document.body.classList.toggle('upright', on);
+    document.body.classList.toggle('turn-ccw', on && angle === 90);
+    document.body.classList.toggle('turn-cw', on && angle === 270);
+  }
+  window.addEventListener('resize', holdUpright);
+  window.addEventListener('orientationchange', () => setTimeout(holdUpright, 80));
+  screen.orientation?.addEventListener?.('change', () => setTimeout(holdUpright, 80));
 
   let wakeLock = null;
   async function keepAwake() {
@@ -1894,6 +1923,7 @@
 
   /* ------------------------------------------------------------ boot */
   (async () => {
+    holdUpright();          // a gun that starts up sideways starts up upright
     idb = await openDb();
     state.deviceToken = (await metaGet('deviceToken')) || '';
     const linked = await identifyFromLink();

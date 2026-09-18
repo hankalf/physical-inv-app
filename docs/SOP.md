@@ -276,10 +276,16 @@ own stylesheet, so it cannot drift from reality.
   quantity, not for a clock-in number. The scanner is the keyboard. The **Keyboard**
   button on the counting screen, and **Type it instead** on the sign-on screen, bring one
   up for whoever has to type.
-- **The app asks the device to stay upright.** An installed app gets portrait from the
-  manifest; a browser tab only gets it once the app owns the screen. If the handheld
-  still rotates, turn auto-rotate off on the device — it is an Android setting, not an
-  app one.
+- **Keep it upright** — on unless you turn it off. These are portrait handhelds held
+  one-handed at a rack face, and a screen that flips to landscape halfway down an aisle is
+  unusable. The app asks the device for portrait first, but only an app that owns the
+  screen (installed, or full screen) is allowed to ask — a browser tab is always refused.
+  So when the handheld turns anyway, the app turns *itself* back: the counting screen is
+  drawn a quarter turn the other way and reads upright in the hand. It is only a picture
+  being turned — scanning, tapping and the comments countdown all carry on exactly as
+  before. Turn it off and the gun is left however the device turned it, with a yellow
+  **Hold the scanner upright** strip across the top. Turning auto-rotate off on the
+  handheld (an Android setting, not an app one) is still the tidiest fix of all.
 - **Take the whole screen** — off unless you turn it on. It makes the app fill the display
   at sign-on, but the browser announces that with a bar carrying the site's address, right
   over the counting screen. **Installing the app** on the handheld (step 8) is the quiet
@@ -731,7 +737,7 @@ a handful of bins are counted every day.
 | Gun says `OFFLINE` with lines queued | Normal in a dead spot | Nothing. They upload when it gets a signal. Do not wipe the device |
 | A scan does nothing | DataWedge is not sending a suffix | DataWedge → Basic data formatting → send **ENTER** (or TAB) |
 | A keypad covers the screen | Somebody left the **Keyboard** button on | Tap **Keyboard** again. It is off by default and never comes up by itself |
-| The screen keeps rotating | Auto-rotate is on, and a browser tab cannot lock the orientation | Install the app (it asks for portrait), or turn auto-rotate off on the handheld |
+| The screen keeps rotating | Auto-rotate is on, and a browser tab is never allowed to lock the orientation | The app turns itself back upright on its own; if it is not, check **Keep it upright** is ticked under Settings → Scanner screen. To stop the device turning at all, install the app (it asks for portrait) or turn auto-rotate off on the handheld |
 | A team says they never got a message | Look at **Read by** on the dashboard | It shows which scanners have tapped Got it. A scanner that is offline gets it on its next sync |
 | A scan seems to land on a button instead of the box | Something else took the focus | Nothing — the app puts the keystrokes in the box and carries on. Tell us if it still happens |
 | The guide is a bin or two ahead of the team | The bins hold several pallets each | Fixed: the guide now stays on a bin until its tags are counted. Check **Show the next bin in the aisle** is on |
