@@ -102,9 +102,11 @@ check('Gun: whoever has to type says so first, and then gets one',
 await gun.click('#btnSignonKeyboard'); await gun.waitForTimeout(300);
 check('Gun: and can put it away again', (await gun.$eval('#fEmployee', (f) => f.inputMode)) === 'none');
 
-check('Gun: the app asks the device to stay upright', await gun.evaluate(() => {
-  // the manifest is what an installed app obeys; the API is the belt to its braces
-  return fetch('/manifest.webmanifest').then((r) => r.json()).then((mf) => mf.orientation === 'portrait');
+check('Gun: the app asks the device to stay upright, one way up', await gun.evaluate(() => {
+  // the manifest is what an installed app obeys; the API is the belt to its braces.
+  // portrait-primary, not portrait - plain portrait is both ways up, and a gun
+  // flipped end over end would be held upside down. See gun-portrait.mjs.
+  return fetch('/manifest.webmanifest').then((r) => r.json()).then((mf) => mf.orientation === 'portrait-primary');
 }));
 
 await gun.selectOption('#fSession', String(sess.id));

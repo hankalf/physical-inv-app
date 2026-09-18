@@ -873,9 +873,12 @@
    * guaranteed - if the device says no, the app says so rather than pretending.
    */
   async function lockPortrait() {
+    /* portrait-primary, not portrait: plain "portrait" is both ways up, and a
+       device that takes it will happily hold the app upside down when a gun is
+       flipped end over end. There is one way up a counter can read. */
     // Only an app that owns the screen may ask - installed, or full screen. In a
     // browser tab this always refuses, which is what holdUpright() is for.
-    try { await screen.orientation?.lock?.('portrait'); } catch { /* the device decides */ }
+    try { await screen.orientation?.lock?.('portrait-primary'); } catch { /* the device decides */ }
     holdUpright();
   }
 
@@ -884,24 +887,56 @@
    * Purely visual: the page is rotated a quarter turn, so every scan, tap and
    * countdown carries on exactly as before.
    */
+  let heldTurn = '';
   function holdUpright() {
-    /* How far the device has turned from the way it is built to be held. The app
-       turns back by exactly that, so a gun tipped at a low bin does not leave a
-       counter reading sideways. Zero means the device is upright - or is a
-       landscape device on purpose - and nothing is done. */
+    /* How far the device says it has turned from the way it is built to be
+       held. The app turns back by exactly that much - but what the screen is
+       actually doing decides, not what was reported, because two handhelds in
+       three report something else:
+
+         - flipped end over end, a gun reports a half turn with the screen still
+           tall. That is the one that leaves a counter reading upside down, and
+           the old rule ignored it because the screen was not wide.
+         - some devices never update the angle at all. They simply hand the page
+           a screen wider than it is tall and say nothing, so a page that waits
+           for a quarter-turn angle waits all shift. */
     const angle = Number(screen.orientation?.angle ?? window.orientation ?? 0);
-    const turned = angle === 90 || angle === 270;
-    /* Only a handheld gets turned: a supervisor opening this page on a laptop is
+    const wide = window.innerWidth > window.innerHeight;
+    /* Only a handheld is turned: somebody opening the gun page on a laptop is
        looking at a wide screen on purpose. */
-    const handheld = Math.min(window.innerWidth, window.innerHeight) <= 600 && matchMedia('(pointer: coarse)').matches;
-    const on = layoutCfg().portrait !== false && turned && handheld && window.innerWidth > window.innerHeight;
-    document.body.classList.toggle('upright', on);
-    document.body.classList.toggle('turn-ccw', on && angle === 90);
-    document.body.classList.toggle('turn-cw', on && angle === 270);
+    const handheld = Math.min(window.innerWidth, window.innerHeight) <= 900 && matchMedia('(pointer: coarse)').matches;
+    let turn = '';
+    if (layoutCfg().portrait !== false && handheld) {
+      /* Wide means sideways, whatever was reported: a quarter turn back, the way
+         the device says it went if it says anything at all. Tall and a half turn
+         means upside down: turned end over end and nothing else. */
+      if (wide) turn = angle === 270 ? 'cw' : 'ccw';
+      else if (angle === 180) turn = '180';
+    }
+    document.body.classList.toggle('upright', !!turn);
+    for (const t of ['cw', 'ccw', '180']) document.body.classList.toggle('turn-' + t, turn === t);
+    heldTurn = turn;
+    renderScreenInfo();
   }
+
+  /* What this particular handheld is doing, on the sign-on screen: the size it
+     gave the page, how far it says it has turned, and what the app did about
+     it. A gun that still reads sideways can be asked, rather than guessed at. */
+  function renderScreenInfo() {
+    const el = $('screenInfo');
+    if (!el) return;
+    const angle = Number(screen.orientation?.angle ?? window.orientation ?? 0);
+    const did = heldTurn ? 'turned back upright by the app'
+      : layoutCfg().portrait === false ? 'left alone - keeping it upright is off'
+      : 'upright already';
+    el.textContent = `Screen ${window.innerWidth}\u00d7${window.innerHeight}, device turned ${angle}\u00b0 - ${did}.`;
+  }
+  /* Every way a device has of saying it moved, because they do not all fire and
+     they do not all fire in the same order. Doing this twice costs nothing. */
   window.addEventListener('resize', holdUpright);
   window.addEventListener('orientationchange', () => setTimeout(holdUpright, 80));
   screen.orientation?.addEventListener?.('change', () => setTimeout(holdUpright, 80));
+  matchMedia('(orientation: portrait)').addEventListener?.('change', () => setTimeout(holdUpright, 80));
 
   let wakeLock = null;
   async function keepAwake() {

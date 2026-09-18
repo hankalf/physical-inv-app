@@ -39,6 +39,11 @@ const back = await j(await fetch(`${BASE}/api/admin/scanner-layout`, { method: '
 check('...and turn it back on, without losing the rest of the screen settings',
   back.portrait === true && back.textSize === 'large', `${back.portrait}, ${back.textSize}`);
 
+/* An installed app is held upright by the manifest, and "portrait" alone is
+   both ways up - a gun flipped end over end would be held upside down. */
+const manifest = await j(await fetch(`${BASE}/manifest.webmanifest`));
+check('The installed app asks for one way up, not either way up', manifest.orientation === 'portrait-primary', manifest.orientation);
+
 /* ---------------- the count these scanners are on ---------------- */
 const sess = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'upright test' }) }));
 await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=bins`, { method: 'POST', headers: csv, body: readFileSync(`${S}../public/templates/front-royal-bins.csv`, 'utf8') });
@@ -100,10 +105,39 @@ const fills = (box, w, h) => Math.abs(box.x) <= 1 && Math.abs(box.y) <= 1 && Mat
   await p.context().close();
 }
 
+/* ---------------- end over end ---------------- */
+{
+  /* The one the first cut of this missed: flipped end over end, a handheld
+     reports a half turn and hands the page a screen that is still tall. Nothing
+     about the shape of it says anything is wrong - and the counter is reading
+     the whole app upside down. */
+  const p = await handheld({ angle: 180, width: 360, height: 640 });
+  const cls = await bodyClass(p);
+  check('A handheld turned end over end is turned back the right way up',
+    /\bupright\b/.test(cls) && /\bturn-180\b/.test(cls), cls);
+  check('...and it still fills the screen, the same way up as the device',
+    fills(await bodyBox(p), 360, 640), JSON.stringify(await bodyBox(p)));
+  await p.context().close();
+}
+
+/* ---------------- a device that never says which way it turned ---------------- */
+{
+  /* Not every handheld updates the orientation angle. Some just hand the page a
+     screen wider than it is tall and say nothing, and waiting for an angle that
+     never comes means waiting all shift. */
+  const p = await handheld({ angle: 0, width: 640, height: 360 });
+  check('A gun that has plainly gone sideways is turned back even when it never says so',
+    /\bupright\b/.test(await bodyClass(p)), await bodyClass(p));
+  check('...and lands square on the screen like any other turn', fills(await bodyBox(p), 640, 360), JSON.stringify(await bodyBox(p)));
+  await p.context().close();
+}
+
 /* ---------------- already upright ---------------- */
 {
   const p = await handheld({ angle: 0, width: 360, height: 640 });
   check('A gun held the way it is meant to be is left alone', !/\bupright\b/.test(await bodyClass(p)), await bodyClass(p));
+  check('...and the sign-on screen says what this handheld is doing, for a gun that still reads sideways',
+    /Screen 360.640, device turned 0. - upright already/.test(clean(await p.textContent('#screenInfo'))), clean(await p.textContent('#screenInfo')));
   await p.context().close();
 }
 

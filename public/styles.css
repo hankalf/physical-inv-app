@@ -245,15 +245,25 @@ button.fit { flex: 0 0 auto; width: auto; }
 body.upright {
   position: fixed;
   top: 0; left: 0;
-  width: 100vh;    /* the screen the other way round */
-  height: 100vw;
-  transform-origin: top left;
   overflow: hidden;
 }
 /* Turned back by exactly what the device turned it by, so the app reads upright
-   however the handheld was tipped. */
+   however the handheld was tipped. A quarter turn is laid out on the screen the
+   other way round; a half turn is the same screen, the right way up. */
+body.upright.turn-cw,
+body.upright.turn-ccw {
+  width: 100vh;    /* the screen the other way round */
+  height: 100vw;
+  transform-origin: top left;
+}
 body.upright.turn-cw  { transform: rotate(90deg) translateY(-100%); }
 body.upright.turn-ccw { transform: rotate(-90deg) translateX(-100%); }
+/* End over end: the screen is still tall, it is just upside down. */
+body.upright.turn-180 {
+  width: 100vw; height: 100dvh;
+  transform-origin: center center;
+  transform: rotate(180deg);
+}
 
 /* Sideways on purpose, with the turning left off: keep it usable rather than
    cramped, and say which way up it wants to be. */
