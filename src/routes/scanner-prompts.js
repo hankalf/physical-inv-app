@@ -122,6 +122,10 @@ const LAYOUT_DEFAULTS = {
      same thing, so this is opt-in for sites that want it anyway. */
   fullScreen: false,       // take the whole screen at sign-on
   portrait: true,          // hold the app upright even when the device rotates
+  /* On: a scanner that has fallen behind a deploy reloads itself between
+     pallets. Off: it keeps running whatever it started with until somebody
+     closes and reopens it. */
+  autoUpdate: true,
   keepAwake: true,         // hold the screen on while a team is counting
 };
 
@@ -146,6 +150,7 @@ export function scannerLayout() {
     vibrate: saved.vibrate === undefined ? true : !!saved.vibrate,
     fullScreen: saved.fullScreen === undefined ? LAYOUT_DEFAULTS.fullScreen : !!saved.fullScreen,
     portrait: saved.portrait === undefined ? LAYOUT_DEFAULTS.portrait : !!saved.portrait,
+    autoUpdate: saved.autoUpdate === undefined ? LAYOUT_DEFAULTS.autoUpdate : !!saved.autoUpdate,
     keepAwake: saved.keepAwake === undefined ? true : !!saved.keepAwake,
     device: saved.device === 'mc9200' ? 'mc9200' : 'mc9090',
     isDefault: !row,
@@ -163,6 +168,7 @@ export function saveScannerLayout(body = {}) {
     vibrate: body.vibrate === undefined ? now.vibrate : !!body.vibrate,
     fullScreen: body.fullScreen === undefined ? now.fullScreen : !!body.fullScreen,
     portrait: body.portrait === undefined ? now.portrait : !!body.portrait,
+    autoUpdate: body.autoUpdate === undefined ? now.autoUpdate : !!body.autoUpdate,
     keepAwake: body.keepAwake === undefined ? now.keepAwake : !!body.keepAwake,
     device: body.device === undefined ? now.device : (body.device === 'mc9200' ? 'mc9200' : 'mc9090'),
   };

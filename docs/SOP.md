@@ -276,6 +276,14 @@ own stylesheet, so it cannot drift from reality.
   quantity, not for a clock-in number. The scanner is the keyboard. The **Keyboard**
   button on the counting screen, and **Type it instead** on the sign-on screen, bring one
   up for whoever has to type.
+- **Update itself after a deploy** — on unless you turn it off. A scanner left running keeps
+  the version it started with: these are installed apps that sit on a cradle overnight and are
+  the same page in the morning. With this on, the gun compares what it is running against what
+  the server is serving and reloads itself when it has fallen behind — **never mid-pallet, and
+  never with counts still queued on the device**. If it is in the middle of a line it shows a
+  green **Update ready** bar and waits for the line to finish; tapping the bar takes it at once.
+  It reloads once for any one version: a gun that comes back still behind says *"update did not
+  take"* rather than reloading in a loop halfway down an aisle.
 - **Keep it upright** — on unless you turn it off. These are portrait handhelds held
   one-handed at a rack face, and a screen that flips halfway down an aisle is unusable.
   There is **one** way up: the installed app asks the device for it by name, and a gun
@@ -514,6 +522,12 @@ second tag is not on the inventory report, the gun offers the same answer in the
 | | |
 |:--:|:--:|
 | ![](images/gun-second-label-ask.png)<br>The gun asks for the other label and names the pallet it will belong to | ![](images/gun-second-label-done.png)<br>Recorded as the same pallet, with no quantity — so the stock is not counted twice |
+
+**The green "Update ready" bar**
+
+A new version of the app is on the server and this scanner has not got it yet. Nothing is
+wrong and nothing needs doing: it loads itself the moment the pallet in hand is finished and
+everything counted has reached the server. Tap the bar if you would rather take it now.
 
 **When a label will not scan**
 
@@ -878,6 +892,9 @@ a handful of bins are counted every day.
 | A pallet is on the report as `NOT IN MASTER` with a name like `NO-LABEL-F01A001-1` | Its label would not scan and nothing on it was readable, so it was counted under the bin's name | Send somebody to relabel it — **Reports → Labels to replace** has the list |
 | A line is in a bin called `NO-LABEL-BIN-F01-1` | The rack label would not scan, and the app had nothing to suggest — an unguided count, with the pallet not on the report either | The quantity is safe. Relabel the bay, then correct the bin on the line if it matters; the relabel list says which aisle it was in |
 | The note is not on the board | The board polls every 15 seconds by default, or the note is on a different count | Wait a few seconds; check the board is pinned to the same count (`/board?session=12`) |
+| A change you made does not appear on the scanners | The gun is still running the app it loaded before the change | Site settings (questions, reasons, text size) reach a running gun within about half a minute and need nothing. A new **version of the app** needs the page to reload: with **Update itself after a deploy** on it does that by itself between pallets, within a couple of minutes of somebody picking the gun up. To force it: tap the green **Update ready** bar, or close the app fully (not just the home button) and reopen it. Reinstalling is never necessary |
+| Not sure whether a gun has the latest version | — | The sign-on screen's bottom line reads *"App build a1b2c3d4e5f6 on the server — this scanner is up to date"*. Compare it across two guns, or against a fresh reload |
+| A gun keeps saying "update did not take" | It reloaded and is still on the old version — something between it and the server is serving stale files | Close the app fully and reopen it. If it persists, clear the site data for the app on that device (Android → Settings → Apps → the app → Storage), then open its link again |
 | The screen keeps rotating, or reads upside down | Auto-rotate is on, and a browser tab is never allowed to lock the orientation | The app turns itself back upright on its own, sideways or end over end. If it is not, check **Keep it upright** is ticked under Settings → Scanner screen, then read the grey line at the bottom of the sign-on screen — it says the screen size the handheld gave the app, how far the device says it has turned, and what the app did about it. To stop the device turning at all, install the app (it asks for one way up) or turn auto-rotate off on the handheld |
 | A team says they never got a message | Look at **Read by** on the dashboard | It shows which scanners have tapped Got it. A scanner that is offline gets it on its next sync |
 | A scan seems to land on a button instead of the box | Something else took the focus | Nothing — the app puts the keystrokes in the box and carries on. Tell us if it still happens |

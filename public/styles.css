@@ -220,6 +220,16 @@ button.fit { flex: 0 0 auto; width: auto; }
 .armbar span { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); }
 @keyframes armpulse { 50% { border-color: #7a2a2f; } }
 
+/* A newer app is waiting. Deliberately quiet - it is news, not a problem, and
+   it sits above the screens rather than inside one because it is true wherever
+   the counter happens to be. */
+.updatebar {
+  display: block; width: 100%; margin: 0 0 10px; padding: 12px; text-align: left;
+  border-radius: 10px; border: 1px solid #1d572a; background: #10281a; color: var(--text); font: inherit;
+}
+.updatebar b { display: block; font-size: 16px; color: #7ee29a; }
+.updatebar span { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); }
+
 .nextbin.done { background: #10281a; border-color: #1d572a; color: #7ee29a; font-weight: 700; font-size: 14px; }
 /* still working this bin: a different colour, so a glance tells you whether the
    code on the banner is where you are or where you are going next */

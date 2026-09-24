@@ -71,7 +71,7 @@
     commentTimeout: 5,
   };
   const prompts = () => state.session?.prompts || FALLBACK_PROMPTS;
-  const LAYOUT_FALLBACK = { showContents: true, showNextBin: true, confirmOver: 1000, vibrate: true, portrait: true };
+  const LAYOUT_FALLBACK = { showContents: true, showNextBin: true, confirmOver: 1000, vibrate: true, portrait: true, autoUpdate: true };
   const layoutCfg = () => state.session?.layout_cfg || LAYOUT_FALLBACK;
 
   /* Which questions this count asks, in the order the site configured.
@@ -1790,6 +1790,9 @@
     if (line.emptyBin) feedback($('scanMsg'), 'ok', `Bin ${line.location} recorded as EMPTY`, [describeBin(line.location), line.overrideReason ? 'flagged' : ''].filter(Boolean).join(' — '));
     else feedback($('scanMsg'), 'ok', `Counted ${line.palletId}`,
       `${line.qty}${d.description ? ' × ' + d.description : ''} @ ${line.location}${line.overrideReason ? ' · flagged' : ''}`);
+    /* A line is finished and the queue may have just drained: the one moment in
+       a counter's day when reloading costs them nothing. */
+    if (updateReady) setTimeout(() => applyUpdate(), 1500);
   }
 
   function stepBack() {
@@ -1854,6 +1857,8 @@
   $('btnSaveDevice').onclick = saveDevice;
   $('fDeviceId').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveDevice(); });
   $('armBar').onclick = () => { $('armBar').hidden = true; focusScan(); };
+  // "or tap here to take it now": a supervisor who wants the new app this second
+  $('updateBar').onclick = () => applyUpdate({ now: true });
   $('btnMsgAck').onclick = ackMessage;
   $('btnMsgAckAssign').onclick = ackMessage;
   $('btnFullScreen').onclick = async () => {
@@ -2064,9 +2069,137 @@
     }
   });
 
-  window.addEventListener('online', () => { updateChips(); syncQueue(); });
+  /*
+   * Keeping up with the server, without anybody going round the freezer.
+   *
+   * These guns run as an installed app that nobody ever closes: it sits on the
+   * cradle overnight and is still the same page in the morning. The service
+   * worker fetches the app from the network before its cache, so a reload always
+   * lands the new version - the problem is that nothing ever reloads.
+   *
+   * So the gun asks the server what it is serving, compares it against what this
+   * page is actually running, and reloads itself when it has fallen behind. Two
+   * rules make that safe on a counting floor:
+   *
+   *   - never mid-line. A counter half way through a pallet does not get the
+   *     screen pulled out from under them; the update waits for the next clean
+   *     start, and the bar says it is waiting.
+   *   - never with lines still on the device. A reload with counts in the queue
+   *     is a reload that risks them, so it waits for the queue to drain.
+   *
+   * Comparing against what is RUNNING, not against what the page was told at
+   * start-up, matters: a gun that woke up offline and loaded yesterday's app out
+   * of its own cache would otherwise think it was up to date for ever.
+   */
+  const UPDATE_EVERY_MS = 120000;
+  let updateReady = false;
+  let updateCheckedAt = 0;
+  let updateTarget = '';
+
+  /** The hash of the app.js this page is running, as the server would stamp it. */
+  async function runningBuild() {
+    try {
+      if (!('caches' in window) || !crypto?.subtle) return null;
+      const hit = await caches.match('/app.js');
+      if (!hit) return null;
+      const bytes = await hit.arrayBuffer();
+      const digest = await crypto.subtle.digest('SHA-256', bytes);
+      return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 12);
+    } catch { return null; }
+  }
+
+  async function checkForUpdate({ force = false } = {}) {
+    if (layoutCfg().autoUpdate === false) return;
+    // already waiting for a clean moment: look for one rather than asking again
+    if (updateReady) { applyUpdate(); return; }
+    if (!online()) return;
+    if (!force && Date.now() - updateCheckedAt < UPDATE_EVERY_MS) return;
+    updateCheckedAt = Date.now();
+    let health;
+    try {
+      const res = await fetch('/api/health', { cache: 'no-store' });
+      if (!res.ok) return;
+      health = await res.json();
+    } catch { return; }                       // the server will still be there later
+    if (!health || !health.build || health.build === 'dev') return;
+
+    const mine = await runningBuild();
+    const theirs = health.shell && health.shell['/app.js'];
+    /* Written on the sign-on screen, so "did this gun get the new version?" is a
+       question somebody can answer by looking at it rather than by guessing. */
+    serverBuild = health.build;
+    renderBuildInfo();
+    /* What this page is running against what the server has. With no cache to
+       read - a browser with storage turned off - fall back to the build this
+       page was told about when it started. */
+    const behind = mine && theirs ? mine !== theirs : (state.bootBuild && state.bootBuild !== health.build);
+    if (!state.bootBuild) state.bootBuild = health.build;
+    if (!behind) return;
+    updateReady = true;
+    updateTarget = health.build;
+    renderUpdate();
+    /* Reload once for any one build, and never again for it. A gun that comes
+       back from a reload still behind is a gun that cannot get the new files -
+       a proxy serving something stale, a cache that will not let go - and a
+       scanner reloading itself in a loop in the middle of an aisle is far worse
+       than one running last week's app. So it says so and waits for a person. */
+    if (triedBuild() === health.build) {
+      feedback($('scanMsg'), 'warn', 'Update did not take',
+        'This scanner reloaded and is still on the old version. Tell a supervisor.');
+      return;
+    }
+    applyUpdate();                            // takes it now if the moment is right
+  }
+
+  let serverBuild = '';
+  function renderBuildInfo() {
+    const el = $('buildInfo');
+    if (!el) return;
+    el.textContent = serverBuild
+      ? `App build ${serverBuild} on the server — this scanner is ${updateReady ? 'behind it; an update is waiting' : 'up to date'}.`
+      : '';
+  }
+
+  const TRIED_KEY = 'updateTriedFor';
+  const triedBuild = () => { try { return sessionStorage.getItem(TRIED_KEY) || ''; } catch { return ''; } };
+
+  /** Nothing half-finished, nothing unsent: the only moment worth reloading in. */
+  async function safeToReload() {
+    if (state.awaitingLabel) return false;
+    if (state.stepIndex !== 0 || Object.keys(state.draft || {}).length) return false;
+    if (document.querySelector('.screen.active')?.id === 'scrOverride') return false;
+    try {
+      const queued = await wrap(tx('lines', 'readonly').index('synced').count(0));
+      if (queued > 0) return false;
+    } catch { return false; }
+    return true;
+  }
+
+  async function applyUpdate({ now = false } = {}) {
+    if (!updateReady) return;
+    if (!now && !(await safeToReload())) return;
+    /* The service worker asks the network before its cache, so a plain reload is
+       enough to land the new app - but tell it to look again first, so a worker
+       that has itself changed is replaced at the same time. */
+    try { sessionStorage.setItem(TRIED_KEY, updateTarget); } catch { /* private mode */ }
+    try { (await navigator.serviceWorker?.getRegistration())?.update(); } catch { /* not installed */ }
+    location.reload();
+  }
+
+  function renderUpdate() {
+    const el = $('updateBar');
+    if (el) el.hidden = !updateReady;
+    renderBuildInfo();
+  }
+
+  /* Coming back to the network, and being picked up off the cradle, both ask
+     straight away rather than waiting out the two-minute gap between routine
+     checks - those are exactly the moments a scanner has been away long enough
+     for a deploy to have happened. */
+  window.addEventListener('online', () => { updateChips(); syncQueue(); checkForUpdate({ force: true }); });
   window.addEventListener('offline', updateChips);
-  setInterval(() => { updateChips(); syncQueue(); }, 20000);
+  setInterval(() => { updateChips(); syncQueue(); checkForUpdate(); }, 20000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate({ force: true }); });
 
   /**
    * A registered scanner is opened from its own link (/?d=<uid>), saved as the
@@ -2118,5 +2251,9 @@
     await describeCache();
     showScreen(state.deviceId ? 'scrSignon' : 'scrDevice');
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { /* http-only hosts */ });
+    /* A scanner that has been asleep on the cradle since the last deploy finds
+       out now, not in two minutes. Nothing is counted yet, so if it is behind it
+       simply reloads. */
+    checkForUpdate({ force: true }).catch(() => { /* it will ask again on the tick */ });
   })();
 })();

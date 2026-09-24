@@ -33,6 +33,12 @@
   </section>
 
   <!-- ---------------- sign-on ---------------- -->
+  <!-- a newer app is on the server; it loads itself when the counter is between pallets -->
+  <button class="updatebar" id="updateBar" hidden>
+    <b>Update ready</b>
+    <span>It will load by itself when you finish this pallet — or tap here to take it now.</span>
+  </button>
+
   <section class="screen" id="scrSignon">
     <div id="modeBlock">
       <label>What are you doing?</label>
@@ -69,6 +75,7 @@
     <button class="link" id="btnChangeDevice">Change scanner ID</button>
     <div class="muted" id="deviceInfo"></div>
     <div class="muted" id="screenInfo"></div>
+    <div class="muted" id="buildInfo"></div>
 
     <div class="feedback" id="signonMsg"></div>
     <div class="spacer"></div>

@@ -374,6 +374,7 @@
     $('fFullScreen').checked = gunCfg.fullScreen !== false;
     $('fKeepAwake').checked = gunCfg.keepAwake !== false;
     $('fPortrait').checked = gunCfg.portrait !== false;
+    $('fAutoUpdate').checked = gunCfg.autoUpdate !== false;
     $('fConfirmOver').value = gunCfg.confirmOver;
     if (promptState) $('fCommentTimeout').value = promptState.commentTimeout;
     $('fDevice').value = gunCfg.device;
@@ -402,7 +403,7 @@
   $('btnCommentLess').onclick = () => nudgeTimeout(-1);
   $('btnCommentMore').onclick = () => nudgeTimeout(1);
 
-  for (const id of ['fTextSize', 'fShowContents', 'fShowNextBin', 'fVibrate', 'fFullScreen', 'fKeepAwake', 'fPortrait', 'fConfirmOver', 'fCommentTimeout', 'fDevice']) {
+  for (const id of ['fTextSize', 'fShowContents', 'fShowNextBin', 'fVibrate', 'fFullScreen', 'fKeepAwake', 'fPortrait', 'fAutoUpdate', 'fConfirmOver', 'fCommentTimeout', 'fDevice']) {
     $(id).addEventListener('change', () => {
       gunCfg.textSize = $('fTextSize').value;
       gunCfg.showContents = $('fShowContents').checked;
@@ -411,6 +412,7 @@
       gunCfg.fullScreen = $('fFullScreen').checked;
       gunCfg.keepAwake = $('fKeepAwake').checked;
       gunCfg.portrait = $('fPortrait').checked;
+      gunCfg.autoUpdate = $('fAutoUpdate').checked;
       gunCfg.confirmOver = Number($('fConfirmOver').value) || 0;
       gunCfg.device = $('fDevice').value;
       if (promptState) promptState.commentTimeout = Math.max(0, Math.min(120, Number($('fCommentTimeout').value) || 0));
@@ -430,7 +432,8 @@
         api.post('/api/admin/scanner-layout', {
           order: gunCfg.order, textSize: gunCfg.textSize, showContents: gunCfg.showContents,
           showNextBin: gunCfg.showNextBin, confirmOver: gunCfg.confirmOver, vibrate: gunCfg.vibrate,
-          fullScreen: gunCfg.fullScreen, keepAwake: gunCfg.keepAwake, portrait: gunCfg.portrait, device: gunCfg.device,
+          fullScreen: gunCfg.fullScreen, keepAwake: gunCfg.keepAwake, portrait: gunCfg.portrait,
+          autoUpdate: gunCfg.autoUpdate, device: gunCfg.device,
         }),
         api.post('/api/admin/scanner-prompts', { commentTimeout: seconds }),
       ]);

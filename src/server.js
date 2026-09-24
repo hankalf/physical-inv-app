@@ -1,5 +1,6 @@
 import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -63,6 +64,37 @@ const SUPERADMIN_NAME = process.env.SUPERADMIN_NAME || '';
 const SUPERADMIN_PASSWORD = process.env.SUPERADMIN_PASSWORD || ADMIN_PASSWORD;
 const PUBLIC_DIR = resolve(fileURLToPath(new URL('../public', import.meta.url)));
 const MAX_BODY = Number(process.env.MAX_UPLOAD_MB || 64) * 1024 * 1024;
+
+/*
+ * Which build of the handheld app this server is serving.
+ *
+ * A gun that is left running - an installed app on a cradle, backgrounded
+ * overnight - keeps the code it started with for as long as nobody closes it.
+ * The service worker fetches from the network first, so a RELOAD always gets the
+ * new app; the trouble is that nothing ever makes it reload, and a fleet of
+ * thirty scanners in a freezer is not a fleet anybody wants to go round and
+ * relaunch by hand.
+ *
+ * So the server stamps what it is serving, the gun compares it against what it
+ * is running, and a scanner that has fallen behind says so and reloads itself
+ * when its counter is between pallets. Hashed from the files themselves rather
+ * than a version number somebody has to remember to bump.
+ */
+const SHELL_FILES = ['index.html', 'app.js', 'styles.css', 'manifest.webmanifest', 'sw.js'];
+const appBuild = { version: 'dev', files: {} };
+try {
+  const parts = [];
+  for (const name of SHELL_FILES) {
+    const body = readFileSync(join(PUBLIC_DIR, name));
+    const hash = createHash('sha256').update(body).digest('hex').slice(0, 12);
+    appBuild.files['/' + name] = hash;
+    parts.push(`${name}:${hash}`);
+  }
+  appBuild.version = createHash('sha256').update(parts.join('|')).digest('hex').slice(0, 12);
+} catch (err) {
+  console.warn(`[warn] could not stamp the app build (${err.message}); scanners will not auto-update.`);
+}
+console.log(`[app] build ${appBuild.version}`);
 
 if (ADMIN_PASSWORD === 'changeme') {
   console.warn('[warn] ADMIN_PASSWORD is unset - the dashboard password is "changeme".');
@@ -1079,7 +1111,13 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const p = url.pathname;
   try {
-    if (p === '/api/health') return sendJson(req, res, 200, { ok: true, time: new Date().toISOString(), siteDate: localDate(), siteTimezone: siteTimezone() });
+    if (p === '/api/health') {
+      return sendJson(req, res, 200, {
+        ok: true, time: new Date().toISOString(), siteDate: localDate(), siteTimezone: siteTimezone(),
+        // what the handhelds check themselves against - see appBuild above
+        build: appBuild.version, shell: appBuild.files,
+      });
+    }
     // The office board is deliberately open: it goes on a screen nobody signs in,
     // and it carries progress only - no pallet IDs, no clock in numbers, no controls.
     if (p === '/api/board' && req.method === 'GET') {
