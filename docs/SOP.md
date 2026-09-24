@@ -521,22 +521,39 @@ Freezer labels come off, ice over, get clipped by a forklift. The pallet is stil
 and still has to be counted, so the gun has a way out that keeps the count going and tells
 a supervisor where to send somebody with a label printer.
 
-On the **PALLET ID** step, tap **Label will not scan**, then pick one:
+The same button is on both steps that read a label — **PALLET ID** and **BIN LOCATION** —
+and asks the same question: can you read it or not?
+
+**On the PALLET ID step** — tap **Label will not scan**:
 
 | Choice | What happens |
 |---|---|
 | **I can read it — let me type it** | The keyboard comes up, the counter types the number off the label, and counting carries on as normal. The line is flagged as a barcode to replace |
 | **Nothing readable on it** | The pallet is counted anyway, under a name made from its bin — `NO-LABEL-F01A001-1`. Give the quantity and scan the bin as usual |
 
-<img src="images/gun-no-scan.png" width="300">
+**On the BIN LOCATION step** — tap **Bin label will not scan**:
 
-*The counter says which kind of problem it is. Either way the pallet still gets counted —
-walking away from it is the one thing that would put the count out.*
+| Choice | What happens |
+|---|---|
+| **I can read it — let me type it** | The keyboard comes up and the counter types the bin code. It is checked against the bin list, the team's aisle and its levels exactly like a scan |
+| **It is F01A005** | The app names the bin it believes the counter is standing at — the one the guide is on, the one they are already counting out of, or the one the report puts this pallet in — and one tap takes it. Checked the same way |
+| **No readable bin label** | Only when the app has nothing to offer. The line is recorded against the aisle rather than being lost, and flagged as an unknown bin for a supervisor to sort out |
 
-Either way the line is marked, and the bin turns up on **Dashboard → Reports → Labels to
+| | |
+|:--:|:--:|
+| ![](images/gun-no-scan.png)<br>On the pallet step: can you read it, or not? | ![](images/gun-no-scan-bin.png)<br>On the bin step the app offers the bin it believes you are at, so nobody types a code off a rack leg in a freezer |
+
+*Either way the pallet still gets counted — walking away from it is the one thing that
+would put the count out.*
+
+The line is marked either way, and the bin turns up on **Dashboard → Reports → Labels to
 replace** with what was counted there. A pallet with nothing readable on it counts as a
 pallet not on the report, so it also shows on the pallet report as `NOT IN MASTER` — which
 is exactly what it is until somebody puts a label on it.
+
+> **Print the rack labels first.** A pallet's bad label costs one counter one minute. A
+> bin's costs every counter who walks up to that bay for the rest of the count — and the
+> put-away driver afterwards. The relabel list marks them **RACK** and puts them at the top.
 
 **A message from the office**
 
@@ -716,9 +733,10 @@ count with known-wrong numbers in it.
 own target and marked MEETS or UNDER — and the one pallet with no class is the tag that was
 not on the report at all.*
 
-- **Labels to replace** — every pallet whose label would not scan, with the bin to walk to,
-  what was counted there, and whether there was a readable number on it at all. This is the
-  walk-round with a label printer after the count.
+- **Labels to replace** — every label that would not scan, on a pallet or on the racking,
+  with the bin to walk to, what was counted there, and whether there was a readable number
+  on it at all. This is the walk-round with a label printer after the count. The **RACK**
+  ones are listed first: everybody walks up to those.
 
 ![](images/dashboard-labels.png)
 
@@ -858,6 +876,7 @@ a handful of bins are counted every day.
 | The ERP file is shorter than the variance list | Adjustments are waiting for approval and are held back deliberately | Work the Adjustments tab, then export again. The preview says how many were left out |
 | Count accuracy says "no pallet has a class" | The inventory report has no ABC column | Add one (**ABC**, **Class**, **Velocity** — any of them is read), or press **Work out classes from the report** |
 | A pallet is on the report as `NOT IN MASTER` with a name like `NO-LABEL-F01A001-1` | Its label would not scan and nothing on it was readable, so it was counted under the bin's name | Send somebody to relabel it — **Reports → Labels to replace** has the list |
+| A line is in a bin called `NO-LABEL-BIN-F01-1` | The rack label would not scan, and the app had nothing to suggest — an unguided count, with the pallet not on the report either | The quantity is safe. Relabel the bay, then correct the bin on the line if it matters; the relabel list says which aisle it was in |
 | The note is not on the board | The board polls every 15 seconds by default, or the note is on a different count | Wait a few seconds; check the board is pinned to the same count (`/board?session=12`) |
 | The screen keeps rotating, or reads upside down | Auto-rotate is on, and a browser tab is never allowed to lock the orientation | The app turns itself back upright on its own, sideways or end over end. If it is not, check **Keep it upright** is ticked under Settings → Scanner screen, then read the grey line at the bottom of the sign-on screen — it says the screen size the handheld gave the app, how far the device says it has turned, and what the app did about it. To stop the device turning at all, install the app (it asks for one way up) or turn auto-rotate off on the handheld |
 | A team says they never got a message | Look at **Read by** on the dashboard | It shows which scanners have tapped Got it. A scanner that is offline gets it on its next sync |

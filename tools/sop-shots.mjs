@@ -383,7 +383,9 @@ try {
   const f02 = binsOf('F02');
   // the first uncounted position in this team's aisle, and one that holds more
   // than a single pallet, so the manual can show both banners
+  const countedHere = [];
   const firstOpen = f02.slice(240).find((b) => (palletAt.get(b) || []).length === 1);
+  countedHere.push(firstOpen);
   const multi = f02.slice(240).find((b) => (palletAt.get(b) || []).length > 2);
   for (const id of palletAt.get(firstOpen) || []) await countOne(id);
   await save(gun, 'gun-step-pallet-mid');
@@ -400,7 +402,9 @@ try {
     await wait(600);
   }
 
-  const nextId = (palletAt.get(f02.slice(240).find((b) => (palletAt.get(b) || []).length === 1 && !(b === firstOpen))) || [])[0];
+  const nextBin = f02.slice(240).find((b) => (palletAt.get(b) || []).length === 1 && !countedHere.includes(b));
+  countedHere.push(nextBin, multi);
+  const nextId = (palletAt.get(nextBin) || [])[0];
   const e = expected.get(nextId);
   await scan(nextId);
   await save(gun, 'gun-pallet-scanned');
@@ -447,6 +451,21 @@ try {
   // a label that will not scan
   await gun.click('#btnNoScan'); await wait(600);
   await save(gun, 'gun-no-scan');
+  await gun.click('#btnNoScan'); await wait(400);          // put the choices away again
+
+  /* and the same question about the label on the racking, which is the one
+     every counter after this one walks up to */
+  const rackId = (palletAt.get(f02.slice(240).find((b) => (palletAt.get(b) || []).length === 1
+    && !(countedHere || []).includes(b))) || [])[0];
+  if (rackId) {
+    const r = expected.get(rackId);
+    await scan(rackId); await scan(String(r.qty)); await scan(r.lot); await scan(r.exp);
+    await gun.click('#btnNoScan'); await wait(600);
+    await save(gun, 'gun-no-scan-bin');
+    await gun.click('#btnNoScanNone'); await wait(1200);   // takes the bin the guide is on
+    await gun.click('#btnSkip').catch(() => {});
+    await wait(800);
+  }
 
   await gun.click('#btnHistory'); await wait(1200);
   if (await gun.$('#scrHistory.active')) await save(gun, 'gun-history');

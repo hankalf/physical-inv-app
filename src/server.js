@@ -1008,7 +1008,7 @@ async function handleAdmin(req, res, url, m) {
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/labels\.csv$/))) {
     return sendCsv(req, res, `labels-to-replace-session-${m[1]}.csv`, toCsv(labelsToReplace(m[1]), [
-      'location_code', 'aisle', 'pallet_id', 'issue', 'sku', 'description', 'qty', 'team', 'device_id', 'comments', 'scanned_at',
+      'what', 'location_code', 'aisle', 'pallet_id', 'issue', 'sku', 'description', 'qty', 'team', 'device_id', 'comments', 'scanned_at',
     ]));
   }
 
@@ -1051,7 +1051,7 @@ async function handleAdmin(req, res, url, m) {
   const COUNT_COLS = [
     'id', 'pallet_id', 'qty', 'location_code', 'aisle', 'sku', 'description', 'lot', 'expiry', 'alias_of', 'comments',
     'team', 'employees', 'device_id', 'unknown_pallet', 'unknown_location', 'off_assignment',
-    'duplicate_pallet', 'empty_bin', 'label_issue', 'pass', 'recount_id', 'override_reason', 'voided', 'scanned_at', 'received_at',
+    'duplicate_pallet', 'empty_bin', 'label_issue', 'bin_label_issue', 'pass', 'recount_id', 'override_reason', 'voided', 'scanned_at', 'received_at',
   ];
   const PALLET_COLS = [
     'pallet_id', 'sku', 'description', 'uom', 'expected_qty', 'counted_qty', 'variance_qty',

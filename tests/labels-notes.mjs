@@ -79,17 +79,47 @@ await scan('42');
 await scan('F01A002');
 await gun.waitForTimeout(2200);
 
-/* ---- a normal pallet after it, to be sure nothing is stuck on ---- */
+/* ---- the label on the racking, which is the worse one ---- */
 await scan('LB2');
 await scan('50');
-await scan('F01A002');
-await gun.waitForTimeout(2200);
+check('Gun: the way out is offered on the bin step too', await gun.$eval('#btnNoScan', (b) => !b.hidden));
+check('Gun: and it is worded for the label in front of the counter',
+  /Bin label will not scan/.test(clean(await gun.textContent('#btnNoScan'))), clean(await gun.textContent('#btnNoScan')));
+await gun.click('#btnNoScan'); await gun.waitForTimeout(300);
+/* This count is not guided and nothing has been counted in a bin yet on this
+   line, so the app falls back to where the report puts this pallet. */
+check('Gun: it offers the bin it believes the counter is standing at, rather than asking them to type one',
+  /It is F01A002/.test(clean(await gun.textContent('#btnNoScanNone'))), clean(await gun.textContent('#btnNoScanNone')));
+await gun.click('#btnNoScanNone'); await gun.waitForTimeout(2200);
+
+/* ---- a rack label with nothing on it, and nothing for the app to suggest ---- */
+await scan('NEWTAG-77');                       // not on the report, so no expected bin
+if (await gun.$('#scrOverride.active')) {
+  await gun.selectOption('#fReason', { index: 1 }).catch(() => {});
+  await gun.click('#btnOverrideAccept');
+  await gun.waitForTimeout(800);
+}
+await scan('12');
+await gun.click('#btnNoScan'); await gun.waitForTimeout(300);
+check('Gun: with nothing to suggest, it offers to record it without a bin code rather than guessing',
+  /No readable bin label/.test(clean(await gun.textContent('#btnNoScanNone'))), clean(await gun.textContent('#btnNoScanNone')));
+await gun.click('#btnNoScanNone'); await gun.waitForTimeout(2200);
+check('Gun: and it does not ask why — the counter has just said why',
+  !(await gun.$('#scrOverride.active')), await gun.$eval('#prompt', (el) => el.textContent));
 
 const lines = (await (await fetch(`${BASE}/api/admin/sessions/${sess.id}/export/counts.csv`, { headers: A })).text()).trim().split('\n');
 const head = lines[0].split(',');
 const at = (row, name) => row.split(',')[head.indexOf(name)];
 const rows = lines.slice(1);
-check('Three lines landed', rows.length === 3, String(rows.length));
+check('Four lines landed', rows.length === 4, String(rows.length));
+const noBin = rows.find((r) => /NO-LABEL-BIN/.test(r));
+check('The one with no readable bin label is still counted, flagged as an unknown bin',
+  at(noBin, 'bin_label_issue') === 'none' && at(noBin, 'unknown_location') === '1' && at(noBin, 'qty') === '12', noBin);
+const lb2 = rows.find((r) => r.includes('LB2'));
+check('The rack label is recorded against the line, separately from the pallet\'s',
+  at(lb2, 'bin_label_issue') === 'assumed' && at(lb2, 'label_issue') === '', lb2);
+check('...and the line still lands in a real bin, with its quantity',
+  at(lb2, 'location_code') === 'F01A002' && at(lb2, 'qty') === '50', lb2);
 check('The typed one is marked as a label to replace',
   at(rows.find((r) => r.includes('LB1')), 'label_issue') === 'typed', rows.find((r) => r.includes('LB1')));
 const noLabel = rows.find((r) => /NO-LABEL/.test(r));
@@ -100,19 +130,26 @@ check('The one with nothing readable is marked too, and carries its quantity',
 check('...and is named after the bin it is in',
   at(noLabel, 'pallet_id') === `NO-LABEL-${at(noLabel, 'location_code')}-1`,
   `${at(noLabel, 'pallet_id')} in ${at(noLabel, 'location_code')}`);
-check('A pallet counted normally after them is not marked at all',
-  at(rows.find((r) => r.includes('LB2')), 'label_issue') === '', rows.find((r) => r.includes('LB2')));
+check('The pallet label on that line is not marked — only the rack one was wrong',
+  at(lb2, 'label_issue') === '', lb2);
 
 /* ================= what a supervisor does with it ================= */
 const { labels } = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/labels`, { headers: A }));
-check('Both are on the relabel list', labels.length === 2, String(labels.length));
+check('All four are on the relabel list', labels.length === 4, String(labels.length));
 check('...and it says which kind each was',
   labels.some((r) => r.issue === 'NO READABLE ID') && labels.some((r) => r.issue === 'BARCODE WOULD NOT SCAN'),
   labels.map((r) => r.issue).join(' | '));
-check('...with the bin to walk to', labels.every((r) => /^F01A00/.test(r.location_code)), labels.map((r) => r.location_code).join(' '));
+check('...whether it was on a pallet or on the racking',
+  labels.filter((r) => r.what === 'PALLET').length === 2 && labels.filter((r) => r.what === 'BIN').length === 2,
+  labels.map((r) => r.what).join(' '));
+check('...with the rack ones first, because everybody walks up to those',
+  labels[0].what === 'BIN', labels.map((r) => r.what).join(' '));
+check('...with the bin to walk to', labels.filter((r) => /^F01A00/.test(r.location_code)).length === 3,
+  labels.map((r) => r.location_code).join(' '));
 const labelCsv = await (await fetch(`${BASE}/api/admin/sessions/${sess.id}/export/labels.csv`, { headers: A })).text();
 check('The list exports as a file for whoever carries the printer',
-  /NO-LABEL/.test(labelCsv) && /BARCODE WOULD NOT SCAN/.test(labelCsv), clean(labelCsv.split('\n')[1] || ''));
+  /NO-LABEL/.test(labelCsv) && /BARCODE WOULD NOT SCAN/.test(labelCsv) && /^what,location_code/.test(labelCsv),
+  clean(labelCsv.split('\n')[1] || ''));
 check('A label problem counts as an exception, so it is in that report too',
   /label_issue/.test(await (await fetch(`${BASE}/api/admin/sessions/${sess.id}/export/exceptions.csv`, { headers: A })).text()));
 check('The list needs a supervisor sign-in', (await fetch(`${BASE}/api/admin/sessions/${sess.id}/labels`)).status === 401);
@@ -171,8 +208,10 @@ check('Dashboard: the note box is under the progress dashboard and works',
   /On the board/.test(clean(await page.textContent('#noteMsg'))), clean(await page.textContent('#noteMsg')));
 check('Dashboard: and the board now carries it',
   (await j(await fetch(`${BASE}/api/board?session=${sess.id}`))).note === 'Dock 4 blocked until 2pm');
-check('Dashboard: the relabel list is on the reports tab',
-  /NO-LABEL/.test(clean(await page.textContent('#labelTable'))), clean(await page.textContent('#labelTable')).slice(0, 140));
+check('Dashboard: the relabel list is on the reports tab, rack labels and pallet labels alike',
+  /NO-LABEL/.test(clean(await page.textContent('#labelTable')))
+  && /RACK/.test(clean(await page.textContent('#labelTable'))),
+  clean(await page.textContent('#labelTable')).slice(0, 160));
 await page.click('#btnClearNote');
 await page.waitForTimeout(1000);
 check('Dashboard: and Clear takes it down',

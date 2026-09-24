@@ -300,7 +300,7 @@
             unknownLocation: l.unknownLocation, offAssignment: l.offAssignment,
             duplicatePallet: l.duplicatePallet, emptyBin: l.emptyBin || 0, pass: l.pass || 1, recountId: l.recountId || null, overrideReason: l.overrideReason,
             lot: l.lot || null, expiry: l.expiry || null, aliasOf: l.aliasOf || null,
-            labelIssue: l.labelIssue || '', scannedAt: l.ts,
+            labelIssue: l.labelIssue || '', binLabelIssue: l.binLabelIssue || '', scannedAt: l.ts,
           }))),
         });
         const ok = new Set(result.accepted || []);
@@ -1066,11 +1066,23 @@
     // a second label belongs to the pallet just counted, so it is offered at the
     // start of the next line rather than in the middle of this one
     $('btnSameLabel').hidden = step !== 'pallet' || !state.lastPallet || !!state.recount;
-    /* A barcode that will not read is not a reason to walk away from a pallet.
-       Offered on the pallet step only, and put away again as soon as the line
-       moves on. */
-    $('btnNoScan').hidden = step !== 'pallet' || !!state.awaitingLabel;
-    if (step !== 'pallet') $('noScanRow').hidden = true;
+    /* A barcode that will not read is not a reason to walk away from a pallet -
+       or from a bin. Offered on both steps that scan a label, worded for the one
+       in front of the counter, and put away again as the line moves on. */
+    const labelStep = step === 'pallet' || step === 'bin';
+    $('btnNoScan').hidden = !labelStep || !!state.awaitingLabel;
+    $('btnNoScan').textContent = step === 'bin' ? 'Bin label will not scan' : 'Label will not scan';
+    $('btnNoScanType').textContent = 'I can read it — let me type it';
+    if (step === 'bin') {
+      /* The app usually knows which bin this is: the one the guide is on, or the
+         one the report puts this pallet in. One tap beats typing a code off a
+         rack leg in a freezer. */
+      const guess = binGuess();
+      $('btnNoScanNone').textContent = guess ? `It is ${guess}` : 'No readable bin label';
+    } else {
+      $('btnNoScanNone').textContent = 'Nothing readable on it';
+    }
+    if (!labelStep) $('noScanRow').hidden = true;
     $('commentChips').hidden = step !== 'comments';
     if (state.draft.emptyBin && step === 'bin') $('prompt').textContent = 'EMPTY bin — scan its LOCATION';
     if (step === 'comments') {
@@ -1394,6 +1406,16 @@
         if (!loc) state.draft.unknownLocation = 1;
       };
       if (!loc) {
+        /* A bin the app itself named because nothing on the rack could be read:
+           the counter has already said why, and asking them to pick a reason for
+           it is asking the same question twice. */
+        if (state.draft.binLabelIssue === 'none') {
+          applyBin();
+          addReason('no readable bin label');
+          await advance('warn', `Recorded against ${value}`,
+            'Carry on. A supervisor gets this bin on the relabel list to sort out.');
+          return;
+        }
         return askOverride({
           title: 'Bin not on the list',
           why: `${value} is not in the uploaded bin list.`,
@@ -1643,10 +1665,52 @@
 
   function noScanTyped() {
     $('noScanRow').hidden = true;
-    state.draft.labelIssue = 'typed';
+    const bin = state.steps[state.stepIndex] === 'bin';
+    if (bin) state.draft.binLabelIssue = 'typed';
+    else state.draft.labelIssue = 'typed';
     setKeyboard(true);
-    feedback($('scanMsg'), 'warn', 'Type the pallet ID', 'The line will be flagged so the label gets replaced.');
+    feedback($('scanMsg'), 'warn', bin ? 'Type the bin code' : 'Type the pallet ID',
+      'The line will be flagged so the label gets replaced.');
     focusScan();
+  }
+
+  /**
+   * Which bin the app believes the counter is standing at.
+   *
+   * The bin being worked right now first - they have already counted something
+   * out of it - then the one the guide is sending them to. The pallet's expected
+   * bin is the last resort, and a weak one: if the report were right about where
+   * this pallet is, nobody would be reading a rack label to check.
+   */
+  function binGuess() {
+    return openBinCode() || nextBinCode() || state.draft.expectedLocation || null;
+  }
+
+  /* A rack label nobody can read. Worse than a pallet's, because every counter
+     after this one walks up to the same bin - so it goes on the relabel list
+     whichever way the counter answers. */
+  async function noScanBin() {
+    $('noScanRow').hidden = true;
+    const guess = binGuess();
+    if (guess) {
+      state.draft.binLabelIssue = 'assumed';
+      state.draft.comments = [state.draft.comments, 'bin label unreadable'].filter(Boolean).join('; ');
+      /* Put it through the same door a scan goes through: the bin is still
+         checked against the list, the aisle and the level, like any other. */
+      await handleEntry(guess);
+      return;
+    }
+    /* Nothing scanned, nothing planned, nothing on the report: record it against
+       the aisle so the count is not lost, and flag the line hard. A supervisor
+       gets an unknown bin to sort out, which is the truth of it. */
+    const aisle = state.assignment?.active?.aisle || state.draft.aisle || '';
+    const base = `NO-LABEL-BIN-${aisle || 'UNKNOWN'}`;
+    let n = 1;
+    while (countedInAisle.has(`${base}-${n}`)) n++;
+    state.draft.binLabelIssue = 'none';
+    state.draft.unknownLocation = 1;
+    state.draft.comments = [state.draft.comments, 'no readable bin label'].filter(Boolean).join('; ');
+    await handleEntry(`${base}-${n}`);
   }
 
   /* Nothing readable at all: the pallet still gets counted, and is named after
@@ -1700,6 +1764,7 @@
       expiry: d.expiry || null,
       aliasOf: d.aliasOf || null,
       labelIssue: d.labelIssue || '',
+      binLabelIssue: d.binLabelIssue || '',
       ts: new Date().toISOString(),
       synced: 0,
       voidedLocal: false,
@@ -1734,7 +1799,10 @@
     const step = state.steps[state.stepIndex];
     if (step === 'pallet') state.draft = {};
     if (step === 'qty') delete state.draft.qty;
-    if (step === 'bin') { delete state.draft.location; delete state.draft.aisle; delete state.draft.unknownLocation; delete state.draft.offAssignment; }
+    if (step === 'bin') {
+      delete state.draft.location; delete state.draft.aisle;
+      delete state.draft.unknownLocation; delete state.draft.offAssignment; delete state.draft.binLabelIssue;
+    }
     clearFeedback($('scanMsg'));
     renderStep();
   }
@@ -1887,7 +1955,10 @@
   $('btnSameLabel').onclick = startSecondLabel;
   $('btnNoScan').onclick = askNoScan;
   $('btnNoScanType').onclick = noScanTyped;
-  $('btnNoScanNone').onclick = noScanNone;
+  $('btnNoScanNone').onclick = () => {
+    if (state.steps[state.stepIndex] === 'bin') noScanBin().catch(() => {});
+    else noScanNone();
+  };
   $('btnEmpty').onclick = () => {
     // jump straight to the bin scan; the line is saved with no pallet and qty 0
     state.draft = { emptyBin: 1 };

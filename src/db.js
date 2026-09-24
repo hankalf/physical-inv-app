@@ -390,6 +390,10 @@ if (!hasCol('sessions', 'require_approval')) {
    says which it was - typed off a damaged barcode, or no readable ID at all -
    so somebody can walk out with a label printer afterwards. */
 if (!hasCol('counts', 'label_issue')) db.exec("ALTER TABLE counts ADD COLUMN label_issue TEXT NOT NULL DEFAULT ''");
+/* The same thing happens to the label on the rack. A bin whose label will not
+   scan is worse than a pallet's, because every counter after this one walks up
+   to it too - so it is recorded separately, and both can be wrong on one line. */
+if (!hasCol('counts', 'bin_label_issue')) db.exec("ALTER TABLE counts ADD COLUMN bin_label_issue TEXT NOT NULL DEFAULT ''");
 
 /* A line on the office board: when lunch is, which dock is blocked. It belongs
    to the count rather than the site - it is about today. */
@@ -600,8 +604,8 @@ const insertCount = db.prepare(`
 INSERT INTO counts (client_id, session_id, pallet_id, qty, location_code, comments, sku,
                     team, employees, device_id, aisle, unknown_pallet, unknown_location,
                     off_assignment, duplicate_pallet, empty_bin, pass, recount_id, override_reason,
-                    lot, expiry, alias_of, label_issue, scanned_at, received_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    lot, expiry, alias_of, label_issue, bin_label_issue, scanned_at, received_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(client_id) DO NOTHING
 `);
 
@@ -641,6 +645,8 @@ export function saveCounts(sessionId, rows) {
         r.aliasOf ? norm(r.aliasOf) : null,
         // 'typed' - read off a damaged barcode; 'none' - nothing readable on it at all
         ['typed', 'none'].includes(r.labelIssue) ? r.labelIssue : '',
+        // the rack label, which can also be 'assumed' - the app said which bin, the counter agreed
+        ['typed', 'assumed', 'none'].includes(r.binLabelIssue) ? r.binLabelIssue : '',
         r.scannedAt || now, now
       );
       accepted.push(r.clientId);

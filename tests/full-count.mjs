@@ -191,6 +191,38 @@ await t0.p.fill('#fDeviceId', 'TEMP-01'); await t0.p.click('#btnSaveDevice'); aw
 }
 await t0.ctx.close();
 
+/*
+ * Signing on downloads the whole warehouse - 13,000 bins - and writes it to the
+ * handheld's own storage before the assignment screen appears. On a machine
+ * running every suite back to back that occasionally takes longer than any fixed
+ * wait, and once in a while the download itself never finishes, leaving the gun
+ * on the sign-on screen with nothing said. Room to be slow, one honest retry,
+ * and then the message from the gun rather than a bare timeout.
+ */
+async function startCounting(page, team, employees) {
+  const landed = async (ms) => {
+    try { await page.waitForSelector('#scrAssign.active, #scrScan.active', { timeout: ms }); return true; }
+    catch { return false; }
+  };
+  /* The app fills the sign-on form from what this scanner remembers as the last
+     thing it does at start-up, and a slow start-up can land after the test has
+     typed into it. A counter would simply see an empty box and type it again,
+     so that is what this does. */
+  const filled = async () => {
+    if (!(await page.inputValue('#fTeam'))) await page.fill('#fTeam', team);
+    if (!(await page.$$('#employeeChips button')).length) {
+      for (const e of employees) { await page.fill('#fEmployee', e); await page.press('#fEmployee', 'Enter'); }
+    }
+  };
+  await filled();
+  await page.click('#btnStart');
+  if (await landed(45000)) return;
+  await filled();
+  await page.click('#btnStart');
+  if (await landed(45000)) return;
+  throw new Error(`the gun never left the sign-on screen: ${(await page.textContent('#signonMsg') || '').replace(/\s+/g, ' ').trim()}`);
+}
+
 const t1 = await scanner('scanner-01');
 await t1.p.goto(devLink['SCANNER-01']);
 await t1.p.waitForSelector('#scrSignon.active');
@@ -203,7 +235,7 @@ await t1.p.waitForSelector('#fSession option[value="1"]', { state: 'attached' })
 await t1.p.selectOption('#fSession', '1'); await t1.p.fill('#fTeam', '1');
 for (const e of ['E1001', 'E1002']) { await t1.p.fill('#fEmployee', e); await t1.p.press('#fEmployee', 'Enter'); }
 await shot(t1.p, 'hh-signon');
-await t1.p.click('#btnStart'); await t1.p.waitForSelector('#scrAssign.active', { timeout: 15000 });
+await startCounting(t1.p, '1', ['E1001', 'E1002']);
 let ac = await t1.T('#assignCard');
 check('Handheld T1: sign-on → F01 levels A–C: 318 of its 654 bins', /your aisleF01Freezer – Aisle F01 · levels A–C/.test(ac) && /of 318 bins/.test(ac), ac.slice(0, 110));
 await shot(t1.p, 'hh-assignment');
@@ -296,7 +328,7 @@ await t2.p.goto(devLink['SCANNER-02']); await t2.p.waitForSelector('#scrSignon.a
 await t2.p.waitForSelector('#fSession option[value="1"]', { state: 'attached' });
 await t2.p.selectOption('#fSession', '1'); await t2.p.fill('#fTeam', '2');
 await t2.p.fill('#fEmployee', 'E2001'); await t2.p.press('#fEmployee', 'Enter');
-await t2.p.click('#btnStart'); await t2.p.waitForSelector('#scrAssign.active', { timeout: 15000 });
+await startCounting(t2.p, '2', ['E2001']);
 ac = await t2.T('#assignCard');
 check('Handheld T2: sign-on → assigned F02', /your aisleF02/.test(ac), ac.slice(0, 60));
 // staging bins (no rack code) validate too

@@ -221,7 +221,8 @@ export function rawCounts(sessionId) {
               COALESCE(p.description, '') AS description,
               c.lot, c.expiry, c.alias_of,
               c.comments, c.team, c.employees, c.device_id,
-              c.unknown_pallet, c.unknown_location, c.off_assignment, c.duplicate_pallet, c.empty_bin, c.label_issue,
+              c.unknown_pallet, c.unknown_location, c.off_assignment, c.duplicate_pallet, c.empty_bin,
+              c.label_issue, c.bin_label_issue,
               c.pass, c.recount_id, c.override_reason, c.voided, c.scanned_at, c.received_at
          FROM counts c
          LEFT JOIN pallets p ON p.session_id = c.session_id AND p.pallet_id = c.pallet_id
@@ -234,7 +235,8 @@ export function rawCounts(sessionId) {
 
 export const exceptions = (sessionId) =>
   rawCounts(sessionId).filter(
-    (r) => r.unknown_pallet || r.unknown_location || r.off_assignment || r.duplicate_pallet || r.override_reason || r.label_issue
+    (r) => r.unknown_pallet || r.unknown_location || r.off_assignment || r.duplicate_pallet || r.override_reason
+      || r.label_issue || r.bin_label_issue
   );
 
 /*
@@ -245,22 +247,43 @@ export const exceptions = (sessionId) =>
  * either. This is the walk-round afterwards: which bin, what was counted, and
  * whether there was a number on it at all.
  */
+const PALLET_ISSUE = {
+  typed: 'BARCODE WOULD NOT SCAN',
+  none: 'NO READABLE ID',
+};
+const BIN_ISSUE = {
+  typed: 'BARCODE WOULD NOT SCAN',
+  assumed: 'NO READABLE LABEL - BIN TAKEN FROM THE PLAN',
+  none: 'NO READABLE LABEL',
+};
+
 export function labelsToReplace(sessionId) {
-  return db
+  const rows = db
     .prepare(
-      `SELECT c.pallet_id, c.location_code, c.aisle, c.qty, c.label_issue, c.sku,
+      `SELECT c.pallet_id, c.location_code, c.aisle, c.qty, c.label_issue, c.bin_label_issue, c.sku,
               COALESCE(p.description, '') AS description,
               c.team, c.device_id, c.comments, c.scanned_at
          FROM counts c
          LEFT JOIN pallets p ON p.session_id = c.session_id AND p.pallet_id = c.pallet_id
-        WHERE c.session_id = ? AND c.voided = 0 AND c.label_issue != ''
+        WHERE c.session_id = ? AND c.voided = 0 AND (c.label_issue != '' OR c.bin_label_issue != '')
         ORDER BY c.location_code, c.scanned_at`
     )
-    .all(Number(sessionId))
-    .map((r) => ({
-      ...r,
-      issue: r.label_issue === 'none' ? 'NO READABLE ID' : 'BARCODE WOULD NOT SCAN',
-    }));
+    .all(Number(sessionId));
+
+  /* One row per label to print, not per line - a pallet with no label sitting in
+     a bin with no label is two labels, and whoever walks out there needs both on
+     the list. The rack ones come first: every counter after this one walks up to
+     that bin too. */
+  const out = [];
+  for (const r of rows) {
+    if (r.bin_label_issue) {
+      out.push({ ...r, what: 'BIN', issue: BIN_ISSUE[r.bin_label_issue] || 'LABEL PROBLEM' });
+    }
+    if (r.label_issue) {
+      out.push({ ...r, what: 'PALLET', issue: PALLET_ISSUE[r.label_issue] || 'LABEL PROBLEM' });
+    }
+  }
+  return out.sort((a, b) => (a.what === b.what ? 0 : a.what === 'BIN' ? -1 : 1));
 }
 
 /** Everything the warehouse map needs: each bin's count state, and each aisle's block and team. */

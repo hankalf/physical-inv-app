@@ -984,19 +984,21 @@
      This is the walk-round afterwards, with a printer. */
   async function refreshLabels() {
     const { labels } = await apiJson(`/api/admin/sessions/${sessionId}/labels`);
+    const racks = labels.filter((r) => r.what === 'BIN').length;
     $('labelSub').textContent = labels.length
-      ? `${labels.length} pallet${labels.length === 1 ? '' : 's'} to relabel`
+      ? `${labels.length} label${labels.length === 1 ? '' : 's'} to print`
+        + (racks ? ` · ${racks} of them on the racking, which everybody walks up to` : '')
       : 'nothing reported — every label scanned';
     table($('labelTable'),
-      [{ label: 'Bin' }, { label: 'Aisle' }, { label: 'Counted as' }, { label: 'Problem' }, { label: 'Item' },
-        { label: 'Qty', num: true }, { label: 'Team' }, { label: 'When' }],
+      [{ label: 'Label' }, { label: 'Bin' }, { label: 'Aisle' }, { label: 'Counted as' }, { label: 'Problem' },
+        { label: 'Item' }, { label: 'Qty', num: true }, { label: 'Team' }, { label: 'When' }],
       labels,
       (r) => {
         const tr = document.createElement('tr');
-        tr.append(cell(r.location_code), cell(r.aisle || '—'), cell(r.pallet_id));
-        const t = document.createElement('td');
-        t.appendChild(tag(r.label_issue === 'none' ? 'NO ID' : 'BARCODE'));
-        tr.append(t, cell(r.description || r.sku || '—', 'wrap'), cell(r.qty, 'num'),
+        const what = document.createElement('td');
+        what.appendChild(tag(r.what === 'BIN' ? 'RACK' : 'PALLET'));
+        tr.append(what, cell(r.location_code), cell(r.aisle || '—'), cell(r.pallet_id),
+          cell(r.issue, 'wrap'), cell(r.description || r.sku || '—', 'wrap'), cell(r.qty, 'num'),
           cell(r.team), cell(new Date(r.scanned_at).toLocaleString()));
         return tr;
       },
