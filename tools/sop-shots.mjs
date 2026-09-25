@@ -292,6 +292,7 @@ try {
   await saveCard(desk, '#deviceTable', 'settings-scanners');
   await saveCard(desk, '#commentList', 'settings-reason-codes');
   await saveCard(desk, '#reasonList', 'settings-adjustment-reasons');
+  await saveCard(desk, '#sosList', 'settings-sos');
   await saveCard(desk, '#btnBookTemplate', 'settings-barcode-book');
   await sub('gun');    await saveCard(desk, '#stepOrder', 'settings-scanner-screen');
   await sub('lists');
@@ -325,6 +326,20 @@ try {
   await saveCard(desk, '#teamList', 'dashboard-team-plan');
   await saveCard(desk, '#msgTable', 'dashboard-message-floor', 6);
   await sub('second'); await saveCard(desk, '#recountTable', 'dashboard-second-counts', 10);
+  /* an SOS waiting to be answered, which is what the bar above the page is for */
+  await post(`/api/sessions/${sess.id}/alerts`, {
+    clientId: 'sop-sos', reason: 'Racking or a pallet looks unsafe', detail: 'Bay 12 in F04 is leaning',
+    team: '2', deviceId: 'SCANNER-02', employees: ['E1102', 'E1157'], aisle: 'F04', bin: 'F04A012',
+  }, gunOf[2].H).catch(() => {});
+  /* The dashboard looks for alerts every few seconds on its own - no reload,
+     which would send the page back to whichever count it defaults to. */
+  await sub('teams');
+  await desk.waitForFunction(() => {
+    const el = document.getElementById('sosAlert');
+    return el && !el.hidden && el.textContent.trim();
+  }, null, { timeout: 30000 }).catch(() => {});
+  const sosBar = await desk.$('#sosAlert');
+  if (sosBar && !(await sosBar.evaluate((el) => el.hidden))) await save(sosBar, 'dashboard-sos');
   await sub('adjust'); await saveCard(desk, '#adjustTable', 'dashboard-adjustments', 10);
   await sub('reports');
   await saveCard(desk, '#accuracyTable', 'dashboard-accuracy', 8);
@@ -458,6 +473,14 @@ try {
   await scan('OLD-TAG-88');
   await wait(900);
   await save(gun, 'gun-second-label-done');
+
+  // the SOS list, as a counter sees it
+  await gun.click('#btnSos'); await wait(900);
+  // the question, then the list: a screen shot half way down explains nothing
+  await gun.evaluate(() => { document.querySelector('main')?.scrollTo(0, 0); window.scrollTo(0, 0); });
+  await wait(300);
+  await save(gun, 'gun-sos');
+  await gun.click('#btnSosBack'); await wait(600);
 
   // a label that will not scan
   await gun.click('#btnNoScan'); await wait(600);

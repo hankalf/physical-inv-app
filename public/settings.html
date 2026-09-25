@@ -290,6 +290,43 @@
         once is flagged, which is normal after a scanner is wiped and worth a look otherwise.
       </div>
     </div>
+    <!-- ============ SOS: the list, and where it goes ============ -->
+    <div class="card">
+      <h2>SOS from a scanner <span class="chip" id="sosChip" hidden></span>
+        <span class="muted">what a counter can raise, and the channel it goes to</span></h2>
+      <div class="hint" style="margin-top:0">
+        Every gun has an <b>SOS</b> button. Pressing it offers this list, and whichever one the counter picks lands on
+        the dashboard within seconds — with their team, aisle and last bin — and in a Teams channel if one is set up
+        below. Write the list in the words your floor uses; the counter is in a hurry.
+      </div>
+      <div class="chips" id="sosList" style="margin-top:10px"></div>
+      <div class="row" style="margin-top:10px">
+        <input id="fNewSos" placeholder="e.g. Blast freezer door will not close" maxlength="120">
+        <button class="fit" id="btnAddSos">Add</button>
+      </div>
+      <hr>
+      <h3 style="margin-top:0">Microsoft Teams channel</h3>
+      <div class="hint" style="margin-top:0">
+        In Teams: <b>⋯</b> beside the channel → <b>Workflows</b> → <i>Post to a channel when a webhook request is
+        received</i>. That gives you an address — paste it here. (An older <i>Incoming Webhook</i> connector address
+        works too, while Microsoft still accepts them.) The address is a key: anyone who has it can post into that
+        channel, so it is stored here and never shown again in full.
+      </div>
+      <div class="inline" style="margin-top:12px">
+        <div><label for="fTeamsUrl">Webhook address</label><input id="fTeamsUrl" placeholder="https://…" autocomplete="off"></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fTeamsOn"> Send alerts to Teams</label></div>
+        <div class="auto"><label class="cb" title="A second card when a supervisor closes the alert, so nobody drives over for something that was sorted twenty minutes ago."><input type="checkbox" id="fTeamsClosed"> Say when it is dealt with</label></div>
+      </div>
+      <div class="toolbar">
+        <button class="primary" id="btnSaveSos">Save</button>
+        <button id="btnTestTeams">Send a test card</button>
+        <button id="btnResetSos">Restore the shipped list</button>
+        <span class="spacer"></span>
+        <span class="muted" id="teamsWho"></span>
+      </div>
+      <div class="feedback" id="sosMsg"></div>
+    </div>
+
     <!-- ============ the barcode test book ============ -->
     <div class="card">
       <h2>Barcode test book <span class="muted">bin, pallet and quantity — real Code 128 to practise on</span></h2>

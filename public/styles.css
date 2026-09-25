@@ -122,6 +122,14 @@ progress { width: 100%; height: 14px; }
   border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line);
 }
 .chip-btn.remove::after { content: " ✕"; color: var(--muted); }
+/* The SOS reasons: full width and a real target, because the person pressing one
+   is in a hurry and probably wearing gloves. */
+.chip-btn.big {
+  display: block; width: 100%; text-align: left; border-radius: 10px;
+  padding: 14px 14px; font-size: 17px; font-weight: 700; margin-bottom: 8px;
+  border-color: #55282a; background: #2a1618;
+}
+.chip-btn.big:active { background: #3a1e21; }
 .chip-btn.selected { border-color: var(--accent); color: #fff; background: #1f4d8f; }
 
 /* --- assignment card --- */
@@ -219,6 +227,26 @@ button.fit { flex: 0 0 auto; width: auto; }
 .armbar b { display: block; font-size: 20px; color: #ffb4ab; }
 .armbar span { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); }
 @keyframes armpulse { 50% { border-color: #7a2a2f; } }
+
+/* The way out when something is wrong. Red, full width, and at the bottom where
+   a thumb finds it without looking - but below the counting buttons, because it
+   is not what this screen is for. */
+button.sos {
+  margin-top: 14px; background: #3a1418; border: 2px solid var(--err); color: #ffb4ab;
+  font-size: 19px; font-weight: 800; letter-spacing: .02em;
+}
+button.sos:active { background: #4a181d; }
+
+/* What happened to the one that was sent. Amber while nobody has looked at it,
+   green once somebody has - which is the only thing the counter wants to know. */
+.sosbar {
+  display: block; width: 100%; margin: 0 0 10px; padding: 12px;
+  border-radius: 10px; border: 1px solid #8a6a1f; background: #3a2c12; color: var(--text);
+}
+.sosbar.seen { border-color: #1d572a; background: #10281a; }
+.sosbar b { display: block; font-size: 17px; color: #ffd479; }
+.sosbar.seen b { color: #7ee29a; }
+.sosbar span { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); }
 
 /* Counts that have not reached the server for a while. Amber, not red: nothing
    is lost, but somebody should know before this gun is put down. */

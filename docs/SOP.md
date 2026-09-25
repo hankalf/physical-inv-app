@@ -292,6 +292,35 @@ count — that is the point of practising.
 *The test book card: a practice line per row from the count itself, or from a spreadsheet of
 whatever you want to practise on.*
 
+### Step 8b — The SOS list, and the Teams channel
+
+**Settings → Scanners → SOS from a scanner.**
+
+Every gun has an SOS button. What it offers when pressed is this list — write it in the words your
+floor uses, because the person pressing it is in a hurry. It ships with what usually goes wrong in a
+cold store: an injury, somebody shut in, racking that looks unsafe, a lift-truck problem, a spill,
+blocked bins, a scanner problem, needing a supervisor.
+
+**To send alerts to a Teams channel as well:**
+
+1. In Teams, click **⋯** beside the channel → **Workflows** → *Post to a channel when a webhook
+   request is received*.
+2. Follow it through; Teams gives you a web address.
+3. Paste that into **Webhook address**, tick **Send alerts to Teams**, and **Save**.
+4. **Send a test card** — a card should appear in the channel within a second or two. Do this now,
+   not during an emergency.
+
+An older *Incoming Webhook* connector address also works while Microsoft still accepts them. The
+address is a key — anybody holding it can post into that channel — so it is stored once and never
+shown again in full; the page only shows which server it points at.
+
+> **A Teams outage never costs you an alert.** The SOS is on the dashboard either way, and the row
+> says whether the channel took it (`teams`, or `teams failed: …`).
+
+![](images/settings-sos.png)
+
+*The SOS list and the channel it goes to.*
+
 ### Step 9 — Set up the counting screen
 
 **Settings → Scanner screen.**
@@ -568,6 +597,29 @@ second tag is not on the inventory report, the gun offers the same answer in the
 |:--:|:--:|
 | ![](images/gun-second-label-ask.png)<br>The gun asks for the other label and names the pallet it will belong to | ![](images/gun-second-label-done.png)<br>Recorded as the same pallet, with no quantity — so the stock is not counted twice |
 
+**The SOS button**
+
+At the bottom of the counting screen, in red: **SOS — I need help**. A counter in the middle of a
+freezer aisle cannot radio the office through ear defenders, and walking out to find somebody is
+five minutes.
+
+1. Tap **SOS**.
+2. Pick what is wrong from the list — your site's own list, set in Settings.
+3. Add a note if it helps, then it sends.
+
+It carries the team, the aisle and the last bin counted, so nobody has to explain where they are.
+Within seconds it is on the dashboard, and in your Teams channel if one is set up. The bar at the
+top of the gun says **SOS sent** while it is waiting, and changes to **Dana has seen your SOS** the
+moment a supervisor picks it up — which is the thing the person who pressed it is waiting to know.
+
+> **With no signal it says so.** *"No signal — this has NOT been sent."* It keeps trying and sends
+> the moment there is a signal, but a counter is told the truth rather than left believing help is
+> coming. If it cannot wait, walk to where there is signal or go and find somebody.
+
+<img src="images/gun-sos.png" width="300">
+
+*The SOS list — the site's own words, in buttons big enough for a gloved hand in a hurry.*
+
 **The green "Update ready" bar**
 
 A new version of the app is on the server and this scanner has not got it yet. Nothing is
@@ -694,6 +746,25 @@ landed; "0 of 3" is one nobody has looked at yet.*
 - Exceptions climbing on one team — usually a training problem, worth a radio call.
 - A team stopped for a long time — dead battery, or stuck behind a trailer.
 - An aisle nobody has started by mid-afternoon.
+
+### Step 16 — Answering an SOS
+
+**Anywhere on the dashboard.** An SOS from a scanner appears as a red bar across the top of the
+page, whichever tab you are on, and makes a noise once. It names the team, what is wrong, the aisle
+and the last bin they counted, and whoever is on that gun.
+
+- **I am on it** — tells the scanner somebody has seen it, by name. This is the one that matters:
+  the counter is standing in an aisle waiting to know that anybody at all has picked it up.
+- **Close** — ends it, and asks what happened. That goes in the log, and to Teams if the channel is
+  set up, so nobody drives over for something sorted twenty minutes ago.
+
+Every alert, open or closed, stays in **Team plan → SOS from the floor**, with who raised it, when,
+what happened and whether the Teams channel took it.
+
+![](images/dashboard-sos.png)
+
+*An SOS above the page: team, what is wrong, where they are, and the two things a supervisor can do
+about it.*
 
 ### Step 16a — Finding anything: the search box
 
@@ -962,6 +1033,8 @@ a handful of bins are counted every day.
 | A line is in a bin called `NO-LABEL-BIN-F01-1` | The rack label would not scan, and the app had nothing to suggest — an unguided count, with the pallet not on the report either | The quantity is safe. Relabel the bay, then correct the bin on the line if it matters; the relabel list says which aisle it was in |
 | The note is not on the board | The board polls every 15 seconds by default, or the note is on a different count | Wait a few seconds; check the board is pinned to the same count (`/board?session=12`) |
 | A change you made does not appear on the scanners | The gun is still running the app it loaded before the change | Site settings (questions, reasons, text size) reach a running gun within about half a minute and need nothing. A new **version of the app** needs the page to reload: with **Update itself after a deploy** on it does that by itself between pallets, within a couple of minutes of somebody picking the gun up. To force it: tap the green **Update ready** bar, or close the app fully (not just the home button) and reopen it. Reinstalling is never necessary |
+| An SOS did not reach Teams | The channel address is wrong, expired, or Teams was down | The alert is still on the dashboard — the row says what Teams answered. Settings → Scanners → **Send a test card** to check the address. Microsoft is retiring the old *Incoming Webhook* connectors; if yours was one, make a **Workflows** one instead |
+| A counter says they pressed SOS and nothing happened | The gun had no signal | The gun tells them: *"No signal — this has NOT been sent."* It sends itself the moment there is signal. In a dead zone, walking ten metres usually fixes it |
 | The printed barcodes will not scan | The page was printed “fit to page”, or on glossy paper | Print again at **100%** on plain white paper. If a gun still refuses them, print with **Per row: 1** — the bars are wider on a bigger label |
 | A code in the spreadsheet will not print | Code 128 carries plain ASCII only — an accented letter or a smart quote cannot be drawn | The book says which character it was; retype that code with plain letters and numbers |
 | You cannot find where something is set | The app has four pages and twenty-odd cards | Type what you would call it into the search box at the top of the sidebar — *"upload bin list"*, *"keyboard"*, *"approve"* — and the **Go to** hits take you straight there. **/** puts the cursor in it |

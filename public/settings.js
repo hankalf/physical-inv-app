@@ -878,6 +878,100 @@
       .catch((err) => msg($('erpMsg'), 'err', err.message));
   };
 
+  /* ------------------------------------------- SOS: the list, and the channel
+     What a counter can raise from the gun, in the site's own words, and the
+     Teams channel the office already watches. The webhook address is a key -
+     anybody holding it can post into that channel - so it is written once and
+     only ever shown back masked. */
+  let sosState = { reasons: [], isDefault: true, defaults: [] };
+  let teamsState = { on: false, configured: false, masked: '', tellWhenClosed: true };
+
+  function renderSos() {
+    const box = $('sosList');
+    box.innerHTML = '';
+    if (!sosState.reasons.length) {
+      const e = document.createElement('span');
+      e.className = 'muted';
+      e.textContent = 'none — the shipped list is used instead';
+      box.appendChild(e);
+    }
+    for (const text of sosState.reasons) {
+      const b = button(text, 'chip-btn remove', () => {
+        sosState.reasons = sosState.reasons.filter((x) => x !== text);
+        renderSos();
+      });
+      b.title = 'Remove it';
+      box.appendChild(b);
+    }
+    const chip = $('sosChip');
+    chip.hidden = false;
+    chip.className = 'chip' + (sosState.isDefault ? '' : ' online');
+    chip.textContent = sosState.isDefault ? 'the shipped list' : 'set for this site';
+    $('fTeamsOn').checked = teamsState.on;
+    $('fTeamsClosed').checked = teamsState.tellWhenClosed !== false;
+    $('teamsWho').textContent = teamsState.configured
+      ? `Posting to ${teamsState.masked}`
+      : 'No Teams channel set — alerts stay on the dashboard.';
+  }
+
+  async function refreshSosSettings() {
+    const [reasons, teams] = await Promise.all([
+      api.json('/api/admin/sos-reasons'),
+      api.json('/api/admin/teams-webhook'),
+    ]);
+    sosState = reasons;
+    teamsState = teams;
+    renderSos();
+  }
+
+  $('btnAddSos').onclick = () => {
+    const v = $('fNewSos').value.replace(/\s+/g, ' ').trim().slice(0, 120);
+    if (!v) return;
+    if (sosState.reasons.some((x) => x.toLowerCase() === v.toLowerCase())) {
+      msg($('sosMsg'), 'warn', `"${v}" is already there`);
+      return;
+    }
+    sosState.reasons = [...sosState.reasons, v];
+    $('fNewSos').value = '';
+    clearMsg($('sosMsg'));
+    renderSos();
+  };
+  $('fNewSos').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnAddSos').click(); });
+
+  $('btnSaveSos').onclick = async () => {
+    try {
+      sosState = await api.post('/api/admin/sos-reasons', { reasons: sosState.reasons });
+      /* An empty box means "leave the address alone" - the page only ever has
+         the masked one - so typing nothing cannot wipe a working channel. */
+      teamsState = await api.post('/api/admin/teams-webhook', {
+        url: $('fTeamsUrl').value.trim() || undefined,
+        on: $('fTeamsOn').checked,
+        tellWhenClosed: $('fTeamsClosed').checked,
+      });
+      $('fTeamsUrl').value = '';
+      renderSos();
+      msg($('sosMsg'), 'ok', 'Saved.', 'Scanners pick the list up within about half a minute.');
+    } catch (err) { msg($('sosMsg'), 'err', err.message); }
+  };
+
+  $('btnTestTeams').onclick = async () => {
+    try {
+      msg($('sosMsg'), 'warn', 'Sending a test card…');
+      const out = await api.post('/api/admin/teams-webhook/test', {});
+      if (out.sent) msg($('sosMsg'), 'ok', 'Teams took it.', 'Check the channel — a test card should be in it.');
+      else msg($('sosMsg'), 'err', 'Teams did not take it', out.why);
+    } catch (err) { msg($('sosMsg'), 'err', err.message); }
+  };
+
+  $('btnResetSos').onclick = async () => {
+    if (!confirm('Put the SOS list back to the shipped one?')) return;
+    try {
+      sosState = await api.post('/api/admin/sos-reasons', { reasons: [] });
+      renderSos();
+      msg($('sosMsg'), 'warn', 'Back to the shipped list.');
+    } catch (err) { msg($('sosMsg'), 'err', err.message); }
+  };
+
   /* --------------------------------------------------- the barcode test book
      A page of real Code 128 labels to print, cut up and scan: for training a
      crew, or for dry-running a count before the real one. Either from the
@@ -1107,7 +1201,7 @@
 
   async function load() {
     await refreshMe();
-    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshReasons()]);
+    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshReasons(), refreshSosSettings()]);
     await refreshGun().catch(() => {});
     await loadSessions();
     await refreshSetup().catch(() => {});

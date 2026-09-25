@@ -73,6 +73,10 @@
   </header>
 
   <main>
+    <!-- an SOS from the floor, above whatever tab is open: it is not a card you
+         should have to go and look at -->
+    <div class="sosalert" id="sosAlert" hidden></div>
+
     <section class="screen active" id="scrLogin">
       <div class="card signin">
         <h2>Supervisor sign-in</h2>
@@ -284,6 +288,17 @@
       </div>
       <div class="feedback" id="assignMsg"></div>
       <div class="team-list" id="teamList" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card" id="sosCard">
+      <h2>SOS from the floor <span class="muted">raised on a scanner · newest first</span></h2>
+      <div class="hint" style="margin-top:0">
+        A counter presses one button and picks what is wrong. It lands here, and in your Teams channel if one is
+        set up (Settings → Scanners). <b>I am on it</b> tells the scanner somebody has seen it — which is what the
+        person who pressed it is waiting for. <b>Close</b> ends it, with a note of what happened.
+      </div>
+      <div class="scroll" style="margin-top:10px"><table id="sosTable"></table></div>
+      <div class="feedback" id="sosAdminMsg"></div>
     </div>
 
     <div class="card">

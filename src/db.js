@@ -150,6 +150,39 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, id DESC);
 
+/*
+ * SOS: a counter in trouble, from the handheld.
+ *
+ * The floor has no radios that work through ear defenders and no line of sight
+ * to the office, so the only way to say "the racking is leaning" or "somebody is
+ * hurt" was to walk out of the freezer and find a supervisor - by which time it
+ * has been five minutes. One button on the gun, a list of what is wrong that the
+ * site writes itself, and it is on the dashboard before the counter has put the
+ * scanner down. Where it came from matters as much as what it says, so the aisle
+ * and bin they were working are recorded with it.
+ */
+CREATE TABLE IF NOT EXISTS alerts (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  team       TEXT,
+  device_id  TEXT,
+  employees  TEXT,
+  reason     TEXT    NOT NULL,
+  detail     TEXT,
+  aisle      TEXT,
+  bin        TEXT,
+  status     TEXT    NOT NULL DEFAULT 'open',   -- open | seen | closed
+  created_at TEXT    NOT NULL,
+  seen_by    TEXT,
+  seen_at    TEXT,
+  closed_by  TEXT,
+  closed_at  TEXT,
+  outcome    TEXT,
+  sent_to    TEXT,                              -- how it went beyond this app: 'teams', or why not
+  client_id  TEXT UNIQUE                        -- the gun's own id, so a retry cannot raise it twice
+);
+CREATE INDEX IF NOT EXISTS idx_alerts_session ON alerts(session_id, status, id DESC);
+
 CREATE TABLE IF NOT EXISTS message_acks (
   message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
   device_id  TEXT    NOT NULL,

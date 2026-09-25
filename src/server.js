@@ -19,6 +19,8 @@ import { listAdjustments, decideAdjustments, adjustmentReasons, saveAdjustmentRe
 import { accuracy, accuracyCsv, deriveAbc, accuracyTargets, saveAccuracyTargets } from './routes/accuracy.js';
 import { setupState } from './routes/setup.js';
 import { searchAll } from './routes/search.js';
+import { raiseAlert, tellTeams, listAlerts, seeAlert, closeAlert, alertsForDevice, sosReasons, saveSosReasons, DEFAULT_REASONS } from './routes/alerts.js';
+import { teamsConfig, saveTeamsConfig, postToTeams, testCard, alertCard } from './util/teams.js';
 import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout } from './routes/scanner-prompts.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
@@ -383,6 +385,29 @@ async function handleHandheld(req, res, url, m) {
 
   /* Messages from the office. The gun asks on its sync tick and puts anything
      live on the screen; acknowledging is what takes it off. */
+  /* --- SOS from a handheld: what is wrong, and where they are. The reasons are
+         handed out with it so a gun that has just signed on has the site's own
+         list without a second call. */
+  if ((m = p.match(/^\/api\/sessions\/(\d+)\/alerts$/)) && method === 'POST') {
+    openSession(m[1]);
+    const body = await readJson(req);
+    const who = device ? device.name : body.deviceId;
+    const { alert, already } = raiseAlert(m[1], { ...body, deviceId: who });
+    if (!already) {
+      audit(who || 'a scanner', 'raised an SOS', `${alert.reason}${alert.detail ? ' - ' + alert.detail : ''}`, m[1]);
+      /* The handheld is not kept waiting on Teams: the alert is already on the
+         dashboard, and what the channel did is recorded on the row. */
+      const origin = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host || 'localhost'}`;
+      tellTeams(alert.id, { dashboard: `${origin}/admin` }).catch(() => { /* recorded on the alert */ });
+    }
+    return sendJson(req, res, 200, { alert, already });
+  }
+  if ((m = p.match(/^\/api\/sessions\/(\d+)\/alerts$/)) && method === 'GET') {
+    if (!getSession(m[1])) throw httpError(404, 'session not found');
+    const who = device ? device.name : url.searchParams.get('device') || '';
+    return sendJson(req, res, 200, { reasons: sosReasons().reasons, mine: alertsForDevice(m[1], who) });
+  }
+
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/messages$/)) && method === 'GET') {
     if (!getSession(m[1])) throw httpError(404, 'session not found');
     const who = device ? device.name : url.searchParams.get('device') || '';
@@ -1012,6 +1037,54 @@ async function handleAdmin(req, res, url, m) {
     return sendCsv(req, res, `second-counts-session-${m[1]}.csv`, toCsv(listRecounts(m[1]), [
       'id', 'bin', 'pallet_id', 'reason', 'detail', 'source', 'first_team', 'team', 'status', 'first_result', 'second_result', 'created_at', 'done_at',
     ]));
+  }
+
+  /* --- SOS: the list the gun offers, the alerts themselves, and the channel */
+  if (p === '/api/admin/sos-reasons' && method === 'GET') {
+    return sendJson(req, res, 200, { ...sosReasons(), defaults: DEFAULT_REASONS });
+  }
+  if (p === '/api/admin/sos-reasons' && method === 'POST') {
+    const body = await readJson(req);
+    const saved = saveSosReasons(body.reasons);
+    audit(actor, 'changed the SOS reasons', saved.reasons.join(' | '));
+    return sendJson(req, res, 200, saved);
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/alerts$/)) && method === 'GET') {
+    return sendJson(req, res, 200, listAlerts(m[1], { status: url.searchParams.get('status') || '' }));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/alerts\/(\d+)\/seen$/)) && method === 'POST') {
+    const out = seeAlert(m[1], m[2], actor);
+    if (out.seen) audit(actor, 'answered an SOS', out.alert.reason, m[1]);
+    return sendJson(req, res, 200, out);
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/alerts\/(\d+)\/close$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const out = closeAlert(m[1], m[2], { who: actor, outcome: body.outcome });
+    if (out.closed) {
+      audit(actor, 'closed an SOS', `${out.alert.reason}${out.alert.outcome ? ' - ' + out.alert.outcome : ''}`, m[1]);
+      /* The channel that was told about it is told it is dealt with, so nobody
+         drives over for something that was sorted twenty minutes ago. */
+      if (teamsConfig().on && teamsConfig().tellWhenClosed) {
+        postToTeams(alertCard(out.alert)).catch(() => { /* the dashboard is the record */ });
+      }
+    }
+    return sendJson(req, res, 200, out);
+  }
+  if (p === '/api/admin/teams-webhook' && method === 'GET') {
+    const cfg = teamsConfig();
+    return sendJson(req, res, 200, { on: cfg.on, configured: cfg.configured, masked: cfg.masked, tellWhenClosed: cfg.tellWhenClosed });
+  }
+  if (p === '/api/admin/teams-webhook' && method === 'POST') {
+    const body = await readJson(req);
+    const saved = saveTeamsConfig(body);
+    audit(actor, 'changed the Teams channel for alerts',
+      `${saved.configured ? saved.masked : 'no address'} · ${saved.on ? 'on' : 'off'}`);
+    return sendJson(req, res, 200, { on: saved.on, configured: saved.configured, masked: saved.masked, tellWhenClosed: saved.tellWhenClosed });
+  }
+  if (p === '/api/admin/teams-webhook/test' && method === 'POST') {
+    const out = await postToTeams(testCard(actor));
+    audit(actor, 'tested the Teams channel', out.sent ? 'accepted' : out.why);
+    return sendJson(req, res, 200, out);
   }
 
   // --- messages to the floor

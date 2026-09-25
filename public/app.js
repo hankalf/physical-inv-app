@@ -164,7 +164,7 @@
         const r = (Math.random() * 16) | 0; return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
       }));
 
-  const SCREENS = ['scrDevice', 'scrSignon', 'scrAssign', 'scrScan', 'scrOverride', 'scrHistory'];
+  const SCREENS = ['scrDevice', 'scrSignon', 'scrAssign', 'scrScan', 'scrOverride', 'scrHistory', 'scrSos'];
   function showScreen(name) {
     for (const s of SCREENS) $(s).classList.toggle('active', s === name);
     if (name === 'scrScan') focusScan();
@@ -586,6 +586,7 @@
       state.session = session;
       state.steps = stepsFor(session);
       refreshMessages().catch(() => {});
+      refreshSos().catch(() => {});
       document.body.classList.toggle('big-text', (session.layout_cfg || {}).textSize === 'large');
       holdUpright();          // now that this count's settings are in hand
       state.draft = {};
@@ -1933,6 +1934,159 @@
     }
   }
 
+  /* ----------------------------------------------------------------- SOS
+   * One button for when something is wrong.
+   *
+   * A counter in the middle of a freezer aisle cannot radio the office through
+   * ear defenders and cannot see it from where they are, so "the racking is
+   * leaning" used to mean walking out and finding somebody. This is a button, a
+   * list of what is wrong in the site's own words, and a supervisor knowing
+   * within seconds - with the aisle and the last bin attached, because where
+   * somebody is matters as much as what is wrong.
+   *
+   * Sent straight away rather than with the count queue: an SOS that waits for
+   * the next twenty-second tick is an SOS that waited twenty seconds. If there
+   * is no signal it says so plainly - nothing is worse than a counter believing
+   * help is coming when nothing was sent - and keeps trying.
+   */
+  const SOS_FALLBACK = ['Injury — someone needs help now', 'Racking or a pallet looks unsafe',
+    'Cannot reach the bins — blocked', 'Scanner or app problem', 'Need a supervisor'];
+  let sosReasonList = SOS_FALLBACK;
+  let sosSending = false;
+
+  function openSos() {
+    /* The list is a site setting that can change mid-shift, and a gun that has
+       just signed on may not have it yet. Ask now; the buttons are drawn from
+       whatever we have and redrawn the moment the answer lands. */
+    refreshSos().catch(() => { /* the fallback list is still a list */ });
+    renderSosReasons();
+    $('sosWhere').innerHTML = '';
+    kv($('sosWhere'), [
+      ['Team', state.team || '—'],
+      ['Aisle', state.assignment?.active?.aisle || '—'],
+      ['Last bin', state.lastBin || '—'],
+      ['Scanner', state.deviceId || '—'],
+    ]);
+    $('fSosNote').value = '';
+    $('fSosNote').inputMode = 'none';
+    clearFeedback($('sosMsg'));
+    showScreen('scrSos');
+  }
+
+  function renderSosReasons() {
+    const box = $('sosReasons');
+    const want = sosReasonList.join('\u0000');
+    if (box.dataset.built === want) return;
+    box.dataset.built = want;
+    box.innerHTML = '';
+    for (const reason of sosReasonList) {
+      const b = document.createElement('button');
+      b.className = 'chip-btn big';
+      b.textContent = reason;
+      b.onclick = () => sendSos(reason);
+      box.appendChild(b);
+    }
+  }
+
+  async function sendSos(reason) {
+    if (sosSending) return;
+    sosSending = true;
+    const line = {
+      clientId: uuid(),
+      reason,
+      detail: $('fSosNote').value.trim(),
+      team: state.team,
+      deviceId: state.deviceId,
+      employees: state.employees,
+      aisle: state.assignment?.active?.aisle || '',
+      bin: state.lastBin || '',
+    };
+    feedback($('sosMsg'), 'warn', 'Sending…', reason);
+    try {
+      await api(`/api/sessions/${state.session.id}/alerts`, { method: 'POST', body: JSON.stringify(line) });
+      state.sos = { reason, at: Date.now(), sent: true, seenBy: '' };
+      await metaSet('sos', state.sos);
+      beep('ok');
+      feedback($('sosMsg'), 'ok', 'Sent — a supervisor has been told', 'You can carry on counting; the bar at the top says when somebody has seen it.');
+      renderSos();
+      setTimeout(() => { if ($('scrSos').classList.contains('active')) backFromSos(); }, 2600);
+    } catch (err) {
+      /* Kept, and tried again on every sync - but the counter is told the truth
+         now, because believing help is coming when nothing was sent is worse
+         than knowing to walk. */
+      state.sosPending = line;
+      await metaSet('sosPending', line);
+      feedback($('sosMsg'), 'err', 'No signal — this has NOT been sent',
+        'It will go the moment there is signal. If it cannot wait, walk to where you have signal or go and find a supervisor.');
+      renderSos();
+    } finally {
+      sosSending = false;
+    }
+  }
+
+  /** Anything that could not be sent when the button was pressed. */
+  async function flushSos() {
+    const line = state.sosPending || (await metaGet('sosPending'));
+    if (!line || !online() || !state.session) return;
+    try {
+      await api(`/api/sessions/${state.session.id}/alerts`, { method: 'POST', body: JSON.stringify(line) });
+      state.sosPending = null;
+      await metaSet('sosPending', null);
+      state.sos = { reason: line.reason, at: Date.now(), sent: true, seenBy: '' };
+      await metaSet('sos', state.sos);
+      renderSos();
+    } catch { /* still no signal; the next tick tries again */ }
+  }
+
+  function renderSos() {
+    const el = $('sosBar');
+    if (!el) return;
+    const pending = state.sosPending;
+    const sos = state.sos;
+    if (!pending && !sos) { el.hidden = true; return; }
+    el.hidden = false;
+    el.classList.toggle('seen', !!sos && !!sos.seenBy);
+    if (pending) {
+      $('sosBarWhat').textContent = 'SOS waiting for signal';
+      $('sosBarWho').textContent = `${pending.reason} — it has not been sent yet. It will go as soon as there is signal.`;
+      return;
+    }
+    $('sosBarWhat').textContent = sos.seenBy ? `${sos.seenBy} has seen your SOS` : 'SOS sent';
+    $('sosBarWho').textContent = sos.seenBy
+      ? `${sos.reason} — help is coming.`
+      : `${sos.reason} — waiting for somebody in the office to pick it up.`;
+  }
+
+  /* The dashboard answering, and the site's own list of what can go wrong, both
+     come back on the same call the gun already makes every few seconds. */
+  async function refreshSos() {
+    if (!state.session || !online()) return;
+    try {
+      const data = await api(`/api/sessions/${state.session.id}/alerts?device=${encodeURIComponent(state.deviceId || '')}`);
+      if (Array.isArray(data.reasons) && data.reasons.length) {
+        sosReasonList = data.reasons;
+        renderSosReasons();
+      }
+      const mine = (data.mine || [])[0];
+      if (!mine) return;
+      if (mine.status === 'closed') {
+        if (state.sos) { state.sos = null; await metaSet('sos', null); renderSos(); }
+        return;
+      }
+      if (mine.seen_by && (!state.sos || state.sos.seenBy !== mine.seen_by)) {
+        state.sos = { reason: mine.reason, at: Date.now(), sent: true, seenBy: mine.seen_by };
+        await metaSet('sos', state.sos);
+        beep('ok');
+        renderSos();
+      }
+    } catch { /* it will ask again */ }
+  }
+
+  function backFromSos() {
+    showScreen(state.session ? 'scrScan' : 'scrSignon');
+    if (state.session) { renderStep(); focusScan(); }
+  }
+
   /* ------------------------------------------------------------ wiring */
   $('btnSaveDevice').onclick = saveDevice;
   $('fDeviceId').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveDevice(); });
@@ -2038,6 +2192,14 @@
     stepBack();
   };
   $('btnSameLabel').onclick = startSecondLabel;
+  $('btnSos').onclick = openSos;
+  $('btnSosBack').onclick = backFromSos;
+  $('btnSosKeyboard').onclick = () => {
+    const f = $('fSosNote');
+    f.inputMode = f.inputMode === 'none' ? 'text' : 'none';
+    f.blur();
+    if (f.inputMode === 'text') setTimeout(() => { try { f.focus(); f.click(); } catch { /* ignore */ } }, 40);
+  };
   $('btnNoScan').onclick = askNoScan;
   $('btnNoScanType').onclick = noScanTyped;
   $('btnNoScanNone').onclick = () => {
@@ -2276,9 +2438,12 @@
      straight away rather than waiting out the two-minute gap between routine
      checks - those are exactly the moments a scanner has been away long enough
      for a deploy to have happened. */
-  window.addEventListener('online', () => { updateChips(); flushPending(); syncQueue(); checkForUpdate({ force: true }); });
+  window.addEventListener('online', () => { updateChips(); flushPending(); flushSos(); syncQueue(); checkForUpdate({ force: true }); });
   window.addEventListener('offline', updateChips);
-  setInterval(() => { updateChips(); flushPending(); syncQueue(); checkForUpdate(); }, 20000);
+  setInterval(() => { updateChips(); flushPending(); flushSos(); syncQueue(); checkForUpdate(); }, 20000);
+  /* An SOS is not a count: a counter waiting to hear that somebody has seen it
+     should not wait out the twenty-second tick, so this looks more often. */
+  setInterval(() => { refreshSos(); }, 6000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate({ force: true }); });
 
   /**
@@ -2323,6 +2488,9 @@
       ? `This scanner is registered as ${state.deviceId}${linked && linked.offline ? ' (offline - using saved identity)' : ''}.`
       : (state.deviceId ? `Scanner ID ${state.deviceId} was typed on this device (not registered).` : '');
     state.employees = (await metaGet('employees')) || [];
+    state.sos = (await metaGet('sos')) || null;
+    state.sosPending = (await metaGet('sosPending')) || null;
+    renderSos();
     state.mode = (await metaGet('mode')) || '';
     $('fTeam').value = (await metaGet('team')) || '';
     renderEmployees();

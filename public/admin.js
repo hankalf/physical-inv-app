@@ -5,7 +5,7 @@
   'use strict';
 
   const api = window.appApi;
-  const { $, msg, clearMsg, cell, tag, table } = window.appUi;
+  const { $, msg, clearMsg, cell, tag, table, button } = window.appUi;
   const apiJson = (p, o) => api.json(p, o);
   const postJson = (p, body, method) => api.post(p, body, method);
 
@@ -803,7 +803,7 @@
   async function refreshAll() {
     if (!sessionId) return;
     await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts(),
-      refreshPicker(), refreshMessages(), refreshAdjustments(), refreshAccuracy(), refreshLabels()]);
+      refreshPicker(), refreshMessages(), refreshAdjustments(), refreshAccuracy(), refreshLabels(), refreshAlerts()]);
   }
 
   /* ------------------------------------------------------- adjustments
@@ -1022,6 +1022,124 @@
   $('btnSaveNote').onclick = () => saveNote($('fBoardNote').value);
   $('btnClearNote').onclick = () => { $('fBoardNote').value = ''; saveNote(''); };
   $('fBoardNote').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveNote($('fBoardNote').value); });
+
+  /* ------------------------------------------------------- SOS from the floor
+     A counter pressed the button. This has to reach a supervisor who is looking
+     at something else, so it goes above the page rather than into a card, and
+     the first one makes a noise. "I am on it" is the part that matters to the
+     person who pressed it: their gun says somebody has seen it. */
+  let sosSeen = new Set();
+  let sosSounded = false;
+
+  async function refreshAlerts() {
+    const data = await apiJson(`/api/admin/sessions/${sessionId}/alerts`);
+    const live = (data.alerts || []).filter((a) => a.status !== 'closed');
+
+    /* A new one makes a noise once. Browsers only allow that after somebody has
+       clicked something on the page, which a supervisor always has. */
+    const fresh = live.filter((a) => !sosSeen.has(a.id));
+    if (fresh.length && sosSounded) sosNoise();
+    sosSounded = true;
+    sosSeen = new Set(live.map((a) => a.id));
+
+    const box = $('sosAlert');
+    box.innerHTML = '';
+    box.hidden = !live.length;
+    for (const a of live) box.appendChild(sosBanner(a));
+    api.subCount('teams', live.length || 0);
+
+    table($('sosTable'),
+      [{ label: 'When' }, { label: 'Team' }, { label: 'What' }, { label: 'Where' }, { label: 'Scanner' },
+        { label: 'State' }, { label: 'Sent on' }, { label: '' }],
+      data.alerts || [],
+      (a) => {
+        const tr = document.createElement('tr');
+        tr.append(cell(new Date(a.created_at).toLocaleString()), cell(a.team || '—'),
+          cell(a.detail ? `${a.reason} — ${a.detail}` : a.reason, 'wrap'),
+          cell([a.aisle, a.bin].filter(Boolean).join(' · ') || '—'), cell(a.device_id || '—'));
+        const st = document.createElement('td');
+        st.appendChild(tag(a.status === 'closed' ? 'CLOSED' : a.status === 'seen' ? 'ON IT' : 'OPEN'));
+        if (a.status === 'seen' && a.seen_by) st.append(` ${a.seen_by}`);
+        if (a.status === 'closed' && a.outcome) st.append(` · ${a.outcome}`);
+        tr.append(st, cell(a.sent_to || '—', 'wrap'));
+        const act = document.createElement('td');
+        if (a.status !== 'closed') {
+          if (a.status === 'open') act.appendChild(button('I am on it', 'sm primary', () => seeAlert(a.id)));
+          act.appendChild(button('Close', 'sm', () => closeAlert(a.id)));
+        }
+        tr.appendChild(act);
+        return tr;
+      },
+      'Nothing raised on this count — which is the way it should be.');
+  }
+
+  function sosBanner(a) {
+    const el = document.createElement('div');
+    el.className = 'one' + (a.status === 'seen' ? ' seen' : '');
+    const grow = document.createElement('div');
+    grow.className = 'grow';
+    const what = document.createElement('div');
+    what.className = 'what';
+    what.textContent = `SOS · team ${a.team || '?'} — ${a.reason}`;
+    const who = document.createElement('div');
+    who.className = 'who';
+    who.textContent = [
+      [a.aisle && `aisle ${a.aisle}`, a.bin && `last bin ${a.bin}`].filter(Boolean).join(' · '),
+      a.device_id, (a.employees || []).join(', '),
+      new Date(a.created_at).toLocaleTimeString(),
+      a.status === 'seen' && a.seen_by ? `${a.seen_by} is on it` : '',
+      a.sent_to === 'teams' ? 'sent to Teams' : a.sent_to && a.sent_to !== 'teams off' ? a.sent_to : '',
+    ].filter(Boolean).join(' · ');
+    grow.append(what, who);
+    if (a.detail) {
+      const note = document.createElement('div');
+      note.className = 'note';
+      note.textContent = `“${a.detail}”`;
+      grow.appendChild(note);
+    }
+    const acts = document.createElement('div');
+    acts.className = 'acts';
+    if (a.status === 'open') acts.appendChild(button('I am on it', 'primary', () => seeAlert(a.id)));
+    acts.appendChild(button('Close', '', () => closeAlert(a.id)));
+    el.append(grow, acts);
+    return el;
+  }
+
+  /* Two notes, a beat apart: enough to look up, not enough to make somebody turn
+     the sound off - which would defeat the whole thing. */
+  function sosNoise() {
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      for (const [at, hz] of [[0, 880], [0.28, 1174]]) {
+        const osc = ac.createOscillator();
+        const gain = ac.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = hz;
+        gain.gain.setValueAtTime(0.0001, ac.currentTime + at);
+        gain.gain.exponentialRampToValueAtTime(0.28, ac.currentTime + at + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + at + 0.24);
+        osc.connect(gain).connect(ac.destination);
+        osc.start(ac.currentTime + at);
+        osc.stop(ac.currentTime + at + 0.26);
+      }
+    } catch { /* a sound is a nicety; the red bar is the alert */ }
+  }
+
+  async function seeAlert(id) {
+    try {
+      await postJson(`/api/admin/sessions/${sessionId}/alerts/${id}/seen`, {});
+      await refreshAlerts();
+    } catch (err) { msg($('sosAdminMsg'), 'err', err.message); }
+  }
+
+  async function closeAlert(id) {
+    const outcome = prompt('Close this SOS — what happened? (optional)') ?? null;
+    if (outcome === null) return;                    // cancelled: leave it open
+    try {
+      await postJson(`/api/admin/sessions/${sessionId}/alerts/${id}/close`, { outcome });
+      await refreshAlerts();
+    } catch (err) { msg($('sosAdminMsg'), 'err', err.message); }
+  }
 
   /* ------------------------------------------------- a word to the floor
      Addressed to one team or all of them, and the table says who has read it -
@@ -1289,4 +1407,7 @@
   });
   document.addEventListener('DOMContentLoaded', () => { api.start().catch(() => show('login')); });
   setInterval(() => { if (api.token && sessionId) refreshAll().catch(() => {}); }, 30000);
+  /* An SOS cannot wait for the half-minute refresh: somebody is standing in an
+     aisle waiting to hear that anybody at all has seen it. */
+  setInterval(() => { if (api.token && sessionId) refreshAlerts().catch(() => {}); }, 8000);
 })();

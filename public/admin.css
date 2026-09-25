@@ -459,3 +459,23 @@ ol.steporder .grip { margin-left: auto; color: var(--muted); font-size: 16px; le
 .scroll > table { border: 1px solid var(--line-soft); border-radius: 9px; overflow: hidden; }
 tbody tr:last-child { border-bottom: 0; }
 tbody td.wrap { white-space: normal; }
+
+/* ================================================== an SOS from the floor
+   Above the page rather than in it: a supervisor reading the map should not
+   have to be on the right tab to find out somebody needs help. Red, loud, and
+   gone the moment it is dealt with. */
+.sosalert { margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; }
+.sosalert .one {
+  border: 2px solid var(--err); background: linear-gradient(180deg, #2e1416, #241012);
+  border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow);
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  animation: sospulse 2s ease-in-out infinite;
+}
+.sosalert .one.seen { animation: none; border-color: #8a6a1f; background: #2c2110; }
+@keyframes sospulse { 50% { border-color: #7a2a2f; } }
+.sosalert .what { font-size: 19px; font-weight: 800; letter-spacing: -.01em; }
+.sosalert .who { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+.sosalert .note { font-size: 13.5px; color: var(--text); margin-top: 4px; }
+.sosalert .grow { flex: 1; min-width: 240px; }
+.sosalert .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.sosalert .tag { align-self: flex-start; }

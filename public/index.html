@@ -33,6 +33,12 @@
   </section>
 
   <!-- ---------------- sign-on ---------------- -->
+  <!-- an SOS this scanner raised, and what has happened to it -->
+  <div class="sosbar" id="sosBar" hidden>
+    <b id="sosBarWhat"></b>
+    <span id="sosBarWho"></span>
+  </div>
+
   <!-- counts that have been sitting on this scanner long enough to be worth saying so -->
   <div class="queuebar" id="queueBar" hidden>
     <b id="queueBarWhat"></b>
@@ -160,6 +166,19 @@
       <button id="btnToAssign" class="ghost">My aisle</button>
       <button id="btnHistory" class="ghost">History</button>
     </div>
+    <button id="btnSos" class="sos">SOS — I need help</button>
+  </section>
+
+  <!-- ---------------- SOS ---------------- -->
+  <section class="screen" id="scrSos">
+    <h2 class="prompt">What is wrong?</h2>
+    <div class="context" id="sosWhere"></div>
+    <div class="chips" id="sosReasons"></div>
+    <label for="fSosNote">Anything else (optional)</label>
+    <input id="fSosNote" autocomplete="off" inputmode="none" placeholder="Tap to type">
+    <button class="ghost" id="btnSosKeyboard">Type it instead — show the keyboard</button>
+    <div class="feedback" id="sosMsg"></div>
+    <button class="ghost" id="btnSosBack">Back to counting</button>
   </section>
 
   <!-- ---------------- override ---------------- -->
