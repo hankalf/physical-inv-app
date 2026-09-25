@@ -261,18 +261,25 @@ and scan — the same symbology the racking uses, so a gun that reads the book r
 Use it to train a crew at a desk, to check a new scanner reads properly, or to dry-run a count
 before the real one.
 
+The page is a table, one row per line to count: **Bin**, **Pallet**, **Qty**. Work down it the way
+a counter works down an aisle — scan the pallet, key the quantity, scan the bin. The quantity is
+printed as a number to type; tick **Quantity as a barcode too** and it is scannable as well, for
+demonstrating a scan-everything workflow.
+
 Two ways to fill it:
 
-- **From this count** — pick **Bins** or **Pallets**, optionally one aisle, and how many. The codes
-  come straight from the uploaded lists, so what you scan off the paper is what the gun expects.
+- **From this count** — **Pallets, with their bin and quantity** gives a full practice line per row,
+  straight from the uploaded lists, so what you scan off the paper is what the gun expects.
+  **Bins on their own** prints rack labels with the other two columns empty, which is what you want
+  for practising empty bays. Narrow it to one aisle, and say how many rows.
 - **From a spreadsheet** — **↓ Excel template** downloads a workbook with four columns:
 
 | Column | What goes in it |
 |---|---|
-| **Type** | `BIN` or `PALLET` — printed above the bars so a trainee knows which question it answers |
-| **Code** | What the barcode carries, and what the gun will receive |
-| **Label** | Free text under the code — the item, the zone, anything useful |
-| **Note** | A second, smaller line |
+| **Bin** | The bin barcode for that row — leave it out and the column is blank |
+| **Pallet** | The pallet barcode |
+| **Qty** | The quantity to key in (or to scan, if you ticked the box) |
+| **Note** | A small line under the pallet — the item, or what the row is for |
 
 Fill it in, upload it back, and the book opens ready to print. The codes need not exist in any
 count — that is the point of practising.
@@ -282,8 +289,8 @@ count — that is the point of practising.
 
 ![](images/settings-barcode-book.png)
 
-*The test book card: from the count itself, or from a spreadsheet of whatever codes you want to
-practise on.*
+*The test book card: a practice line per row from the count itself, or from a spreadsheet of
+whatever you want to practise on.*
 
 ### Step 9 — Set up the counting screen
 
@@ -1032,14 +1039,17 @@ upload card shows exactly which columns it recognised.
 | Expiry | expiry, expiry date, expiration, expires, best before, use by, shelf life date |
 | ABC class | abc, abc class, abc code, class, item class, velocity, velocity code, movement class, category — `A`, `B` or `C`, upper or lower case |
 
-**Barcode test book** — one row per label to print.
+**Barcode test book** — one row per practice line.
 
 | What | Accepted column names |
 |---|---|
-| Type | type, kind — `BIN` or `PALLET` |
-| Code (required) | code, value, barcode, bin, pallet, pallet id, bin location |
-| Label | label, description, desc |
-| Note | note, notes |
+| Bin | bin, bin location, location, loc |
+| Pallet | pallet, pallet id, tag, LPN |
+| Qty | qty, quantity, count, cases, units |
+| Note | note, notes, label, description |
+
+A row needs a bin or a pallet; everything else is optional. Sheets made with the first version of
+the template (Type / Code) are still read.
 
 **Counting plan** — one row per aisle, in the order the team counts it.
 

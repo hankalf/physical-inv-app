@@ -785,8 +785,9 @@ async function handleAdmin(req, res, url, m) {
          count's own bins and pallets or from a sheet somebody filled in */
   if (p === '/api/admin/print/barcode-book') {
     const q = url.searchParams;
-    const kind = (q.get('kind') || 'bins').toLowerCase();
-    const limit = Math.max(1, Math.min(600, Number(q.get('limit')) || 60));
+    const kind = (q.get('kind') || 'lines').toLowerCase();
+    const limit = Math.max(1, Math.min(600, Number(q.get('limit')) || 40));
+    const qtyBarcode = q.get('qty') === '1';
     let rows = [];
     let note = '';
     if (method === 'POST') {
@@ -794,43 +795,48 @@ async function handleAdmin(req, res, url, m) {
          on, which need not exist in any count. */
       const body = await readJson(req);
       rows = (Array.isArray(body.rows) ? body.rows : []).slice(0, 600).map((r) => ({
-        kind: String(r.kind || r.type || 'CODE').toUpperCase().slice(0, 12),
-        code: String(r.code ?? r.value ?? '').trim(),
-        label: String(r.label ?? r.description ?? '').trim().slice(0, 80),
-        note: String(r.note ?? '').trim().slice(0, 80),
-      })).filter((r) => r.code);
+        bin: String(r.bin ?? '').trim(),
+        pallet: String(r.pallet ?? '').trim(),
+        qty: r.qty === undefined || r.qty === null || r.qty === '' ? '' : String(r.qty).trim(),
+        note: String(r.note ?? '').trim().slice(0, 60),
+      })).filter((r) => r.bin || r.pallet);
       note = 'from an uploaded sheet';
     } else {
       const id = Number(q.get('session') || 0);
       if (!getSession(id)) throw httpError(404, 'pick a count first');
       const aisle = norm(q.get('aisle') || '');
-      if (kind === 'pallets') {
-        rows = db.prepare(
-          `SELECT p.pallet_id AS code, COALESCE(p.sku, '') AS sku, COALESCE(p.description, '') AS description,
-                  COALESCE(p.expected_location, '') AS bin
-             FROM pallets p
-             LEFT JOIN locations l ON l.session_id = p.session_id AND l.code = p.expected_location
-            WHERE p.session_id = ?${aisle ? ' AND l.aisle = ?' : ''}
-            ORDER BY p.expected_location, p.pallet_id LIMIT ?`
-        ).all(...(aisle ? [id, aisle, limit] : [id, limit]))
-          .map((r) => ({ kind: 'PALLET', code: r.code, label: [r.sku, r.description].filter(Boolean).join(' — '), note: r.bin }));
-      } else {
+      if (kind === 'bins') {
+        /* Bins on their own: a rack walk, with nothing in the other columns to
+           read off - which is the point when practising empty bins. */
         rows = db.prepare(
           `SELECT code, COALESCE(zone, '') AS zone, COALESCE(aisle, '') AS aisle, COALESCE(level, '') AS level
              FROM locations WHERE session_id = ?${aisle ? ' AND aisle = ?' : ''}
             ORDER BY aisle, code LIMIT ?`
         ).all(...(aisle ? [id, aisle, limit] : [id, limit]))
-          .map((r) => ({ kind: 'BIN', code: r.code, label: [r.zone, r.aisle && 'aisle ' + r.aisle, r.level && 'level ' + r.level].filter(Boolean).join(' · ') }));
+          .map((r) => ({ bin: r.code, pallet: '', qty: '', note: [r.zone, r.level && 'level ' + r.level].filter(Boolean).join(' · ') }));
+        note = `bins from count #${id}${aisle ? ', aisle ' + aisle : ''}`;
+      } else {
+        /* One row per pallet, in bin order: bin, the pallet in it, and what the
+           report says is on it - the three things a counter handles per line. */
+        rows = db.prepare(
+          `SELECT p.pallet_id, COALESCE(p.expected_location, '') AS bin, p.expected_qty,
+                  COALESCE(p.sku, '') AS sku, COALESCE(p.uom, '') AS uom
+             FROM pallets p
+             LEFT JOIN locations l ON l.session_id = p.session_id AND l.code = p.expected_location
+            WHERE p.session_id = ?${aisle ? ' AND l.aisle = ?' : ''}
+            ORDER BY p.expected_location, p.pallet_id LIMIT ?`
+        ).all(...(aisle ? [id, aisle, limit] : [id, limit]))
+          .map((r) => ({
+            bin: r.bin, pallet: r.pallet_id,
+            qty: r.expected_qty == null ? '' : String(r.expected_qty),
+            note: [r.sku, r.uom].filter(Boolean).join(' '),
+          }));
+        note = `pallets from count #${id}${aisle ? ', aisle ' + aisle : ''}`;
       }
-      note = `${kind === 'pallets' ? 'pallets' : 'bins'} from count #${id}${aisle ? ', aisle ' + aisle : ''}`;
     }
-    audit(actor, 'printed a barcode test book', `${rows.length} label(s) ${note}`);
-    return send(req, res, 200, barcodeBook(rows, {
-      title: 'Barcode test book',
-      note,
-      perRow: Number(q.get('perRow')) || 2,
-      height: Number(q.get('height')) || 16,
-    }), { 'content-type': 'text/html; charset=utf-8' });
+    audit(actor, 'printed a barcode test book', `${rows.length} line(s) ${note}`);
+    return send(req, res, 200, barcodeBook(rows, { title: 'Barcode test book', note, qtyBarcode }),
+      { 'content-type': 'text/html; charset=utf-8' });
   }
 
   // --- how the counting screen is put together

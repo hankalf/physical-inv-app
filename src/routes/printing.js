@@ -192,19 +192,24 @@ ${devices.length ? `<div class="sheet">${cards}</div>` : '<div class="none">No s
  *
  * Laid out to be cut up, taped to a desk or a shelf, and scanned.
  */
-export function barcodeBook(rows, { title = 'Barcode test book', note = '', perRow = 2, height = 16 } = {}) {
-  const cards = rows.map((r) => {
+export function barcodeBook(rows, { title = 'Barcode test book', note = '', qtyBarcode = false, height = 13 } = {}) {
+  const cell = (value, { kind = '', big = false, note = '' } = {}) => {
+    if (!value) return `<td class="${kind}"><span class="empty">—</span></td>`;
     let svg = '';
     let bad = '';
-    try { svg = barcodeSvg(r.code, { height, module: 0.36 }); }
+    try { svg = barcodeSvg(String(value), { height: big ? height + 2 : height, module: 0.33, showText: false }); }
     catch (err) { bad = err.message; }
-    return `<div class="lbl ${esc((r.kind || '').toLowerCase())}">
-      <div class="kind">${esc(r.kind || '')}</div>
-      ${svg || `<div class="bad">${esc(bad)}</div>`}
-      ${r.label ? `<div class="what">${esc(r.label)}</div>` : ''}
-      ${r.note ? `<div class="note">${esc(r.note)}</div>` : ''}
-    </div>`;
-  }).join('');
+    return `<td class="${kind}">${svg || `<div class="bad">${esc(bad)}</div>`}
+      <div class="code">${esc(value)}</div>${note ? `<div class="note">${esc(note)}</div>` : ''}</td>`;
+  };
+
+  const body = rows.map((r, i) => `<tr${i % 2 ? ' class="alt"' : ''}>
+      ${cell(r.bin, { kind: 'bin' })}
+      ${cell(r.pallet, { kind: 'pallet', big: true, note: r.note })}
+      <td class="qty">${r.qty === '' || r.qty == null ? '<span class="empty">—</span>' : `
+        <div class="n">${esc(r.qty)}</div>
+        ${qtyBarcode ? barcodeSvg(String(r.qty), { height: 8, module: 0.3, showText: false }) : ''}`}</td>
+    </tr>`).join('');
 
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -214,25 +219,34 @@ export function barcodeBook(rows, { title = 'Barcode test book', note = '', perR
   body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #000; background: #fff; margin: 0; padding: 12px; }
   h1 { font-size: 16pt; margin: 0 0 2px; }
   .sub { color: #444; font-size: 9.5pt; margin-bottom: 12px; }
-  .sheet { display: grid; grid-template-columns: repeat(${Math.max(1, Math.min(4, Number(perRow) || 2))}, 1fr); gap: 8px; }
-  .lbl { border: 1.2px dashed #999; border-radius: 6px; padding: 8px 10px 10px; text-align: center;
-         break-inside: avoid; page-break-inside: avoid; }
-  .lbl svg { display: block; margin: 2px auto 0; max-width: 100%; height: auto; }
-  .kind { font-size: 7.5pt; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #555; }
-  .lbl.pallet .kind { color: #14532d; }
-  .what { font-size: 9pt; margin-top: 3px; color: #222; }
-  .note { font-size: 8pt; color: #666; }
-  .bad { font-size: 9pt; color: #a00; padding: 14px 0; }
+  table { width: 100%; border-collapse: collapse; }
+  thead { display: table-header-group; }            /* the headings repeat on every printed page */
+  th { text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: .1em; color: #555;
+       border-bottom: 1.5px solid #333; padding: 0 8px 5px; }
+  th.bin, td.bin, th.pallet, td.pallet { width: 44%; text-align: center; }
+  th.qty, td.qty { text-align: center; width: 90px; }
+  th.bin, th.pallet { text-align: center; }
+  td { padding: 7px 8px; border-bottom: 1px dashed #bbb; vertical-align: middle; break-inside: avoid; page-break-inside: avoid; }
+  tr.alt td { background: #f6f6f6; }
+  td svg { display: block; margin: 0 auto; }
+  .code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 8.5pt; letter-spacing: .04em; margin-top: 2px; }
+  .qty .n { font-size: 15pt; font-weight: 800; line-height: 1; }
+  .note { font-size: 7.5pt; color: #666; margin-top: 2px; }
+  .empty { color: #999; }
+  .bad { font-size: 8pt; color: #a00; }
   .none { padding: 30px; text-align: center; color: #666; }
   .tip { margin-top: 14px; font-size: 8.5pt; color: #555; border-top: 1px solid #ccc; padding-top: 6px; }
   @media print { .noprint { display: none; } }
 </style></head>
 <body>
 <h1>${esc(title)}</h1>
-<div class="sub">${rows.length} label${rows.length === 1 ? '' : 's'} · Code 128 · printed ${esc(localDate())}${note ? ' · ' + esc(note) : ''}</div>
+<div class="sub">${rows.length} line${rows.length === 1 ? '' : 's'} · Code 128 · printed ${esc(localDate())}${note ? ' · ' + esc(note) : ''}</div>
 <button class="noprint" onclick="window.print()" style="margin-bottom:10px;padding:6px 12px">Print</button>
-${rows.length ? `<div class="sheet">${cards}</div>` : '<div class="none">Nothing to print — pick a count and an aisle, or upload a sheet of codes.</div>'}
-<div class="tip">Print at <b>100%</b> — “fit to page” shrinks the bars and a scanner will refuse them. If a label will not read,
-print that page again on plain white paper: a glossy or coloured sheet scatters the beam.</div>
+${rows.length ? `<table>
+  <thead><tr><th class="bin">Bin</th><th class="pallet">Pallet</th><th class="qty">Qty</th></tr></thead>
+  <tbody>${body}</tbody></table>` : '<div class="none">Nothing to print — pick a count, or upload a sheet of codes.</div>'}
+<div class="tip">Work down the page the way a counter works down an aisle: scan the pallet, key the quantity, scan the bin.
+Print at <b>100%</b> — “fit to page” shrinks the bars and a scanner will refuse them. If a label will not read, print that page
+again on plain white paper: a glossy or coloured sheet scatters the beam.</div>
 </body></html>`;
 }

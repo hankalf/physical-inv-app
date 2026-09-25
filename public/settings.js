@@ -883,12 +883,15 @@
      crew, or for dry-running a count before the real one. Either from the
      count's own bins and pallets, or from a spreadsheet of whatever codes a
      site wants to practise on. */
+  /* One row per practice line: the bin, the pallet in it, and the quantity a
+     trainee keys in. An empty cell simply prints nothing in that column - a bin
+     with no pallet is an empty bay to practise on. */
   const TEMPLATE_ROWS = [
-    ['Type', 'Code', 'Label', 'Note'],
-    ['BIN', 'F01A001', 'Freezer · aisle F01 · level A', 'front face'],
-    ['BIN', 'F01A002', 'Freezer · aisle F01 · level A', 'back face'],
-    ['PALLET', 'F01-001', 'SKU-4120 — Chicken breast IQF 40lb', 'expected in F01A001'],
-    ['PALLET', 'F01-002', 'SKU-2210 — Peas petite 12x2lb', 'expected in F01A002'],
+    ['Bin', 'Pallet', 'Qty', 'Note'],
+    ['F01A001', 'F01-001', 40, 'SKU-4120 Chicken breast'],
+    ['F01A002', 'F01-002', 33, 'SKU-2210 Peas petite'],
+    ['F01A003', 'F01-003', 28, 'SKU-6610 Salmon fillet'],
+    ['F01A004', '', '', 'an empty bay to practise on'],
   ];
 
   async function bookTemplate() {
@@ -905,12 +908,12 @@
         });
       }
       const ws = window.XLSX.utils.aoa_to_sheet(TEMPLATE_ROWS);
-      ws['!cols'] = [{ wch: 10 }, { wch: 22 }, { wch: 42 }, { wch: 26 }];
+      ws['!cols'] = [{ wch: 14 }, { wch: 18 }, { wch: 8 }, { wch: 34 }];
       const wb = window.XLSX.utils.book_new();
       window.XLSX.utils.book_append_sheet(wb, ws, 'Barcodes');
       window.XLSX.writeFile(wb, 'barcode-test-book-template.xlsx');
       msg($('bookMsg'), 'ok', 'Template downloaded.',
-        'Type or paste your codes under the example rows, keep the four column headings, then upload it back here.');
+        'Type or paste your lines under the examples, keep the four column headings, then upload it back here.');
     } catch (err) { msg($('bookMsg'), 'err', err.message); }
   }
 
@@ -921,21 +924,32 @@
     if (!lines.length) throw new Error('that file has no rows in it');
     const head = lines[0].split(',').map((h) => h.replace(/^"|"$/g, '').trim().toLowerCase());
     const col = (...names) => head.findIndex((h) => names.includes(h));
+    const iBin = col('bin', 'bin location', 'location', 'loc');
+    const iPallet = col('pallet', 'pallet id', 'palletid', 'tag', 'lpn');
+    const iQty = col('qty', 'quantity', 'count', 'cases', 'units');
+    const iNote = col('note', 'notes', 'label', 'description', 'desc');
+    /* The first template had a Type/Code pair rather than three columns. A site
+       that filled one in should not be told to start again. */
     const iType = col('type', 'kind');
-    const iCode = col('code', 'value', 'barcode', 'bin', 'pallet', 'pallet id', 'bin location');
-    const iLabel = col('label', 'description', 'desc');
-    const iNote = col('note', 'notes');
-    if (iCode < 0) throw new Error('no "Code" column — the template has Type, Code, Label, Note');
+    const iCode = col('code', 'value', 'barcode');
+    if (iBin < 0 && iPallet < 0 && iCode < 0) {
+      throw new Error('no Bin or Pallet column — the template has Bin, Pallet, Qty, Note');
+    }
     const cell = (parts, i) => (i >= 0 ? String(parts[i] ?? '').replace(/^"|"$/g, '').trim() : '');
     return lines.slice(1).map((l) => {
       const parts = l.match(/("([^"]|"")*"|[^,]*)(,|$)/g).map((x) => x.replace(/,$/, ''));
+      if (iBin < 0 && iPallet < 0) {
+        const code = cell(parts, iCode);
+        const pallet = /pallet/i.test(cell(parts, iType));
+        return { bin: pallet ? '' : code, pallet: pallet ? code : '', qty: '', note: cell(parts, iNote) };
+      }
       return {
-        kind: cell(parts, iType) || 'CODE',
-        code: cell(parts, iCode),
-        label: cell(parts, iLabel),
+        bin: cell(parts, iBin),
+        pallet: cell(parts, iPallet),
+        qty: cell(parts, iQty),
         note: cell(parts, iNote),
       };
-    }).filter((r) => r.code);
+    }).filter((r) => r.bin || r.pallet);
   }
 
   async function bookFromFile() {
@@ -949,11 +963,11 @@
       /* The page is built by the server and opened in a tab, the same as the
          count sheets and the scanner cards - one place that knows how to draw a
          barcode, and one print layout. */
-      const res = await api.call('/api/admin/print/barcode-book?perRow=' + encodeURIComponent($('fBookPerRow').value), {
+      const res = await api.call('/api/admin/print/barcode-book?qty=' + ($('fBookQty').checked ? '1' : '0'), {
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ rows }),
       });
       writeTab(tab, await res.text());
-      msg($('bookMsg'), 'ok', `${rows.length} label${rows.length === 1 ? '' : 's'} from ${file.name}.`,
+      msg($('bookMsg'), 'ok', `${rows.length} line${rows.length === 1 ? '' : 's'} from ${file.name}.`,
         'Print at 100% — "fit to page" shrinks the bars and a scanner will refuse them.');
     } catch (err) {
       if (tab) tab.close();
@@ -987,7 +1001,7 @@
       kind: $('fBookKind').value,
       aisle: $('fBookAisle').value.trim(),
       limit: $('fBookLimit').value || '40',
-      perRow: $('fBookPerRow').value,
+      qty: $('fBookQty').checked ? '1' : '0',
     });
     let tab;
     try {

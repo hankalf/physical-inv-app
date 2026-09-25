@@ -292,11 +292,12 @@
     </div>
     <!-- ============ the barcode test book ============ -->
     <div class="card">
-      <h2>Barcode test book <span class="muted">real Code 128 labels to practise on</span></h2>
+      <h2>Barcode test book <span class="muted">bin, pallet and quantity — real Code 128 to practise on</span></h2>
       <div class="hint" style="margin-top:0">
-        A page of bin and pallet barcodes to print, cut up and scan — for training a crew, or dry-running a count
-        before the real one. The same symbology the racking uses, so a gun that reads the book reads the rack.
-        Take the codes from this count, or fill in the spreadsheet with whatever you want to practise on.
+        A printable sheet of practice lines — <b>bin</b>, <b>pallet</b>, <b>quantity</b>, one row each — in real Code 128,
+        the same symbology the racking uses. Work down the page the way a counter works down an aisle. For training a
+        crew, demonstrating the app, or dry-running a count before the real one. Take the lines from this count, or fill
+        in the spreadsheet with whatever you want to practise on.
       </div>
 
       <div class="fieldsets">
@@ -304,19 +305,15 @@
           <div class="legend">From this count</div>
           <div class="inline">
             <div class="auto">
-              <label for="fBookKind">Labels for</label>
+              <label for="fBookKind">Rows</label>
               <select id="fBookKind">
-                <option value="bins">Bins</option>
-                <option value="pallets">Pallets</option>
+                <option value="lines">Pallets, with their bin and quantity</option>
+                <option value="bins">Bins on their own</option>
               </select>
             </div>
             <div class="auto"><label for="fBookAisle">Aisle</label><input id="fBookAisle" class="sm" style="width:110px" placeholder="F01 — or blank"></div>
             <div class="auto"><label for="fBookLimit">How many</label><input id="fBookLimit" class="sm" type="number" min="1" max="600" style="width:90px" value="40"></div>
-            <div class="auto"><label for="fBookPerRow">Per row</label>
-              <select id="fBookPerRow" class="sm" style="width:80px">
-                <option>2</option><option>3</option><option>1</option>
-              </select>
-            </div>
+            <div class="auto"><label class="cb" title="The quantity is printed as a number to key in. Tick this to print it as a barcode as well, for practising a scan-everything workflow."><input type="checkbox" id="fBookQty"> Quantity as a barcode too</label></div>
           </div>
           <div class="toolbar">
             <button class="primary" id="btnBookPrint">Open the book</button>
@@ -326,8 +323,9 @@
         <div class="fieldset">
           <div class="legend">From a spreadsheet</div>
           <div class="hint" style="margin-top:0">
-            Download the template, type or paste your codes into it, then upload it back. Columns:
-            <b>Type</b> (BIN or PALLET), <b>Code</b> — what the barcode carries — <b>Label</b> and <b>Note</b>.
+            Download the template, type or paste your codes into it, then upload it back. One row per line to
+            practise: <b>Bin</b>, <b>Pallet</b>, <b>Qty</b> and an optional <b>Note</b>. Leave a cell empty and that
+            column is blank on the page — a bin with no pallet is an empty bay to practise on.
           </div>
           <div class="toolbar">
             <button id="btnBookTemplate">↓ Excel template</button>
