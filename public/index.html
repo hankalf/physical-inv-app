@@ -33,6 +33,12 @@
   </section>
 
   <!-- ---------------- sign-on ---------------- -->
+  <!-- counts that have been sitting on this scanner long enough to be worth saying so -->
+  <div class="queuebar" id="queueBar" hidden>
+    <b id="queueBarWhat"></b>
+    <span id="queueBarWhy"></span>
+  </div>
+
   <!-- a newer app is on the server; it loads itself when the counter is between pallets -->
   <button class="updatebar" id="updateBar" hidden>
     <b>Update ready</b>

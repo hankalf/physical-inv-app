@@ -37,6 +37,20 @@
   }
 
   const tx = (store, mode) => idb.transaction(store, mode).objectStore(store);
+  /*
+   * A counted line, written to flash before the counter is told it is counted.
+   *
+   * The browser's default is "relaxed": it says a write is done once the data is
+   * handed to the operating system, which is fine for a page that crashes and
+   * plain wrong for a handheld whose battery is pulled in a freezer aisle -
+   * those last few lines never reach the flash. "strict" costs a few
+   * milliseconds per line and means a battery yanked mid-shift loses nothing
+   * that a counter was told was counted.
+   */
+  const lineTx = () => {
+    try { return idb.transaction('lines', 'readwrite', { durability: 'strict' }).objectStore('lines'); }
+    catch { return tx('lines', 'readwrite'); }      // older browsers: relaxed, as before
+  };
   const wrap = (req) => new Promise((res, rej) => { req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error); });
   const metaGet = (k) => wrap(tx('meta', 'readonly').get(k));
   const metaSet = (k, v) => wrap(tx('meta', 'readwrite').put(v, k));
@@ -243,9 +257,42 @@
     el.appendChild(d);
   }
 
+  /* How long the oldest line on this device has been waiting to be sent. */
+  async function queueAge() {
+    const pending = await wrap(tx('lines', 'readonly').index('synced').getAll(0));
+    if (!pending.length) return { count: 0, oldest: 0 };
+    const oldest = pending.reduce((t, l) => Math.min(t, new Date(l.ts).getTime()), Date.now());
+    return { count: pending.length, oldest: Math.round((Date.now() - oldest) / 60000) };
+  }
+
+  /*
+   * Counts that have not left the handheld yet.
+   *
+   * Queued lines are safe on the device - they survive the app closing, the gun
+   * rebooting, and the battery being pulled. What they do not survive is the gun
+   * itself: dropped off a lift, run over, left in the freezer. Fifteen minutes
+   * of that is a nuisance; a whole shift of it is a day's counting on one
+   * device, and nobody notices because the counting screen looks exactly the
+   * same. So once the queue is old enough to matter, the gun says so.
+   */
+  const QUEUE_NAG_MINS = 15;
+  function renderQueueWarning({ count, oldest }) {
+    const el = $('queueBar');
+    if (!el) return;
+    const show = count > 0 && oldest >= QUEUE_NAG_MINS;
+    el.hidden = !show;
+    if (!show) return;
+    $('queueBarWhat').textContent = `${count} count${count === 1 ? '' : 's'} still on this scanner`;
+    $('queueBarWhy').textContent = online()
+      ? `The oldest is ${oldest} minutes old and the server has not taken it yet. Tell a supervisor before you put this scanner down.`
+      : `No signal for ${oldest} minutes. Nothing is lost — walk somewhere with Wi-Fi and they will send themselves.`;
+  }
+
   async function updateChips() {
     renderDeviceProblem();
-    const queued = await wrap(tx('lines', 'readonly').index('synced').count(0));
+    const q = await queueAge();
+    const queued = q.count;
+    renderQueueWarning(q);
     $('chipQueue').hidden = queued === 0;
     $('chipQueue').textContent = queued + ' queued';
     $('chipNet').textContent = online() ? 'online' : 'OFFLINE';
@@ -283,32 +330,65 @@
     renderStep();
   }
 
+  /** One batch of lines, in the shape the server takes them. */
+  const wireLine = (l) => ({
+    clientId: l.clientId, palletId: l.palletId, qty: l.qty, location: l.location,
+    comments: l.comments, sku: l.sku, team: l.team, employees: l.employees,
+    deviceId: l.deviceId, aisle: l.aisle, unknownPallet: l.unknownPallet,
+    unknownLocation: l.unknownLocation, offAssignment: l.offAssignment,
+    duplicatePallet: l.duplicatePallet, emptyBin: l.emptyBin || 0, pass: l.pass || 1,
+    recountId: l.recountId || null, overrideReason: l.overrideReason,
+    lot: l.lot || null, expiry: l.expiry || null, aliasOf: l.aliasOf || null,
+    labelIssue: l.labelIssue || '', binLabelIssue: l.binLabelIssue || '', scannedAt: l.ts,
+  });
+
+  /** Send what is waiting for one count, two hundred lines at a time. */
+  async function sendLines(sessionId, lines) {
+    for (let i = 0; i < lines.length; i += 200) {
+      const batch = lines.slice(i, i + 200);
+      const result = await api(`/api/sessions/${sessionId}/counts`, {
+        method: 'POST', body: JSON.stringify(batch.map(wireLine)),
+      });
+      const ok = new Set(result.accepted || []);
+      const t = idb.transaction('lines', 'readwrite');
+      const os = t.objectStore('lines');
+      for (const l of batch) if (ok.has(l.clientId)) os.put({ ...l, synced: 1 });
+      await new Promise((r) => { t.oncomplete = r; });
+    }
+  }
+
+  /*
+   * Everything still waiting, whatever count it belongs to.
+   *
+   * A gun switched off in the middle of an aisle and switched on at the office
+   * door is on the sign-on screen, not counting - and its counts would sit there
+   * until somebody signed on again, on that same scanner, to that same count.
+   * Nobody would. So the queue goes up as soon as the app has a network and
+   * knows which scanner it is, signed on or not.
+   */
+  async function flushPending() {
+    if (!online() || !state.deviceToken) return;
+    const pending = (await wrap(tx('lines', 'readonly').index('synced').getAll(0))).filter((l) => !l.voidedLocal);
+    if (!pending.length) return;
+    const bySession = new Map();
+    for (const l of pending) {
+      if (!l.sessionId) continue;
+      if (!bySession.has(l.sessionId)) bySession.set(l.sessionId, []);
+      bySession.get(l.sessionId).push(l);
+    }
+    for (const [sessionId, lines] of bySession) {
+      try { await sendLines(sessionId, lines); }
+      catch (err) { console.warn('queue deferred:', err.message); }
+    }
+    await updateChips();
+  }
+
   async function syncQueue() {
     if (state.syncing || !online() || !state.session) return;
     state.syncing = true;
     try {
       const pending = await wrap(tx('lines', 'readonly').index('synced').getAll(0));
-      const toSend = pending.filter((l) => l.sessionId === state.session.id && !l.voidedLocal);
-      for (let i = 0; i < toSend.length; i += 200) {
-        const batch = toSend.slice(i, i + 200);
-        const result = await api(`/api/sessions/${state.session.id}/counts`, {
-          method: 'POST',
-          body: JSON.stringify(batch.map((l) => ({
-            clientId: l.clientId, palletId: l.palletId, qty: l.qty, location: l.location,
-            comments: l.comments, sku: l.sku, team: l.team, employees: l.employees,
-            deviceId: l.deviceId, aisle: l.aisle, unknownPallet: l.unknownPallet,
-            unknownLocation: l.unknownLocation, offAssignment: l.offAssignment,
-            duplicatePallet: l.duplicatePallet, emptyBin: l.emptyBin || 0, pass: l.pass || 1, recountId: l.recountId || null, overrideReason: l.overrideReason,
-            lot: l.lot || null, expiry: l.expiry || null, aliasOf: l.aliasOf || null,
-            labelIssue: l.labelIssue || '', binLabelIssue: l.binLabelIssue || '', scannedAt: l.ts,
-          }))),
-        });
-        const ok = new Set(result.accepted || []);
-        const t = idb.transaction('lines', 'readwrite');
-        const os = t.objectStore('lines');
-        for (const l of batch) if (ok.has(l.clientId)) os.put({ ...l, synced: 1 });
-        await new Promise((r) => { t.oncomplete = r; });
-      }
+      await sendLines(state.session.id, pending.filter((l) => l.sessionId === state.session.id && !l.voidedLocal));
       const voids = (await wrap(tx('lines', 'readonly').getAll()))
         .filter((l) => l.voidedLocal && l.synced === 1 && !l.voidSynced);
       for (const l of voids) {
@@ -1769,7 +1849,7 @@
       synced: 0,
       voidedLocal: false,
     };
-    await wrap(tx('lines', 'readwrite').put(line));
+    await wrap(lineTx().put(line));
     if (!line.emptyBin) await wrap(tx('dup', 'readwrite').put({ p: line.palletId, loc: line.location, team: line.team }));
     updateChips();
     if (line.location) {
@@ -1835,12 +1915,12 @@
         btn.className = 'danger';
         btn.textContent = 'Void this line';
         btn.onclick = async () => {
-          await wrap(tx('lines', 'readwrite').put({ ...l, voidedLocal: true }));
+          await wrap(lineTx().put({ ...l, voidedLocal: true }));
           await wrap(tx('dup', 'readwrite').delete(l.palletId));
           if (l.synced && online()) {
             try {
               await api(`/api/sessions/${l.sessionId}/void`, { method: 'POST', body: JSON.stringify({ clientId: l.clientId }) });
-              await wrap(tx('lines', 'readwrite').put({ ...l, voidedLocal: true, voidSynced: true }));
+              await wrap(lineTx().put({ ...l, voidedLocal: true, voidSynced: true }));
             } catch { /* the sync loop retries it */ }
           }
           beep('warn');
@@ -2196,9 +2276,9 @@
      straight away rather than waiting out the two-minute gap between routine
      checks - those are exactly the moments a scanner has been away long enough
      for a deploy to have happened. */
-  window.addEventListener('online', () => { updateChips(); syncQueue(); checkForUpdate({ force: true }); });
+  window.addEventListener('online', () => { updateChips(); flushPending(); syncQueue(); checkForUpdate({ force: true }); });
   window.addEventListener('offline', updateChips);
-  setInterval(() => { updateChips(); syncQueue(); checkForUpdate(); }, 20000);
+  setInterval(() => { updateChips(); flushPending(); syncQueue(); checkForUpdate(); }, 20000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate({ force: true }); });
 
   /**
@@ -2251,6 +2331,9 @@
     await describeCache();
     showScreen(state.deviceId ? 'scrSignon' : 'scrDevice');
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { /* http-only hosts */ });
+    /* Anything counted before this scanner was last switched off goes up now,
+       without waiting for somebody to sign on to the same count again. */
+    flushPending().catch(() => { /* the tick will try again */ });
     /* A scanner that has been asleep on the cradle since the last deploy finds
        out now, not in two minutes. Nothing is counted yet, so if it is behind it
        simply reloads. */

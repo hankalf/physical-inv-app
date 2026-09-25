@@ -220,6 +220,15 @@ button.fit { flex: 0 0 auto; width: auto; }
 .armbar span { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); }
 @keyframes armpulse { 50% { border-color: #7a2a2f; } }
 
+/* Counts that have not reached the server for a while. Amber, not red: nothing
+   is lost, but somebody should know before this gun is put down. */
+.queuebar {
+  display: block; width: 100%; margin: 0 0 10px; padding: 12px;
+  border-radius: 10px; border: 1px solid #8a6a1f; background: #3a2c12; color: var(--text);
+}
+.queuebar b { display: block; font-size: 17px; color: #ffd479; }
+.queuebar span { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); }
+
 /* A newer app is waiting. Deliberately quiet - it is news, not a problem, and
    it sits above the screens rather than inside one because it is true wherever
    the counter happens to be. */
