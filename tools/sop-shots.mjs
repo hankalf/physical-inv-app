@@ -336,6 +336,16 @@ try {
   await desk.check('#fOnlyExceptions').catch(() => {});
   await wait(1800);
   await saveCard(desk, '#palletTable', 'dashboard-pallet-report', 10);
+  /* the search box, with the panel open - the one picture that explains it */
+  /* a pallet with a variance on it: the search shows the pallet, the second
+     count raised for it and the adjustment waiting to be signed, all at once */
+  await desk.fill('#navSearch', String(first ? first.pallet_id : 'F01-008'));
+  await desk.waitForTimeout(1200);
+  await save({ screenshot: (o) => desk.screenshot({ ...o, clip: { x: 0, y: 0, width: 760, height: 620 } }) }, 'search');
+  await desk.fill('#navSearch', '');
+  await desk.keyboard.press('Escape');
+  await desk.waitForTimeout(300);
+
   await desk.goto(BASE + '/teams');
   await desk.waitForSelector('#scrMain.active', { state: 'attached' }); await wait(1800);
   await save(desk, 'teams-and-crew');

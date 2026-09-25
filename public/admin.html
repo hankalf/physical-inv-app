@@ -120,38 +120,72 @@
       <div class="hint" style="margin-top:0">
         Settings for the count picked in the header. A scanner already counting picks up a change
         within about half a minute; the questions it asks change between pallets, never mid-line.
-        The <b>recount thresholds</b> decide how big a quantity difference has to be before somebody
-        walks back to the bin — leave them at 0 to send someone back for every unit.
       </div>
-      <div class="inline" style="margin-top:12px">
-        <div class="auto">
-          <label for="fPalletMode">Pallet ID check</label>
-          <select id="fPalletMode">
-            <option value="warn">Validate — allow override with reason</option>
-            <option value="strict">Validate — no overrides</option>
-            <option value="off">Accept any ID (still blocks duplicates)</option>
-          </select>
+      <div class="fieldsets">
+        <div class="fieldset">
+          <div class="legend">What the gun asks</div>
+          <div class="inline">
+            <div class="auto">
+              <label for="fPalletMode">Pallet ID check</label>
+              <select id="fPalletMode">
+                <option value="warn">Validate — allow override with reason</option>
+                <option value="strict">Validate — no overrides</option>
+                <option value="off">Accept any ID (still blocks duplicates)</option>
+              </select>
+            </div>
+          </div>
+          <div class="inline" style="margin-top:10px">
+            <div class="auto"><label class="cb"><input type="checkbox" id="fAskComments"> Ask for comments</label></div>
+            <div class="auto"><label class="cb" title="Adds a LOT CODE question on the gun, checked against the inventory report. Off by default."><input type="checkbox" id="fAskLot"> Ask for the lot code</label></div>
+            <div class="auto"><label class="cb" title="Adds an EXPIRY question on the gun and flags anything already out of date. Off by default."><input type="checkbox" id="fAskExpiry"> Ask for the expiry date</label></div>
+          </div>
         </div>
-        <div class="auto"><label class="cb"><input type="checkbox" id="fGuided"> Guided by aisle plan</label></div>
-        <div class="auto"><label class="cb"><input type="checkbox" id="fAskComments"> Ask for comments</label></div>
-        <div class="auto"><label class="cb"><input type="checkbox" id="fAutoRecount"> Auto second counts</label></div>
-        <div class="auto"><label class="cb" title="Every scanner lands on this count at sign-on. They can still pick another."><input type="checkbox" id="fDefaultSession"> Scanners start here</label></div>
-        <div class="auto"><label class="cb" title="Adds a LOT CODE question on the gun, checked against the inventory report. Off by default."><input type="checkbox" id="fAskLot"> Ask for the lot code</label></div>
-        <div class="auto"><label class="cb" title="Adds an EXPIRY question on the gun and flags anything already out of date. Off by default."><input type="checkbox" id="fAskExpiry"> Ask for the expiry date</label></div>
-        <div class="auto"><label for="fRecMinQty" title="A quantity difference smaller than this and than the percentage below does not raise a second count. 0 raises every difference.">Recount over</label><input id="fRecMinQty" class="sm" type="number" min="0" style="width:74px" placeholder="0"><span class="muted"> units</span></div>
-        <div class="auto"><label for="fRecMinPct" title="...or a difference of at least this percentage of the expected quantity. Either threshold is enough.">or over</label><input id="fRecMinPct" class="sm" type="number" min="0" max="100" style="width:66px" placeholder="0"><span class="muted"> %</span></div>
-        <div class="auto"><label for="fRecCap" title="Stop raising automatic second counts once this many are open. 0 is no cap.">Cap open</label><input id="fRecCap" class="sm" type="number" min="0" style="width:74px" placeholder="0"></div>
-        <div class="auto"><label class="cb" title="Every difference from the report has to be approved with a reason code before it reaches the ERP file. Off by default."><input type="checkbox" id="fRequireApproval"> Adjustments need approval</label></div>
-        <div class="auto"><label for="fApprMinQty" title="Smaller than this and than the percentage beside it, an adjustment goes through without a signature. 0 and 0 means every one needs approving.">Approve over</label><input id="fApprMinQty" class="sm" type="number" min="0" style="width:74px" placeholder="0"><span class="muted"> units</span></div>
-        <div class="auto"><label for="fApprMinPct" title="...or at least this percentage of what the report expected. Either threshold is enough.">or over</label><input id="fApprMinPct" class="sm" type="number" min="0" max="100" style="width:66px" placeholder="0"><span class="muted"> %</span></div>
-        <div class="auto"><label class="cb" title="Reports accuracy by ABC class against a target for each. Off by default."><input type="checkbox" id="fTrackAbc"> ABC classes &amp; accuracy</label></div>
-        <div class="auto">
-          <label for="fLayout">Map drawing</label>
-          <select id="fLayout"><option value="">Schematic (auto from bin codes)</option></select>
+
+        <div class="fieldset">
+          <div class="legend">How the floor is run</div>
+          <div class="inline">
+            <div class="auto"><label class="cb"><input type="checkbox" id="fGuided"> Guided by aisle plan</label></div>
+            <div class="auto"><label class="cb" title="Every scanner lands on this count at sign-on. They can still pick another."><input type="checkbox" id="fDefaultSession"> Scanners start here</label></div>
+          </div>
+          <div class="inline" style="margin-top:10px">
+            <div class="auto">
+              <label for="fLayout">Map drawing</label>
+              <select id="fLayout"><option value="">Schematic (auto from bin codes)</option></select>
+            </div>
+          </div>
         </div>
-        <div class="auto"><button id="btnSaveSettings">Save</button></div>
-        <div class="auto"><button id="btnCloseSession" class="danger">Close session</button></div>
-        <div class="auto"><button id="btnDeleteSession" class="danger" title="Close the count first. Everything counted against it goes with it.">Delete…</button></div>
+
+        <div class="fieldset">
+          <div class="legend">Second counts</div>
+          <div class="inline">
+            <div class="auto"><label class="cb"><input type="checkbox" id="fAutoRecount"> Raise them automatically</label></div>
+          </div>
+          <div class="inline" style="margin-top:10px">
+            <div class="auto"><label for="fRecMinQty" title="A quantity difference smaller than this and than the percentage below does not raise a second count. 0 raises every difference.">Over</label><input id="fRecMinQty" class="sm" type="number" min="0" style="width:74px" placeholder="0"><span class="muted"> units</span></div>
+            <div class="auto"><label for="fRecMinPct" title="...or a difference of at least this percentage of the expected quantity. Either threshold is enough.">or over</label><input id="fRecMinPct" class="sm" type="number" min="0" max="100" style="width:66px" placeholder="0"><span class="muted"> %</span></div>
+            <div class="auto"><label for="fRecCap" title="Stop raising automatic second counts once this many are open. 0 is no cap.">Cap open</label><input id="fRecCap" class="sm" type="number" min="0" style="width:74px" placeholder="0"></div>
+          </div>
+          <div class="hint" style="margin-top:8px">Both at 0 sends somebody back for a one-unit difference.</div>
+        </div>
+
+        <div class="fieldset">
+          <div class="legend">Adjustments &amp; accuracy</div>
+          <div class="inline">
+            <div class="auto"><label class="cb" title="Every difference from the report has to be approved with a reason code before it reaches the ERP file. Off by default."><input type="checkbox" id="fRequireApproval"> Adjustments need approval</label></div>
+            <div class="auto"><label class="cb" title="Reports accuracy by ABC class against a target for each. Off by default."><input type="checkbox" id="fTrackAbc"> ABC classes &amp; accuracy</label></div>
+          </div>
+          <div class="inline" style="margin-top:10px">
+            <div class="auto"><label for="fApprMinQty" title="Smaller than this and than the percentage beside it, an adjustment goes through without a signature. 0 and 0 means every one needs approving.">Approve over</label><input id="fApprMinQty" class="sm" type="number" min="0" style="width:74px" placeholder="0"><span class="muted"> units</span></div>
+            <div class="auto"><label for="fApprMinPct" title="...or at least this percentage of what the report expected. Either threshold is enough.">or over</label><input id="fApprMinPct" class="sm" type="number" min="0" max="100" style="width:66px" placeholder="0"><span class="muted"> %</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button class="primary" id="btnSaveSettings">Save</button>
+        <span class="spacer"></span>
+        <button id="btnCloseSession" class="danger">Close session</button>
+        <button id="btnDeleteSession" class="danger" title="Close the count first. Everything counted against it goes with it.">Delete…</button>
       </div>
       <hr>
       <h3 style="margin-top:0">Start a new count</h3>
@@ -322,10 +356,11 @@
           <div class="auto"><button class="danger fit" id="btnReject">Reject selected</button></div>
           <div class="auto"><button class="fit" id="btnExportAdjust">Adjustments CSV</button></div>
         </div>
-        <div class="inline" style="margin-top:6px">
-          <div class="auto"><label class="cb"><input type="checkbox" id="fAdjPendingOnly" checked> Only the ones still waiting</label></div>
-          <div class="auto"><button class="fit" id="btnAdjAll">Select all shown</button></div>
-          <div class="auto"><button class="fit" id="btnAdjNone">Select none</button></div>
+        <div class="toolbar" style="margin-top:6px">
+          <label class="cb"><input type="checkbox" id="fAdjPendingOnly" checked> Only the ones still waiting</label>
+          <span class="spacer"></span>
+          <button id="btnAdjAll">Select all shown</button>
+          <button id="btnAdjNone">Select none</button>
         </div>
         <div class="feedback" id="adjustMsg"></div>
         <div class="scroll" style="margin-top:10px"><table id="adjustTable"></table></div>
@@ -347,10 +382,11 @@
           auditor asks for. <b>Quantity accuracy</b> is how many of the expected units were not in dispute.
           Classes come from an ABC column on the pallet file; if it has none, work them out from the report.
         </div>
-        <div class="inline" style="margin-top:12px">
-          <div class="auto"><button id="btnDeriveAbc" title="Pareto on the expected quantities: the first 80% is A, the next 15% B, the tail C. Anything the file already classified is left alone.">Work out classes from the report</button></div>
-          <div class="auto"><button id="btnExportAccuracy">Accuracy CSV</button></div>
-          <div class="auto"><span class="muted" id="abcSub"></span></div>
+        <div class="toolbar">
+          <button id="btnDeriveAbc" title="Pareto on the expected quantities: the first 80% is A, the next 15% B, the tail C. Anything the file already classified is left alone.">Work out classes from the report</button>
+          <button id="btnExportAccuracy">Accuracy CSV</button>
+          <span class="spacer"></span>
+          <span class="muted" id="abcSub"></span>
         </div>
         <div class="feedback" id="accuracyMsg"></div>
         <div class="scroll" style="margin-top:10px"><table id="accuracyTable"></table></div>
@@ -367,9 +403,10 @@
         so it can be found again. <b>RACK</b> labels are the ones worth printing first: every counter after this
         one walks up to that bin too.
       </div>
-      <div class="inline" style="margin-top:10px">
-        <div class="auto"><button id="btnExportLabels">Labels CSV</button></div>
-        <div class="auto"><span class="muted" id="labelSub"></span></div>
+      <div class="toolbar">
+        <button id="btnExportLabels">Labels CSV</button>
+        <span class="spacer"></span>
+        <span class="muted" id="labelSub"></span>
       </div>
       <div class="scroll" style="margin-top:10px"><table id="labelTable"></table></div>
     </div>
@@ -391,14 +428,13 @@
 
     <div class="card">
       <h2>Pallet report</h2>
-      <div class="inline">
-        <div class="auto"><label class="cb"><input type="checkbox" id="fOnlyExceptions" checked> Hide matching pallets</label></div>
-        <div class="auto">
-          <button id="btnExportPallets">Pallet report CSV</button>
-          <button id="btnExportCounts">Raw counts CSV</button>
-          <button id="btnExportExceptions">Exceptions CSV</button>
-          <button id="btnExportUncounted">Uncounted bins CSV</button>
-        </div>
+      <div class="toolbar">
+        <label class="cb"><input type="checkbox" id="fOnlyExceptions" checked> Hide matching pallets</label>
+        <span class="spacer"></span>
+        <button id="btnExportPallets">Pallet report CSV</button>
+        <button id="btnExportCounts">Raw counts CSV</button>
+        <button id="btnExportExceptions">Exceptions CSV</button>
+        <button id="btnExportUncounted">Uncounted bins CSV</button>
       </div>
       <div class="scroll" style="margin-top:10px"><table id="palletTable"></table></div>
       <div class="muted" id="palletNote"></div>

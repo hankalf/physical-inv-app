@@ -340,6 +340,11 @@
     let list = [];
     let currentId = null;
 
+    /* Search results need to know which count the page is on, and sometimes to
+       move it to another one. */
+    api.currentSession = () => currentId;
+    api.pickSession = (id) => { if (Number(id) !== currentId) onPick(Number(id)); };
+
     const close = () => { menu.hidden = true; btn.classList.remove('open'); };
     const open = () => { menu.hidden = false; btn.classList.add('open'); };
     btn.onclick = (e) => { e.stopPropagation(); menu.hidden ? open() : close(); };
@@ -455,9 +460,235 @@
     return { render, close };
   };
 
+  /* ------------------------------------------------------------- search
+   * One box that finds anything.
+   *
+   * A supervisor's question is rarely "open the pallet report": it is "where is
+   * pallet F02-118", "who counted F01A005", "which team has F04", "where do I
+   * upload the bin list". Knowing which of four pages and twenty cards answers
+   * that is fine after a month and hopeless on day one, so this asks everywhere
+   * at once - the data through the server, and the app's own screens from the
+   * list below.
+   *
+   * It lives in the sidebar, which every supervisor page shares, so it is in the
+   * same place wherever you are.
+   */
+  const PLACES = [
+    ['Count progress, teams and totals', '/admin', 'progress', 'progress dashboard totals lines bins percent complete teams counting how far'],
+    ['Count session settings', '/admin', 'progress', 'settings options pallet check guided comments lot expiry recount thresholds approval abc close delete session'],
+    ['Note on the office board', '/admin', 'progress', 'note board break lunch message wall screen tv'],
+    ['Start a new count', '/admin', 'progress', 'new count create session wall-to-wall cycle start'],
+    ['Warehouse map', '/admin', 'map', 'map drawing racking aisles bays picture layout blueprint'],
+    ['Team assignments', '/admin', 'teams', 'assign aisles teams plan queue blocks racking give aisle levels'],
+    ['Message the floor', '/admin', 'teams', 'message scanners guns floor tell team radio broadcast'],
+    ['Second counts', '/admin', 'second', 'recount second count variance go back check again task'],
+    ['Adjustments and approvals', '/admin', 'adjust', 'adjustment approve approval reason code sign off erp variance write off'],
+    ['Pallet report', '/admin', 'reports', 'pallet report variance exceptions missing wrong bin counted twice status'],
+    ['Find a lot', '/admin', 'reports', 'lot batch recall find trace expiry'],
+    ['Count accuracy by ABC class', '/admin', 'reports', 'accuracy abc class kpi target percent quality score'],
+    ['Labels to replace', '/admin', 'reports', 'label barcode unreadable relabel print rack tag damaged'],
+    ['Printable count sheets', '/admin', 'reports', 'print paper count sheet blind auditor pen'],
+    ['Cycle count programme', '/cycle', '', 'cycle batch schedule daily weekly oldest abc coverage programme'],
+    ['Crew list and equipment', '/teams', 'crew', 'crew employee badge clock in number people roster equipment forklift scissor reach'],
+    ['Teams and who is on them', '/teams', 'teams', 'team member crew drag assign people'],
+    ['Level rules for equipment', '/teams', 'rules', 'level rules reach equipment which levels forklift high reach'],
+    ['Getting started checklist', '/settings', 'start', 'getting started checklist setup first time what next'],
+    ['Scanner screen layout', '/settings', 'gun', 'scanner screen questions order keyboard text size upright portrait update comments countdown gun handheld'],
+    ['Supervisor logins', '/settings', 'logins', 'login user password account supervisor admin shared'],
+    ['Scanner setup and links', '/settings', 'scanners', 'scanner device link qr register enrol setup card handheld gun'],
+    ['One-tap reasons on the gun', '/settings', 'scanners', 'reason comment override one tap chips damaged'],
+    ['Adjustment reasons and accuracy targets', '/settings', 'scanners', 'adjustment reason code accuracy target abc percent'],
+    ['Upload the bin list', '/settings', 'lists', 'bin list locations upload import csv excel master file racking'],
+    ['Upload the inventory report', '/settings', 'lists', 'inventory report pallets upload import csv excel expected quantity erp export'],
+    ['Upload a counting plan', '/settings', 'lists', 'plan counting plan teams aisles upload csv'],
+    ['Racking blocks', '/settings', 'lists', 'racking block back to back pair aisles conflict'],
+    ['Send to the ERP', '/settings', 'erp', 'erp export send file layout columns adjustments posting'],
+    ['Backups and the log', '/settings', 'erp', 'backup restore log audit who did what download'],
+  ].map(([title, page, sub, words]) => ({ title, page, sub, words }));
+
+  const PENDING = 'searchGoto';
+  let searchTimer = null;
+  let searchRows = [];
+  let searchAt = -1;
+
+  function mountSearch() {
+    const side = document.querySelector('aside.side');
+    if (!side || document.getElementById('navSearch')) return;
+    const box = document.createElement('div');
+    box.className = 'navsearch';
+    box.innerHTML = '<input id="navSearch" type="search" autocomplete="off" spellcheck="false"'
+      + ' placeholder="Search anything…" aria-label="Search anything">'
+      + '<div class="results" id="navResults" hidden></div>';
+    side.insertBefore(box, side.querySelector('#navTabs'));
+    const input = box.querySelector('#navSearch');
+    input.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => runSearch(input.value), 180);
+    });
+    input.addEventListener('keydown', onSearchKey);
+    input.addEventListener('focus', () => { if (input.value.trim().length > 1) runSearch(input.value); });
+    document.addEventListener('click', (e) => { if (!box.contains(e.target)) closeSearch(); });
+    /* "/" is the one key nobody types into a warehouse form by accident, and
+       ctrl-K is what everybody's fingers already do. */
+    document.addEventListener('keydown', (e) => {
+      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '');
+      if ((e.key === '/' && !typing) || (e.key.toLowerCase() === 'k' && (e.ctrlKey || e.metaKey))) {
+        e.preventDefault();
+        input.focus();
+        input.select();
+      }
+    });
+  }
+
+  function closeSearch() {
+    const r = document.getElementById('navResults');
+    if (r) r.hidden = true;
+    searchAt = -1;
+  }
+
+  function onSearchKey(e) {
+    const panel = document.getElementById('navResults');
+    if (e.key === 'Escape') { closeSearch(); e.target.blur(); return; }
+    if (!panel || panel.hidden || !searchRows.length) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      searchAt = (searchAt + (e.key === 'ArrowDown' ? 1 : -1) + searchRows.length) % searchRows.length;
+      highlightSearch();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      goSearch(searchRows[Math.max(0, searchAt)]);
+    }
+  }
+
+  function highlightSearch() {
+    const panel = document.getElementById('navResults');
+    if (!panel) return;
+    const items = [...panel.querySelectorAll('.hit')];
+    items.forEach((el, i) => el.classList.toggle('on', i === searchAt));
+    if (items[searchAt]) items[searchAt].scrollIntoView({ block: 'nearest' });
+  }
+
+  /** The app's own screens, matched on what a person would call them. */
+  function placeHits(q) {
+    const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    return PLACES
+      .map((pl) => {
+        const hay = (pl.title + ' ' + pl.words).toLowerCase();
+        const score = words.reduce((n, w) => n + (hay.includes(w) ? (pl.title.toLowerCase().includes(w) ? 2 : 1) : 0), 0);
+        return { pl, score };
+      })
+      .filter((x) => x.score >= words.length)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6)
+      .map((x) => ({
+        title: x.pl.title,
+        detail: `${x.pl.page.replace('/', '')}${x.pl.sub ? ' → ' + x.pl.sub : ''}`,
+        goto: { page: x.pl.page, sub: x.pl.sub },
+      }));
+  }
+
+  async function runSearch(raw) {
+    const q = String(raw || '').trim();
+    const panel = document.getElementById('navResults');
+    if (!panel) return;
+    if (q.length < 2) { closeSearch(); return; }
+    const groups = [];
+    const places = placeHits(q);
+    if (places.length) groups.push({ kind: 'Go to', rows: places });
+    try {
+      const sess = api.currentSession ? api.currentSession() : 0;
+      const data = await api.json(`/api/admin/search?q=${encodeURIComponent(q)}&session=${sess || 0}`);
+      groups.push(...(data.groups || []));
+    } catch { /* signed out, or offline: the screens above still work */ }
+    renderSearch(q, groups);
+  }
+
+  function renderSearch(q, groups) {
+    const panel = document.getElementById('navResults');
+    panel.innerHTML = '';
+    searchRows = [];
+    searchAt = -1;
+    if (!groups.length) {
+      const none = document.createElement('div');
+      none.className = 'none';
+      none.textContent = `Nothing matching “${q}”.`;
+      panel.appendChild(none);
+      panel.hidden = false;
+      return;
+    }
+    for (const g of groups) {
+      const h = document.createElement('div');
+      h.className = 'group';
+      h.textContent = g.kind;
+      panel.appendChild(h);
+      for (const row of g.rows) {
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'hit';
+        const t = document.createElement('b');
+        t.textContent = row.title;
+        const d = document.createElement('span');
+        d.textContent = row.detail || '';
+        el.append(t, d);
+        el.onclick = () => goSearch(row);
+        panel.appendChild(el);
+        searchRows.push(row);
+      }
+    }
+    panel.hidden = false;
+  }
+
+  /**
+   * Take the supervisor there.
+   *
+   * On this page it is a sub-tab away; on another it is a page load, so what to
+   * do on arrival is left in the tab's own storage and picked up on the way in.
+   */
+  function goSearch(row) {
+    if (!row || !row.goto) return;
+    const g = row.goto;
+    closeSearch();
+    const target = (g.page || here).replace(/\/$/, '');
+    if (target === here) { applyGoto(g); return; }
+    try { sessionStorage.setItem(PENDING, JSON.stringify(g)); } catch { /* private window */ }
+    location.href = target + (g.sub ? '#' + g.sub : '');
+  }
+
+  function applyGoto(g) {
+    if (g.session && api.pickSession) api.pickSession(g.session);
+    if (g.sub) api.showSub(g.sub);
+    /* Some hits are a field rather than a card - a lot code belongs in the lot
+       box, typed and asked for, not just nearby. */
+    setTimeout(() => {
+      const el = g.focus && document.getElementById(g.focus);
+      if (el) {
+        if (g.value != null) el.value = g.value;
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        el.focus();
+        const card = el.closest('.card');
+        if (card) { card.classList.add('found'); setTimeout(() => card.classList.remove('found'), 2200); }
+        if (g.press) document.getElementById(g.press)?.click();
+      }
+    }, g.sub ? 250 : 0);
+  }
+
+  /** Anything left for us by a search on the page before this one. */
+  function applyPendingGoto() {
+    let g = null;
+    try {
+      const raw = sessionStorage.getItem(PENDING);
+      if (!raw) return;
+      sessionStorage.removeItem(PENDING);
+      g = JSON.parse(raw);
+    } catch { return; }
+    if (g) setTimeout(() => applyGoto(g), 400);
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     renderTabs();
+    mountSearch();
     renderSubTabs();
+    applyPendingGoto();
     const btn = document.getElementById('btnLogin');
     if (btn) {
       const go = async () => {

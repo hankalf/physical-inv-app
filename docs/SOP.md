@@ -650,6 +650,30 @@ landed; "0 of 3" is one nobody has looked at yet.*
 - A team stopped for a long time — dead battery, or stuck behind a trailer.
 - An aisle nobody has started by mid-afternoon.
 
+### Step 16a — Finding anything: the search box
+
+**Every supervisor page, top of the sidebar.** One box. Press **/** from anywhere on the page
+(or **Ctrl-K**) to jump into it.
+
+It searches two things at once:
+
+- **Your data** — a pallet ID, an item number, a word from a description, a bin code, a lot, an
+  aisle, a name or clock-in number, a scanner, a count, a second count, an adjustment, something
+  the office said to the floor, or a line in the log. Each hit carries the answer rather than
+  just a link: a pallet shows what the report expected, what was counted, in which bin and by
+  which team.
+- **The app itself** — *"upload bin list"*, *"keyboard"*, *"approve"*, *"racking blocks"*,
+  *"lunch note"*. These come back under **Go to** and take you to the card that does it, on
+  whichever page it lives.
+
+Choosing a hit takes you there: a tab on this page, or a page load that lands on the right tab.
+A lot code goes one better — it fills the lot box and runs it.
+
+![](images/search.png)
+
+*Typing a pallet ID: what the report expected and what was counted, the second count raised for
+it and the adjustment waiting to be signed — without opening any of those three cards.*
+
 ### Step 17 — The office board
 
 Put `/board` on the office TV. It needs no sign-in and is read-only: the percentage
@@ -893,6 +917,7 @@ a handful of bins are counted every day.
 | A line is in a bin called `NO-LABEL-BIN-F01-1` | The rack label would not scan, and the app had nothing to suggest — an unguided count, with the pallet not on the report either | The quantity is safe. Relabel the bay, then correct the bin on the line if it matters; the relabel list says which aisle it was in |
 | The note is not on the board | The board polls every 15 seconds by default, or the note is on a different count | Wait a few seconds; check the board is pinned to the same count (`/board?session=12`) |
 | A change you made does not appear on the scanners | The gun is still running the app it loaded before the change | Site settings (questions, reasons, text size) reach a running gun within about half a minute and need nothing. A new **version of the app** needs the page to reload: with **Update itself after a deploy** on it does that by itself between pallets, within a couple of minutes of somebody picking the gun up. To force it: tap the green **Update ready** bar, or close the app fully (not just the home button) and reopen it. Reinstalling is never necessary |
+| You cannot find where something is set | The app has four pages and twenty-odd cards | Type what you would call it into the search box at the top of the sidebar — *"upload bin list"*, *"keyboard"*, *"approve"* — and the **Go to** hits take you straight there. **/** puts the cursor in it |
 | Not sure whether a gun has the latest version | — | The sign-on screen's bottom line reads *"App build a1b2c3d4e5f6 on the server — this scanner is up to date"*. Compare it across two guns, or against a fresh reload |
 | A gun keeps saying "update did not take" | It reloaded and is still on the old version — something between it and the server is serving stale files | Close the app fully and reopen it. If it persists, clear the site data for the app on that device (Android → Settings → Apps → the app → Storage), then open its link again |
 | The screen keeps rotating, or reads upside down | Auto-rotate is on, and a browser tab is never allowed to lock the orientation | The app turns itself back upright on its own, sideways or end over end. If it is not, check **Keep it upright** is ticked under Settings → Scanner screen, then read the grey line at the bottom of the sign-on screen — it says the screen size the handheld gave the app, how far the device says it has turned, and what the app did about it. To stop the device turning at all, install the app (it asks for one way up) or turn auto-rotate off on the handheld |

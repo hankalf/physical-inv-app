@@ -18,6 +18,7 @@ import { sendMessage, listMessages, messagesFor, ackMessage, clearMessage } from
 import { listAdjustments, decideAdjustments, adjustmentReasons, saveAdjustmentReasons } from './routes/adjustments.js';
 import { accuracy, accuracyCsv, deriveAbc, accuracyTargets, saveAccuracyTargets } from './routes/accuracy.js';
 import { setupState } from './routes/setup.js';
+import { searchAll } from './routes/search.js';
 import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout } from './routes/scanner-prompts.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
@@ -968,6 +969,12 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/messages\/(\d+)$/)) && method === 'DELETE') {
     audit(actor, 'took a message off the scanners', `message ${m[2]}`, m[1]);
     return sendJson(req, res, 200, clearMessage(m[1], m[2]));
+  }
+
+  /* --- one box that finds anything: pallets, bins, lots, aisles, crew,
+         scanners, counts, second counts, adjustments, messages and the log */
+  if (p === '/api/admin/search' && method === 'GET') {
+    return sendJson(req, res, 200, searchAll(url.searchParams.get('session') || 0, url.searchParams.get('q') || ''));
   }
 
   // --- a line on the office board: when lunch is, which dock is blocked

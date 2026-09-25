@@ -62,8 +62,11 @@
     const mine = state.teams.find((t) => t.members.some((x) => x.badge === e.badge));
     sel.value = mine ? String(mine.id) : '';
     sel.onchange = () => move(e.badge, sel.value);
+    /* Quiet until it is wanted: a red block against every name on the crew list
+       reads as a page full of warnings rather than a list of people. */
     const del = document.createElement('button');
-    del.className = 'sm danger'; del.textContent = 'Remove'; del.style.marginTop = '6px'; del.style.width = '100%';
+    del.className = 'sm ghost del'; del.textContent = 'Remove'; del.title = `Remove ${e.name} from the crew list`;
+    del.style.marginTop = '6px'; del.style.width = '100%';
     del.onclick = async () => {
       if (!confirm(`Remove ${e.name} from the crew list?`)) return;
       try { await apiJson(`/api/admin/people/employees/${encodeURIComponent(e.badge)}`, { method: 'DELETE' }); await refresh(); }
