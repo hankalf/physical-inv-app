@@ -292,6 +292,7 @@ try {
   await saveCard(desk, '#deviceTable', 'settings-scanners');
   await saveCard(desk, '#commentList', 'settings-reason-codes');
   await saveCard(desk, '#reasonList', 'settings-adjustment-reasons');
+  await saveCard(desk, '#btnBookTemplate', 'settings-barcode-book');
   await sub('gun');    await saveCard(desk, '#stepOrder', 'settings-scanner-screen');
   await sub('lists');
   await saveCard(desk, '#fFile-bins', 'settings-bin-list');

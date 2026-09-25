@@ -2,6 +2,7 @@ import { db, norm } from '../db.js';
 import { localDate } from '../util/localtime.js';
 import { parseBinCode } from '../util/bincode.js';
 import { loadLayout } from '../util/layouts.js';
+import { barcodeSvg } from '../util/barcode.js';
 
 /*
  * A count sheet for when the scanners are not an option: a battery dies, Wi-Fi
@@ -177,5 +178,61 @@ ${devices.length ? `<div class="sheet">${cards}</div>` : '<div class="none">No s
     catch (e) { box.textContent = 'QR unavailable — type the address below'; }
   }
 </script>
+</body></html>`;
+}
+
+/*
+ * The test book: a printed page of bin and pallet barcodes.
+ *
+ * Training a crew, or dry-running a count before the real one, needs something
+ * to scan that is not the warehouse. This prints real Code 128 labels - the same
+ * symbology the racking uses, so a gun that reads the book reads the rack -
+ * either from the count's own bins and pallets, or from a spreadsheet somebody
+ * filled in with the codes they want to practise on.
+ *
+ * Laid out to be cut up, taped to a desk or a shelf, and scanned.
+ */
+export function barcodeBook(rows, { title = 'Barcode test book', note = '', perRow = 2, height = 16 } = {}) {
+  const cards = rows.map((r) => {
+    let svg = '';
+    let bad = '';
+    try { svg = barcodeSvg(r.code, { height, module: 0.36 }); }
+    catch (err) { bad = err.message; }
+    return `<div class="lbl ${esc((r.kind || '').toLowerCase())}">
+      <div class="kind">${esc(r.kind || '')}</div>
+      ${svg || `<div class="bad">${esc(bad)}</div>`}
+      ${r.label ? `<div class="what">${esc(r.label)}</div>` : ''}
+      ${r.note ? `<div class="note">${esc(r.note)}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>${esc(title)}</title>
+<style>
+  @page { size: letter portrait; margin: 10mm; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #000; background: #fff; margin: 0; padding: 12px; }
+  h1 { font-size: 16pt; margin: 0 0 2px; }
+  .sub { color: #444; font-size: 9.5pt; margin-bottom: 12px; }
+  .sheet { display: grid; grid-template-columns: repeat(${Math.max(1, Math.min(4, Number(perRow) || 2))}, 1fr); gap: 8px; }
+  .lbl { border: 1.2px dashed #999; border-radius: 6px; padding: 8px 10px 10px; text-align: center;
+         break-inside: avoid; page-break-inside: avoid; }
+  .lbl svg { display: block; margin: 2px auto 0; max-width: 100%; height: auto; }
+  .kind { font-size: 7.5pt; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #555; }
+  .lbl.pallet .kind { color: #14532d; }
+  .what { font-size: 9pt; margin-top: 3px; color: #222; }
+  .note { font-size: 8pt; color: #666; }
+  .bad { font-size: 9pt; color: #a00; padding: 14px 0; }
+  .none { padding: 30px; text-align: center; color: #666; }
+  .tip { margin-top: 14px; font-size: 8.5pt; color: #555; border-top: 1px solid #ccc; padding-top: 6px; }
+  @media print { .noprint { display: none; } }
+</style></head>
+<body>
+<h1>${esc(title)}</h1>
+<div class="sub">${rows.length} label${rows.length === 1 ? '' : 's'} · Code 128 · printed ${esc(localDate())}${note ? ' · ' + esc(note) : ''}</div>
+<button class="noprint" onclick="window.print()" style="margin-bottom:10px;padding:6px 12px">Print</button>
+${rows.length ? `<div class="sheet">${cards}</div>` : '<div class="none">Nothing to print — pick a count and an aisle, or upload a sheet of codes.</div>'}
+<div class="tip">Print at <b>100%</b> — “fit to page” shrinks the bars and a scanner will refuse them. If a label will not read,
+print that page again on plain white paper: a glossy or coloured sheet scatters the beam.</div>
 </body></html>`;
 }

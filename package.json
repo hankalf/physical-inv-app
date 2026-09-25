@@ -12,7 +12,8 @@
     "test:one": "node tests/run-all.mjs",
     "docs:shots": "node tools/sop-shots.mjs",
     "docs:pdf": "node tools/sop-pdf.mjs",
-    "docs": "npm run docs:shots && npm run docs:pdf"
+    "docs": "npm run docs:shots && npm run docs:pdf",
+    "video": "node tools/gun-video.mjs"
   },
   "engines": {
     "node": "22.x"

@@ -878,6 +878,133 @@
       .catch((err) => msg($('erpMsg'), 'err', err.message));
   };
 
+  /* --------------------------------------------------- the barcode test book
+     A page of real Code 128 labels to print, cut up and scan: for training a
+     crew, or for dry-running a count before the real one. Either from the
+     count's own bins and pallets, or from a spreadsheet of whatever codes a
+     site wants to practise on. */
+  const TEMPLATE_ROWS = [
+    ['Type', 'Code', 'Label', 'Note'],
+    ['BIN', 'F01A001', 'Freezer · aisle F01 · level A', 'front face'],
+    ['BIN', 'F01A002', 'Freezer · aisle F01 · level A', 'back face'],
+    ['PALLET', 'F01-001', 'SKU-4120 — Chicken breast IQF 40lb', 'expected in F01A001'],
+    ['PALLET', 'F01-002', 'SKU-2210 — Peas petite 12x2lb', 'expected in F01A002'],
+  ];
+
+  async function bookTemplate() {
+    try {
+      /* The same spreadsheet library the uploads are read with - no second one,
+         and no server round trip to build four rows. */
+      if (!window.XLSX) {
+        await new Promise((res, rej) => {
+          const sc = document.createElement('script');
+          sc.src = '/vendor/xlsx.full.min.js';
+          sc.onload = res;
+          sc.onerror = () => rej(new Error('Could not load the spreadsheet writer — try again, or use the CSV columns above.'));
+          document.head.appendChild(sc);
+        });
+      }
+      const ws = window.XLSX.utils.aoa_to_sheet(TEMPLATE_ROWS);
+      ws['!cols'] = [{ wch: 10 }, { wch: 22 }, { wch: 42 }, { wch: 26 }];
+      const wb = window.XLSX.utils.book_new();
+      window.XLSX.utils.book_append_sheet(wb, ws, 'Barcodes');
+      window.XLSX.writeFile(wb, 'barcode-test-book-template.xlsx');
+      msg($('bookMsg'), 'ok', 'Template downloaded.',
+        'Type or paste your codes under the example rows, keep the four column headings, then upload it back here.');
+    } catch (err) { msg($('bookMsg'), 'err', err.message); }
+  }
+
+  /** Read whatever they uploaded - Excel or CSV - into rows the printer takes. */
+  async function bookRowsFromFile(file) {
+    const text = await fileToCsv(file);
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    if (!lines.length) throw new Error('that file has no rows in it');
+    const head = lines[0].split(',').map((h) => h.replace(/^"|"$/g, '').trim().toLowerCase());
+    const col = (...names) => head.findIndex((h) => names.includes(h));
+    const iType = col('type', 'kind');
+    const iCode = col('code', 'value', 'barcode', 'bin', 'pallet', 'pallet id', 'bin location');
+    const iLabel = col('label', 'description', 'desc');
+    const iNote = col('note', 'notes');
+    if (iCode < 0) throw new Error('no "Code" column — the template has Type, Code, Label, Note');
+    const cell = (parts, i) => (i >= 0 ? String(parts[i] ?? '').replace(/^"|"$/g, '').trim() : '');
+    return lines.slice(1).map((l) => {
+      const parts = l.match(/("([^"]|"")*"|[^,]*)(,|$)/g).map((x) => x.replace(/,$/, ''));
+      return {
+        kind: cell(parts, iType) || 'CODE',
+        code: cell(parts, iCode),
+        label: cell(parts, iLabel),
+        note: cell(parts, iNote),
+      };
+    }).filter((r) => r.code);
+  }
+
+  async function bookFromFile() {
+    const file = $('fBookFile').files[0];
+    if (!file) { msg($('bookMsg'), 'err', 'Pick the filled-in spreadsheet first'); return; }
+    let tab;
+    try {
+      tab = openTab();
+      const rows = await bookRowsFromFile(file);
+      if (!rows.length) throw new Error('no codes in that file');
+      /* The page is built by the server and opened in a tab, the same as the
+         count sheets and the scanner cards - one place that knows how to draw a
+         barcode, and one print layout. */
+      const res = await api.call('/api/admin/print/barcode-book?perRow=' + encodeURIComponent($('fBookPerRow').value), {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ rows }),
+      });
+      writeTab(tab, await res.text());
+      msg($('bookMsg'), 'ok', `${rows.length} label${rows.length === 1 ? '' : 's'} from ${file.name}.`,
+        'Print at 100% — "fit to page" shrinks the bars and a scanner will refuse them.');
+    } catch (err) {
+      if (tab) tab.close();
+      msg($('bookMsg'), 'err', err.message);
+    }
+  }
+
+  /*
+   * The tab has to be opened while the click is still the reason for it.
+   * Opening it after the fetch comes back is a pop-up as far as the browser is
+   * concerned, and it blocks it - so the window is opened empty on the click and
+   * written into when the page arrives.
+   */
+  function openTab() {
+    const w = window.open('', '_blank');
+    if (!w) throw new Error('the browser blocked the new tab — allow pop-ups for this site');
+    w.document.write('<!doctype html><title>Barcode test book</title>'
+      + '<body style="font:15px system-ui;padding:24px;color:#333">Building the labels…</body>');
+    return w;
+  }
+  function writeTab(w, html) {
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  }
+
+  async function bookFromCount() {
+    if (!needSession($('bookMsg'))) return;
+    const q = new URLSearchParams({
+      session: String(sessionId),
+      kind: $('fBookKind').value,
+      aisle: $('fBookAisle').value.trim(),
+      limit: $('fBookLimit').value || '40',
+      perRow: $('fBookPerRow').value,
+    });
+    let tab;
+    try {
+      tab = openTab();
+      const res = await api.call('/api/admin/print/barcode-book?' + q.toString());
+      writeTab(tab, await res.text());
+      clearMsg($('bookMsg'));
+    } catch (err) {
+      if (tab) tab.close();
+      msg($('bookMsg'), 'err', err.message);
+    }
+  }
+
+  $('btnBookTemplate').onclick = bookTemplate;
+  $('btnBookUpload').onclick = bookFromFile;
+  $('btnBookPrint').onclick = bookFromCount;
+
   /* ------------------------------------------------------------ backups & log */
   async function refreshOps() {
     const [b, log] = await Promise.all([api.json('/api/admin/backups'), api.json('/api/admin/audit?limit=60')]);

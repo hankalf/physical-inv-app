@@ -254,6 +254,37 @@ scanner is wiped and worth asking about otherwise.
 
 *Print setup cards: one per scanner, each with its own QR code and the three steps to do on the device.*
 
+### Step 8a — A barcode test book, to practise on
+
+**Settings → Scanners → Barcode test book.** A page of real **Code 128** labels to print, cut up
+and scan — the same symbology the racking uses, so a gun that reads the book reads the rack.
+Use it to train a crew at a desk, to check a new scanner reads properly, or to dry-run a count
+before the real one.
+
+Two ways to fill it:
+
+- **From this count** — pick **Bins** or **Pallets**, optionally one aisle, and how many. The codes
+  come straight from the uploaded lists, so what you scan off the paper is what the gun expects.
+- **From a spreadsheet** — **↓ Excel template** downloads a workbook with four columns:
+
+| Column | What goes in it |
+|---|---|
+| **Type** | `BIN` or `PALLET` — printed above the bars so a trainee knows which question it answers |
+| **Code** | What the barcode carries, and what the gun will receive |
+| **Label** | Free text under the code — the item, the zone, anything useful |
+| **Note** | A second, smaller line |
+
+Fill it in, upload it back, and the book opens ready to print. The codes need not exist in any
+count — that is the point of practising.
+
+> **Print at 100%.** “Fit to page” shrinks the bars and a scanner will refuse them. Plain white
+> paper only: glossy or coloured stock scatters the beam.
+
+![](images/settings-barcode-book.png)
+
+*The test book card: from the count itself, or from a spreadsheet of whatever codes you want to
+practise on.*
+
 ### Step 9 — Set up the counting screen
 
 **Settings → Scanner screen.**
@@ -443,6 +474,13 @@ or queue aisles by hand here.
 ## Part 4 — Counting day
 
 ### Step 15 — The counter's procedure (on the handheld)
+
+> **There is a film of this.** `docs/gun-demo.webm` (about four minutes) is a recording of the
+> real app on real data, working through everything below: signing on, counting a pallet, a bay
+> with three tags, two labels on one pallet, a label that will not scan, an empty bin, a pallet
+> nobody expected, a message from the office, voiding a line, losing the wifi, and handing the
+> aisle back. Open it in any browser. It is worth showing a new crew before their first shift.
+
 
 **Signing on**
 
@@ -917,6 +955,8 @@ a handful of bins are counted every day.
 | A line is in a bin called `NO-LABEL-BIN-F01-1` | The rack label would not scan, and the app had nothing to suggest — an unguided count, with the pallet not on the report either | The quantity is safe. Relabel the bay, then correct the bin on the line if it matters; the relabel list says which aisle it was in |
 | The note is not on the board | The board polls every 15 seconds by default, or the note is on a different count | Wait a few seconds; check the board is pinned to the same count (`/board?session=12`) |
 | A change you made does not appear on the scanners | The gun is still running the app it loaded before the change | Site settings (questions, reasons, text size) reach a running gun within about half a minute and need nothing. A new **version of the app** needs the page to reload: with **Update itself after a deploy** on it does that by itself between pallets, within a couple of minutes of somebody picking the gun up. To force it: tap the green **Update ready** bar, or close the app fully (not just the home button) and reopen it. Reinstalling is never necessary |
+| The printed barcodes will not scan | The page was printed “fit to page”, or on glossy paper | Print again at **100%** on plain white paper. If a gun still refuses them, print with **Per row: 1** — the bars are wider on a bigger label |
+| A code in the spreadsheet will not print | Code 128 carries plain ASCII only — an accented letter or a smart quote cannot be drawn | The book says which character it was; retype that code with plain letters and numbers |
 | You cannot find where something is set | The app has four pages and twenty-odd cards | Type what you would call it into the search box at the top of the sidebar — *"upload bin list"*, *"keyboard"*, *"approve"* — and the **Go to** hits take you straight there. **/** puts the cursor in it |
 | Not sure whether a gun has the latest version | — | The sign-on screen's bottom line reads *"App build a1b2c3d4e5f6 on the server — this scanner is up to date"*. Compare it across two guns, or against a fresh reload |
 | A gun keeps saying "update did not take" | It reloaded and is still on the old version — something between it and the server is serving stale files | Close the app fully and reopen it. If it persists, clear the site data for the app on that device (Android → Settings → Apps → the app → Storage), then open its link again |
@@ -991,6 +1031,15 @@ upload card shows exactly which columns it recognised.
 | Lot | lot, lot code, lot no, lot number, batch, batch code, batch number |
 | Expiry | expiry, expiry date, expiration, expires, best before, use by, shelf life date |
 | ABC class | abc, abc class, abc code, class, item class, velocity, velocity code, movement class, category — `A`, `B` or `C`, upper or lower case |
+
+**Barcode test book** — one row per label to print.
+
+| What | Accepted column names |
+|---|---|
+| Type | type, kind — `BIN` or `PALLET` |
+| Code (required) | code, value, barcode, bin, pallet, pallet id, bin location |
+| Label | label, description, desc |
+| Note | note, notes |
 
 **Counting plan** — one row per aisle, in the order the team counts it.
 

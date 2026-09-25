@@ -290,6 +290,55 @@
         once is flagged, which is normal after a scanner is wiped and worth a look otherwise.
       </div>
     </div>
+    <!-- ============ the barcode test book ============ -->
+    <div class="card">
+      <h2>Barcode test book <span class="muted">real Code 128 labels to practise on</span></h2>
+      <div class="hint" style="margin-top:0">
+        A page of bin and pallet barcodes to print, cut up and scan — for training a crew, or dry-running a count
+        before the real one. The same symbology the racking uses, so a gun that reads the book reads the rack.
+        Take the codes from this count, or fill in the spreadsheet with whatever you want to practise on.
+      </div>
+
+      <div class="fieldsets">
+        <div class="fieldset">
+          <div class="legend">From this count</div>
+          <div class="inline">
+            <div class="auto">
+              <label for="fBookKind">Labels for</label>
+              <select id="fBookKind">
+                <option value="bins">Bins</option>
+                <option value="pallets">Pallets</option>
+              </select>
+            </div>
+            <div class="auto"><label for="fBookAisle">Aisle</label><input id="fBookAisle" class="sm" style="width:110px" placeholder="F01 — or blank"></div>
+            <div class="auto"><label for="fBookLimit">How many</label><input id="fBookLimit" class="sm" type="number" min="1" max="600" style="width:90px" value="40"></div>
+            <div class="auto"><label for="fBookPerRow">Per row</label>
+              <select id="fBookPerRow" class="sm" style="width:80px">
+                <option>2</option><option>3</option><option>1</option>
+              </select>
+            </div>
+          </div>
+          <div class="toolbar">
+            <button class="primary" id="btnBookPrint">Open the book</button>
+          </div>
+        </div>
+
+        <div class="fieldset">
+          <div class="legend">From a spreadsheet</div>
+          <div class="hint" style="margin-top:0">
+            Download the template, type or paste your codes into it, then upload it back. Columns:
+            <b>Type</b> (BIN or PALLET), <b>Code</b> — what the barcode carries — <b>Label</b> and <b>Note</b>.
+          </div>
+          <div class="toolbar">
+            <button id="btnBookTemplate">↓ Excel template</button>
+            <label class="cb" style="margin-left:4px"><input type="file" id="fBookFile" accept=".csv,.tsv,.txt,.xlsx,.xlsm" style="width:auto"></label>
+            <button class="primary" id="btnBookUpload">Turn it into barcodes</button>
+          </div>
+        </div>
+      </div>
+      <div class="feedback" id="bookMsg"></div>
+    </div>
+
     <div id="qrModal" class="modal" hidden>
       <div class="modal-box">
         <h2 id="qrTitle">Scanner</h2>
