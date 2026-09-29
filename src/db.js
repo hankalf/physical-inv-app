@@ -436,6 +436,8 @@ if (!hasCol('sessions', 'board_note')) {
   db.exec('ALTER TABLE sessions ADD COLUMN board_note_at TEXT');
 }
 if (!hasCol('sessions', 'track_abc')) db.exec('ALTER TABLE sessions ADD COLUMN track_abc INTEGER NOT NULL DEFAULT 0');
+// the Testing tab's own count: never offered to a gun on the floor, never on the board
+if (!hasCol('sessions', 'practice')) db.exec('ALTER TABLE sessions ADD COLUMN practice INTEGER NOT NULL DEFAULT 0');
 if (!hasCol('pallets', 'abc')) db.exec('ALTER TABLE pallets ADD COLUMN abc TEXT');
 
 // a login can be handed out with a starter password the person must replace
@@ -491,7 +493,8 @@ export function listSessions(status) {
            (SELECT MAX(c.scanned_at) FROM counts c WHERE c.session_id = s.id AND c.voided = 0) AS last_scan,
            (SELECT COUNT(*) FROM recounts r WHERE r.session_id = s.id AND r.status != 'done') AS recounts_open
       FROM sessions s ${where}
-     ORDER BY s.status = 'closed', s.id DESC`;
+     -- a practice count goes last so no page ever opens on it by default
+     ORDER BY s.status = 'closed', s.practice, s.id DESC`;
   return status ? db.prepare(sql).all(status) : db.prepare(sql).all();
 }
 
@@ -581,6 +584,7 @@ export const publicSession = (s) => ({
   layout_cfg: scannerLayout(),
   // the count a scanner should land on at sign-on, if a supervisor picked one
   isDefault: defaultSessionId() === s.id,
+  practice: !!s.practice,
 });
 
 /* ------------------------------------------------------- handheld master data */

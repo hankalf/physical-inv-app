@@ -19,6 +19,7 @@ import { listAdjustments, decideAdjustments, adjustmentReasons, saveAdjustmentRe
 import { accuracy, accuracyCsv, deriveAbc, accuracyTargets, saveAccuracyTargets } from './routes/accuracy.js';
 import { setupState } from './routes/setup.js';
 import { searchAll } from './routes/search.js';
+import { practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet } from './routes/practice.js';
 import { raiseAlert, tellTeams, listAlerts, seeAlert, closeAlert, alertsForDevice, sosReasons, saveSosReasons, DEFAULT_REASONS } from './routes/alerts.js';
 import { teamsConfig, saveTeamsConfig, postToTeams, testCard, alertCard } from './util/teams.js';
 import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout } from './routes/scanner-prompts.js';
@@ -267,6 +268,7 @@ async function serveStatic(req, res, pathname) {
     : /^\/cycle\/?$/.test(pathname) ? '/cycle.html'
     : /^\/settings\/?$/.test(pathname) ? '/settings.html'
     : /^\/board\/?$/.test(pathname) ? '/board.html'
+    : /^\/testing\/?$/.test(pathname) ? '/testing.html'
     : pathname;
   const filePath = join(PUBLIC_DIR, normalize(rel).replace(/^(\.\.[/\\])+/, ''));
   if (!filePath.startsWith(PUBLIC_DIR)) return send(req, res, 403, 'forbidden');
@@ -331,7 +333,10 @@ async function handleHandheld(req, res, url, m) {
   const device = requireDevice(req);
 
   if (p === '/api/sessions' && method === 'GET') {
-    return sendJson(req, res, 200, listSessions('open').map(publicSession));
+    /* A gun on the floor never sees the Testing tab's practice count, and the
+       practice gun sees nothing else - so nobody tests into the live count. */
+    const practice = url.searchParams.get('practice') === '1';
+    return sendJson(req, res, 200, listSessions('open').filter((s) => !!s.practice === practice).map(publicSession));
   }
 
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/master$/)) && method === 'GET') {
@@ -526,6 +531,21 @@ async function handleAdmin(req, res, url, m) {
   }
 
   if (p === '/api/admin/sessions' && method === 'GET') return sendJson(req, res, 200, listSessions());
+
+  // --- the Testing tab: a practice count and a scanner of this supervisor's own
+  if (p === '/api/admin/practice' && (method === 'GET' || method === 'POST')) {
+    const who = currentUser(req, url);
+    const s = method === 'POST' ? ensurePractice() : practiceSession();
+    if (!s) return sendJson(req, res, 200, { session: null });
+    const dev = practiceDevice(who);
+    return sendJson(req, res, 200, { ...practiceSheet(s.id), device: { uid: dev.uid, name: dev.name } });
+  }
+  if (p === '/api/admin/practice/reset' && method === 'POST') {
+    const s = resetPractice();
+    audit(actor, 'reset the practice count', `now #${s.id}`, s.id);
+    const dev = practiceDevice(currentUser(req, url));
+    return sendJson(req, res, 200, { ...practiceSheet(s.id), device: { uid: dev.uid, name: dev.name } });
+  }
 
   if (p === '/api/admin/sessions' && method === 'POST') {
     const body = await readJson(req);

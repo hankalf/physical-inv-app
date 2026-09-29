@@ -321,6 +321,59 @@ shown again in full; the page only shows which server it points at.
 
 *The SOS list and the channel it goes to.*
 
+### Step 8c — Try the scanner on the Testing tab
+
+**Testing** in the sidebar. The fastest way to show somebody the gun, or to try a setting before
+a count, without a handheld and without touching a real count.
+
+On the left is the **real scanner app** — the same one the Zebras run — on a picture of an MC9300.
+On the right is a sheet of test data: two short aisles of real Front Royal bins (F01 and F02,
+levels A–B), what is on each shelf, and a made-up inventory report laid over them.
+
+**Click any bin, pallet or quantity on the sheet and it is scanned into the gun**, exactly as the
+trigger would send it. The **SCAN** box under the screen sends anything you type — a wrong ID,
+a typo — to see what the gun does with it. You can also click on the gun's screen and use it
+directly.
+
+1. **Sign on.** Click team **99** and a clock-in number, then **Sign on & load list** on the gun.
+   Team 99 already has F01, then F02. Your own clock-in number works; **T1001** and **T1002** are
+   made up, so the gun flags them as not on the crew list — which is what it does with a typo.
+2. **Start counting**, and work down the sheet. For each pallet: pallet, quantity, bin.
+3. **Things to try** ticks itself off from what actually reached the server. The shelves are
+   wrong in places on purpose, each with a **Try this** line saying what to do:
+
+| Bin | What it teaches |
+|---|---|
+| F01A002, F01B004 | Two and three pallets in one bin |
+| F01A003 | An empty bin — **Bin is EMPTY — scan the bin** |
+| F01A004 | A pallet short of the report (report 36, shelf 32) |
+| F01A005 / F01A006 | A pallet in the next bay, and one the report never heard of |
+| F01B001 | A torn pallet label — **Label will not scan**, then type it |
+| F01B002 | Best-before already passed |
+| F01B003 | A missing rack label — **Bin label will not scan** |
+| F01B006 | A pallet on the report that has gone — record the bin empty |
+| F02B001 | A quantity big enough that the gun asks for it twice |
+
+Then **Aisle complete — next aisle**, press **SOS** once, and **Open the dashboard on this count**
+to see it all from the supervisor's side: progress, the pallet report, the SOS bar, adjustments.
+
+**It is walled off from the real thing.**
+
+- It counts into a **Practice count** of its own. A gun on the floor is never offered it, and the
+  test gun is never offered anything else.
+- The office board never shows it. In every dashboard's count picker it is listed **last** and
+  marked **PRACTICE**, so no page opens on it by mistake.
+- Each supervisor gets their own test scanner (**TEST-** and their name, under Scanners), so two
+  people practising at once do not sign each other out. It keeps its own storage in the browser,
+  separate from a real scanner's.
+
+**Start over** wipes the practice count and the test gun and builds both again from nothing.
+Nothing on a real count is touched.
+
+![](images/testing-tab.png)
+
+*The Testing tab: the real gun on the left, the shelves and what to try on the right.*
+
 ### Step 9 — Set up the counting screen
 
 **Settings → Scanner screen.**
@@ -747,7 +800,7 @@ landed; "0 of 3" is one nobody has looked at yet.*
 - A team stopped for a long time — dead battery, or stuck behind a trailer.
 - An aisle nobody has started by mid-afternoon.
 
-### Step 16 — Answering an SOS
+### Step 16a — Answering an SOS
 
 **Anywhere on the dashboard.** An SOS from a scanner appears as a red bar across the top of the
 page, whichever tab you are on, and makes a noise once. It names the team, what is wrong, the aisle
@@ -766,7 +819,7 @@ what happened and whether the Teams channel took it.
 *An SOS above the page: team, what is wrong, where they are, and the two things a supervisor can do
 about it.*
 
-### Step 16a — Finding anything: the search box
+### Step 16b — Finding anything: the search box
 
 **Every supervisor page, top of the sidebar.** One box. Press **/** from anywhere on the page
 (or **Ctrl-K**) to jump into it.

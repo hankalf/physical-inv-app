@@ -15,14 +15,16 @@ import { progress } from './reports.js';
  * people stand and watch, so it wins over a cycle programme that runs all year.
  */
 export function defaultBoardSession() {
-  return db.prepare("SELECT * FROM sessions WHERE status = 'open' AND mode != 'cycle' ORDER BY id DESC LIMIT 1").get()
-    || db.prepare("SELECT * FROM sessions WHERE status = 'open' ORDER BY id DESC LIMIT 1").get()
-    || db.prepare('SELECT * FROM sessions ORDER BY id DESC LIMIT 1').get()
+  /* The Testing tab's practice count is never what the wall shows by itself;
+     it can still be put up by asking for it by number. */
+  return db.prepare("SELECT * FROM sessions WHERE status = 'open' AND mode != 'cycle' AND practice = 0 ORDER BY id DESC LIMIT 1").get()
+    || db.prepare("SELECT * FROM sessions WHERE status = 'open' AND practice = 0 ORDER BY id DESC LIMIT 1").get()
+    || db.prepare('SELECT * FROM sessions WHERE practice = 0 ORDER BY id DESC LIMIT 1').get()
     || null;
 }
 
 export function listBoardSessions() {
-  return db.prepare("SELECT id, name, mode, status FROM sessions WHERE status = 'open' ORDER BY id DESC")
+  return db.prepare("SELECT id, name, mode, status FROM sessions WHERE status = 'open' AND practice = 0 ORDER BY id DESC")
     .all().map((s) => ({ id: s.id, name: s.name, mode: s.mode || 'full' }));
 }
 

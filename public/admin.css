@@ -479,3 +479,6 @@ tbody td.wrap { white-space: normal; }
 .sosalert .grow { flex: 1; min-width: 240px; }
 .sosalert .acts { display: flex; gap: 8px; flex-wrap: wrap; }
 .sosalert .tag { align-self: flex-start; }
+
+/* the Testing tab's practice count, wherever a count is named */
+.tag.practice { color: #1a1300; background: var(--warn); border-color: var(--warn); font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }

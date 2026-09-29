@@ -11,8 +11,18 @@
 (() => {
   'use strict';
 
+  /*
+   * The Testing tab runs this same app inside the admin panel, pointed at the
+   * practice count. It keeps its own storage, so nothing it does can mix with a
+   * real scanner's queue, and it leaves the screen alone: it is a picture of a
+   * gun on a desk, not a gun, and has no business turning or taking the screen.
+   */
+  const PRACTICE = new URLSearchParams(location.search).get('practice') === '1';
+  let EMBEDDED = false;
+  try { EMBEDDED = window.top !== window.self; } catch { EMBEDDED = true; }
+
   /* ------------------------------------------------------------ IndexedDB */
-  const DB_NAME = 'invcount';
+  const DB_NAME = PRACTICE ? 'invcount-practice' : 'invcount';
   const DB_VERSION = 2;
   let idb = null;
 
@@ -477,7 +487,7 @@
     const sel = $('fSession');
     sel.innerHTML = '';
     try {
-      const sessions = await api('/api/sessions');
+      const sessions = await api(PRACTICE ? '/api/sessions?practice=1' : '/api/sessions');
       if (!sessions.length) { sel.innerHTML = '<option value="">No open sessions on the server</option>'; $('modeBlock').hidden = true; return; }
       state.sessions = sessions;
       await metaSet('sessions', sessions);
@@ -929,7 +939,7 @@
   async function goFullScreen() {
     // opt-in only: the browser announces this with a banner carrying the site
     // address, and on a handheld that lands right over the counting screen
-    if (layoutCfg().fullScreen !== true) return;
+    if (layoutCfg().fullScreen !== true || EMBEDDED) return;
     if (document.fullscreenElement) return;
     try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch { /* the device decides */ }
   }
@@ -960,7 +970,7 @@
        flipped end over end. There is one way up a counter can read. */
     // Only an app that owns the screen may ask - installed, or full screen. In a
     // browser tab this always refuses, which is what holdUpright() is for.
-    try { await screen.orientation?.lock?.('portrait-primary'); } catch { /* the device decides */ }
+    if (!EMBEDDED) try { await screen.orientation?.lock?.('portrait-primary'); } catch { /* the device decides */ }
     holdUpright();
   }
 
@@ -992,7 +1002,7 @@
     const wide = sw > sh;
     /* Only a handheld is turned: somebody opening the gun page on a laptop is
        looking at a wide screen on purpose. */
-    const handheld = Math.min(sw, sh) <= 900 && matchMedia('(pointer: coarse)').matches;
+    const handheld = !EMBEDDED && Math.min(sw, sh) <= 900 && matchMedia('(pointer: coarse)').matches;
     let turn = '';
     if (layoutCfg().portrait !== false && handheld) {
       /* Wide means sideways, whatever was reported: a quarter turn back, the way
@@ -1030,7 +1040,7 @@
 
   let wakeLock = null;
   async function keepAwake() {
-    if (layoutCfg().keepAwake === false || !('wakeLock' in navigator)) return;
+    if (layoutCfg().keepAwake === false || EMBEDDED || !('wakeLock' in navigator)) return;
     try { wakeLock = await navigator.wakeLock.request('screen'); } catch { /* battery saver, or no support */ }
   }
   document.addEventListener('visibilitychange', () => {
@@ -2119,7 +2129,7 @@
   function renderInstallHint() {
     const el = $('installHint');
     if (!el) return;
-    const inTab = !standalone();
+    const inTab = !standalone() && !PRACTICE;
     el.hidden = !inTab;
     /* Until somebody installs it, one tap takes the browser bar off the screen
        for the rest of the shift. The browser says so once, with a banner
@@ -2312,6 +2322,35 @@
   });
 
   /*
+   * A scan from outside the gun.
+   *
+   * The Testing tab sits this app beside a sheet of test data, and clicking a
+   * pallet ID there "scans" it. It arrives the way a Zebra's DataWedge delivers
+   * one: typed into whichever box would take a scan, then Enter - so the gun
+   * cannot tell it from the trigger, and what is tested is what counters use.
+   */
+  window.wedge = function wedge(text, fieldId) {
+    const screenEl = document.querySelector('.screen.active');
+    if (!screenEl) return false;
+    const usable = (el) => el && !el.disabled && el.offsetParent !== null && screenEl.contains(el)
+      && /^(INPUT|TEXTAREA)$/.test(el.tagName) && !/^(checkbox|radio|button|hidden)$/.test(el.type);
+    /* The sheet can say which box a value is for - a team number and a clock-in
+       number are both just digits to a scanner. Otherwise: the scan box while
+       counting, the box in focus, or the first empty one on the screen. A frame
+       that is not in focus loses track of its focused box, which is why focus
+       is only the second guess. */
+    const boxes = [...screenEl.querySelectorAll('input, textarea')].filter(usable);
+    let f = fieldId ? $(fieldId) : scanning() ? $('fScan') : document.activeElement;
+    if (!usable(f)) f = boxes.find((b) => !b.value) || boxes[0];
+    if (!f) return false;
+    try { f.focus({ preventScroll: true }); } catch { f.focus(); }
+    f.value = String(text);
+    f.dispatchEvent(new Event('input', { bubbles: true }));
+    f.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
+    return true;
+  };
+
+  /*
    * Keeping up with the server, without anybody going round the freezer.
    *
    * These guns run as an installed app that nobody ever closes: it sits on the
@@ -2498,7 +2537,10 @@
     await loadSessions();
     await describeCache();
     showScreen(state.deviceId ? 'scrSignon' : 'scrDevice');
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { /* http-only hosts */ });
+    /* the practice gun lives inside the admin panel; a worker would take over
+       the panel's pages too, for no gain */
+    if ('serviceWorker' in navigator && !PRACTICE) navigator.serviceWorker.register('/sw.js').catch(() => { /* http-only hosts */ });
+    if (PRACTICE) { document.body.classList.add('practice'); $('chipPractice').hidden = false; }
     /* Anything counted before this scanner was last switched off goes up now,
        without waiting for somebody to sign on to the same count again. */
     flushPending().catch(() => { /* the tick will try again */ });

@@ -370,6 +370,35 @@ try {
   await save(desk, 'cycle-counts');
   await sub('setup'); await wait(800);
   await save(desk, 'cycle-batches');
+
+  /* ---------- the Testing tab: signed on, a few pallets in ---------- */
+  await signIn('/testing');
+  await desk.waitForSelector('#shelves table.shelf');
+  const tgun = async () => {
+    for (let i = 0; i < 60; i++) {
+      const f = desk.frames().find((x) => /practice=1/.test(x.url()));
+      if (f && await f.evaluate(() => typeof window.wedge === 'function').catch(() => false)) return f;
+      await wait(150);
+    }
+    return null;
+  };
+  const tg = await tgun();
+  if (tg) {
+    const tap = async (text) => { await desk.locator('#shelves .scan, .signon .scan', { hasText: new RegExp(`^${text}$`) }).first().click(); await wait(400); };
+    await tap('99'); await tap('T1001');
+    await tg.click('#btnStart'); await wait(1800);
+    await tg.click('#btnCount').catch(() => {}); await wait(600);
+    for (const [pal, q, b] of [['F01-001', '40', 'F01A001'], ['F01-002', '32', 'F01A002']]) {
+      await tap(pal);
+      await desk.locator('#shelves tr', { has: desk.locator('.scan', { hasText: new RegExp(`^${pal}$`) }) }).locator('.scan.qty').click(); await wait(400);
+      await tap(b);
+      if (await tg.isVisible('#btnSkip')) { await tg.click('#btnSkip'); await wait(500); }
+    }
+    await tap('F01-003');
+    await wait(3500);                        // the sheet's own refresh
+    await desk.evaluate(() => window.scrollTo(0, 0));
+    await save(desk, 'testing-tab');
+  }
   await desk.close();
 
   /* ---------- the office board ---------- */

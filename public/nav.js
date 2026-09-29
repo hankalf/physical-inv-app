@@ -1,4 +1,4 @@
-/* Shared by the four supervisor pages: the tab bar, the sign-in box, and the
+/* Shared by the supervisor pages: the tab bar, the sign-in box, and the
    little API helpers each page would otherwise repeat. */
 (() => {
   'use strict';
@@ -8,6 +8,7 @@
     ['/cycle', 'Cycle counts', '↻'],
     ['/teams', 'Teams & crew', '☰'],
     ['/settings', 'Settings', '⚙'],
+    ['/testing', 'Testing', '▶'],
   ];
 
   const here = location.pathname.replace(/\/$/, '') || '/admin';
@@ -370,6 +371,13 @@
       nm.className = 'sr-name';
       nm.textContent = s.name;
       top.append(k, nm);
+      if (s.practice) {
+        const pr = document.createElement('span');
+        pr.className = 'tag practice';
+        pr.textContent = 'practice';
+        pr.title = 'The Testing tab\'s practice count — not a real count';
+        top.appendChild(pr);
+      }
       if (s.status === 'closed') {
         const c = document.createElement('span');
         c.className = 'tag off';
@@ -424,6 +432,12 @@
         nm.className = 'sb-name';
         nm.textContent = s.name;
         btn.append(k, nm);
+        if (s.practice) {
+          const pr = document.createElement('span');
+          pr.className = 'tag practice';
+          pr.textContent = 'practice';
+          btn.appendChild(pr);
+        }
         if (s.status === 'closed') {
           const c = document.createElement('span');
           c.className = 'tag off';
@@ -504,6 +518,7 @@
     ['Racking blocks', '/settings', 'lists', 'racking block back to back pair aisles conflict'],
     ['Send to the ERP', '/settings', 'erp', 'erp export send file layout columns adjustments posting'],
     ['Backups and the log', '/settings', 'erp', 'backup restore log audit who did what download'],
+    ['Try the scanner on test data', '/testing', '', 'testing test practice training try demo scanner gun emulator simulator learn new starter'],
   ].map(([title, page, sub, words]) => ({ title, page, sub, words }));
 
   const PENDING = 'searchGoto';
@@ -653,6 +668,9 @@
     try { sessionStorage.setItem(PENDING, JSON.stringify(g)); } catch { /* private window */ }
     location.href = target + (g.sub ? '#' + g.sub : '');
   }
+
+  /** Send the supervisor to another page, arriving on a count and a sub-tab. */
+  api.goto = (g) => goSearch({ goto: g });
 
   function applyGoto(g) {
     if (g.session && api.pickSession) api.pickSession(g.session);

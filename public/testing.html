@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Testing</title>
+<link rel="icon" href="/icon.svg">
+<link rel="stylesheet" href="/admin.css">
+<style>
+  /* The gun stays on screen while the sheet beside it scrolls: the thing you
+     click and the thing that answers are always both in view. */
+  .bench { display: grid; grid-template-columns: 404px minmax(0, 1fr); gap: 20px; align-items: start; }
+  .bench > .rig { position: sticky; top: 64px; }   /* clear of the sticky header */
+  @media (max-width: 1100px) {
+    .bench { grid-template-columns: minmax(0, 1fr); }
+    .bench > .rig { position: static; justify-self: center; }
+  }
+
+  /* A Zebra MC9300, near enough: a dark slab, a screen, a keypad-coloured
+     trigger underneath. It is the real app in the screen, not a picture. */
+  .gun {
+    width: 404px; max-width: 100%;
+    background: linear-gradient(180deg, #2a2f38, #1a1e25 60%, #15181e);
+    border: 1px solid #3a414d; border-radius: 30px 30px 44px 44px;
+    padding: 16px 16px 18px; box-shadow: 0 18px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .gun .brandrow { display: flex; justify-content: space-between; align-items: center; padding: 0 6px 10px; }
+  .gun .brandrow b { font-size: 12px; letter-spacing: .22em; color: #aeb7c4; }
+  .gun .brandrow span { font-size: 11px; color: #7b8595; }
+  .gun .led { width: 8px; height: 8px; border-radius: 50%; background: #3a414d; display: inline-block; margin-right: 6px; vertical-align: middle; transition: background .15s; }
+  .gun .led.on { background: #3fcf68; box-shadow: 0 0 10px #3fcf68; }
+  .gun .led.bad { background: #ff6b62; box-shadow: 0 0 10px #ff6b62; }
+  .gun .glass {
+    border-radius: 10px; overflow: hidden; background: #000;
+    border: 3px solid #0b0d11; box-shadow: inset 0 0 0 1px #000;
+  }
+  .gun iframe { display: block; width: 360px; max-width: 100%; height: min(620px, calc(100vh - 290px)); min-height: 440px; border: 0; background: #0b0e14; margin: 0 auto; }
+  .gun .keys { display: flex; gap: 8px; margin-top: 14px; }
+  .gun .keys input { flex: 1 1 auto; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .gun .trigger {
+    background: #f0b429; border-color: #f0b429; color: #1a1300; font-weight: 800; letter-spacing: .06em;
+  }
+  .gun .trigger:hover { filter: brightness(1.06); background: #f0b429; }
+  .gun .said { min-height: 20px; margin-top: 9px; font-size: 12.5px; color: #aeb7c4; text-align: center; }
+  .gun .said b { color: #fff; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .rig .tools { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+
+  /* the sheet */
+  .scan {
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; font-weight: 700;
+    padding: 4px 9px; border-radius: 7px; cursor: pointer; white-space: nowrap;
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
+  }
+  .scan::before { content: "▮▯▮ "; color: var(--muted); font-size: 10px; letter-spacing: -1px; }
+  .scan:hover { border-color: var(--accent); background: var(--accent-ink); }
+  .scan.flash { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .scan.torn { border-style: dashed; }
+  .scan.torn::before { content: "✂ "; color: var(--warn); letter-spacing: 0; }
+  .scan.qty::before { content: "# "; letter-spacing: 0; }
+
+  .signon { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
+  .signon .lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
+  .signon .vals { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 6px 18px; margin-top: 12px; }
+  .check { display: flex; gap: 9px; align-items: flex-start; font-size: 13.5px; color: var(--text-dim); padding: 3px 0; }
+  .check i { flex: 0 0 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--line); font-style: normal; font-size: 11px; display: grid; place-items: center; margin-top: 1px; }
+  .check.done { color: var(--text); }
+  .check.done i { background: var(--ok); border-color: var(--ok); color: #06210f; font-weight: 900; }
+  .meter { height: 8px; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; margin-top: 10px; }
+  .meter > i { display: block; height: 100%; background: var(--ok); width: 0; transition: width .4s; }
+
+  /* fixed columns: a long tip wraps inside the card instead of pushing the
+     quantity and the counted state off the side of it */
+  table.shelf { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+  table.shelf th.c-bin { width: 128px; }
+  table.shelf th.c-qty { width: 92px; }
+  table.shelf th.c-state { width: 150px; }
+  table.shelf td { overflow-wrap: break-word; white-space: normal; }
+  table.shelf .state { white-space: normal; }
+  table.shelf th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+  table.shelf td { padding: 8px 10px; border-bottom: 1px solid var(--line-soft); vertical-align: top; font-size: 13.5px; }
+  table.shelf tr.binstart td { border-top: 1px solid var(--line); }
+  table.shelf tr.binstart.counted td:first-child { box-shadow: inset 3px 0 0 var(--ok); }
+  table.shelf tr.tip td { padding-top: 0; }
+  table.shelf .what {
+    color: var(--text-dim); font-size: 12.5px; line-height: 1.45;
+    border-left: 3px solid var(--accent); background: var(--accent-ink); border-radius: 0 7px 7px 0; padding: 6px 10px;
+  }
+  table.shelf .what b { color: var(--text); font-weight: 700; }
+  table.shelf td.num, table.shelf th.num { text-align: right; }
+  table.shelf .item { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  table.shelf .item.expired { color: var(--err); }
+  table.shelf .rep { color: var(--warn); font-size: 12px; margin-top: 4px; }
+  table.shelf .none { color: var(--muted); font-style: italic; }
+  .state { font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .state.ok { color: var(--ok); }
+  .state.warn { color: var(--warn); }
+  .state.todo { color: var(--muted); font-weight: 500; }
+  .aislehead { display: flex; align-items: baseline; gap: 10px; margin: 18px 0 8px; }
+  .aislehead h3 { margin: 0; }
+</style>
+</head>
+<body class="app">
+
+<aside class="side">
+  <div class="brand">Inventory Count<span>Front Royal</span></div>
+  <nav id="navTabs"></nav>
+  <div class="side-foot">
+    <span class="chip" id="navWho" hidden></span>
+    <button id="navLogout" class="ghost sm" hidden>Log out</button>
+  </div>
+</aside>
+
+<div class="shell">
+  <header class="topbar">
+    <h1>Testing</h1>
+    <span class="tag practice" id="practiceChip" hidden>practice count</span>
+    <span class="spacer"></span>
+  </header>
+
+  <main>
+    <section class="screen active" id="scrLogin">
+      <div class="card signin">
+        <h2>Supervisor sign-in</h2>
+        <label for="fUser">Username <span style="text-transform:none;letter-spacing:0">— or your name, if your site still uses the shared password</span></label>
+        <input id="fUser" autocomplete="username" placeholder="e.g. DANA">
+        <label for="fPassword">Password</label>
+        <input id="fPassword" type="password" autocomplete="current-password">
+        <button class="primary" id="btnLogin" style="width:100%;margin-top:14px">Sign in</button>
+        <div class="feedback" id="loginMsg"></div>
+      </div>
+    </section>
+
+    <section class="screen" id="scrMain">
+      <div class="bench">
+        <div class="rig">
+          <div class="gun">
+            <div class="brandrow"><b>ZEBRA</b><span><i class="led" id="gunLed"></i><span id="gunName">MC9300</span></span></div>
+            <div class="glass"><iframe id="gunFrame" title="The scanner app, running on the practice count"></iframe></div>
+            <div class="keys">
+              <input id="fWedge" placeholder="Type a scan — try a wrong ID" autocomplete="off" spellcheck="false">
+              <button class="trigger fit" id="btnWedge">SCAN</button>
+            </div>
+            <div class="said" id="gunSaid">Click a bin, pallet or quantity on the sheet to scan it.</div>
+          </div>
+          <div class="tools">
+            <button class="sm" id="btnReloadGun" title="Reload the app on this scanner, as if it had been switched off and on">Restart the gun</button>
+            <button class="sm" id="btnDashboard">Open the dashboard on this count</button>
+            <button class="sm danger" id="btnReset">Start over</button>
+          </div>
+          <div class="feedback" id="rigMsg"></div>
+        </div>
+
+        <div class="sheet">
+          <div class="card">
+            <h2>Try the scanner on test data</h2>
+            <div class="hint" style="margin-top:0">
+              The screen on the left is the real scanner app, counting into a <b>practice count</b> of its own —
+              two short aisles of real Front Royal bins with a made-up report laid over them. Click any
+              <span class="scan" style="cursor:default">bin</span> <span class="scan" style="cursor:default">pallet</span>
+              or <span class="scan qty" style="cursor:default">qty</span> below to scan it into the gun, exactly as the trigger would.
+              Nothing done here reaches a real count, the office board, or the floor’s scanners.
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>1 · Sign on</h2>
+            <div class="hint" style="margin-top:0">Scan the team and a clock-in number, then tap <b>Sign on &amp; load list</b> on the gun. Team 99 already has aisles F01 then F02.
+              Your own clock-in number works too — T1001 and T1002 are made up, so the gun flags them as not on the crew list, which is exactly what it does with a mistyped one.</div>
+            <div class="signon" style="margin-top:12px">
+              <div><div class="lbl">Team</div><div class="vals" id="teamVals"></div></div>
+              <div><div class="lbl">Clock-in numbers</div><div class="vals" id="crewVals"></div></div>
+              <div><div class="lbl">Then</div><div class="muted" style="padding-top:4px">tap <b>Start counting</b> on the gun</div></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>2 · Things to try <span class="muted" id="checkCount"></span></h2>
+            <div class="meter"><i id="checkMeter"></i></div>
+            <div class="checks" id="checks"></div>
+          </div>
+
+          <div class="card">
+            <h2>3 · What is on the shelves <span class="muted" id="shelfCount"></span></h2>
+            <div class="hint" style="margin-top:0">
+              This is what a counter would find — the <b>report</b> is what the system thinks, and it is wrong in places on purpose.
+              The gun asks for the pallet, then the quantity, then the bin. A green edge means the bin has been counted.
+            </div>
+            <div id="shelves"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="/nav.js"></script>
+<script src="/testing.js"></script>
+</body>
+</html>
