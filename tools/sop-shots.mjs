@@ -489,7 +489,7 @@ try {
     await g.goto(`${BASE}/?d=${jd.uid}`); await wait(1500);
     if (await g.isVisible('#btnModeMove')) {
       await g.click('#btnModeMove'); await wait(300);
-      await g.fill('#fEmployee', '10422'); await g.press('#fEmployee', 'Enter');
+      await g.fill('#fEmployee', 'E1088'); await g.press('#fEmployee', 'Enter');
       await g.click('#btnStart'); await g.waitForSelector('#scrMove.active', { timeout: 10000 }).catch(() => {}); await wait(800);
       await save(g, 'gun-move-aisles');
       if (await g.$('#moveAisles button')) { await g.click('#moveAisles button >> nth=0'); await wait(2500); await save(g, 'gun-move-desk'); }
@@ -498,7 +498,7 @@ try {
     await g.goto(`${BASE}/?d=${jd.uid}`); await wait(1500);
     if (await g.isVisible('#btnModeFind')) {
       await g.click('#btnModeFind'); await wait(300);
-      await g.fill('#fEmployee', '10422'); await g.press('#fEmployee', 'Enter');
+      await g.fill('#fEmployee', 'E1088'); await g.press('#fEmployee', 'Enter');
       await g.click('#btnStart'); await g.waitForSelector('#scrFind.active', { timeout: 10000 }).catch(() => {}); await wait(800);
       if (await g.$('#findAisles button')) { await g.click('#findAisles button >> nth=0'); await wait(2500); await save(g, 'gun-find-desk'); }
     }
