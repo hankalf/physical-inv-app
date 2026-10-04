@@ -2,6 +2,7 @@ import { db, getSession } from '../db.js';
 import { progress, palletReport, rawCounts } from './reports.js';
 import { adjustmentView } from './adjustments.js';
 import { teamClocks } from './idle.js';
+import { fixList } from './issues.js';
 import { siteTimezone } from '../util/localtime.js';
 
 /*
@@ -170,6 +171,14 @@ export function exportEverything(sessionId, { by = '' } = {}) {
       'Raised': when(r.created_at), 'Done': when(r.done_at), 'Done by': r.done_by_team || '',
     })));
 
+  const KIND = { label: 'Label to replace', damage: 'Damage', blocked: 'Blocked bin', other: 'Other' };
+  const fixes = sheet('Fix list', ['Kind', 'What', 'Bin', 'Aisle', 'Pallet', 'Problem', 'Note', 'Reported by team', 'Reported', 'Status', 'Fixed by', 'Fixed', 'Outcome'],
+    fixList(id).rows.map((r) => ({
+      'Kind': KIND[r.kind] || r.kind, 'What': r.target ? r.target[0].toUpperCase() + r.target.slice(1) : '', 'Bin': r.bin || '', 'Aisle': r.aisle || '',
+      'Pallet': r.pallet_id || '', 'Problem': r.reason, 'Note': r.note || '', 'Reported by team': r.team || '', 'Reported': when(r.created_at),
+      'Status': r.status === 'fixed' ? 'Fixed' : 'Open', 'Fixed by': r.fixed_by || '', 'Fixed': when(r.fixed_at), 'Outcome': r.outcome || '',
+    })));
+
   const log = sheet('Log', ['When', 'Who', 'What', 'Detail'],
     db.prepare('SELECT * FROM audit WHERE session_id = ? ORDER BY id').all(id).map((a) => ({
       'When': when(a.at), 'Who': a.actor, 'What': a.action, 'Detail': a.detail || '',
@@ -177,6 +186,6 @@ export function exportEverything(sessionId, { by = '' } = {}) {
 
   return {
     filename: `${String(s.name).replace(/[^A-Za-z0-9 _-]+/g, '').trim().replace(/\s+/g, '-') || 'count'}-${new Date().toISOString().slice(0, 10)}.xlsx`,
-    sheets: [summary, lines, report, adjustments, bins, notCounted, teams, signons, sos, quiet, second, log],
+    sheets: [summary, lines, report, adjustments, bins, notCounted, teams, signons, sos, quiet, second, fixes, log],
   };
 }

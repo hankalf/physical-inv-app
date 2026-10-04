@@ -438,9 +438,14 @@ if (!hasCol('sessions', 'board_note')) {
 if (!hasCol('sessions', 'track_abc')) db.exec('ALTER TABLE sessions ADD COLUMN track_abc INTEGER NOT NULL DEFAULT 0');
 // a test scanner belongs to one person's practice
 if (!hasCol('devices', 'practice_owner')) db.exec('ALTER TABLE devices ADD COLUMN practice_owner TEXT');
+// whether the scanners are offered this count at sign-on (a count being set up, or kept for the office, is not)
+if (!hasCol('sessions', 'show_on_guns')) db.exec('ALTER TABLE sessions ADD COLUMN show_on_guns INTEGER NOT NULL DEFAULT 1');
 // a practice run built from a person's own file, and that file, so Start over can rebuild it
 if (!hasCol('sessions', 'practice_source')) db.exec("ALTER TABLE sessions ADD COLUMN practice_source TEXT NOT NULL DEFAULT ''");
 if (!hasCol('sessions', 'practice_rows')) db.exec('ALTER TABLE sessions ADD COLUMN practice_rows TEXT');
+// the Testing Suite's own scanner settings: a practice count is a sandbox, so the
+// site-wide prompts and screen settings can be changed there and nowhere else
+if (!hasCol('sessions', 'sandbox')) db.exec('ALTER TABLE sessions ADD COLUMN sandbox TEXT');
 // whose practice count it is: each login on the Testing tab has its own
 if (!hasCol('sessions', 'practice_owner')) db.exec('ALTER TABLE sessions ADD COLUMN practice_owner TEXT');
 // a trial run: counted like the real thing, then cleared before the real thing
@@ -595,6 +600,14 @@ export const bumpMasterVersion = (sessionId) =>
   db.prepare('UPDATE sessions SET master_version = master_version + 1 WHERE id = ?').run(Number(sessionId));
 
 const movesOpenCount = { get: (id) => { try { return db.prepare("SELECT COUNT(*) n FROM moves WHERE session_id = ? AND status = 'open'").get(id); } catch { return { n: 0 }; } } };
+/* The sandbox a practice count carries: what it overrides of the site's prompts
+   and screen settings. Nothing for a real count. */
+export function sandboxOf(s) {
+  if (!s || !s.practice || !s.sandbox) return { prompts: {}, layout: {}, sosReasons: null };
+  try { const v = JSON.parse(s.sandbox); return { prompts: v.prompts || {}, layout: v.layout || {}, sosReasons: Array.isArray(v.sosReasons) ? v.sosReasons : null }; }
+  catch { return { prompts: {}, layout: {}, sosReasons: null }; }
+}
+
 export const publicSession = (s) => ({
   id: s.id,
   name: s.name,
@@ -609,12 +622,14 @@ export const publicSession = (s) => ({
   layout: s.layout || null,
   // odd/even position -> Front/Back, so the gun can tell the counter which face a bin is on
   faces: loadLayout(s.layout)?.faces || null,
-  // the one-tap reasons, and how long the comments step waits before moving on
-  prompts: scannerPrompts(),
-  layout_cfg: scannerLayout(),
+  // the one-tap reasons, and how long the comments step waits before moving on -
+  // the site's, or the Testing Suite's own on a practice count
+  prompts: { ...scannerPrompts(), ...sandboxOf(s).prompts },
+  layout_cfg: { ...scannerLayout(), ...sandboxOf(s).layout },
   // the count a scanner should land on at sign-on, if a supervisor picked one
   isDefault: defaultSessionId() === s.id,
   practice: !!s.practice,
+  showOnGuns: s.show_on_guns !== 0,
   // pallets waiting to be moved back on this count, for the gun's "Move pallets" choice
   movesOpen: movesOpenCount.get(s.id).n,
   // a trial run says so on the gun; a trial that was cleared tells the gun to forget it

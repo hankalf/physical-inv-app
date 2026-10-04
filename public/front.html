@@ -29,7 +29,7 @@
 <div class="shell">
   <header class="topbar">
     <h1>Front bins</h1>
-    <div id="sessionPick"></div>
+    <span class="chip" id="frontRef" hidden></span>
     <span class="spacer"></span>
     <nav class="subtabs" id="subTabs"></nav>
   </header>
@@ -53,9 +53,10 @@
       <h2>Pallets to move back <span class="muted">a front pallet with an empty bin behind it</span></h2>
       <div class="hint" style="margin-top:0">
         In double-deep racking a pallet left in the <b>front</b> position with nothing behind it blocks the back slot.
-        This builds the list of those from the inventory report — or takes one you upload — and hands it to the scanners
+        This builds the list of those from the site's inventory report — or takes one you upload — and hands it to the scanners
         as a job of its own: <b>Move pallets</b> at sign-on. The gun walks the aisle, asks for the pallet, then the bin
-        it went into. Each move updates the report, so the count that follows expects the pallet where it now is.
+        it went into. It is a job on the warehouse, not on a count: it works from the site's current bin list and report
+        (the newest uploaded), and nothing here is a count line.
       </div>
       <div class="how">
         <div>
@@ -81,6 +82,7 @@
         <div class="auto"><label class="cb" title="Take every pallet still waiting off the list first. Moves already done or skipped are kept."><input type="checkbox" id="fMvReplace"> Replace what is still waiting</label></div>
       </div>
       <div class="feedback" id="mvMsg"></div>
+      <div class="feedback show warn" id="frontNotReady" hidden></div>
       <div class="mvtiles">
         <div class="stat"><div class="n" id="mvOpen">0</div><div class="l">To move</div></div>
         <div class="stat"><div class="n" id="mvDone">0</div><div class="l">Moved</div></div>

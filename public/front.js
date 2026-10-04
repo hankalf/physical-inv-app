@@ -9,29 +9,31 @@
   const apiJson = (p, o) => api.json(p, o);
   const postJson = (p, body, method) => api.post(p, body, method);
 
-  let sessions = [];
-  let sessionId = null;
+  /* No count to pick: this is a job on the warehouse. The server works from the
+     site's current bin list and says which one that is. */
+  let ready = false;
   let mvStatus = '';
-  const picker = api.sessionPicker('sessionPick', async (id) => { sessionId = id; picker.render(sessions, id); await refresh(); });
+  const F = '/api/admin/front';
 
   function show(which) {
     $('scrLogin').classList.toggle('active', which === 'login');
     $('scrMain').classList.toggle('active', which === 'main');
   }
-  const needSession = (el) => { if (sessionId) return true; msg(el, 'err', 'Pick a count first', 'Moves belong to the count whose bin list they come from.'); return false; };
+  const needSession = (el) => { if (ready) return true; msg(el, 'err', 'No bin list yet', 'Upload the site\'s bin list under Settings → Lists & racking first.'); return false; };
 
-  async function loadSessions() {
-    sessions = await apiJson('/api/admin/sessions');
-    const prior = sessionId;
-    if (!sessions.length) { sessionId = null; picker.render([], null); return; }
-    sessionId = sessions.some((s) => s.id === prior) ? prior : sessions[0].id;
-    picker.render(sessions, sessionId);
-    await refresh();
+  async function loadStatus() {
+    const st = await apiJson(`${F}/status`);
+    ready = !!st.ready;
+    $('frontRef').hidden = !ready;
+    $('frontRef').textContent = ready ? `bin list: ${st.binList.bins.toLocaleString()} bins, ${st.binList.pallets.toLocaleString()} pallets on the report (from “${st.binList.from}”)` : '';
+    $('frontNotReady').hidden = ready;
+    $('frontNotReady').textContent = ready ? '' : `Nothing to work from yet — ${st.why}.`;
+    if (ready) await refresh();
   }
 
   async function refresh() {
-    if (!sessionId) return;
-    const d = await apiJson(`/api/admin/sessions/${sessionId}/moves${mvStatus ? '?status=' + mvStatus : ''}`);
+    if (!ready) return;
+    const d = await apiJson(`${F}/moves${mvStatus ? '?status=' + mvStatus : ''}`);
     $('mvOpen').textContent = d.summary.open.toLocaleString();
     $('mvDone').textContent = d.summary.done.toLocaleString();
     $('mvSkipped').textContent = d.summary.skipped.toLocaleString();
@@ -57,7 +59,7 @@
   $('btnMvBuild').onclick = async () => {
     if (!needSession($('mvMsg'))) return;
     try {
-      const r = await postJson(`/api/admin/sessions/${sessionId}/moves/build`, { aisle: $('fMvAisle').value, zone: $('fMvZone').value, replace: $('fMvReplace').checked });
+      const r = await postJson(`${F}/moves/build`, { aisle: $('fMvAisle').value, zone: $('fMvZone').value, replace: $('fMvReplace').checked });
       msg($('mvMsg'), r.added ? 'ok' : 'warn', r.added ? `${r.added.toLocaleString()} pallets to move back.` : 'Nothing to move.',
         r.added ? 'They are on the scanners now — pick Move pallets at sign-on.' : r.found ? 'Every one found is already on the list.' : 'No front pallet on the report has an empty bin behind it (or the bin list does not say which bins are front and back).');
       await refresh();
@@ -69,19 +71,19 @@
     if (!file) return msg($('mvMsg'), 'err', 'Choose a file first');
     try {
       const text = await fileToCsv(file);
-      const res = await api.call(`/api/admin/sessions/${sessionId}/moves/import?replace=${$('fMvReplace').checked ? 1 : 0}`, { method: 'POST', headers: { 'content-type': 'text/csv' }, body: text });
+      const res = await api.call(`${F}/moves/import?replace=${$('fMvReplace').checked ? 1 : 0}`, { method: 'POST', headers: { 'content-type': 'text/csv' }, body: text });
       const r = await res.json();
       msg($('mvMsg'), 'ok', `${r.added.toLocaleString()} pallets to move back, from ${file.name}.`, r.found > r.added ? `${r.found - r.added} were already on the list.` : '');
       $('fMvFile').value = '';
       await refresh();
     } catch (err) { msg($('mvMsg'), 'err', 'That file did not load', err.message); }
   };
-  $('btnMvCsv').onclick = () => { if (needSession($('mvMsg'))) api.download(`/api/admin/sessions/${sessionId}/moves.csv`, `moves-session-${sessionId}.csv`); };
+  $('btnMvCsv').onclick = () => { if (needSession($('mvMsg'))) api.download(`${F}/moves.csv`, 'pallets-to-move-back.csv'); };
   $('btnMvClear').onclick = async () => {
     if (!needSession($('mvMsg'))) return;
     if (!confirm('Take every pallet still waiting off the move list? Moves already done or skipped are kept.')) return;
     try {
-      const r = await apiJson(`/api/admin/sessions/${sessionId}/moves`, { method: 'DELETE' });
+      const r = await apiJson(`${F}/moves`, { method: 'DELETE' });
       msg($('mvMsg'), 'warn', `${r.cleared} taken off the list.`);
       await refresh();
     } catch (err) { msg($('mvMsg'), 'err', err.message); }
@@ -96,7 +98,7 @@
   $('btnFrList').onclick = async () => {
     if (!needSession($('frMsg'))) return;
     try {
-      const r = await apiJson(`/api/admin/sessions/${sessionId}/cycle/bins?${frQuery()}`);
+      const r = await apiJson(`${F}/bins?${frQuery()}`);
       const shown = r.bins.slice(0, 1000);
       msg($('frMsg'), r.count ? 'ok' : 'warn',
         `${r.count.toLocaleString()} ${r.face ? FACE[r.face].toLowerCase() + '-placed ' : ''}bin${r.count === 1 ? '' : 's'}`,
@@ -115,17 +117,17 @@
   $('btnFrCsv').onclick = async () => {
     if (!needSession($('frMsg'))) return;
     const q = frQuery(); q.set('format', 'csv');
-    try { await api.download(`/api/admin/sessions/${sessionId}/cycle/bins?${q}`, `${$('fFrFace').value || 'all'}-bins.csv`); }
+    try { await api.download(`${F}/bins?${q}`, `${$('fFrFace').value || 'all'}-bins.csv`); }
     catch (err) { msg($('frMsg'), 'err', err.message); }
   };
   $('btnFrBatch').onclick = async () => {
     if (!needSession($('frMsg'))) return;
     try {
-      const list = await apiJson(`/api/admin/sessions/${sessionId}/cycle/bins?${frQuery()}`);
+      const list = await apiJson(`${F}/bins?${frQuery()}`);
       const free = list.bins.filter((b) => !b.open_task).length;
       if (!free) return msg($('frMsg'), 'warn', 'Every bin in this list already has an open cycle task.');
       if (!confirm(`Put ${free.toLocaleString()} ${list.face ? FACE[list.face].toLowerCase() + '-placed ' : ''}bins on today's cycle count?`)) return;
-      const r = await postJson(`/api/admin/sessions/${sessionId}/cycle/batches`, {
+      const r = await postJson(`${F}/cycle/batches`, {
         target: free, strategy: 'oldest', face: $('fFrFace').value, zone: $('fFrZone').value, aisle: $('fFrAisle').value,
         levels: $('fFrLevels').value, name: `${new Date().toISOString().slice(0, 10)} · ${list.face ? FACE[list.face].toLowerCase() + ' bins' : 'bins'}`,
       });
@@ -135,12 +137,12 @@
   };
 
 
-  document.addEventListener('subshow', () => { if (sessionId) refresh().catch(() => {}); });
+  document.addEventListener('subshow', () => { if (ready) refresh().catch(() => {}); });
   document.addEventListener('auth', (e) => {
     if (!e.detail) return show('login');
     show('main');
-    loadSessions().catch(() => show('login'));
+    loadStatus().catch(() => show('login'));
   });
   document.addEventListener('DOMContentLoaded', () => { api.start().catch(() => show('login')); });
-  setInterval(() => { if (api.token && sessionId) refresh().catch(() => {}); }, 20000);
+  setInterval(() => { if (api.token && ready) refresh().catch(() => {}); }, 20000);
 })();

@@ -207,10 +207,10 @@ check('Dashboard: the note box is under the progress dashboard and works',
   /On the board/.test(clean(await page.textContent('#noteMsg'))), clean(await page.textContent('#noteMsg')));
 check('Dashboard: and the board now carries it',
   (await j(await fetch(`${BASE}/api/board?session=${sess.id}`))).note === 'Dock 4 blocked until 2pm');
-check('Dashboard: the relabel list is on the reports tab, rack labels and pallet labels alike',
-  /NO-LABEL/.test(clean(await page.textContent('#labelTable')))
-  && /RACK/.test(clean(await page.textContent('#labelTable'))),
-  clean(await page.textContent('#labelTable')).slice(0, 160));
+check('Dashboard: the labels to replace are on the Fix list, rack labels and pallet labels alike',
+  /NO-LABEL/.test(clean(await page.textContent('#fixTable')))
+  && /LABEL rack/.test(clean(await page.textContent('#fixTable'))),
+  clean(await page.textContent('#fixTable')).slice(0, 160));
 await page.click('#btnClearNote');
 await page.waitForTimeout(1000);
 check('Dashboard: and Clear takes it down',

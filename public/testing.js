@@ -287,6 +287,43 @@
     } catch (err) { msg($('optMsg'), 'err', err.message); }
   }
 
+  /* The sandbox: the gun's prompts and screen, for this practice alone. Drawn
+     only when they change, so a half-typed list is not wiped by the refresh. */
+  let sbDrawn = '';
+  function renderSandbox() {
+    const sb = data.sandbox;
+    if (!sb) return;
+    const sig = JSON.stringify(sb);
+    if (sig === sbDrawn) return;
+    sbDrawn = sig;
+    $('sbTimeout').value = sb.prompts.commentTimeout;
+    $('sbOrder').value = (sb.layout.order || ['pallet', 'qty', 'bin']).join(',');
+    $('sbConfirm').value = sb.layout.confirmOver || 0;
+    $('sbLarge').checked = sb.layout.textSize === 'large';
+    $('sbNextBin').checked = sb.layout.showNextBin !== false;
+    $('sbVibrate').checked = sb.layout.vibrate !== false;
+    $('sbComments').value = (sb.prompts.comments || []).join('\n');
+    $('sbOverrides').value = (sb.prompts.overrides || []).join('\n');
+    $('sbSos').value = (sb.sosReasons || []).join('\n');
+    const n = sb.overridden.prompts.length + sb.overridden.layout.length + (sb.overridden.sosReasons ? 1 : 0);
+    $('sbState').textContent = n ? `${n} setting${n === 1 ? '' : 's'} differ from the site's` : 'same as the site, except the 5-second comments step';
+  }
+  async function saveSandbox(body, okText) {
+    try {
+      const next = await api.post('/api/admin/practice/sandbox', body);
+      drawn = '';
+      render(next);
+      msg($('sbMsg'), 'ok', okText, 'The gun picks it up between pallets, within about fifteen seconds.');
+    } catch (err) { msg($('sbMsg'), 'err', err.message); }
+  }
+  $('btnSandboxSave').onclick = () => saveSandbox({
+    prompts: { commentTimeout: Number($('sbTimeout').value), comments: $('sbComments').value, overrides: $('sbOverrides').value },
+    layout: { order: $('sbOrder').value.split(','), confirmOver: Number($('sbConfirm').value), textSize: $('sbLarge').checked ? 'large' : 'normal',
+      showNextBin: $('sbNextBin').checked, vibrate: $('sbVibrate').checked },
+    sosReasons: $('sbSos').value,
+  }, 'Saved to your sandbox.');
+  $('btnSandboxReset').onclick = () => saveSandbox({ reset: true }, 'Back to the site\'s settings (and the 5-second comments step).');
+
   function renderHistory() {
     const runs = data.history || [];
     $('historyCard').hidden = !runs.length;
@@ -313,6 +350,7 @@
     renderHistory();
     renderReady();
     renderOptions();
+    renderSandbox();
     const own = data.source === 'upload';
     $('dataSource').textContent = own ? `testing on “${data.label}”` : 'testing on the built-in data';
     $('btnBuiltIn').hidden = !own;
@@ -356,26 +394,31 @@
   /* ------------------------------------------------- the first-time guide
      Open until somebody hides it; the choice is kept in this browser. A person
      who has counted here before has read it, so it starts folded for them. */
-  const GUIDE_KEY = 'testingGuideHidden';
-  function setGuide(hidden) {
+  /* The guide and the tips come up by themselves the first time a person signs
+     in - the server remembers per login, so a shared office computer does not
+     hide them from the next new starter. Hiding either tells the server. */
+  const GUIDE_KEY = () => `testingGuideHidden:${data ? data.owner : ''}`;
+  const tipsSeen = () => { api.post('/api/admin/practice/tips', { seen: true }).catch(() => {}); if (data) data.firstTime = false; };
+  function setGuide(hidden, { tell = true } = {}) {
     $('guideCard').classList.toggle('collapsed', hidden);
     $('btnGuide').textContent = hidden ? 'Show me how this works' : 'Hide';
-    try { localStorage.setItem(GUIDE_KEY, hidden ? '1' : '0'); } catch { /* private window */ }
+    try { localStorage.setItem(GUIDE_KEY(), hidden ? '1' : '0'); } catch { /* private window */ }
+    if (hidden && tell) tipsSeen();
   }
   $('btnGuide').onclick = () => setGuide(!$('guideCard').classList.contains('collapsed'));
   function guideFirstTime() {
+    if (data && data.firstTime) { setGuide(false, { tell: false }); return; }
     let saved = null;
-    try { saved = localStorage.getItem(GUIDE_KEY); } catch { saved = null; }
-    if (saved !== null) { setGuide(saved === '1'); return; }
-    const seen = (data && ((data.history || []).length || (data.totals && data.totals.lines > 0)));
-    setGuide(!!seen);
+    try { saved = localStorage.getItem(GUIDE_KEY()); } catch { saved = null; }
+    if (saved !== null) { setGuide(saved === '1', { tell: false }); return; }
+    setGuide(true, { tell: false });
   }
 
   /* ------------------------------------------------------------- the coach
      A bubble beside the next thing to click, following what the gun is asking
      for. It reads the gun's own screen - which prompt is up, what is in the
      team box - so it is never a step ahead or behind. */
-  const TIPS_KEY = 'testingTipsOff';
+  const TIPS_KEY = () => `testingTipsOff:${data ? data.owner : ''}`;
   let tipsOff = false;
   let lastTarget = null;
   let lastKey = '';
@@ -461,20 +504,22 @@
     placeCoach(nextTip());
   }
 
-  function setTips(off) {
+  function setTips(off, { tell = true } = {}) {
     tipsOff = off;
     $('btnTips').textContent = off ? 'Show tips' : 'Hide tips';
-    try { localStorage.setItem(TIPS_KEY, off ? '1' : '0'); } catch { /* private window */ }
+    try { localStorage.setItem(TIPS_KEY(), off ? '1' : '0'); } catch { /* private window */ }
+    if (off && tell) tipsSeen();
     coach();
   }
   $('btnTips').onclick = () => setTips(!tipsOff);
   $('coachOff').onclick = () => setTips(true);
   function tipsFirstTime() {
+    // their first sign-in: the tips pop up whatever this computer remembers
+    if (data && data.firstTime) { setTips(false, { tell: false }); return; }
     let saved = null;
-    try { saved = localStorage.getItem(TIPS_KEY); } catch { saved = null; }
-    if (saved !== null) { setTips(saved === '1'); return; }
-    // somebody who has counted here before does not need to be shown where the pallet is
-    setTips(!!(data && ((data.history || []).length || data.totals.lines > 0)));
+    try { saved = localStorage.getItem(TIPS_KEY()); } catch { saved = null; }
+    if (saved !== null) { setTips(saved === '1', { tell: false }); return; }
+    setTips(true, { tell: false });
   }
   setInterval(coach, 700);
   window.addEventListener('scroll', () => coach(), { passive: true });

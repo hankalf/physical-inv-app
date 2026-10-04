@@ -362,6 +362,24 @@ const nsLogin = await (await fetch(`${BASE}/api/admin/login`, { method: 'POST', 
 const N = { ...hdr, authorization: 'Bearer ' + nsLogin.token };
 const ns = await get('/api/admin/practice', N);
 check('A new user has no practice yet, and no history', ns.session === null && (ns.history || []).length === 0);
+check('…and is a first-timer: the guide and the tips come up by themselves', ns.firstTime === true);
+check('Dana, who hid the tips, is not', (await get('/api/admin/practice')).firstTime === false);
+/* on the same computer, where Dana hid everything, the new starter still sees it */
+await page.evaluate(() => { sessionStorage.removeItem('admToken'); });
+await page.goto(BASE + '/testing');
+await page.fill('#fUser', 'newstarter'); await page.fill('#fPassword', 'starter-pass-1'); await page.click('#btnLogin');
+await page.waitForSelector('#shelves table.shelf');
+await wait(1500);
+check('On a computer where somebody else hid them, a new login still gets the guide open', await page.isVisible('#guideBody'));
+check('…and the tip bubble up', await page.isVisible('#coach'));
+await page.click('#coachOff');
+await wait(600);
+check('Hiding the tips is remembered with the login', (await get('/api/admin/practice', N)).firstTime === false);
+await page.evaluate(() => { sessionStorage.removeItem('admToken'); });
+await page.goto(BASE + '/testing');
+await page.fill('#fUser', 'Dana Whitfield'); await page.fill('#fPassword', 'changeme'); await page.click('#btnLogin');
+await page.waitForSelector('#shelves table.shelf');
+await wait(800);
 const nsMade = await post('/api/admin/practice', {}, N);
 check('…and opening the Testing tab gives them a fresh one of their own', nsMade.session && ![pid, fresh.session.id, other.session.id].includes(nsMade.session.id)
   && nsMade.checklist.every((c) => !c.done) && nsMade.device.name === 'TEST-NEWSTARTER', nsMade.device && nsMade.device.name);
@@ -412,6 +430,35 @@ for (let t = 0; t < 8000; t += 300) { if ((await get('/api/admin/practice')).sou
 const back2 = await get('/api/admin/practice');
 check('"Back to the built-in test data" does what it says', back2.source === 'built-in' && back2.totals.pallets === 25);
 check('…and every run so far is in your history', back2.history.length >= 3, `${back2.history.length} runs`);
+
+/* ---------------- the sandbox: the gun's settings, in here only ---------------- */
+const siteBefore = await get('/api/admin/scanner-prompts');
+gun = await gunFrame();
+/* asked through the gun itself, with its own token - enrolling its link again would sign it out */
+const gunFetch = (path) => gun.evaluate(async (p) => {
+  const name = `invcount-practice-${new URLSearchParams(location.search).get('d')}`;
+  const tok = await new Promise((res) => { const q = indexedDB.open(name); q.onsuccess = () => { const g = q.result.transaction('meta').objectStore('meta').get('deviceToken'); g.onsuccess = () => res(g.result); }; });
+  return (await fetch(p, { headers: { authorization: 'Device ' + tok } })).json();
+}, path);
+const gunView = async () => (await gunFetch('/api/sessions?practice=1')).find((s) => s.name.startsWith('Practice count'));
+check('A practice count holds the comments step for 5 seconds, whatever the site says', (await gunView()).prompts.commentTimeout === 5);
+check('The sandbox card shows the gun\'s settings', Number(await page.inputValue('#sbTimeout')) === 5 && (await page.inputValue('#sbComments')).includes('Damaged'));
+await page.fill('#sbTimeout', '9');
+await page.check('#sbLarge');
+await page.fill('#sbComments', 'Frozen to the rack\nShrink wrap torn');
+await page.fill('#sbSos', 'Lift truck down\nNeed a supervisor');
+await page.click('#btnSandboxSave');
+await wait(1000);
+const gv = await gunView();
+check('Saving changes what the gun is sent for this practice count', gv.prompts.commentTimeout === 9 && gv.layout_cfg.textSize === 'large' && gv.prompts.comments.join('|') === 'Frozen to the rack|Shrink wrap torn', JSON.stringify([gv.prompts.commentTimeout, gv.layout_cfg.textSize, gv.prompts.comments]));
+const sosNow = await gunFetch(`/api/sessions/${(await get('/api/admin/practice')).session.id}/alerts`);
+check('…including the SOS list', sosNow.reasons.join('|') === 'Lift truck down|Need a supervisor', sosNow.reasons.join('|'));
+const siteAfter = await get('/api/admin/scanner-prompts');
+check('…and the site\'s own settings have not moved', JSON.stringify(siteAfter) === JSON.stringify(siteBefore));
+check('…nor anybody else\'s practice', (await get('/api/admin/practice', O)).sandbox.prompts.commentTimeout === 5);
+await page.click('#btnSandboxReset');
+await wait(800);
+check('Back to the site\'s settings does that, keeping the 5-second comments step', (await gunView()).prompts.commentTimeout === 5 && (await gunView()).layout_cfg.textSize !== 'large');
 
 /* ---------------- the features that ship turned off ---------------- */
 const optRow = (k) => page.locator(`#optList .opt[data-key="${k}"]`);

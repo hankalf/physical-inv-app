@@ -70,6 +70,7 @@ export function teamClocks(sessionId, at = Date.now()) {
             MAX(CASE WHEN status = 'active' THEN aisle END) AS aisle
        FROM assignments WHERE session_id = ? GROUP BY team`).all(id).map((r) => [r.team, r]));
   const shifts = shiftOf();
+  const people = new Map(db.prepare('SELECT badge, name FROM employees').all().map((e) => [norm(e.badge), e.name]));
   const guided = !!s.guided && (s.mode || 'full') === 'full';
   const teams = new Set([...scans.keys(), ...signons.keys()]);
   const out = [];
@@ -89,6 +90,7 @@ export function teamClocks(sessionId, at = Date.now()) {
     const working = s.status === 'open' && onShift && !finished && !gone;
     out.push({
       team,
+      person: people.get(norm(team)) || '',      // a cycle counter is their own team: say who
       shift: shifts.get(norm(team)) || '',
       started,
       lastScan: sc.last || null,

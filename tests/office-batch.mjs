@@ -55,6 +55,19 @@ await fetch(`${BASE}/api/admin/sessions/${plain.id}/master?kind=bins`, { method:
 const byDrawing = await get(`/api/admin/sessions/${plain.id}/cycle/bins?face=front`);
 check('Where the list does not say, the site drawing does (odd positions front)', byDrawing.bins.map((b) => b.code).join(',') === 'F05A001,F05A003', byDrawing.bins.map((b) => b.code).join(','));
 
+/* ================= which counts the scanners see ================= */
+{
+  const hid = await post('/api/admin/sessions', { name: 'Still being set up' });
+  const d = await post('/api/admin/devices', { name: 'SHOW-01' });
+  const G = { ...hdr, authorization: 'Device ' + (await post(`/api/devices/${d.uid}`, {}, hdr)).token };
+  check('A new count is shown on the scanners to start with', (await get('/api/sessions', G)).some((s) => s.id === hid.id));
+  await post(`/api/admin/sessions/${hid.id}/settings`, { showOnGuns: false });
+  check('Unticking "Show on the scanners" takes it off their list', !(await get('/api/sessions', G)).some((s) => s.id === hid.id));
+  check('…while the dashboards still have it, marked', (await get('/api/admin/sessions')).find((s) => s.id === hid.id).show_on_guns === 0);
+  await post(`/api/admin/sessions/${hid.id}/settings`, { showOnGuns: true });
+  check('…and ticking it puts it back', (await get('/api/sessions', G)).some((s) => s.id === hid.id));
+}
+
 /* ================= a full count, run as a trial ================= */
 const sess = await post('/api/admin/sessions', { name: 'Q4 wall-to-wall' });
 await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=bins`, { method: 'POST', headers: csv,

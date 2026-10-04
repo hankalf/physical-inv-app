@@ -95,8 +95,22 @@ check('Gun: choosing Cycle count narrows the list to cycle programs',
   (await gun.$$eval('#fSession option', (o) => o.map((x) => x.textContent))).every((t) => /cycle/i.test(t)),
   (await gun.$$eval('#fSession option', (o) => o.map((x) => x.textContent))).join(' | '));
 await gun.selectOption('#fSession', String(sess.id));
-await gun.fill('#fTeam', '7'); await gun.fill('#fEmployee', 'E7001'); await gun.press('#fEmployee', 'Enter');
+check('Gun: a cycle count asks for a clock-in number only - no team box', await gun.isHidden('#fTeam') && /Your clock-in number/.test(await gun.textContent('#employeeLabel')));
+await gun.fill('#fEmployee', 'E7001'); await gun.press('#fEmployee', 'Enter');
 await gun.click('#btnStart'); await gun.waitForSelector('#scrAssign.active', { timeout: 90000 });
+check('Gun: the person signs on as themselves', /E7001/.test(await gun.textContent('#chipDevice')) && !/T7/.test(await gun.textContent('#chipDevice')), await gun.textContent('#chipDevice'));
+/* a second person on the same programme at the same time */
+{
+  const d2 = await j(await fetch(`${BASE}/api/admin/devices`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'CYC-02' }) }));
+  const t2 = (await j(await fetch(`${BASE}/api/devices/${d2.uid}`, { method: 'POST' }))).token;
+  const H2 = { 'content-type': 'application/json', authorization: 'Device ' + t2 };
+  const on = await fetch(`${BASE}/api/sessions/${sess.id}/signon`, { method: 'POST', headers: H2, body: JSON.stringify({ deviceId: 'CYC-02', team: 'E7002', employees: ['E7002'] }) });
+  const mine = await j(await fetch(`${BASE}/api/sessions/${sess.id}/recounts?team=E7002`, { headers: H2 }));
+  const taken = await j(await fetch(`${BASE}/api/sessions/${sess.id}/recounts/${mine.tasks[0].id}/take`, { method: 'POST', headers: H2, body: JSON.stringify({ team: 'E7002' }) }));
+  const other = await j(await fetch(`${BASE}/api/sessions/${sess.id}/recounts?team=E7001`, { headers: api.headers }));
+  check('Cycle: a second person signs on at the same time and takes a bin of their own', on.ok && mine.tasks.length > 0 && taken.team === 'E7002'
+    && !other.tasks.some((t) => t.id === taken.id), `${mine.tasks.length} offered; ${taken.bin} taken by E7002; E7001 sees ${other.tasks.length}`);
+}
 check('Gun: a cycle session shows the list instead of an aisle', /Cycle count/.test(await T('#recountCardTitle')) && (await T('#recountCount')) === '35' && (await gun.getAttribute('#btnCount', 'hidden')) !== null, `${await T('#recountCount')} bins`);
 await shot(gun, 'gun-cycle-list');
 await gun.click('#btnRecounts'); await gun.waitForSelector('#scrScan.active'); await gun.waitForTimeout(400);
@@ -147,7 +161,7 @@ await gun.goto(`${BASE}/?d=${dev.uid}`); await gun.waitForSelector('#scrSignon.a
 for (const chip of await gun.$$('#employeeChips button')) await chip.click();
 await gun.click('#btnModeCycle'); await gun.waitForTimeout(200);
 await gun.selectOption('#fSession', String(sess.id));
-await gun.fill('#fTeam', '7'); await gun.fill('#fEmployee', 'C001'); await gun.press('#fEmployee', 'Enter');
+await gun.fill('#fEmployee', 'C001'); await gun.press('#fEmployee', 'Enter');
 await gun.click('#btnStart'); await gun.waitForSelector('#scrAssign.active', { timeout: 90000 }); await gun.waitForTimeout(600);
 const crewBanner = clean(await gun.textContent('#crewBanner'));
 check('Gun: the equipment check runs on a cycle count too, against the bins on the list',

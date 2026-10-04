@@ -3,13 +3,16 @@
 (() => {
   'use strict';
 
+  /* The pages, in the groups a supervisor thinks in: the counting itself, the
+     jobs around it, and how the site is set up. */
   const TABS = [
-    ['/admin', 'Dashboard', '▤'],
-    ['/cycle', 'Cycle counts', '↻'],
-    ['/teams', 'Teams & crew', '☰'],
-    ['/settings', 'Settings', '⚙'],
-    ['/front', 'Front bins', '▥'],
-    ['/testing', 'Testing Suite', '▶'],
+    ['/admin', 'Dashboard', '▤', 'Counting'],
+    ['/cycle', 'Cycle counts', '↻', 'Counting'],
+    ['/front', 'Front bins', '▥', 'Warehouse jobs'],
+    ['/missing', 'Not in Location', '◎', 'Warehouse jobs'],
+    ['/teams', 'Teams & crew', '☰', 'The site'],
+    ['/settings', 'Settings', '⚙', 'The site'],
+    ['/testing', 'Testing Suite', '▶', 'Learn'],
   ];
 
   /* Each page's sections, so the sidebar can open them out under the page.
@@ -20,10 +23,56 @@
     '/teams': [['crew', 'Crew & teams'], ['rules', 'Equipment rules']],
     '/settings': [['start', 'Getting started'], ['gun', 'Scanner screen'], ['logins', 'Logins'], ['scanners', 'Scanners'], ['lists', 'Lists & racking'], ['erp', 'ERP & backups']],
     '/front': [['moves', 'Pallets to move back'], ['bins', 'Front-placed bins']],
+    '/missing': [],
     '/testing': [],
   };
 
   const here = location.pathname.replace(/\/$/, '') || '/admin';
+
+  /* ------------------------------------------------------------- themes
+     Kept in this browser, applied before the page draws. Every colour in the
+     stylesheet is a token, so a theme is a set of tokens on <html>. */
+  const THEMES = [['midnight', 'Midnight (dark blue)'], ['graphite', 'Graphite (dark grey)'], ['daylight', 'Daylight (light)'], ['frost', 'Frost (light, cool)']];
+  const ACCENTS = ['blue', 'teal', 'amber', 'berry'];
+  const look = { theme: 'midnight', accent: 'blue' };
+  try {
+    look.theme = THEMES.some(([k]) => k === localStorage.getItem('adminTheme')) ? localStorage.getItem('adminTheme') : 'midnight';
+    look.accent = ACCENTS.includes(localStorage.getItem('adminAccent')) ? localStorage.getItem('adminAccent') : 'blue';
+  } catch { /* private window */ }
+  function applyLook() {
+    const root = document.documentElement;
+    if (look.theme === 'midnight') root.removeAttribute('data-theme'); else root.dataset.theme = look.theme;
+    if (look.accent === 'blue') root.removeAttribute('data-accent'); else root.dataset.accent = look.accent;
+    try { localStorage.setItem('adminTheme', look.theme); localStorage.setItem('adminAccent', look.accent); } catch { /* private window */ }
+    for (const b of document.querySelectorAll('.themepick .accents button')) b.classList.toggle('on', b.dataset.accent === look.accent);
+  }
+  applyLook();
+  function mountThemePicker() {
+    const foot = document.querySelector('.side-foot');
+    if (!foot || foot.querySelector('.themepick')) return;
+    const box = document.createElement('div');
+    box.className = 'themepick';
+    const sel = document.createElement('select');
+    sel.title = 'How the supervisor pages look, on this computer';
+    sel.setAttribute('aria-label', 'Theme');
+    for (const [k, l] of THEMES) { const o = document.createElement('option'); o.value = k; o.textContent = l; sel.appendChild(o); }
+    sel.value = look.theme;
+    sel.onchange = () => { look.theme = sel.value; applyLook(); };
+    const acc = document.createElement('div');
+    acc.className = 'accents';
+    acc.appendChild(Object.assign(document.createElement('span'), { textContent: 'Accent' }));
+    for (const a of ACCENTS) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.accent = a;
+      b.title = a[0].toUpperCase() + a.slice(1);
+      b.onclick = () => { look.accent = a; applyLook(); };
+      acc.appendChild(b);
+    }
+    box.append(sel, acc);
+    foot.prepend(box);
+    applyLook();
+  }
   const api = {
     token: sessionStorage.getItem('admToken') || '',
     me: null,
@@ -178,7 +227,15 @@
     if (!bar) return;
     bar.innerHTML = '';
     const currentSub = (location.hash || '').replace('#', '') || (() => { try { return sessionStorage.getItem('sub:' + here); } catch { return ''; } })();
-    for (const [href, label, ico] of TABS) {
+    let lastSection = '';
+    for (const [href, label, ico, section] of TABS) {
+      if (section !== lastSection) {
+        const h = document.createElement('div');
+        h.className = 'navsection';
+        h.textContent = section;
+        bar.appendChild(h);
+        lastSection = section;
+      }
       const group = document.createElement('div');
       group.className = 'navgroup' + (here === href ? ' here' : '');
       const row = document.createElement('div');
@@ -455,8 +512,15 @@
         const pr = document.createElement('span');
         pr.className = 'tag practice';
         pr.textContent = 'practice';
-        pr.title = 'The Testing tab\'s practice count — not a real count';
+        pr.title = 'The Testing Suite\'s practice count — not a real count';
         top.appendChild(pr);
+      }
+      if (s.show_on_guns === 0 && s.status !== 'closed') {
+        const h = document.createElement('span');
+        h.className = 'tag off';
+        h.textContent = 'not on scanners';
+        h.title = 'Untick "Show on the scanners" is off for this count';
+        top.appendChild(h);
       }
       if (s.status === 'closed') {
         const c = document.createElement('span');
@@ -606,6 +670,9 @@
     ['Stopped-scanning alert setting', '/settings', 'scanners', 'idle stopped scanning minutes alert teams break'],
     ['1st and 2nd shift teams', '/teams', 'crew', 'shift first second 1st 2nd night day team'],
     ['Front bins — the list, and pallets to move back', '/front', 'bins', 'front back face placed bins list cycle aisle side move pallets behind empty'],
+    ['Not in Location — pallets the system has lost track of', '/missing', '', 'not in location missing lost pallets find locate last known location where is written off'],
+    ['Fix list — damage, blocked bins, labels to replace', '/admin', 'reports', 'fix list damage damaged racking beam blocked bin trailer relabel labels replace repair problems reported'],
+    ['Pallets to move back — front bins with an empty bin behind', '/front', 'moves', 'move pallets back front behind empty double deep relocate'],
     ['Auto-assign the aisles — a staggered plan', '/admin', 'teams', 'auto assign plan stagger staggered aisles teams spread automatic queue every team'],
     ['Test with your own pallets, and try features that are off', '/testing', '', 'testing upload own pallets file lot expiry approval abc try features off practice'],
   ].map(([title, page, sub, words]) => ({ title, page, sub, words }));
@@ -793,6 +860,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     renderTabs();
+    mountThemePicker();
     mountSearch();
     renderSubTabs();
     applyPendingGoto();

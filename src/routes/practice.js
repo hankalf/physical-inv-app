@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { db, norm, getSession, createSession, createDevice, listDevices } from '../db.js';
+import { db, norm, getSession, createSession, createDevice, listDevices, sandboxOf } from '../db.js';
+import { scannerPrompts, scannerLayout } from './scanner-prompts.js';
+import { sosReasons } from './alerts.js';
 import { importMaster } from './master.js';
 import { parseRecords, pick } from '../util/csv.js';
 import { queueAssignments } from './assignments.js';
@@ -157,9 +159,13 @@ export const practiceSession = (owner) =>
   db.prepare("SELECT * FROM sessions WHERE practice = 1 AND practice_owner = ? AND status = 'open' ORDER BY id DESC LIMIT 1").get(owner) || null;
 
 /** Build a practice count from nothing: bins, report, and the team's two aisles. */
+/* A practice count starts with the comments step held for five seconds, so a
+   person learning the gun has time to read it before it moves on. */
+const SANDBOX_START = JSON.stringify({ prompts: { commentTimeout: 5 }, layout: {}, sosReasons: null });
+
 function buildPractice(owner) {
   const s = createSession({ name: PRACTICE_NAME, mode: 'full', palletMode: 'warn', guided: 1, askComments: 1 });
-  db.prepare('UPDATE sessions SET practice = 1, practice_owner = ? WHERE id = ?').run(owner, s.id);
+  db.prepare('UPDATE sessions SET practice = 1, practice_owner = ?, sandbox = ? WHERE id = ?').run(owner, SANDBOX_START, s.id);
   importMaster(s.id, 'bins', binCsv());
   importMaster(s.id, 'pallets', reportCsv());
   queueAssignments(s.id, PRACTICE_TEAM, ['F01', 'F02'], 'A-F', { force: true });
@@ -218,8 +224,8 @@ export function readPracticeFile(text) {
 
 function buildFromRows(owner, rows, label) {
   const s = createSession({ name: `${PRACTICE_NAME} — ${label}`.slice(0, 80), mode: 'full', palletMode: 'warn', guided: 1, askComments: 1 });
-  db.prepare("UPDATE sessions SET practice = 1, practice_owner = ?, practice_source = 'upload', practice_rows = ? WHERE id = ?")
-    .run(owner, JSON.stringify({ label, rows }), s.id);
+  db.prepare("UPDATE sessions SET practice = 1, practice_owner = ?, practice_source = 'upload', practice_rows = ?, sandbox = ? WHERE id = ?")
+    .run(owner, JSON.stringify({ label, rows }), SANDBOX_START, s.id);
   importMaster(s.id, 'bins', binCsv([...new Set(rows.map((r) => r.bin))]));
   let report = 'Pallet ID,SKU,Description,Qty,Location,Lot Code,Best Before,ABC\n';
   for (const r of rows.filter((x) => x.pallet)) {
@@ -487,4 +493,59 @@ export function setPracticeOptions(owner, body = {}) {
       body.approvalMinPct === undefined ? s.approval_min_pct : NUM(body.approvalMinPct, 100),
       flag('trackAbc', 'track_abc'), flag('autoRecount', 'auto_recount'), flag('askComments', 'ask_comments'), mode, s.id, owner);
   return getSession(s.id);
+}
+
+/* ------------------------------------------------------------ the sandbox
+   Everything the gun takes from the site - the one-tap reasons, the override
+   reasons, how long the comments step waits, the screen settings, the SOS list
+   - can be changed here for this person's practice count alone. The site's own
+   settings never move. */
+const cleanList = (v, max = 30) => (Array.isArray(v) ? v : String(v || '').split(/\r?\n/))
+  .map((x) => String(x == null ? '' : x).replace(/\s+/g, ' ').trim()).filter(Boolean).slice(0, max);
+
+export function practiceSandbox(s) {
+  const own = sandboxOf(s);
+  const prompts = { ...scannerPrompts(), ...own.prompts };
+  const layout = { ...scannerLayout(), ...own.layout };
+  return {
+    prompts, layout,
+    sosReasons: own.sosReasons || sosReasons().reasons,
+    site: { prompts: scannerPrompts(), layout: scannerLayout(), sosReasons: sosReasons().reasons },
+    overridden: { prompts: Object.keys(own.prompts), layout: Object.keys(own.layout), sosReasons: !!own.sosReasons },
+  };
+}
+
+export function setPracticeSandbox(owner, body = {}) {
+  const s = practiceSession(owner);
+  if (!s) throw Object.assign(new Error('open the Testing Suite first - there is no practice count yet'), { status: 404 });
+  const own = sandboxOf(s);
+  const p = { ...own.prompts };
+  const l = { ...own.layout };
+  if (body.prompts) {
+    const b = body.prompts;
+    if (b.commentTimeout !== undefined) p.commentTimeout = Math.max(0, Math.min(60, Number(b.commentTimeout) || 0));
+    if (b.comments !== undefined) p.comments = cleanList(b.comments);
+    if (b.overrides !== undefined) p.overrides = cleanList(b.overrides);
+  }
+  if (body.layout) {
+    const b = body.layout;
+    for (const k of ['showNextBin', 'vibrate', 'portrait', 'fullScreen', 'keepAwake', 'autoUpdate']) if (b[k] !== undefined) l[k] = !!b[k];
+    if (b.textSize !== undefined) l.textSize = b.textSize === 'large' ? 'large' : 'normal';
+    if (b.confirmOver !== undefined) l.confirmOver = Math.max(0, Math.min(1e6, Number(b.confirmOver) || 0));
+    if (b.order !== undefined) {
+      const order = cleanList(b.order, 3).map((x) => x.toLowerCase()).filter((x) => ['pallet', 'qty', 'bin'].includes(x));
+      if (new Set(order).size === 3) l.order = order;
+    }
+  }
+  let sos = own.sosReasons;
+  if (body.sosReasons !== undefined) sos = body.sosReasons === null ? null : cleanList(body.sosReasons, 20);
+  if (body.reset) { return resetSandbox(s.id); }
+  db.prepare('UPDATE sessions SET sandbox = ?, master_version = master_version + 1 WHERE id = ?')
+    .run(JSON.stringify({ prompts: p, layout: l, sosReasons: sos }), s.id);
+  return getSession(s.id);
+}
+
+function resetSandbox(id) {
+  db.prepare('UPDATE sessions SET sandbox = ?, master_version = master_version + 1 WHERE id = ?').run(SANDBOX_START, id);
+  return getSession(id);
 }

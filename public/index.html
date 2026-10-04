@@ -68,17 +68,19 @@
     <label for="fSession" id="sessionLabel">Count session</label>
     <select id="fSession"><option value="">Loading…</option></select>
 
-    <label for="fTeam">Team number</label>
-    <input id="fTeam" class="big" inputmode="none" autocomplete="off" placeholder="e.g. 3">
+    <div id="teamBlock">
+      <label for="fTeam">Team number</label>
+      <input id="fTeam" class="big" inputmode="none" autocomplete="off" placeholder="e.g. 3">
+    </div>
 
-    <label for="fEmployee">Clock In Numbers — scan them, then Enter</label>
+    <label for="fEmployee" id="employeeLabel">Clock In Numbers — scan them, then Enter</label>
     <div class="row">
       <input id="fEmployee" inputmode="none" autocomplete="off" autocapitalize="characters" placeholder="Scan a badge">
       <button id="btnAddEmployee" class="fit" style="margin-top:0">Add</button>
     </div>
     <button class="link" id="btnSignonKeyboard">Type it instead — show the keyboard</button>
     <div class="chips" id="employeeChips"></div>
-    <div class="hint">Everyone on the crew — tap a number to remove it.</div>
+    <div class="hint" id="employeeHint">Everyone on the crew — tap a number to remove it.</div>
 
     <button class="primary" id="btnStart">Sign on &amp; load list</button>
     <button class="ghost" id="btnRefreshSessions">Refresh sessions</button>
@@ -173,7 +175,24 @@
       <button id="btnToAssign" class="ghost">My aisle</button>
       <button id="btnHistory" class="ghost">History</button>
     </div>
+    <button id="btnIssue" class="ghost">Report a problem — damage, blocked bin</button>
     <button id="btnSos" class="sos">SOS — I need help</button>
+  </section>
+
+  <!-- ---------------- a problem to put right ---------------- -->
+  <section class="screen" id="scrIssue">
+    <h2 class="prompt">What did you find?</h2>
+    <div class="context" id="issueWhere"></div>
+    <div class="chips" id="issueKinds"></div>
+    <div id="issueDetail" hidden>
+      <label id="issueReasonLabel">What is wrong</label>
+      <div class="chips" id="issueReasons"></div>
+      <label for="fIssueNote">Anything else (optional)</label>
+      <input id="fIssueNote" autocomplete="off" inputmode="none" placeholder="Tap to type">
+      <button class="ghost" id="btnIssueKeyboard">Type it instead — show the keyboard</button>
+    </div>
+    <div class="feedback" id="issueMsg"></div>
+    <button class="ghost" id="btnIssueBack">Back to counting</button>
   </section>
 
   <!-- ---------------- moving pallets back ---------------- -->

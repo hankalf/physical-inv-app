@@ -180,5 +180,16 @@ export function finishMove(sessionId, moveId, { team, deviceId, actualBin = '', 
 export const clearOpenMoves = (sessionId) =>
   db.prepare("DELETE FROM moves WHERE session_id = ? AND status = 'open'").run(Number(sessionId)).changes;
 
+/**
+ * The bin list the site is working from: the newest real count that has one
+ * (an open one first). Front bins and moves are a job on the warehouse, not on
+ * a count, so they use this without anybody picking anything.
+ */
+export function referenceSession() {
+  return db.prepare(`SELECT s.* FROM sessions s
+    WHERE s.practice = 0 AND EXISTS (SELECT 1 FROM locations l WHERE l.session_id = s.id)
+    ORDER BY s.status = 'closed', s.id DESC LIMIT 1`).get() || null;
+}
+
 export const openMoveCount = (sessionId) =>
   db.prepare("SELECT COUNT(*) n FROM moves WHERE session_id = ? AND status = 'open'").get(Number(sessionId)).n;

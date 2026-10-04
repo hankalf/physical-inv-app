@@ -549,6 +549,7 @@ questions it asks change between pallets, never mid-line.
 | **Guided by aisle plan** | Teams are sent to their assigned aisle and warned when they scan a bin outside it. Off means anyone can count anything. | On for a wall-to-wall |
 | **Ask for comments** | Adds the optional comments step at the end of each pallet. | On |
 | **Auto second counts** | Raises a "go back and look again" task automatically when a line disagrees with the report. | On |
+| **Show on the scanners** | Untick to keep this count off the scanners' list — while it is being set up, or once the floor is done with it. The dashboards still have it, marked *not on scanners*. | On, once the lists are uploaded |
 | **Scanners start here** | Every scanner lands on this count at sign-on. They can still pick another. | On, on count day |
 | **Ask for the lot code** | Adds a LOT CODE question, checked against the report. Wrong lot is called out at the pallet. | On only if you track lots |
 | **Ask for the expiry date** | Adds an EXPIRY question and flags anything already out of date. | On for frozen food |
@@ -701,6 +702,14 @@ to find before they walk on.
   may be a second pallet in it that the ERP has never heard of. Tap **Nothing more here →**
   when it is clear.
 - **Bin is EMPTY** closes a bin outright.
+- **This pallet has another label** — on the quantity screen, right after the pallet scan. A pallet
+  wearing two tags: tap it, scan the other tag, and carry on with the quantity. The pallet is counted
+  once; the second tag is saved beside it with no quantity, so neither label comes up as uncounted.
+  (**Second label on the same pallet**, on the pallet screen, does the same after the line is saved.)
+- **Report a problem** — damage (a pallet, the racking, the product), a bin **blocked** by a trailer
+  or a forklift to come back to, or something else. Pick what, then why, add a word if it helps. It
+  goes on the office's **Fix list** against the bin and pallet in hand, with no bar and no chime —
+  it is not an emergency, that is what **SOS** is for. With no signal it is kept and sent later.
 - **Several empty bins in a row** — for a stretch of an aisle with nothing in it. Scan the
   **first** empty bin and the **last**; the gun lists every bin between them in walking order,
   already ticked. Untick any that are not empty, then **Mark N bins EMPTY**. Each is recorded as
@@ -846,10 +855,40 @@ if it helps, and press **Accept and continue**. The line is saved and flagged fo
 |:--:|:--:|
 | ![](images/gun-override.png)<br>A pallet that is not on the inventory report: **YES** to count it, **NO** to rescan | ![](images/gun-override-reason.png)<br>Everything else asks why. The reasons are the ones set in Settings — your site's words. **Other** is always offered |
 
+**Not in Location** (the pallets the system has lost track of)
+
+**Not in Location** in the sidebar is the site's list of pallets that are not where the ERP says
+— upload it (Pallet, Item, Description, Qty, Lot, **Last known location**, Note) or type one in.
+Every scanner then watches for them: the moment any gun scans one, during any count or move, it
+is marked **found** with the bin, the team and the time, and the counter is told on the gun
+(*"F03-118 was on the Not in Location list — found!"*). **Found in…** marks one by hand; **Close**
+writes one off with the outcome. The list is the site's, not a count's: a pallet stays on it
+across counts until it turns up or is closed. It downloads as a CSV.
+
+**Moving pallets back** (a job of its own)
+
+**Front bins → Pallets to move back** builds the list — every pallet the report puts in a front bin
+with an empty bin behind it — or takes one you upload (Pallet, From bin, To bin). The guns then offer
+**Move pallets** at sign-on while any are waiting:
+
+1. Pick **Move pallets**, the count, team and clock-in numbers, **Sign on**.
+2. Pick an **aisle** — each shows how many are waiting.
+3. The gun names the pallet, where it is and where it goes. **Scan the pallet** (the wrong one is
+   refused), move it, **scan the bin it went into** (the front bin it came from, or any other bin,
+   is refused). The next pallet comes up.
+4. **Cannot move it** — the bin behind is not empty, the pallet is not there, cannot reach it,
+   damaged — skips it with the reason, for the office.
+5. Done moves update the report, so the count that follows expects the pallet where it now is.
+   With no signal they queue and send later, like count lines.
+
 ### Step 16 — The supervisor's procedure (on the dashboard)
 
 **Dashboard**, with the count picked in the header. It refreshes itself every 30
 seconds.
+
+> **How it looks** is up to you: the picker at the foot of the sidebar offers four themes —
+> *Midnight* (dark blue), *Graphite* (dark grey), *Daylight* and *Frost* (light) — and an accent
+> colour. It is kept per computer, so the office TV can be dark and a desk can be light.
 
 - **Progress** — lines, bins counted, pallets, exceptions; and a row per team with its
   **shift**, what it is counting right now, **when it started**, a **clock** of its time on the
@@ -997,6 +1036,13 @@ count with known-wrong numbers in it.
 ### Step 19 — Read the reports
 
 **Dashboard → Reports.**
+
+**Fix list** — what the floor found that somebody has to put right, on one list: **labels that would
+not scan** (pallet or rack — rack first, every counter after walks up to that bin), **damage** reported
+from the gun's *Report a problem* button (a pallet, the racking, the product, each with a reason and
+a note), and **bins blocked** by a trailer or a forklift that a team said it would come back to. Each
+shows the bin, the pallet, who saw it and when. **Fixed** ticks it off with a word on what was done;
+*Still open* is the walk-round list. It downloads as a CSV and has its own sheet in the export.
 
 **Export everything (Excel)** — one workbook with every table the app keeps for this count, in a
 form a person can read: a **Summary**, every **count line**, the **pallet** report, the
@@ -1169,7 +1215,11 @@ with **Count these — make a batch**. Which face a bin is on comes from the bin
 description (*… Position # 001 – Front*), or, where the list does not say, from the site drawing
 (odd positions front, even back).
 
-5. Counters pick **Cycle count** at sign-on and work the list. Each bin is counted as it
+5. Counters pick **Cycle count** at sign-on. A cycle count is one person with a gun, so the
+   gun asks for **their clock-in number only — no team**. Several people can be on the same
+   programme at once: each signs on as themselves and takes their own bins; a bin one person
+   has taken is not offered to the next. The dashboard shows each by clock-in number and name.
+   They then work the list. Each bin is counted as it
    stands — it is *the* count for that bin, not a second opinion.
 6. **Coverage** shows how much of the warehouse has been counted in the period, and what
    has not been touched. Export it for the auditors.

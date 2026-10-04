@@ -125,9 +125,11 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 950 } });
 page.on('pageerror', (e) => errors.push('front: ' + e.message));
 await page.goto(BASE + '/front');
 await signIn(page);
-await pickSession(page, sess.id);
-await page.waitForTimeout(800);
-check('Front bins is its own page in the sidebar', clean(await page.textContent('#navTabs a.tab.current')).includes('Front bins'));
+await page.waitForTimeout(1200);
+check('Front bins is its own page in the sidebar, with no count to pick', clean(await page.textContent('#navTabs a.tab.current')).includes('Front bins') && (await page.$('#sessionPick')) === null);
+check('…working from the site\'s current bin list, and saying which', /bin list: 12 bins/.test(clean(await page.textContent('#frontRef'))), clean(await page.textContent('#frontRef')));
+const viaSite = await get('/api/admin/front/moves');
+check('The moves are reachable with no count in the address', viaSite.summary.open === 1 && viaSite.summary.done === 2);
 check('…with the moves summary', clean(await page.textContent('#mvOpen')) === '1' && clean(await page.textContent('#mvDone')) === '2' && clean(await page.textContent('#mvSkipped')) === '1',
   `${await page.textContent('#mvOpen')} / ${await page.textContent('#mvDone')} / ${await page.textContent('#mvSkipped')}`);
 const rows = await page.$$eval('#mvTable tbody tr', (trs) => trs.map((tr) => tr.textContent));

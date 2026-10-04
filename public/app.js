@@ -177,7 +177,7 @@
         const r = (Math.random() * 16) | 0; return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
       }));
 
-  const SCREENS = ['scrDevice', 'scrSignon', 'scrAssign', 'scrScan', 'scrOverride', 'scrHistory', 'scrSos', 'scrEmptyRun', 'scrMove'];
+  const SCREENS = ['scrDevice', 'scrSignon', 'scrAssign', 'scrScan', 'scrOverride', 'scrHistory', 'scrSos', 'scrEmptyRun', 'scrMove', 'scrIssue'];
   function showScreen(name) {
     for (const s of SCREENS) $(s).classList.toggle('active', s === name);
     if (name === 'scrScan') focusScan();
@@ -311,7 +311,7 @@
     $('chipNet').textContent = online() ? 'online' : 'OFFLINE';
     $('chipNet').className = 'chip ' + (online() ? 'online' : 'offline');
     $('chipDevice').hidden = !state.deviceId;
-    $('chipDevice').textContent = state.deviceId + (state.team ? ' · T' + state.team : '');
+    $('chipDevice').textContent = state.deviceId + (state.team ? (state.team === state.employees[0] ? ' · ' + state.team : ' · T' + state.team) : '');
   }
 
   /*
@@ -504,6 +504,17 @@
     $('btnModeCycle').classList.toggle('selected', state.mode === 'cycle');
     $('btnModeMove').classList.toggle('selected', state.mode === 'move');
 
+    /* A cycle count is one person with a gun, not a crew: no team number, just
+       their own clock-in number. Several people can be on the same programme at
+       once - each signs on as themselves, and each takes their own bins. */
+    const solo = state.mode === 'cycle';
+    $('teamBlock').hidden = solo;
+    // moving pallets is one job on the warehouse: nothing to choose
+    $('fSession').hidden = state.mode === 'move';
+    $('sessionLabel').hidden = state.mode === 'move';
+    $('employeeLabel').textContent = solo ? 'Your clock-in number — scan it, then Enter' : 'Clock In Numbers — scan them, then Enter';
+    $('employeeHint').textContent = solo ? 'Just you. Scan your badge and sign on.' : 'Everyone on the crew — tap a number to remove it.';
+
     const shown = state.mode === 'move' ? state.sessions.filter((s) => s.movesOpen > 0)
       : state.sessions.filter((s) => (s.mode || 'full') === state.mode);
     sel.innerHTML = '';
@@ -606,9 +617,12 @@
 
   async function signon() {
     clearFeedback($('signonMsg'));
-    const team = norm($('fTeam').value);
-    if (!team) { feedback($('signonMsg'), 'err', 'Enter your team number'); return; }
     if (norm($('fEmployee').value)) addEmployee();
+    const solo = state.mode === 'cycle';
+    // on a cycle count the person IS the team, so everything keyed by team - the
+    // bins they take, their clock, their lines - is theirs alone
+    const team = solo ? (state.employees[0] || '') : norm($('fTeam').value);
+    if (!team) { feedback($('signonMsg'), 'err', solo ? 'Scan your clock-in number' : 'Enter your team number'); return; }
     if (!state.employees.length) { feedback($('signonMsg'), 'err', 'Add at least one clock in number'); return; }
     const opt = $('fSession').selectedOptions[0];
     if (!opt || !opt.value) { feedback($('signonMsg'), 'err', 'Pick a count session'); return; }
@@ -645,6 +659,7 @@
       state.steps = stepsFor(session);
       refreshMessages().catch(() => {});
       refreshSos().catch(() => {});
+      refreshMissing().catch(() => {});
       document.body.classList.toggle('big-text', (session.layout_cfg || {}).textSize === 'large');
       holdUpright();          // now that this count's settings are in hand
       state.draft = {};
@@ -1523,6 +1538,7 @@
         `Pallet ${value}`,
         early ? `System expected this pallet in ${state.draft.expectedLocation}, not ${state.draft.location}`
           : (pal ? 'Now enter what you count' : 'Not in the pallet list'));
+      if (missingMap.has(value)) missingHit(value);
       return;
     }
 
@@ -1750,6 +1766,7 @@
     if (state.stepIndex < state.steps.length) {
       renderStep();
       feedback($('scanMsg'), 'warn', spec.feedbackText, full);
+      if (state.draft.palletId && missingMap.has(state.draft.palletId)) missingHit(state.draft.palletId);
     } else {
       await commitLine();
     }
@@ -2147,6 +2164,124 @@
       delete state.draft.unknownLocation; delete state.draft.offAssignment; delete state.draft.binLabelIssue;
     }
     clearFeedback($('scanMsg'));
+    renderStep();
+  }
+
+  /* ---------------------------------------------- the Not in Location list
+     Pallets the office is looking for. The gun keeps the list, and when one is
+     scanned it says so - the server marks it found when the line lands. */
+  let missingMap = new Map();
+  async function refreshMissing() {
+    if (online()) {
+      try {
+        const d = await api('/api/missing');
+        await metaSet('missing', d.pallets || []);
+        missingMap = new Map((d.pallets || []).map(([p, last, desc]) => [p, { last, desc }]));
+        return;
+      } catch { /* use the cached list */ }
+    }
+    missingMap = new Map(((await metaGet('missing')) || []).map(([p, last, desc]) => [p, { last, desc }]));
+  }
+  function missingHit(palletId) {
+    const m = missingMap.get(palletId);
+    if (!m) return;
+    missingMap.delete(palletId);
+    beep('warn');
+    feedback($('scanMsg'), 'warn', `${palletId} was on the Not in Location list — found!`,
+      `${m.last ? 'Last seen in ' + m.last + '. ' : ''}Count it here as normal; the office is told where it turned up.`);
+  }
+
+  /* ------------------------------------------------------ a problem found
+     Damage, a blocked bin, product leaking: the count is the one time somebody
+     walks past every bin, so what they see goes on a list the office can work
+     through. Reported against the pallet and bin in hand, sent like an SOS -
+     kept and re-sent if there is no signal - but with no bar and no chime,
+     because none of it is an emergency. That is what SOS is for. */
+  const ISSUE_FALLBACK = [
+    { kind: 'damage', target: 'pallet', label: 'Damaged pallet', reasons: ['Broken boards', 'Leaning or unstable', 'Wrap torn or open', 'Crushed cases'] },
+    { kind: 'damage', target: 'rack', label: 'Damaged rack or bin', reasons: ['Beam bent', 'Upright hit', 'Beam or clip missing', 'Decking broken', 'Ice build-up'] },
+    { kind: 'damage', target: 'product', label: 'Damaged product', reasons: ['Leaking', 'Thawed or soft', 'Crushed', 'Open cases'] },
+    { kind: 'blocked', target: 'bin', label: 'Bin blocked — come back later', reasons: ['Trailer in the way', 'Forklift or equipment in the aisle', 'Spill on the floor', 'Locked or caged'] },
+    { kind: 'other', target: '', label: 'Something else', reasons: ['Wrong product on the pallet', 'Pallet on the floor, not in a bin', 'Light out', 'Needs a supervisor to look'] },
+  ];
+  let issueMenu = ISSUE_FALLBACK;
+  let issuePick = null;
+
+  function issueContext() {
+    return {
+      pallet: state.draft.palletId || state.lastPallet?.id || '',
+      // the bin scanned on this line; else where the pallet in hand should be; else the bin being worked
+      bin: state.draft.location || state.draft.expectedLocation || openBinCode() || state.lastBin || '',
+      aisle: state.assignment?.active?.aisle || state.draft.aisle || '',
+    };
+  }
+
+  function openIssue() {
+    issuePick = null;
+    $('fIssueNote').value = '';
+    clearFeedback($('issueMsg'));
+    const c = issueContext();
+    kv($('issueWhere'), [['Pallet', c.pallet || '—'], ['Bin', c.bin || '—'], ['Aisle', c.aisle || '—']].filter((r) => r[1] !== '—'));
+    renderIssueKinds();
+    $('issueDetail').hidden = true;
+    showScreen('scrIssue');
+    if (online()) api(`/api/sessions/${state.session.id}/issues`).then((d) => { if (Array.isArray(d.menu) && d.menu.length) { issueMenu = d.menu; renderIssueKinds(); } }).catch(() => {});
+  }
+
+  function renderIssueKinds() {
+    const box = $('issueKinds');
+    box.innerHTML = '';
+    for (const k of issueMenu) {
+      const b = document.createElement('button');
+      b.className = 'chip-btn big' + (issuePick === k ? ' selected' : '');
+      b.textContent = k.label;
+      b.onclick = () => { issuePick = k; renderIssueKinds(); renderIssueReasons(); };
+      box.appendChild(b);
+    }
+  }
+
+  function renderIssueReasons() {
+    $('issueDetail').hidden = !issuePick;
+    if (!issuePick) return;
+    const box = $('issueReasons');
+    box.innerHTML = '';
+    for (const r of issuePick.reasons) {
+      const b = document.createElement('button');
+      b.className = 'chip-btn big';
+      b.textContent = r;
+      b.onclick = () => sendIssue(r);
+      box.appendChild(b);
+    }
+  }
+
+  async function sendIssue(reason) {
+    const c = issueContext();
+    const line = {
+      clientId: uuid(), kind: issuePick.kind, target: issuePick.target, reason, note: $('fIssueNote').value.trim(),
+      palletId: c.pallet, bin: c.bin, aisle: c.aisle, team: state.team, deviceId: state.deviceId, employees: state.employees,
+    };
+    state.issuesPending = [...(state.issuesPending || []), line];
+    await metaSet('issuesPending', state.issuesPending);
+    beep('ok');
+    feedback($('issueMsg'), 'ok', 'On the fix list', `${reason}${c.bin ? ' · ' + c.bin : ''}. Carry on counting — a supervisor will see it.`);
+    flushIssues();
+    setTimeout(() => { if ($('scrIssue').classList.contains('active')) backFromIssue(); }, 1800);
+  }
+
+  async function flushIssues() {
+    const pending = state.issuesPending || (await metaGet('issuesPending')) || [];
+    if (!pending.length || !online() || !state.session) return;
+    for (const line of [...pending]) {
+      try {
+        await api(`/api/sessions/${state.session.id}/issues`, { method: 'POST', body: JSON.stringify(line) });
+        state.issuesPending = (state.issuesPending || pending).filter((x) => x.clientId !== line.clientId);
+      } catch { /* the next tick tries again */ }
+    }
+    await metaSet('issuesPending', state.issuesPending || []);
+  }
+
+  function backFromIssue() {
+    showScreen('scrScan');
     renderStep();
   }
 
@@ -2624,6 +2759,9 @@
   $('btnMoveAisles').onclick = () => { moveState.aisle = ''; moveState.step = 'pallet'; clearFeedback($('moveMsg')); renderMoves(); };
   $('btnMoveRefresh').onclick = async () => { await flushMoves(); await loadMoves(); renderMoves(); };
   $('btnMoveSos').onclick = () => { state.sosReturn = 'scrMove'; openSos(); };
+  $('btnIssue').onclick = openIssue;
+  $('btnIssueBack').onclick = backFromIssue;
+  $('btnIssueKeyboard').onclick = () => { $('fIssueNote').inputMode = 'text'; try { $('fIssueNote').focus(); $('fIssueNote').click(); } catch { /* ignore */ } };
   $('btnMoveSignoff').onclick = () => $('btnSignoff').click();
   $('btnEmptyRun').onclick = openEmptyRun;
   $('btnEmptyRunSave').onclick = () => { saveEmptyRun().catch((err) => feedback($('erMsg'), 'err', 'Could not save', err.message)); };
@@ -2899,9 +3037,9 @@
      straight away rather than waiting out the two-minute gap between routine
      checks - those are exactly the moments a scanner has been away long enough
      for a deploy to have happened. */
-  window.addEventListener('online', () => { updateChips(); flushPending(); flushSos(); flushMoves(); syncQueue(); checkForUpdate({ force: true }); });
+  window.addEventListener('online', () => { updateChips(); flushPending(); flushSos(); flushMoves(); flushIssues(); syncQueue(); checkForUpdate({ force: true }); });
   window.addEventListener('offline', updateChips);
-  setInterval(() => { updateChips(); flushPending(); flushSos(); flushMoves(); syncQueue(); checkForUpdate(); }, 20000);
+  setInterval(() => { updateChips(); flushPending(); flushSos(); flushMoves(); flushIssues(); syncQueue(); checkForUpdate(); }, 20000);
   /* An SOS is not a count: a counter waiting to hear that somebody has seen it
      should not wait out the twenty-second tick, so this looks more often. */
   setInterval(() => { refreshSos(); }, 6000);
@@ -2951,6 +3089,7 @@
     state.employees = (await metaGet('employees')) || [];
     state.sos = (await metaGet('sos')) || null;
     state.sosPending = (await metaGet('sosPending')) || null;
+    state.issuesPending = (await metaGet('issuesPending')) || [];
     renderSos();
     state.mode = (await metaGet('mode')) || '';
     $('fTeam').value = (await metaGet('team')) || '';

@@ -39,6 +39,12 @@ const FIELDS = {
   approvedBy: (r) => r.approvedBy || '',
   approvedAt: (r) => r.approvedAt || '',
   approvalNote: (r) => r.approvalNote || '',
+  lot: (r) => r.lot || '',
+  /* Dynamics NAV wants a document number on every journal line; one per count
+     and day keeps a re-export from posting twice. */
+  navDocNo: (r) => `PHYS-${localDate().replace(/-/g, '')}`,
+  navPostingDate: () => { const d = localDate().split('-'); return `${d[1]}/${d[2]}/${d[0]}`; },
+  blank: () => '',
 };
 
 const BUILTIN = {
@@ -54,6 +60,17 @@ const BUILTIN = {
     columns: [['Location', 'bin'], ['Item', 'sku'], ['Pallet', 'pallet'], ['System Qty', 'expected'],
       ['Counted Qty', 'counted'], ['Adjustment', 'adjustment'], ['Reason', 'reasonCode'],
       ['Approved By', 'approvedBy'], ['Count Date', 'countDate']],
+  },
+  /* Microsoft Dynamics NAV 2018: the Phys. Inventory Journal, as the journal
+     page imports it (Edit in Excel, or a configuration package on table 83).
+     Qty. (Calculated) is what NAV thinks, Qty. (Phys. Inventory) is what was
+     counted; NAV works the difference out itself when the journal is posted. */
+  'nav-2018-phys-inv-journal': {
+    label: 'Dynamics NAV 2018 — Phys. Inventory Journal lines',
+    rowsOf: 'pallets',
+    columns: [['Posting Date', 'navPostingDate'], ['Document No.', 'navDocNo'], ['Item No.', 'sku'], ['Description', 'description'],
+      ['Location Code', 'blank'], ['Bin Code', 'bin'], ['Lot No.', 'lot'], ['Unit of Measure Code', 'uom'],
+      ['Qty. (Calculated)', 'expected'], ['Qty. (Phys. Inventory)', 'counted'], ['Package No.', 'pallet']],
   },
   'bin-lines': {
     label: 'Bin lines — one row per count line, with who counted it',

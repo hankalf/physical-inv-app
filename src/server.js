@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 
 import {
-  db, listSessions, getSession, createSession, deleteSession, checkSessionDeletable, sessionContents, lastUsedLayout, publicSession, masterPayload,
+  db, listSessions, getSession, createSession, sandboxOf, deleteSession, checkSessionDeletable, sessionContents, lastUsedLayout, publicSession, masterPayload,
   saveCounts, countedPallets, recordSignon, norm,
   listDevices, getDevice, createDevice, updateDevice, deleteDevice, touchDevice,
   enrollDevice, deviceByToken, resetDevice,
@@ -19,12 +19,14 @@ import { listAdjustments, adjustmentView, decideAdjustments, adjustmentReasons, 
 import { accuracy, accuracyCsv, deriveAbc, accuracyTargets, saveAccuracyTargets } from './routes/accuracy.js';
 import { setupState } from './routes/setup.js';
 import { searchAll } from './routes/search.js';
-import { buildMoves, importMoves, listMoves, movesForGun, finishMove, clearOpenMoves } from './routes/moves.js';
+import { importMissing, addMissing, listMissing, missingForGun, markFound, foundByHand, closeMissing, deleteMissing } from './routes/missing.js';
+import { raiseIssue, fixIssue, fixList, ISSUE_MENU } from './routes/issues.js';
+import { buildMoves, importMoves, listMoves, movesForGun, finishMove, clearOpenMoves, referenceSession } from './routes/moves.js';
 import { autoPlan, applyPlan } from './routes/auto-plan.js';
 import { endTrial, setTrial } from './routes/trial.js';
 import { exportEverything } from './routes/export-all.js';
 import { idleConfig, saveIdleConfig, teamClocks, checkIdle, answerIdle, openIdleAlerts, recentIdleAlerts, tellTeamsIdle, idleTick, recordSignoff } from './routes/idle.js';
-import { practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, practiceReadiness, practiceFromFile, practiceOptions, setPracticeOptions, ownerOf } from './routes/practice.js';
+import { practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, practiceReadiness, practiceFromFile, practiceOptions, setPracticeOptions, practiceSandbox, setPracticeSandbox, ownerOf } from './routes/practice.js';
 import { raiseAlert, tellTeams, listAlerts, seeAlert, closeAlert, alertsForDevice, sosReasons, saveSosReasons, DEFAULT_REASONS } from './routes/alerts.js';
 import { teamsConfig, saveTeamsConfig, postToTeams, testCard, alertCard } from './util/teams.js';
 import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout } from './routes/scanner-prompts.js';
@@ -275,6 +277,7 @@ async function serveStatic(req, res, pathname) {
     : /^\/board\/?$/.test(pathname) ? '/board.html'
     : /^\/testing\/?$/.test(pathname) ? '/testing.html'
     : /^\/front\/?$/.test(pathname) ? '/front.html'
+    : /^\/missing\/?$/.test(pathname) ? '/missing.html'
     : pathname;
   const filePath = join(PUBLIC_DIR, normalize(rel).replace(/^(\.\.[/\\])+/, ''));
   if (!filePath.startsWith(PUBLIC_DIR)) return send(req, res, 403, 'forbidden');
@@ -342,7 +345,8 @@ async function handleHandheld(req, res, url, m) {
     /* A gun on the floor never sees the Testing tab's practice count, and the
        practice gun sees nothing else - so nobody tests into the live count. */
     const practice = url.searchParams.get('practice') === '1';
-    if (!practice) return sendJson(req, res, 200, listSessions('open').filter((s) => !s.practice).map(publicSession));
+    // only the counts a supervisor has ticked "show on the scanners"
+    if (!practice) return sendJson(req, res, 200, listSessions('open').filter((s) => !s.practice && s.show_on_guns !== 0).map(publicSession));
     // a test scanner sees its own person's practice count, and only that
     const auth = String(req.headers.authorization || '');
     const me = device || (auth.startsWith('Device ') ? deviceByToken(auth.slice(7)) : null);
@@ -361,6 +365,21 @@ async function handleHandheld(req, res, url, m) {
     return sendJson(req, res, 200, masterPayload(m[1]));
   }
 
+  // --- the Not in Location list, for the gun to watch for as it scans
+  if (p === '/api/missing' && method === 'GET') return sendJson(req, res, 200, { pallets: missingForGun() });
+
+  // --- the fix list: a problem seen on the floor, reported from the gun
+  if ((m = p.match(/^\/api\/sessions\/(\d+)\/issues$/)) && method === 'GET') {
+    return sendJson(req, res, 200, { menu: ISSUE_MENU });
+  }
+  if ((m = p.match(/^\/api\/sessions\/(\d+)\/issues$/)) && method === 'POST') {
+    openSession(m[1]);
+    const body = await readJson(req);
+    const out = raiseIssue(m[1], { ...body, deviceId: device ? device.name : body.deviceId });
+    if (!out.already) audit(out.issue.device_id || 'a scanner', 'reported a problem', `${out.issue.reason}${out.issue.bin ? ' at ' + out.issue.bin : ''}${out.issue.pallet_id ? ' (' + out.issue.pallet_id + ')' : ''}`, m[1]);
+    return sendJson(req, res, 200, out);
+  }
+
   // --- pallets to move back: the list by aisle, and each one done or skipped
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/moves$/)) && method === 'GET') {
     return sendJson(req, res, 200, movesForGun(m[1]));
@@ -369,6 +388,7 @@ async function handleHandheld(req, res, url, m) {
     openSession(m[1]);
     const body = await readJson(req);
     const out = finishMove(m[1], m[2], { team: body.team, deviceId: device ? device.name : body.deviceId, actualBin: body.actualBin, status: m[3] === 'skip' ? 'skipped' : 'done', reason: body.reason });
+    if (!out.already && out.move.status === 'done') markFound(out.move.pallet_id, { bin: out.move.actual_bin, team: body.team, device: device ? device.name : body.deviceId, sessionId: m[1], how: 'moved' });
     return sendJson(req, res, 200, out);
   }
 
@@ -439,7 +459,9 @@ async function handleHandheld(req, res, url, m) {
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/alerts$/)) && method === 'GET') {
     if (!getSession(m[1])) throw httpError(404, 'session not found');
     const who = device ? device.name : url.searchParams.get('device') || '';
-    return sendJson(req, res, 200, { reasons: sosReasons().reasons, mine: alertsForDevice(m[1], who) });
+    // a practice count can have its own list, from the Testing Suite's sandbox
+    const own = sandboxOf(getSession(m[1])).sosReasons;
+    return sendJson(req, res, 200, { reasons: own || sosReasons().reasons, mine: alertsForDevice(m[1], who) });
   }
 
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/messages$/)) && method === 'GET') {
@@ -466,6 +488,14 @@ async function handleHandheld(req, res, url, m) {
     // the device is whoever the token says, not whatever the payload claims
     const result = saveCounts(m[1], device ? rows.map((r) => ({ ...r, deviceId: device.name })) : rows);
     if (result.firstCountPallets.length) result.recounts = autoAfterCounts(m[1], result.firstCountPallets);
+    /* a pallet on the Not in Location list, scanned anywhere, is found */
+    const ok = new Set(result.accepted);
+    result.found = [];
+    for (const r of rows) {
+      if (!ok.has(r.clientId) || r.emptyBin || !r.palletId) continue;
+      const f = markFound(r.palletId, { bin: r.location, team: r.team, device: device ? device.name : r.deviceId, sessionId: m[1], how: 'counted' });
+      if (f) { result.found.push({ pallet: f.pallet_id, bin: f.found_bin }); audit(f.found_device || 'a scanner', 'found a pallet from the Not in Location list', `${f.pallet_id} in ${f.found_bin}`, m[1]); }
+    }
     return sendJson(req, res, 200, result);
   }
 
@@ -499,14 +529,21 @@ async function handleHandheld(req, res, url, m) {
 
 let lastOrigin = '';
 
+const tipsKey = (owner) => `practiceTips:${owner}`;
+const tipsSeen = (owner) => !!db.prepare('SELECT 1 FROM settings WHERE key = ?').get(tipsKey(owner));
+
 /** Everything the Testing tab draws, for one person. */
 function practicePayload(who, owner, s, dev) {
   return {
+    owner,
+    // their first time: the guide and the tips come up by themselves
+    firstTime: !tipsSeen(owner),
     ...practiceSheet(s.id),
     device: { uid: dev.uid, name: dev.name },
     history: practiceHistory(owner),
     ready: practiceReadiness(who, s.id, dev),
     options: practiceOptions(s.id),
+    sandbox: practiceSandbox(s),
     teamsChannel: teamsConfig().on,
   };
 }
@@ -611,9 +648,25 @@ async function handleAdmin(req, res, url, m) {
     const who = currentUser(req, url);
     const owner = ownerOf(who);
     const s = method === 'POST' ? ensurePractice(owner) : practiceSession(owner);
-    if (!s) return sendJson(req, res, 200, { session: null, history: practiceHistory(owner) });
+    if (!s) return sendJson(req, res, 200, { session: null, history: practiceHistory(owner), owner, firstTime: !tipsSeen(owner) });
     const dev = practiceDevice(who);
     return sendJson(req, res, 200, practicePayload(who, owner, s, dev));
+  }
+  // the sandbox: the gun's prompts and screen settings, for this practice count alone
+  if (p === '/api/admin/practice/sandbox' && method === 'POST') {
+    const who = currentUser(req, url);
+    const owner = ownerOf(who);
+    const s = setPracticeSandbox(owner, await readJson(req));
+    audit(actor, 'changed the scanner settings in their sandbox', '', s.id);
+    return sendJson(req, res, 200, practicePayload(who, owner, s, practiceDevice(who)));
+  }
+  // the tips have been seen (or are wanted back) - kept with the login, not the browser
+  if (p === '/api/admin/practice/tips' && method === 'POST') {
+    const owner = ownerOf(currentUser(req, url));
+    const body = await readJson(req);
+    if (body.seen === false) db.prepare('DELETE FROM settings WHERE key = ?').run(tipsKey(owner));
+    else db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(tipsKey(owner), new Date().toISOString());
+    return sendJson(req, res, 200, { seen: body.seen !== false });
   }
   if (p === '/api/admin/practice/reset' && method === 'POST') {
     const who = currentUser(req, url);
@@ -740,7 +793,8 @@ async function handleAdmin(req, res, url, m) {
     const apprQty = num(body.approvalMinQty, s.approval_min_qty, 1e6);
     const apprPct = num(body.approvalMinPct, s.approval_min_pct, 100);
     audit(actor, 'changed session settings', JSON.stringify({ palletMode: mode, guided: body.guided, askComments: body.askComments, layout, autoRecount: body.autoRecount, recount: { minQty, minPct, cap },
-      approvals: { on: body.requireApproval, minQty: apprQty, minPct: apprPct }, trackAbc: body.trackAbc }), m[1]);
+      approvals: { on: body.requireApproval, minQty: apprQty, minPct: apprPct }, trackAbc: body.trackAbc, showOnGuns: body.showOnGuns }), m[1]);
+    if (body.showOnGuns != null) db.prepare('UPDATE sessions SET show_on_guns = ? WHERE id = ?').run(body.showOnGuns ? 1 : 0, s.id);
     db.prepare(`UPDATE sessions SET pallet_mode = ?, guided = ?, ask_comments = ?, layout = ?, auto_recount = ?,
                   recount_min_qty = ?, recount_min_pct = ?, recount_cap = ?,
                   ask_lot = ?, ask_expiry = ?,
@@ -1088,6 +1142,59 @@ async function handleAdmin(req, res, url, m) {
       siteDate: localDate(), siteTimezone: siteTimezone(), siteHour: localHour(),
     });
   }
+  // --- Not in Location: pallets the system has lost track of
+  if (p === '/api/admin/missing' && method === 'GET') return sendJson(req, res, 200, listMissing({ status: url.searchParams.get('status') || '' }));
+  if (p === '/api/admin/missing' && method === 'POST') {
+    const out = addMissing(await readJson(req));
+    audit(actor, 'added a pallet to Not in Location', '', null);
+    return sendJson(req, res, 200, out);
+  }
+  if (p === '/api/admin/missing/import' && method === 'POST') {
+    const out = importMissing(await readBody(req), { label: url.searchParams.get('name') || '' });
+    audit(actor, 'uploaded a Not in Location list', `${out.added} added, ${out.updated} updated (${out.batch})`);
+    return sendJson(req, res, 200, out);
+  }
+  if (p === '/api/admin/missing.csv' && method === 'GET') {
+    const rows = listMissing().rows.map((r) => ({
+      Pallet: r.pallet_id, Item: r.sku || '', Description: r.description || '', Qty: r.qty ?? '', UOM: r.uom || '', Lot: r.lot || '',
+      'Last known location': r.last_location || '', Note: r.note || '', Status: r.status === 'found' ? 'Found' : r.status === 'closed' ? 'Closed' : 'Missing',
+      'Found in': r.found_bin || '', 'Found by': r.found_team ? `team ${r.found_team}` : r.found_device || '', 'Found at': r.found_at || '', How: r.found_how || '',
+      'Closed by': r.closed_by || '', Outcome: r.outcome || '', Uploaded: r.created_at, Batch: r.batch || '',
+    }));
+    return sendCsv(req, res, `not-in-location-${localDate()}.csv`, toCsv(rows, ['Pallet', 'Item', 'Description', 'Qty', 'UOM', 'Lot', 'Last known location', 'Note', 'Status', 'Found in', 'Found by', 'Found at', 'How', 'Closed by', 'Outcome', 'Uploaded', 'Batch']));
+  }
+  if ((m = p.match(/^\/api\/admin\/missing\/(\d+)\/found$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const r = foundByHand(m[1], { bin: body.bin, by: actor });
+    audit(actor, 'marked a Not in Location pallet found', `${r.pallet_id}${r.found_bin ? ' in ' + r.found_bin : ''}`);
+    return sendJson(req, res, 200, r);
+  }
+  if ((m = p.match(/^\/api\/admin\/missing\/(\d+)\/close$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const r = closeMissing(m[1], { by: actor, outcome: body.outcome, reopen: !!body.reopen });
+    audit(actor, body.reopen ? 'put a pallet back on Not in Location' : 'closed a Not in Location pallet', `${r.pallet_id}${r.outcome ? ': ' + r.outcome : ''}`);
+    return sendJson(req, res, 200, r);
+  }
+  if ((m = p.match(/^\/api\/admin\/missing\/(\d+)$/)) && method === 'DELETE') {
+    return sendJson(req, res, 200, { deleted: deleteMissing(m[1]) });
+  }
+
+  // --- Front bins: a job on the warehouse, not on a count. The site's bin list
+  //     is the newest real count's; the page never asks which.
+  if (p.startsWith('/api/admin/front/')) {
+    const ref = referenceSession();
+    const sub = p.slice('/api/admin/front/'.length);
+    if (sub === 'status' && method === 'GET') {
+      return sendJson(req, res, 200, ref
+        ? { ready: true, binList: { from: ref.name, sessionId: ref.id, bins: db.prepare('SELECT COUNT(*) n FROM locations WHERE session_id = ?').get(ref.id).n, pallets: db.prepare('SELECT COUNT(*) n FROM pallets WHERE session_id = ?').get(ref.id).n } }
+        : { ready: false, why: 'no bin list yet - upload one under Settings → Lists & racking (or create a count and upload its bins)' });
+    }
+    if (!ref) throw httpError(409, 'no bin list yet - upload one under Settings → Lists & racking first');
+    // the same routes as a count's, on the site's list
+    url.pathname = `/api/admin/sessions/${ref.id}/${sub === 'bins' ? 'cycle/bins' : sub}`;
+    return handleAdmin(req, res, url, null);
+  }
+
   // --- pallets to move back
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/moves$/)) && method === 'GET') {
     return sendJson(req, res, 200, listMoves(m[1], { status: url.searchParams.get('status') || '', aisle: url.searchParams.get('aisle') || '' }));
@@ -1359,6 +1466,24 @@ async function handleAdmin(req, res, url, m) {
   }
 
   // --- labels that would not scan
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/fixlist$/)) && method === 'GET') {
+    return sendJson(req, res, 200, fixList(m[1], { status: url.searchParams.get('status') || '' }));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/issues\/(\d+)\/fix$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const i = fixIssue(m[1], m[2], { by: actor, outcome: body.outcome, reopen: !!body.reopen });
+    audit(actor, body.reopen ? 'reopened a fix-list item' : 'marked a fix-list item fixed', `${i.reason}${i.bin ? ' at ' + i.bin : ''}`, m[1]);
+    return sendJson(req, res, 200, i);
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/fixlist\.csv$/))) {
+    const KIND = { label: 'Label to replace', damage: 'Damage', blocked: 'Blocked bin', other: 'Other' };
+    const rows = fixList(m[1]).rows.map((r) => ({
+      Kind: KIND[r.kind] || r.kind, What: r.target ? r.target[0].toUpperCase() + r.target.slice(1) : '', Bin: r.bin || '', Aisle: r.aisle || '', Pallet: r.pallet_id || '',
+      Problem: r.reason, Note: r.note || '', 'Reported by team': r.team || '', Scanner: r.device_id || '', Reported: r.created_at || '',
+      Status: r.status === 'fixed' ? 'Fixed' : 'Open', 'Fixed by': r.fixed_by || '', 'Fixed at': r.fixed_at || '', Outcome: r.outcome || '',
+    }));
+    return sendCsv(req, res, `fix-list-session-${m[1]}.csv`, toCsv(rows, ['Kind', 'What', 'Bin', 'Aisle', 'Pallet', 'Problem', 'Note', 'Reported by team', 'Scanner', 'Reported', 'Status', 'Fixed by', 'Fixed at', 'Outcome']));
+  }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/labels$/)) && method === 'GET') {
     return sendJson(req, res, 200, { labels: labelsToReplace(m[1]) });
   }

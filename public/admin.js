@@ -126,6 +126,7 @@
     $('noteWho').textContent = s.board_note
       ? `On the board since ${new Date(s.board_note_at).toLocaleString()}${s.board_note_by ? ', put there by ' + s.board_note_by : ''}.`
       : 'Nothing on the board at the moment.';
+    $('fShowOnGuns').checked = s.show_on_guns !== 0;
     $('fDefaultSession').checked = defaultSessionId === s.id;
     $('fDefaultSession').disabled = s.status === 'closed';
     $('fLayout').value = s.layout || '';
@@ -229,7 +230,7 @@
         }
         const st = cell(c ? (c.started ? new Date(c.started).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '—') : '—');
         if (c && !c.working && c.started) st.appendChild(Object.assign(document.createElement('div'), { className: 'muted', textContent: c.state }));
-        tr.append(cell(t.team), cell(c && c.shift ? SHIFT_NAME[c.shift] : '—'), cell(t.devices || '—'), cell(t.employees || '—', 'wrap'),
+        tr.append(cell(c && c.person ? `${t.team} · ${c.person}` : t.team), cell(c && c.shift ? SHIFT_NAME[c.shift] : '—'), cell(t.devices || '—'), cell(t.employees || '—', 'wrap'),
           (() => { const a = t.active_aisle || (c && c.aisle); return cell(a ? aisleLabel(a, zoneByAisle.get(a)) : '—'); })(),
           st, timer, quiet, cell(t.lines || 0, 'num'), cell(t.bins || 0, 'num'));
         return tr;
@@ -530,7 +531,9 @@
   /* ------------------------------------------------------------ pallet report */
   async function refreshPallets() {
     const only = $('fOnlyExceptions').checked ? '&only=exceptions' : '';
-    const data = await apiJson(`/api/admin/sessions/${sessionId}/pallets?limit=500${only}`);
+    // a cap on the rows shown, so the report is read, not scrolled; the CSV has all of it
+    const lim = $('fPalletLimit').value;
+    const data = await apiJson(`/api/admin/sessions/${sessionId}/pallets?limit=${lim === 'all' ? 100000 : lim}${only}`);
     table($('palletTable'),
       [{ label: 'Pallet' }, { label: 'SKU' }, { label: 'Description' }, { label: 'Expected', num: true }, { label: '1st count', num: true }, { label: 'Counted', num: true },
        { label: 'Expected bin' }, { label: 'Found in' }, { label: 'Lot' }, { label: 'Expiry' }, { label: 'Team' }, { label: 'Comments' }, { label: 'Status' }, { label: '' }],
@@ -1282,28 +1285,55 @@
   /* ----------------------------------------------------- labels to replace
      A label that would not scan is a pallet the next person cannot scan either.
      This is the walk-round afterwards, with a printer. */
+  /* The fix list: labels to replace, damage, blocked bins - one list, ticked
+     off as it is dealt with. */
+  let fixStatus = 'open';
+  const FIX_KIND = { label: 'LABEL', damage: 'DAMAGE', blocked: 'BLOCKED', other: 'OTHER' };
+  const FIX_WHAT = { pallet: 'pallet', rack: 'rack', product: 'product', bin: 'bin', '': '' };
+
   async function refreshLabels() {
-    const { labels } = await apiJson(`/api/admin/sessions/${sessionId}/labels`);
-    const racks = labels.filter((r) => r.what === 'BIN').length;
-    $('labelSub').textContent = labels.length
-      ? `${labels.length} label${labels.length === 1 ? '' : 's'} to print`
-        + (racks ? ` · ${racks} of them on the racking, which everybody walks up to` : '')
-      : 'nothing reported — every label scanned';
-    table($('labelTable'),
-      [{ label: 'Label' }, { label: 'Bin' }, { label: 'Aisle' }, { label: 'Counted as' }, { label: 'Problem' },
-        { label: 'Item' }, { label: 'Qty', num: true }, { label: 'Team' }, { label: 'When' }],
-      labels,
+    const d = await apiJson(`/api/admin/sessions/${sessionId}/fixlist${fixStatus ? '?status=' + fixStatus : ''}`);
+    const s = d.summary;
+    $('fixSub').textContent = s.open ? `${s.open} to put right` : s.fixed ? 'everything reported has been dealt with' : 'nothing reported — a clean walk';
+    $('fixStats').innerHTML = '';
+    for (const [n, l] of [[s.labels, 'Labels to replace'], [s.damage, 'Damage'], [s.blocked, 'Blocked bins to go back to'], [s.other, 'Other'], [s.fixed, 'Fixed']]) {
+      const el = document.createElement('div');
+      el.className = 'stat';
+      el.innerHTML = '<div class="n"></div><div class="l"></div>';
+      el.querySelector('.n').textContent = n;
+      el.querySelector('.l').textContent = l;
+      $('fixStats').appendChild(el);
+    }
+    for (const b of document.querySelectorAll('#fixFilter button')) b.classList.toggle('selected', b.dataset.status === fixStatus);
+    table($('fixTable'),
+      [{ label: 'Kind' }, { label: 'Bin' }, { label: 'Aisle' }, { label: 'Pallet' }, { label: 'Problem' }, { label: 'Reported by' }, { label: 'When' }, { label: 'State' }, { label: '' }],
+      d.rows,
       (r) => {
         const tr = document.createElement('tr');
-        const what = document.createElement('td');
-        what.appendChild(tag(r.what === 'BIN' ? 'RACK' : 'PALLET'));
-        tr.append(what, cell(r.location_code), cell(r.aisle || '—'), cell(r.pallet_id),
-          cell(r.issue, 'wrap'), cell(r.description || r.sku || '—', 'wrap'), cell(r.qty, 'num'),
-          cell(r.team), cell(new Date(r.scanned_at).toLocaleString()));
+        const k = document.createElement('td');
+        k.appendChild(tag(FIX_KIND[r.kind] || r.kind));
+        if (r.target) k.append(' ' + FIX_WHAT[r.target]);
+        const st = document.createElement('td');
+        st.appendChild(tag(r.status === 'fixed' ? 'done' : 'open'));
+        if (r.status === 'fixed') st.append(` ${r.fixed_by || ''}${r.outcome ? ' · ' + r.outcome : ''}`);
+        const act = document.createElement('td');
+        if (r.id && r.status === 'open') act.appendChild(button('Fixed', 'sm primary', () => fixItem(r.id, false)));
+        else if (r.id) act.appendChild(button('Reopen', 'sm', () => fixItem(r.id, true)));
+        else act.appendChild(Object.assign(document.createElement('span'), { className: 'muted', textContent: 'print the label' }));
+        tr.append(k, cell(r.bin || '—'), cell(r.aisle || '—'), cell(r.pallet_id || '—'), cell(r.note ? `${r.reason} — ${r.note}` : r.reason, 'wrap'),
+          cell(r.team ? `team ${r.team}${r.device_id ? ' · ' + r.device_id : ''}` : r.device_id || '—'), cell(r.created_at ? new Date(r.created_at).toLocaleString() : '—'), st, act);
         return tr;
       },
-      'No label problems reported on this count.');
+      fixStatus === 'open' ? 'Nothing open — every label scanned, nothing reported.' : fixStatus === 'fixed' ? 'Nothing fixed yet.' : 'Nothing reported on this count.');
   }
+  async function fixItem(id, reopen) {
+    let outcome = '';
+    if (!reopen) { outcome = prompt('Mark it fixed — what was done? (optional)') ?? null; if (outcome === null) return; }
+    try { await postJson(`/api/admin/sessions/${sessionId}/issues/${id}/fix`, { outcome, reopen }); await refreshLabels(); }
+    catch (err) { msg($('fixMsg'), 'err', err.message); }
+  }
+  for (const b of document.querySelectorAll('#fixFilter button')) b.onclick = () => { fixStatus = b.dataset.status; refreshLabels().catch(() => {}); };
+  $('btnExportFix').onclick = () => api.download(`/api/admin/sessions/${sessionId}/export/fixlist.csv`, `fix-list-session-${sessionId}.csv`);
   $('btnExportLabels').onclick = () =>
     api.download(`/api/admin/sessions/${sessionId}/export/labels.csv`, `labels-to-replace-session-${sessionId}.csv`);
 
@@ -1521,6 +1551,8 @@
 
   /* ------------------------------------------------------------ wiring */
   $('fOnlyExceptions').onchange = refreshPallets;
+  $('fPalletLimit').onchange = () => { try { sessionStorage.setItem('palletLimit', $('fPalletLimit').value); } catch { /* private window */ } refreshPallets(); };
+  try { const saved = sessionStorage.getItem('palletLimit'); if (saved) $('fPalletLimit').value = saved; } catch { /* private window */ }
 
   /* Creating a count is also where its lists come from: a count with no
      inventory report to compare against is a count nobody can act on. Both
@@ -1604,6 +1636,7 @@
         requireApproval: $('fRequireApproval').checked,
         approvalMinQty: $('fApprMinQty').value, approvalMinPct: $('fApprMinPct').value,
         trackAbc: $('fTrackAbc').checked,
+        showOnGuns: $('fShowOnGuns').checked,
       });
       const wantDefault = $('fDefaultSession').checked;
       if (wantDefault !== (defaultSessionId === sessionId)) {

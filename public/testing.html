@@ -85,9 +85,9 @@
   .guide .guidehead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .guide .guidehead h2 { margin: 0; }
   .guide p { margin: 10px 0 0; line-height: 1.55; }
-  .guide .steps { margin: 12px 0 0; padding-left: 22px; line-height: 1.55; }
-  .guide .steps li { margin-bottom: 7px; }
-  .guide .steps li::marker { font-weight: 800; color: var(--accent); }
+  .guide .guidesteps { margin: 12px 0 0; padding-left: 24px; line-height: 1.55; list-style: decimal; }
+  .guide .guidesteps li { margin-bottom: 7px; display: list-item; }
+  .guide .guidesteps li::marker { font-weight: 800; color: var(--accent); }
   .guidegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; margin-top: 12px; }
   .guidegrid > div { background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; font-size: 13px; line-height: 1.45; }
   .guidegrid > div b { display: block; margin-bottom: 2px; }
@@ -96,6 +96,11 @@
   .checks.ready { grid-template-columns: 1fr; gap: 4px; margin-top: 4px; }
   .check .fix { display: block; font-size: 12.5px; color: var(--warn); margin-top: 2px; }
   .check.opt i { border-color: var(--warn); color: var(--warn); }
+  .sbgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; }
+  @media (max-width: 1000px) { .sbgrid { grid-template-columns: 1fr; } }
+  .sbgrid h3 { margin: 12px 0 6px; font-size: 13px; }
+  .sbgrid h3:first-child { margin-top: 0; }
+  .sbgrid textarea { width: 100%; font: inherit; font-size: 13px; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; resize: vertical; }
   .opts { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
   .opt { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: start; padding: 10px 12px;
     border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
@@ -211,7 +216,7 @@
                 one on the Zebra guns — counting into a practice count that belongs to you alone. The <b>right</b> side is
                 the warehouse: what is on each shelf, and a checklist of things to try. Nothing you do here touches a real count.
               </p>
-              <ol class="steps">
+              <ol class="guidesteps">
                 <li><b>Check “Before you start”.</b> It should say <i>ready to test</i>. If not, it tells you what to do.</li>
                 <li><b>Sign on.</b> Under <i>1 · Sign on</i>, click the team number <span class="scan" style="cursor:default">99</span> and a
                   clock-in number — each click is a scan into the gun. Then tap <b>Sign on &amp; load list</b> on the gun itself.</li>
@@ -285,6 +290,48 @@
               <b>large text</b>, <b>full screen</b>, the question order (Settings → Scanner screen) — apply to every scanner,
               so changing them for a test would change them on the floor too.
             </div>
+          </div>
+
+          <div class="card" id="sandboxCard">
+            <h2>Scanner settings in this sandbox <span class="muted">what the gun shows and asks — changed here, for your practice only</span></h2>
+            <div class="hint" style="margin-top:0">
+              These are the site-wide scanner settings (Settings → Scanner screen and Scanners). In here they belong to your practice
+              count: change any of them to see what the gun does, and the real scanners never notice. The comments step is held for
+              <b>5 seconds</b> to start with, so there is time to read it. <b>Back to the site's settings</b> puts it all back.
+            </div>
+            <div class="sbgrid">
+              <div>
+                <h3>The questions</h3>
+                <div class="inline">
+                  <div class="auto"><label for="sbTimeout">Comments step waits</label><input id="sbTimeout" type="number" min="0" max="60" class="sm" style="width:80px"> <span class="muted">seconds (0: waits for a tap)</span></div>
+                  <div class="auto"><label for="sbOrder">Order</label>
+                    <select id="sbOrder" class="sm"><option value="pallet,qty,bin">Pallet → quantity → bin</option><option value="bin,pallet,qty">Bin → pallet → quantity</option><option value="pallet,bin,qty">Pallet → bin → quantity</option></select></div>
+                  <div class="auto"><label for="sbConfirm">Ask a quantity twice over</label><input id="sbConfirm" type="number" min="0" class="sm" style="width:90px"></div>
+                </div>
+                <h3>The screen</h3>
+                <div class="inline" style="gap:14px">
+                  <div class="auto"><label class="cb"><input type="checkbox" id="sbLarge"> Large text</label></div>
+                  <div class="auto"><label class="cb"><input type="checkbox" id="sbNextBin"> Show the next bin</label></div>
+                  <div class="auto"><label class="cb"><input type="checkbox" id="sbVibrate"> Buzz on a scan</label></div>
+                </div>
+              </div>
+              <div>
+                <h3>The lists</h3>
+                <label for="sbComments">One-tap comment reasons <span class="muted">one per line</span></label>
+                <textarea id="sbComments" rows="4"></textarea>
+                <label for="sbOverrides">Reasons when the gun stops and asks why <span class="muted">one per line</span></label>
+                <textarea id="sbOverrides" rows="4"></textarea>
+                <label for="sbSos">SOS — what can be wrong <span class="muted">one per line</span></label>
+                <textarea id="sbSos" rows="4"></textarea>
+              </div>
+            </div>
+            <div class="toolbar" style="margin-top:10px">
+              <button class="primary" id="btnSandboxSave">Save to my sandbox</button>
+              <button id="btnSandboxReset">Back to the site's settings</button>
+              <span class="spacer"></span>
+              <span class="muted" id="sbState"></span>
+            </div>
+            <div class="feedback" id="sbMsg"></div>
           </div>
 
           <div class="card" id="uploadCard">

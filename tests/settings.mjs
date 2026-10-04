@@ -129,7 +129,7 @@ check('Settings: signing in as an account shows who you are in the header',
 
 /* ---- the shell: a sidebar, and sub-tabs that show one thing at a time ---- */
 check('Shell: the sidebar links every page, Testing last, with this one marked',
-  (await page.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/cycle,/teams,/settings,/front,/testing'
+  (await page.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/cycle,/front,/missing,/teams,/settings,/testing'
     && (await page.$eval('#navTabs .tab.current', (a) => a.getAttribute('href'))) === '/settings');
 check('Shell: Settings is split into sub-tabs',
   (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.replace(/\d+$/, '').trim()))).join(' | ') === 'Getting started | Scanner screen | Logins | Scanners | Lists & racking | ERP & backups',
@@ -246,7 +246,7 @@ await sup.close();
   const narrow = await browser.newPage({ viewport: { width: 430, height: 940 } });
   narrow.on('pageerror', (e) => errors.push('narrow: ' + e.message));
   const bad = [];
-  for (const path of ['/admin', '/cycle', '/teams', '/settings', '/front', '/testing', '/board']) {
+  for (const path of ['/admin', '/cycle', '/teams', '/settings', '/front', '/missing', '/testing', '/board']) {
     await narrow.goto(BASE + path);
     if (path === '/board') {
       await narrow.waitForTimeout(1400);
@@ -271,7 +271,7 @@ await sup.close();
   await narrow.goto(BASE + '/admin');
   await narrow.waitForSelector('#scrMain.active'); await narrow.waitForTimeout(1500);
   check('Narrow: the sidebar becomes a top bar and the tabs stay reachable',
-    (await narrow.$$('#navTabs .tab')).length === 6
+    (await narrow.$$('#navTabs .tab')).length === 7
       && await narrow.$eval('#navTabs .tab.current', (a) => a.getBoundingClientRect().top < 260),
     `tab top ${Math.round(await narrow.$eval('#navTabs .tab.current', (a) => a.getBoundingClientRect().top))}px`);
   await narrow.screenshot({ path: `${S}screenshots/settings-narrow.png` });

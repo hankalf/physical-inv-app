@@ -161,6 +161,7 @@
           <div class="legend">How the floor is run</div>
           <div class="inline">
             <div class="auto"><label class="cb"><input type="checkbox" id="fGuided"> Guided by aisle plan</label></div>
+            <div class="auto"><label class="cb" title="Untick to keep this count off the scanners' list — while it is being set up, or once the floor is done with it."><input type="checkbox" id="fShowOnGuns"> Show on the scanners</label></div>
             <div class="auto"><label class="cb" title="Every scanner lands on this count at sign-on. They can still pick another."><input type="checkbox" id="fDefaultSession"> Scanners start here</label></div>
           </div>
           <div class="inline" style="margin-top:10px">
@@ -478,21 +479,27 @@
       </div>
     </div>
 
-    <div class="card" id="labelCard">
-      <h2>Labels to replace <span class="muted">pallets whose label would not scan</span></h2>
+    <div class="card" id="fixCard">
+      <h2>Fix list <span class="muted" id="fixSub">what the floor found that somebody has to put right</span></h2>
       <div class="hint" style="margin-top:0">
-        A counter who cannot scan a label — on a pallet or on the racking — says so on the gun and carries on
-        counting. This is the walk-round afterwards: which bin, what was counted there, and whether there was a
-        readable number on it at all. A pallet with nothing readable is counted under a name made from its bin,
-        so it can be found again. <b>RACK</b> labels are the ones worth printing first: every counter after this
-        one walks up to that bin too.
+        A count walks every bin in the building. What the counters see on the way is written down here instead of
+        lost on the radio: <b>labels that would not scan</b> (pallet or rack — rack ones first, every counter after walks
+        up to that bin too), <b>damage</b> reported from the gun (a pallet, the racking, the product), and <b>bins blocked</b>
+        by a trailer or a forklift that a team said it would come back to. Tick each one off as it is dealt with.
       </div>
-      <div class="toolbar">
-        <button id="btnExportLabels">Labels CSV</button>
+      <div class="grid" id="fixStats" style="margin-top:12px"></div>
+      <div class="toolbar" style="margin-top:12px">
+        <div class="seg" id="fixFilter">
+          <button type="button" data-status="">All</button>
+          <button type="button" data-status="open">Still open</button>
+          <button type="button" data-status="fixed">Fixed</button>
+        </div>
         <span class="spacer"></span>
-        <span class="muted" id="labelSub"></span>
+        <button id="btnExportFix">Fix list CSV</button>
+        <button id="btnExportLabels">Labels only (CSV)</button>
       </div>
-      <div class="scroll" style="margin-top:10px"><table id="labelTable"></table></div>
+      <div class="feedback" id="fixMsg"></div>
+      <div class="scroll" style="margin-top:10px"><table id="fixTable"></table></div>
     </div>
 
     <div class="card">
@@ -514,6 +521,10 @@
       <h2>Pallet report</h2>
       <div class="toolbar">
         <label class="cb"><input type="checkbox" id="fOnlyExceptions" checked> Hide matching pallets</label>
+        <label class="cb" style="gap:6px">Show
+          <select id="fPalletLimit" class="sm" style="width:auto;padding:4px 8px">
+            <option value="30">30</option><option value="50" selected>50</option><option value="100">100</option><option value="200">200</option><option value="all">All</option>
+          </select> rows</label>
         <span class="spacer"></span>
         <button class="primary" id="btnExportAll" title="One Excel workbook: a summary, every count line, the pallet report, adjustments, bins, teams, sign-ons, SOS, second counts and the log — in plain words">Export everything (Excel)</button>
         <button id="btnExportPallets">Pallet report CSV</button>
