@@ -1159,5 +1159,220 @@
    "other": "frames/027-teams.jpg",
    "otherLabel": "Team plan"
   }
+ },
+ {
+  "n": 28,
+  "at": "2026-10-04T13:23:36.761Z",
+  "wall": 244,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "06:16",
+  "label": "Wednesday 06:16",
+  "event": "",
+  "lines": 22038,
+  "bins": 19919,
+  "binsTotal": 20000,
+  "pallets": 18518,
+  "exceptions": 195,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 25,
+  "pending": 0,
+  "approved": 296,
+  "rejected": 61,
+  "secondOpen": 406,
+  "secondDone": 246,
+  "lat": {
+   "count": {
+    "n": 20172,
+    "p50": 9,
+    "p95": 740,
+    "max": 3476
+   },
+   "dashboard": {
+    "n": 3105,
+    "p50": 143,
+    "p95": 817,
+    "max": 4645
+   }
+  },
+  "frames": {
+   "progress": "frames/028-progress.jpg",
+   "board": "frames/028-board.jpg",
+   "other": "frames/028-reports.jpg",
+   "otherLabel": "Reports"
+  }
+ },
+ {
+  "n": 29,
+  "at": "2026-10-04T13:33:45.099Z",
+  "wall": 254,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "06:59",
+  "label": "Wednesday 06:59",
+  "event": "",
+  "lines": 22133,
+  "bins": 20000,
+  "binsTotal": 20000,
+  "pallets": 18591,
+  "exceptions": 197,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 25,
+  "pending": 0,
+  "approved": 296,
+  "rejected": 62,
+  "secondOpen": 402,
+  "secondDone": 255,
+  "lat": {
+   "count": {
+    "n": 20255,
+    "p50": 9,
+    "p95": 747,
+    "max": 3476
+   },
+   "dashboard": {
+    "n": 3230,
+    "p50": 151,
+    "p95": 929,
+    "max": 4645
+   }
+  },
+  "frames": {
+   "progress": "frames/029-progress.jpg",
+   "board": "frames/029-board.jpg",
+   "other": "frames/029-map.jpg",
+   "otherLabel": "Map"
+  }
+ },
+ {
+  "n": 30,
+  "at": "2026-10-04T13:43:40.640Z",
+  "wall": 264,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "07:41",
+  "label": "Wednesday 07:41",
+  "event": "",
+  "lines": 22133,
+  "bins": 20000,
+  "binsTotal": 20000,
+  "pallets": 18591,
+  "exceptions": 197,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 25,
+  "pending": 0,
+  "approved": 296,
+  "rejected": 62,
+  "secondOpen": 402,
+  "secondDone": 255,
+  "lat": {
+   "count": {
+    "n": 20255,
+    "p50": 9,
+    "p95": 747,
+    "max": 3476
+   },
+   "dashboard": {
+    "n": 3350,
+    "p50": 158,
+    "p95": 1005,
+    "max": 4645
+   }
+  },
+  "frames": {
+   "progress": "frames/030-progress.jpg",
+   "board": "frames/030-board.jpg",
+   "other": "frames/030-teams.jpg",
+   "otherLabel": "Team plan"
+  }
+ },
+ {
+  "n": 31,
+  "at": "2026-10-04T13:53:47.315Z",
+  "wall": 274,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "08:24",
+  "label": "Wednesday 08:24",
+  "event": "",
+  "lines": 22133,
+  "bins": 20000,
+  "binsTotal": 20000,
+  "pallets": 18591,
+  "exceptions": 197,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 25,
+  "pending": 0,
+  "approved": 296,
+  "rejected": 62,
+  "secondOpen": 402,
+  "secondDone": 255,
+  "lat": {
+   "count": {
+    "n": 20255,
+    "p50": 9,
+    "p95": 747,
+    "max": 3476
+   },
+   "dashboard": {
+    "n": 3475,
+    "p50": 167,
+    "p95": 1102,
+    "max": 4645
+   }
+  },
+  "frames": {
+   "progress": "frames/031-progress.jpg",
+   "board": "frames/031-board.jpg",
+   "other": "frames/031-alerts.jpg",
+   "otherLabel": "Alerts"
+  }
+ },
+ {
+  "n": 32,
+  "at": "2026-10-04T14:03:42.160Z",
+  "wall": 284,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "09:07",
+  "label": "Wednesday 09:07",
+  "event": "",
+  "lines": 22133,
+  "bins": 20000,
+  "binsTotal": 20000,
+  "pallets": 18591,
+  "exceptions": 197,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 25,
+  "pending": 0,
+  "approved": 296,
+  "rejected": 62,
+  "secondOpen": 402,
+  "secondDone": 255,
+  "lat": {
+   "count": {
+    "n": 20255,
+    "p50": 9,
+    "p95": 747,
+    "max": 3476
+   },
+   "dashboard": {
+    "n": 3596,
+    "p50": 178,
+    "p95": 1125,
+    "max": 4645
+   }
+  },
+  "frames": {
+   "progress": "frames/032-progress.jpg",
+   "board": "frames/032-board.jpg",
+   "other": "frames/032-second.jpg",
+   "otherLabel": "Second counts"
+  }
  }
 ]

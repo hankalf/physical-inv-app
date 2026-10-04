@@ -1,16 +1,16 @@
 {
-  "phase": "sign-on",
+  "phase": "counting",
   "day": 3,
-  "simTime": "Wednesday 06:03",
-  "lines": 21633,
+  "simTime": "Wednesday 09:12",
+  "lines": 21788,
   "startedAt": "2026-10-04T09:19:28.471Z",
-  "snapshots": 27,
+  "snapshots": 32,
   "sos": 25,
-  "approved": 299,
-  "rejected": 62,
-  "secondCounts": 240,
-  "handbacks": 66,
+  "approved": 300,
+  "rejected": 63,
+  "secondCounts": 255,
+  "handbacks": 71,
   "failures": 0,
   "failed": [],
-  "at": "2026-10-04T13:20:22.056Z"
+  "at": "2026-10-04T14:04:52.145Z"
 }
