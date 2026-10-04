@@ -23,7 +23,7 @@ p.on('console', (m) => { if (m.type() === 'error' && !/40[19]/.test(m.text())) e
 p.on('dialog', (d) => d.accept());
 
 await p.goto(BASE + '/teams');
-check('Teams page: /teams serves the page', await p.title() === 'Teams & Crew');
+check('Teams page: /teams serves the page', await p.title() === 'Full Harvest Inventory — Teams & Crew');
 await p.fill('#fPassword', 'changeme'); await p.click('#btnLogin');
 await p.waitForSelector('#scrMain.active'); await expandSubTabs(p); await p.waitForTimeout(400);
 

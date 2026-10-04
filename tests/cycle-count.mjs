@@ -53,7 +53,7 @@ await admin.goto(BASE + '/cycle');
 await admin.fill('#fPassword', 'changeme'); await admin.click('#btnLogin');
 await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(400);
 await admin.selectOption('#fSessionPick', String(sess.id)); await admin.waitForTimeout(2500);
-check('Cycle page: /cycle lists only cycle-count programs', await admin.title() === 'Cycle Counts' && (await admin.$$eval('#fSessionPick option', (o) => o.length)) === 1);
+check('Cycle page: /cycle lists only cycle-count programs', await admin.title() === 'Full Harvest Inventory — Cycle Counts' && (await admin.$$eval('#fSessionPick option', (o) => o.length)) === 1);
 const stats = clean(await admin.textContent('#cycleStats'));
 check('Cycle page: coverage stats from the ERP dates', /Counted within 90 days/.test(stats) && /Never counted/.test(stats) && /Bins\/day to stay covered/.test(stats), stats.slice(0, 160));
 check('Cycle page: the site clock is shown', /America\/New_York/.test(clean(await admin.textContent('#clockChip'))), clean(await admin.textContent('#clockChip')));

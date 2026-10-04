@@ -125,7 +125,7 @@ page.on('console', (m) => { if (m.type() === 'error' && !/40[19]|403/.test(m.tex
 page.on('dialog', (d) => d.accept('reset-password-42'));
 
 await page.goto(BASE + '/settings');
-check('Settings: /settings serves the page', await page.title() === 'Settings');
+check('Settings: /settings serves the page', await page.title() === 'Full Harvest Inventory — Settings');
 await page.fill('#fUser', 'nobody'); await page.fill('#fPassword', 'wrong'); await page.click('#btnLogin'); await page.waitForTimeout(400);
 check('Settings: a bad sign-in says so and stays on the sign-in screen',
   clean(await page.textContent('#loginMsg')).length > 0 && (await page.$('#scrLogin.active')) !== null, clean(await page.textContent('#loginMsg')));
