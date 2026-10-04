@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Floor simulation — 20 teams, 20,000 bins</title>
+<style>
+  :root { --bg:#0f1216; --surface:#171b21; --line:#2a3039; --text:#e8ebef; --dim:#aab2bd; --accent:#f0b429; --ok:#3fcf68; --warn:#f5a524; --err:#ff6b62; }
+  * { box-sizing: border-box; } body { margin:0; background:var(--bg); color:var(--text); font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { position: sticky; top:0; z-index:5; background: rgba(15,18,22,.96); border-bottom:1px solid var(--line); padding: 12px 20px; }
+  h1 { font-size: 20px; margin: 0 0 4px; } h1 span { color: var(--dim); font-weight: 400; }
+  .scrub { display:flex; gap:12px; align-items:center; margin-top:8px; flex-wrap: wrap; }
+  .scrub input[type=range] { flex: 1 1 320px; accent-color: var(--accent); }
+  .scrub button { background: var(--accent); color:#1a1300; border:0; border-radius:8px; padding:6px 14px; font-weight:800; cursor:pointer; }
+  .scrub .when { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 220px; }
+  .figs { display:flex; gap:18px; flex-wrap:wrap; margin-top:6px; color: var(--dim); font-size: 13px; }
+  .figs b { color: var(--text); font-size: 16px; }
+  main { padding: 16px 20px 60px; max-width: 1400px; margin: 0 auto; }
+  .stage { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stage figure { margin:0; background: var(--surface); border:1px solid var(--line); border-radius: 12px; overflow:hidden; }
+  .stage figure.wide { grid-column: 1 / -1; }
+  .stage img { display:block; width:100%; height:auto; }
+  .stage figcaption { padding: 8px 12px; font-size: 13px; color: var(--dim); border-top: 1px solid var(--line); }
+  h2 { font-size: 16px; margin: 28px 0 10px; color: var(--dim); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .timeline { display:flex; flex-direction:column; gap: 18px; }
+  .snap { background: var(--surface); border:1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+  .snap .head { display:flex; gap:14px; align-items:baseline; flex-wrap: wrap; }
+  .snap .head b { font-size: 17px; } .snap .head .ev { color: var(--accent); font-weight: 700; }
+  .snap .row { display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; margin-top: 10px; }
+  .snap img { width:100%; height:auto; border-radius: 8px; border:1px solid var(--line); background:#000; cursor: zoom-in; }
+  .snap .cap { font-size: 12px; color: var(--dim); margin-top: 4px; }
+  .bar { height: 8px; background: #22272f; border-radius: 99px; overflow: hidden; margin-top: 8px; } .bar i { display:block; height:100%; background: var(--ok); }
+  .summary { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 10px; }
+  .summary div { background: var(--surface); border:1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .summary div b { display:block; font-size: 22px; } .summary div span { color: var(--dim); font-size: 13px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; } th, td { text-align:left; padding: 6px 8px; border-bottom: 1px solid var(--line); } th { color: var(--dim); font-weight: 700; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.92); display:none; align-items:center; justify-content:center; z-index: 20; cursor: zoom-out; }
+  .lightbox img { max-width: 98vw; max-height: 96vh; }
+  .note { color: var(--dim); font-size: 13px; }
+  @media (max-width: 900px) { .stage { grid-template-columns: 1fr; } }
+</style></head>
+<body>
+<header>
+  <h1>Floor simulation <span>— 20 teams · 40 scanners · 20,000 bins · 3 shifts played in 6 hours</span></h1>
+  <div class="scrub">
+    <button id="play">▶ Play</button>
+    <input type="range" id="scrub" min="1" max="7" value="7" step="1">
+    <span class="when" id="when"></span>
+  </div>
+  <div class="figs" id="figs"></div>
+</header>
+<main>
+  <div class="stage" id="stage"></div>
+  <div id="summary"></div>
+  <h2>Every snapshot, in order</h2>
+  <div class="timeline" id="timeline"></div>
+</main>
+<div class="lightbox" id="lightbox"><img id="lightimg" alt=""></div>
+<script id="data" type="application/json">{"meta":{"teams":20,"guns":40,"bins":20000,"pallets":18796,"days":3,"hours":6,"scale":4.25,"planted":{"short":445,"over":186,"missing":205,"unlisted":151,"moved":84,"label":43,"expired":306},"startedAt":"2026-10-04T09:19:31.694Z"},"timeline":[{"n":1,"at":"2026-10-04T09:22:06.669Z","wall":3,"day":0,"dayName":"Monday","sim":"06:10","label":"The sign-on rush is over, counting has begun","event":"start","lines":27,"bins":26,"binsTotal":20000,"pallets":21,"exceptions":0,"teams":13,"sosOpen":0,"sosTotal":0,"pending":0,"approved":0,"rejected":0,"secondOpen":0,"secondDone":0,"lat":{"count":{"n":26,"p50":5,"p95":7,"max":8},"dashboard":{"n":35,"p50":31,"p95":153,"max":168}},"frames":{"progress":"frames/001-progress.jpg","board":"frames/001-board.jpg","other":"frames/001-teams.jpg","otherLabel":"Team plan"}},{"n":2,"at":"2026-10-04T09:32:16.419Z","wall":13,"day":0,"dayName":"Monday","sim":"06:53","label":"Monday 06:53","event":"","lines":712,"bins":647,"binsTotal":20000,"pallets":602,"exceptions":4,"teams":13,"sosOpen":0,"sosTotal":0,"pending":0,"approved":7,"rejected":1,"secondOpen":22,"secondDone":0,"lat":{"count":{"n":653,"p50":5,"p95":116,"max":695},"dashboard":{"n":166,"p50":38,"p95":149,"max":620}},"frames":{"progress":"frames/002-progress.jpg","board":"frames/002-board.jpg","other":"frames/002-teams.jpg","otherLabel":"Team plan"}},{"n":3,"at":"2026-10-04T09:40:03.230Z","wall":21,"day":0,"dayName":"Monday","sim":"07:26","label":"First SOS of the count","event":"sos","lines":1234,"bins":1129,"binsTotal":20000,"pallets":1039,"exceptions":10,"teams":13,"sosOpen":1,"sosTotal":1,"pending":3,"approved":11,"rejected":4,"secondOpen":37,"secondDone":0,"lat":{"count":{"n":1138,"p50":5,"p95":101,"max":695},"dashboard":{"n":267,"p50":41,"p95":149,"max":620}},"frames":{"progress":"frames/003-progress.jpg","board":"frames/003-board.jpg","other":"frames/003-alerts.jpg","otherLabel":"Alerts"}},{"n":4,"at":"2026-10-04T09:42:20.941Z","wall":23,"day":0,"dayName":"Monday","sim":"07:36","label":"Monday 07:36","event":"","lines":1384,"bins":1262,"binsTotal":20000,"pallets":1171,"exceptions":11,"teams":13,"sosOpen":1,"sosTotal":1,"pending":1,"approved":15,"rejected":5,"secondOpen":42,"secondDone":0,"lat":{"count":{"n":1281,"p50":6,"p95":116,"max":695},"dashboard":{"n":296,"p50":41,"p95":153,"max":620}},"frames":{"progress":"frames/004-progress.jpg","board":"frames/004-board.jpg","other":"frames/004-second.jpg","otherLabel":"Second counts"}},{"n":5,"at":"2026-10-04T09:52:24.517Z","wall":33,"day":0,"dayName":"Monday","sim":"08:19","label":"Monday 08:19","event":"","lines":2084,"bins":1894,"binsTotal":20000,"pallets":1782,"exceptions":19,"teams":13,"sosOpen":0,"sosTotal":1,"pending":0,"approved":28,"rejected":7,"secondOpen":62,"secondDone":0,"lat":{"count":{"n":1902,"p50":6,"p95":146,"max":806},"dashboard":{"n":426,"p50":44,"p95":166,"max":632}},"frames":{"progress":"frames/005-progress.jpg","board":"frames/005-board.jpg","other":"frames/005-adjust.jpg","otherLabel":"Adjustments"}},{"n":6,"at":"2026-10-04T10:02:28.188Z","wall":43,"day":0,"dayName":"Monday","sim":"09:01","label":"Monday 09:01","event":"","lines":2520,"bins":2304,"binsTotal":20000,"pallets":2160,"exceptions":20,"teams":13,"sosOpen":0,"sosTotal":1,"pending":1,"approved":30,"rejected":9,"secondOpen":73,"secondDone":0,"lat":{"count":{"n":2317,"p50":6,"p95":143,"max":879},"dashboard":{"n":556,"p50":46,"p95":168,"max":632}},"frames":{"progress":"frames/006-progress.jpg","board":"frames/006-board.jpg","other":"frames/006-teams.jpg","otherLabel":"Teams & crew"}},{"n":7,"at":"2026-10-04T10:12:33.053Z","wall":53,"day":0,"dayName":"Monday","sim":"09:44","label":"Monday 09:44","event":"","lines":3192,"bins":2911,"binsTotal":20000,"pallets":2720,"exceptions":25,"teams":13,"sosOpen":1,"sosTotal":3,"pending":0,"approved":38,"rejected":11,"secondOpen":88,"secondDone":0,"lat":{"count":{"n":2921,"p50":6,"p95":110,"max":880},"dashboard":{"n":687,"p50":48,"p95":176,"max":632}},"frames":{"progress":"frames/007-progress.jpg","board":"frames/007-board.jpg","other":"frames/007-reports.jpg","otherLabel":"Reports"}}],"summary":null}</script>
+<script>
+(() => {
+  const D = JSON.parse(document.getElementById('data').textContent);
+  const tl = D.timeline, meta = D.meta;
+  const $ = (id) => document.getElementById(id);
+  const n = (v) => Number(v || 0).toLocaleString();
+  const pctOf = (a, b) => (b ? Math.round((a / b) * 1000) / 10 : 0);
+  function show(i) {
+    const s = tl[i - 1]; if (!s) return;
+    $('scrub').value = i;
+    $('when').textContent = s.dayName + ' ' + s.sim + ' · snapshot ' + s.n + ' of ' + tl.length + ' · ' + s.wall + ' min in';
+    $('figs').innerHTML = '<span><b>' + n(s.bins) + '</b> of ' + n(s.binsTotal) + ' bins (' + pctOf(s.bins, s.binsTotal) + '%)</span>'
+      + '<span><b>' + n(s.lines) + '</b> lines</span><span><b>' + n(s.pallets) + '</b> pallets counted</span>'
+      + '<span><b>' + s.sosOpen + '</b> SOS open (' + s.sosTotal + ' so far)</span><span><b>' + s.pending + '</b> adjustments waiting · ' + s.approved + ' approved</span>'
+      + '<span><b>' + s.secondOpen + '</b> second counts open · ' + s.secondDone + ' done</span>'
+      + '<span>count post p95 <b>' + (s.lat && s.lat.count ? s.lat.count.p95 : 0) + ' ms</b></span>';
+    const f = s.frames || {};
+    $('stage').innerHTML = (f.progress ? '<figure><img src="' + f.progress + '" alt="Dashboard"><figcaption>Dashboard · Progress — ' + s.dayName + ' ' + s.sim + '</figcaption></figure>' : '')
+      + (f.other ? '<figure><img src="' + f.other + '" alt=""><figcaption>' + (f.otherLabel || '') + '</figcaption></figure>' : '')
+      + (f.board ? '<figure class="wide"><img src="' + f.board + '" alt="Office board"><figcaption>Office board</figcaption></figure>' : '');
+  }
+  $('scrub').addEventListener('input', () => show(Number($('scrub').value)));
+  let timer = null;
+  $('play').onclick = () => {
+    if (timer) { clearInterval(timer); timer = null; $('play').textContent = '▶ Play'; return; }
+    let i = Number($('scrub').value); if (i >= tl.length) i = 0;
+    $('play').textContent = '❚❚ Pause';
+    timer = setInterval(() => { i++; if (i > tl.length) { clearInterval(timer); timer = null; $('play').textContent = '▶ Play'; return; } show(i); }, 1400);
+  };
+  $('timeline').innerHTML = tl.map((s) => {
+    const f = s.frames || {};
+    const img = (src, cap) => src ? '<div><img loading="lazy" src="' + src + '" alt="" data-full="' + src + '"><div class="cap">' + cap + '</div></div>' : '';
+    return '<div class="snap" id="s' + s.n + '"><div class="head"><b>' + s.dayName + ' ' + s.sim + '</b><span>snapshot ' + s.n + ' · ' + s.wall + ' min of real time</span>'
+      + (s.event ? '<span class="ev">' + s.label + '</span>' : '')
+      + '<span>' + n(s.bins) + ' bins · ' + n(s.lines) + ' lines · ' + s.sosOpen + ' SOS open · ' + s.pending + ' adjustments waiting · ' + s.secondOpen + ' second counts open</span></div>'
+      + '<div class="bar"><i style="width:' + pctOf(s.bins, s.binsTotal) + '%"></i></div>'
+      + '<div class="row">' + img(f.progress, 'Dashboard · Progress') + img(f.other, f.otherLabel || '') + img(f.board, 'Office board') + '</div></div>';
+  }).join('');
+  document.addEventListener('click', (e) => {
+    const t = e.target;
+    if (t.tagName === 'IMG' && t.dataset.full) { $('lightimg').src = t.dataset.full; $('lightbox').style.display = 'flex'; }
+    else if (t.closest('#lightbox')) $('lightbox').style.display = 'none';
+  });
+  const S = D.summary;
+  if (S) {
+    const card = (b, s) => '<div><b>' + b + '</b><span>' + s + '</span></div>';
+    const l = S.latency;
+    $('summary').innerHTML = '<h2>How it went</h2><div class="summary">'
+      + card(n(S.bins) + ' / ' + n(S.binsTotal), 'bins counted · ' + pctOf(S.bins, S.binsTotal) + '%')
+      + card(n(S.lines), 'count lines from ' + meta.guns + ' scanners')
+      + card(n(S.pallets) + ' / ' + n(meta.pallets), 'pallets on the report seen')
+      + card(S.match + ' match · ' + S.variance + ' variances', 'pallet report: ' + S.missing + ' missing, ' + S.unlisted + ' not on the report')
+      + card(S.approved + ' approved · ' + S.rejected + ' rejected', 'adjustments, ' + S.pending + ' still waiting')
+      + card(S.secondDone + ' done · ' + S.secondOpen + ' open', 'second counts raised by the variances')
+      + card(S.sos + ' SOS', S.sosClosed + ' closed by the office')
+      + card(S.handbacks + ' aisles handed back', 'of ' + S.aisles + ' in the plan')
+      + card(S.failures + ' failed requests', 'out of ' + n(S.requests) + ' made')
+      + '</div><h2>What a person felt</h2><table><tr><th>Action</th><th class="n">calls</th><th class="n">typical</th><th class="n">slowest 5%</th><th class="n">worst</th></tr>'
+      + Object.entries(l).map(([k, v]) => '<tr><td>' + ({ count: 'A count line reaching the server', signon: 'Signing a scanner on', master: 'A scanner pulling the whole bin list', dashboard: 'A dashboard refresh', board: 'The office board refresh', office: 'Approving and closing from the desk' })[k] + '</td><td class="n">' + n(v.n) + '</td><td class="n">' + v.p50 + ' ms</td><td class="n">' + v.p95 + ' ms</td><td class="n">' + v.max + ' ms</td></tr>').join('')
+      + '</table><p class="note">Planted in the data: ' + Object.entries(meta.planted).map(([k, v]) => v + ' ' + k).join(', ') + '. Time ran at ' + meta.scale.toFixed(1) + '× — a ' + Math.round(510 / meta.scale) + '-minute block of real time per shift.</p>';
+  }
+  show(tl.length);
+})();
+</script>
+</body></html>
