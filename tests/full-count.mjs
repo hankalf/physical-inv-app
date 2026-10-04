@@ -520,7 +520,7 @@ await pickSession(admin, '1');
   await admin.click('#btnUseDrawing'); await admin.waitForTimeout(2500);
   check('Admin: one click switches it to the blueprint and the offer goes away',
     await admin.$eval('#map', (s) => s.classList.contains('blueprint')) && await admin.$eval('#mapFix', (el) => el.hidden),
-    await admin.$eval('#fLayout', (s) => s.value));
+    clean(await admin.textContent('#mapSub')).slice(0, 60));
   await pickSession(admin, '1');
 }
 // close session (under Settings) -> scanner rejected -> reopen

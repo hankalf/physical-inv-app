@@ -118,7 +118,7 @@ await page.screenshot({ path: `${S}screenshots/setup-guide.png` });
 const jump = await page.$('#startSteps li.blocking button');
 await jump.click(); await page.waitForTimeout(900);
 check('Setup: its button takes you to the place that does it',
-  /lists|scanners/.test(await page.evaluate(() => location.hash)) || (await page.$eval('[data-sub="lists"]', (el) => el.classList.contains('active'))),
+  /lists|gun/.test(await page.evaluate(() => location.hash)) || (await page.$eval('[data-sub="lists"]', (el) => el.classList.contains('active'))),
   await page.evaluate(() => location.hash));
 
 console.log('\nerrors:', errors.length ? errors : 'none');
