@@ -43,8 +43,9 @@ control's.
 
 **Teams & crew → Crew & teams.**
 
-- **Crew**: every counter with their clock-in number, name, department and shift. A gun
-  refuses a clock-in number that is not on this list unless the count allows walk-ups. The
+- **Crew**: every counter with their clock-in number, name, department and shift. Once this
+  list is loaded, a gun refuses to sign on with a clock-in number that is not on it, and tells
+  the counter to see a supervisor: add them here and they sign on again. The
   list uploads from a file or is typed; **Employees CSV** downloads it.
 - **Teams**: a number, a shift (1 or 2; *day*, *am*, *first* read as 1, *night*, *pm*,
   *second* as 2) and the people on it. Two people with one gun is the usual team; a team of

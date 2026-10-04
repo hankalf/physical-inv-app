@@ -728,6 +728,14 @@
           if (state.assignment.crew) { state.crew = state.assignment.crew; await metaSet('crew', state.crew); }
           await refreshRecounts();
         } catch (err) {
+          // a clock-in number the site does not know: no sign-on at all
+          if (err.code === 'crew') {
+            state.session = null; state.team = '';
+            showScreen('scrSignon');
+            beep('err');
+            feedback($('signonMsg'), 'err', 'Not signed on — see a supervisor', `${err.message.replace(/ — see a supervisor$/, '')}. A supervisor adds the clock-in number under Teams & crew, then sign on again.`);
+            return;
+          }
           feedback($('signonMsg'), 'warn', 'Signed on locally only', err.message);
         }
       } else {

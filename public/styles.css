@@ -372,3 +372,8 @@ body.big-text .nextbin .nb-code { font-size: 30px; }
 .gnote { margin-top: 8px; font-size: 13px; color: var(--muted, #8b95a7); }
 .mvsys { margin-top: 6px; border: 1px solid var(--line, #2a3240); border-radius: 12px; overflow: hidden; background: #fff; }
 .mvsys iframe { display: block; width: 100%; height: max(380px, calc(100vh - 330px)); border: 0; background: #fff; }
+
+/* the jobs at sign-on: two to a row so "Front2Back" and "Not in Location" fit a handheld */
+#modePick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+#modePick > button { margin: 0; min-width: 0; padding: 12px 8px; font-size: 16px; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
+#modePick > button[hidden] { display: none; }

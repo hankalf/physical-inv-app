@@ -25,7 +25,7 @@ import { endTrial, setTrial } from './routes/trial.js';
 import { exportEverything } from './routes/export-all.js';
 import { archiveAisle, finalReadiness, finalReport, listArchives, archivePath } from './routes/archive.js';
 import { idleConfig, saveIdleConfig, teamClocks, checkIdle, answerIdle, openIdleAlerts, recentIdleAlerts, tellTeamsIdle, idleTick, recordSignoff } from './routes/idle.js';
-import { practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, practiceReadiness, practiceFromFile, practiceOptions, setPracticeOptions, practiceSandbox, setPracticeSandbox, practiceExport, ownerOf, practiceModes, startPracticeMode, MODE_ACCESS } from './routes/practice.js';
+import { practiceJobs, practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, practiceReadiness, practiceFromFile, practiceOptions, setPracticeOptions, practiceSandbox, setPracticeSandbox, practiceExport, ownerOf, practiceModes, startPracticeMode, MODE_ACCESS } from './routes/practice.js';
 import { branding, saveLogo, clearLogo, saveName } from './routes/branding.js';
 import { raiseAlert, tellTeams, listAlerts, seeAlert, closeAlert, alertsForDevice, sosReasons, saveSosReasons, DEFAULT_REASONS } from './routes/alerts.js';
 import { teamsConfig, saveTeamsConfig, postToTeams, testCard, alertCard } from './util/teams.js';
@@ -380,7 +380,10 @@ async function handleHandheld(req, res, url, m) {
   // --- which jobs the sign-on screen offers; a practice gun always has all of them
   if (p === '/api/scanner-jobs' && method === 'GET') {
     const practice = url.searchParams.get('practice') === '1' || !!(device && device.practice_owner);
-    return sendJson(req, res, 200, { jobs: practice ? Object.fromEntries(JOBS.map(([k]) => [k, true])) : scannerJobs() });
+    if (!practice) return sendJson(req, res, 200, { jobs: scannerJobs() });
+    // a practice gun: the jobs its person ticked in the Testing Suite, every one by default
+    const ps = device && device.practice_owner ? practiceSession(device.practice_owner) : null;
+    return sendJson(req, res, 200, { jobs: ps ? practiceJobs(ps) : Object.fromEntries(JOBS.map(([k]) => [k, true])) });
   }
   // --- the pallet system's address, for the move desk on the gun
   if (p === '/api/pallet-system' && method === 'GET') {
@@ -424,6 +427,18 @@ async function handleHandheld(req, res, url, m) {
     const body = await readJson(req);
     if (!norm(body.deviceId)) throw httpError(400, 'deviceId required');
     if (!norm(body.team)) throw httpError(400, 'team required');
+    /* Nobody signs on with a clock-in number the site does not know. Once a
+       crew list is loaded, an unknown number stops the sign-on: see a
+       supervisor, who adds the person under Teams & crew. The practice count
+       in the Testing Suite is exempt - its numbers are made up. */
+    const sess = getSession(m[1]);
+    if (sess && !sess.practice && listEmployees().length) {
+      const known = crewCheck(Array.isArray(body.employees) ? body.employees : [], body.team);
+      if (known.unknown.length) {
+        audit(device ? device.name : body.deviceId, 'refused a sign-on: clock-in number not on the crew list', known.unknown.join(', '), m[1]);
+        throw Object.assign(httpError(403, `${known.unknown.join(', ')} ${known.unknown.length === 1 ? 'is' : 'are'} not on the crew list — see a supervisor`), { code: 'crew', unknown: known.unknown });
+      }
+    }
     recordSignon(m[1], {
       deviceId: body.deviceId,
       team: body.team,

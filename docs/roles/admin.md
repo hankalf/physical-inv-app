@@ -116,7 +116,8 @@ All under **Settings → Advanced**.
 - **Jobs on the sign-on screen** (in *What the scanners offer*): the scanners show exactly
   what is ticked: full count, cycle count, Front2Back, Not in Location (NIL). Day to day tick
   the last three; on the morning of a wall-to-wall untick them and tick the full count alone;
-  swap back after. At least one stays on; the practice gun always has every job.
+  swap back after. At least one stays on. The practice gun has its own ticks in the Testing
+  Suite's sandbox, all four to start with.
 - **Your picker sees everything.** An admin's count picker lists every count on the site,
   other people's practice counts from the Testing Suite included, tagged *practice · NAME*.
 - **How the counting screen is put together**: the order of the questions (pallet, quantity,

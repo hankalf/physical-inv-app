@@ -312,8 +312,8 @@ for each; a ticked job with nothing to do says so when it is picked. Day to day 
 cycle count, Front2Back and Not in Location. On the morning of a wall-to-wall, untick those and
 tick the full count alone, so every scanner opens on it and nobody signs on to anything else by
 mistake; tick the others back on when it is over. At least one job has to stay on. Scanners pick
-the change up the next time they are online, and the practice gun in the Testing Suite always
-has every job, whatever is ticked here.
+the change up the next time they are online. The practice gun in the Testing Suite has its own ticks instead, under
+*Scanner settings in this sandbox → Jobs on the sign-on screen* — all four to start with.
 
 ![](images/settings-jobs.png)
 
@@ -1473,6 +1473,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | A gun does not offer the cycle count, Front2Back or Not in Location | That job is unticked under Settings → Scanner screen → What the scanners offer | Deliberate during a wall-to-wall; tick it back on when the count is over |
 | A gun offers Front2Back but says *Nothing waiting to move right now* | The job is ticked and the move list is empty | Normal: build a move list under Front bins, or untick the job |
 | A count is missing from the picker | The login may not work that kind of count | A login without the Cycle counts page sees no cycle count; a cycle counter sees no full count. An admin adds the page under Supervisor logins |
+| Gun: *Not signed on — see a supervisor* (*E9999 is not on the crew list*) | That clock-in number is not on the crew list | Add the person under Teams & crew → Crew & teams, then they sign on again. Once a crew list is loaded, nobody signs on with a number the site does not know (the Testing Suite's practice gun is exempt) |
 | You do not know what a message means | The gun or the dashboard said something unfamiliar | Paste it into **User guide → Ask the guide**: it knows every message the gun and the server can show, with the fix. A new starter should begin at the guide's *Your first day* |
 | You cannot find where something is set | The app has four pages and twenty-odd cards | Type what you would call it into the search box at the top of the sidebar — *"upload bin list"*, *"keyboard"*, *"approve"* — and the **Go to** hits take you straight there. **/** puts the cursor in it |
 | Not sure whether a gun has the latest version | — | The sign-on screen's bottom line reads *"App build a1b2c3d4e5f6 on the server — this scanner is up to date"*. Compare it across two guns, or against a fresh reload |

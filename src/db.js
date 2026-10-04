@@ -630,9 +630,9 @@ const movesOpenCount = { get: (id) => { try { return db.prepare("SELECT COUNT(*)
 /* The sandbox a practice count carries: what it overrides of the site's prompts
    and screen settings. Nothing for a real count. */
 export function sandboxOf(s) {
-  if (!s || !s.practice || !s.sandbox) return { prompts: {}, layout: {}, sosReasons: null };
-  try { const v = JSON.parse(s.sandbox); return { prompts: v.prompts || {}, layout: v.layout || {}, sosReasons: Array.isArray(v.sosReasons) ? v.sosReasons : null }; }
-  catch { return { prompts: {}, layout: {}, sosReasons: null }; }
+  if (!s || !s.practice || !s.sandbox) return { prompts: {}, layout: {}, sosReasons: null, jobs: null };
+  try { const v = JSON.parse(s.sandbox); return { prompts: v.prompts || {}, layout: v.layout || {}, sosReasons: Array.isArray(v.sosReasons) ? v.sosReasons : null, jobs: v.jobs && typeof v.jobs === 'object' ? v.jobs : null }; }
+  catch { return { prompts: {}, layout: {}, sosReasons: null, jobs: null }; }
 }
 
 export const publicSession = (s) => ({

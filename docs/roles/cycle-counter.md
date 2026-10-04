@@ -85,7 +85,7 @@ minutes on it before your first morning.
 | Cycle count is not offered at sign-on | No batch today, or the job is switched off for count day | Ask the office |
 | Gun: *Offline and no list cached for this session* | The gun has never downloaded this count | Carry it into Wi-Fi once and sign on again |
 | Gun shows OFFLINE with a number | Your lines are queued in a dead spot | Nothing; they upload with signal. Do not clear the app |
-| Your badge is refused | Your clock-in number is not on the crew list | Ask the office to add you under Teams & crew |
+| *Not signed on — see a supervisor* | Your clock-in number is not on the crew list | See a supervisor; they add you under Teams & crew and you sign on again |
 | A keypad covers the screen | The Keyboard button was left on | Tap Keyboard again |
 | A scan does nothing | The scanner is not sending ENTER | Tell the office: DataWedge needs setting on that gun |
 | Gun: *Bin done — nothing more here* did not move on | Something in the bin is still waiting | Finish the pallet on screen first |

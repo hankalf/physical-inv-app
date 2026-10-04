@@ -293,6 +293,7 @@
   /* The sandbox: the gun's prompts and screen, for this practice alone. Drawn
      only when they change, so a half-typed list is not wiped by the refresh. */
   let sbDrawn = '';
+  const SB_JOBS = { full: 'sbJobFull', cycle: 'sbJobCycle', move: 'sbJobMove', missing: 'sbJobMissing' };
   function renderSandbox() {
     const sb = data.sandbox;
     if (!sb) return;
@@ -308,15 +309,21 @@
     $('sbComments').value = (sb.prompts.comments || []).join('\n');
     $('sbOverrides').value = (sb.prompts.overrides || []).join('\n');
     $('sbSos').value = (sb.sosReasons || []).join('\n');
-    const n = sb.overridden.prompts.length + sb.overridden.layout.length + (sb.overridden.sosReasons ? 1 : 0);
+    const jobs = sb.jobs || {};
+    for (const [k, id] of Object.entries(SB_JOBS)) $(id).checked = jobs[k] !== false;
+    const n = sb.overridden.prompts.length + sb.overridden.layout.length + (sb.overridden.sosReasons ? 1 : 0) + (sb.overridden.jobs ? 1 : 0);
     $('sbState').textContent = n ? `${n} setting${n === 1 ? '' : 's'} differ from the site's` : 'same as the site, except the 5-second comments step';
   }
   async function saveSandbox(body, okText) {
     try {
+      const before = JSON.stringify((data.sandbox || {}).jobs || {});
       const next = await api.post('/api/admin/practice/sandbox', body);
       drawn = '';
       render(next);
-      msg($('sbMsg'), 'ok', okText, 'The gun picks it up between pallets, within about fifteen seconds.');
+      // the jobs are read on the sign-on screen: show them by starting the gun again
+      const jobsChanged = JSON.stringify((next.sandbox || {}).jobs || {}) !== before;
+      if (jobsChanged) { restarted = 0; restartGun(); }
+      msg($('sbMsg'), 'ok', okText, jobsChanged ? 'The gun restarts on its sign-on screen with the jobs you ticked.' : 'The gun picks it up between pallets, within about fifteen seconds.');
     } catch (err) { msg($('sbMsg'), 'err', err.message); }
   }
   $('btnSandboxSave').onclick = () => saveSandbox({
@@ -324,6 +331,7 @@
     layout: { order: $('sbOrder').value.split(','), confirmOver: Number($('sbConfirm').value), textSize: $('sbLarge').checked ? 'large' : 'normal',
       showNextBin: $('sbNextBin').checked, vibrate: $('sbVibrate').checked },
     sosReasons: $('sbSos').value,
+    jobs: Object.fromEntries(Object.entries(SB_JOBS).map(([k, id]) => [k, $(id).checked])),
   }, 'Saved to your sandbox.');
   $('btnSandboxReset').onclick = () => saveSandbox({ reset: true }, 'Back to the site\'s settings (and the 5-second comments step).');
 

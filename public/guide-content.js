@@ -151,7 +151,7 @@
         },
         {
           title: 'Choose which jobs the scanners offer',
-          do: 'Settings → Scanner screen → What the scanners offer → Jobs: the sign-on screen shows exactly what is ticked — Full count, Cycle count, Front2Back, Not in Location. Day to day tick the last three; on count day untick them and tick the full count alone; swap back afterwards. The practice gun always has every job.',
+          do: 'Settings → Scanner screen → What the scanners offer → Jobs: the sign-on screen shows exactly what is ticked — Full count, Cycle count, Front2Back, Not in Location. Day to day tick the last three; on count day untick them and tick the full count alone; swap back afterwards. The practice gun has its own ticks in the Testing Suite sandbox.',
           where: S('/settings', 'gun', 'Settings → Scanner screen'),
           watch: [
             { see: '"leave at least one job on, or the scanners have nothing to do"', means: 'Every job was unticked.', fix: 'Tick at least one.' },
@@ -239,7 +239,7 @@
           where: S('/teams', 'crew', 'Teams & crew'),
           watch: [
             { see: '"that aisle belongs to another team"', means: 'You are moving an aisle a team already holds.', fix: 'Take it off that team first.' },
-            { see: 'A team’s clock-in number is refused', means: 'The number is not on the crew list.', fix: 'Add the person under Crew, or tick Count without an assignment on the count if walk-ups are allowed.' },
+            { see: 'Gun: "Not signed on — see a supervisor"', means: 'A clock-in number is not on the crew list; once a crew list is loaded nobody signs on with an unknown number.', fix: 'Add the person under Teams & crew → Crew & teams; they sign on again.' },
           ],
           ask: [
             { q: 'What does shift 1 or 2 mean on a team?', a: 'Which shift the team belongs to, so the plan can show who is on. Day, morning, am, first all mean 1; night, pm, second mean 2.' },

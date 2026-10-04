@@ -590,9 +590,18 @@ export function practiceSandbox(s) {
   return {
     prompts, layout,
     sosReasons: own.sosReasons || sosReasons().reasons,
+    // the jobs the practice gun's sign-on screen offers: every one, until the person picks
+    jobs: practiceJobs(s),
     site: { prompts: scannerPrompts(), layout: scannerLayout(), sosReasons: sosReasons().reasons },
-    overridden: { prompts: Object.keys(own.prompts), layout: Object.keys(own.layout), sosReasons: !!own.sosReasons },
+    overridden: { prompts: Object.keys(own.prompts), layout: Object.keys(own.layout), sosReasons: !!own.sosReasons, jobs: !!own.jobs },
   };
+}
+
+const PRACTICE_JOBS = ['full', 'cycle', 'move', 'missing'];
+/** The jobs a practice gun offers: the person's own choice, every one until they make it. */
+export function practiceJobs(s) {
+  const own = sandboxOf(s).jobs;
+  return Object.fromEntries(PRACTICE_JOBS.map((k) => [k, own ? own[k] !== false : true]));
 }
 
 export function setPracticeSandbox(owner, body = {}) {
@@ -619,9 +628,14 @@ export function setPracticeSandbox(owner, body = {}) {
   }
   let sos = own.sosReasons;
   if (body.sosReasons !== undefined) sos = body.sosReasons === null ? null : cleanList(body.sosReasons, 20);
+  let jobs = own.jobs;
+  if (body.jobs !== undefined) {
+    jobs = body.jobs === null ? null : Object.fromEntries(PRACTICE_JOBS.map((k) => [k, body.jobs[k] !== false]));
+    if (jobs && !Object.values(jobs).some(Boolean)) throw Object.assign(new Error('leave at least one job on, or the practice gun has nothing to do'), { status: 400 });
+  }
   if (body.reset) { return resetSandbox(s.id); }
   db.prepare('UPDATE sessions SET sandbox = ?, master_version = master_version + 1 WHERE id = ?')
-    .run(JSON.stringify({ prompts: p, layout: l, sosReasons: sos }), s.id);
+    .run(JSON.stringify({ prompts: p, layout: l, sosReasons: sos, jobs }), s.id);
   return getSession(s.id);
 }
 

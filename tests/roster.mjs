@@ -125,7 +125,7 @@ async function signon(team, badges) {
   await gun.waitForSelector('#scrSignon.active');
   await gun.selectOption('#fSession', String(sess.id));
   // a scanner remembers yesterday's crew until someone signs off; clear it here
-  for (const chip of await gun.$$('#employeeChips button')) await chip.click();
+  for (let i = 0; i < 12 && (await gun.$('#employeeChips button')); i++) { await gun.click('#employeeChips button'); await gun.waitForTimeout(80); }
   await gun.fill('#fTeam', team);
   for (const b of badges) { await gun.fill('#fEmployee', b); await gun.press('#fEmployee', 'Enter'); }
   /*
@@ -170,10 +170,21 @@ check('Gun sign-on: a crew that cannot reach its levels is told, with the machin
 check('Gun sign-on: the warning names the aisle and the levels it was given', /Aisle F03 was given to team 2 for levels C–F/.test(banner), banner.slice(banner.indexOf('Aisle'), banner.indexOf('Aisle') + 70));
 await shot(gun, 'gun-signon-shortfall');
 
-// a badge nobody knows, plus somebody rostered to another team
-await signon('2', ['E1001', 'E9999', 'E1003']);
+// a badge nobody knows: the sign-on is refused, and the counter is sent to a supervisor
+await gun.goto(`${BASE}/?d=${dev.uid}`);
+await gun.waitForSelector('#scrSignon.active');
+await gun.selectOption('#fSession', String(sess.id));
+for (let i = 0; i < 12 && (await gun.$('#employeeChips button')); i++) { await gun.click('#employeeChips button'); await gun.waitForTimeout(80); }
+await gun.fill('#fTeam', '2');
+for (const b of ['E1001', 'E9999']) { await gun.fill('#fEmployee', b); await gun.press('#fEmployee', 'Enter'); }
+await gun.click('#btnStart'); await gun.waitForTimeout(4000);
+const crewRefused = clean(await gun.textContent('#signonMsg'));
+check('Gun sign-on: a clock-in number not on the crew list is refused — see a supervisor', await gun.isVisible('#scrSignon') && /Not signed on — see a supervisor/.test(crewRefused) && /E9999 is not on the crew list/.test(crewRefused), crewRefused.slice(0, 160));
+const refusedLog = await (await fetch(`${BASE}/api/admin/audit?limit=10`, { headers: { authorization: 'Bearer ' + token } })).json();
+check('…and the refusal is in the log', refusedLog.some((r) => /refused a sign-on/.test(r.action) && /E9999/.test(r.detail)));
+// somebody rostered to another team still signs on, with a word about it
+await signon('2', ['E1001', 'E1003']);
 banner = await G('#crewBanner');
-check('Gun sign-on: an unknown badge is flagged', /Not on the crew list: E9999/.test(banner), banner.slice(banner.indexOf('Not on'), banner.indexOf('Not on') + 80));
 check('Gun sign-on: somebody rostered to another team is flagged', /Sam Ortiz \(E1003\) is on team 1 today, not team 2/.test(banner), banner.slice(banner.indexOf('Sam'), banner.indexOf('Sam') + 70));
 check('Gun sign-on: with the right person present the shortfall clears', !/Check your equipment/.test(banner), banner.slice(0, 60));
 // signing off clears the crew so the next shift scans their own badges

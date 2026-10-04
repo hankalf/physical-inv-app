@@ -134,6 +134,7 @@ cradle.
 | *Offline and no list cached for this session* | It has never downloaded this count | Into Wi-Fi once, sign on again |
 | *this scanner is no longer authorised* | Its link was reset | A supervisor opens its new link on it |
 | *Add at least one clock in number* | Sign on with no badge | Scan a badge |
+| *Not signed on — see a supervisor* | Your clock-in number is not on the crew list | See a supervisor; they add you and you sign on again |
 | *Team N is counting aisle X* | Another team holds that racking | Wait, or ask |
 | *That bin was taken by another team* | Two teams reached one bin | Move on; the gun shows the next |
 | *EMPTY bin — scan its LOCATION* | Waiting for the rack label | Scan the bin, not a pallet |

@@ -69,6 +69,16 @@ const dtok = (await j(await post(`/api/devices/${dev.uid}`, {}, hdr))).token;
 const dj = await j(await fetch(`${BASE}/api/scanner-jobs`, { headers: { authorization: 'Device ' + dtok } }));
 check('The practice gun in the Testing Suite still gets every job, while a floor gun gets the ticked ones', pj.jobs.cycle === true && pj.jobs.move === true && dj.jobs.cycle === false, JSON.stringify([pj, dj]));
 
+/* the practice gun follows its own ticks in the Testing Suite, not the site's */
+const ps = await j(await post('/api/admin/practice/sandbox', { jobs: { full: true, cycle: false, move: true, missing: false } }));
+check('The Testing Suite saves the practice gun\'s own jobs', ps.sandbox && ps.sandbox.jobs.cycle === false && ps.sandbox.jobs.move === true && ps.sandbox.overridden.jobs === true, JSON.stringify(ps.sandbox && ps.sandbox.jobs));
+const pj2 = await j(await fetch(`${BASE}/api/scanner-jobs?practice=1`, { headers: { authorization: 'Device ' + ptok } }));
+check('…and the practice gun is offered just those', pj2.jobs.full === true && pj2.jobs.move === true && pj2.jobs.cycle === false && pj2.jobs.missing === false, JSON.stringify(pj2.jobs));
+const pnone = await post('/api/admin/practice/sandbox', { jobs: { full: false, cycle: false, move: false, missing: false } });
+check('…at least one has to stay ticked', pnone.status === 400);
+await post('/api/admin/practice/sandbox', { jobs: null });
+check('…and clearing the choice offers every job again', Object.values((await j(await fetch(`${BASE}/api/scanner-jobs?practice=1`, { headers: { authorization: 'Device ' + ptok } }))).jobs).every(Boolean));
+
 /* the rules */
 r = await post('/api/admin/scanner-jobs', { full: false, cycle: false, move: false, missing: false });
 check('Every job off is refused', r.status === 400 && /at least one job/.test((await j(r)).error));
