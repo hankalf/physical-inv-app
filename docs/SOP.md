@@ -1,4 +1,4 @@
-# Standard Operating Procedure — Ripe & Ready Inventorying
+# Standard Operating Procedure — Full Harvest Inventory
 
 **Site:** Front Royal, VA cold storage  **Scanners:** Zebra MC9000-series handhelds
 
@@ -988,12 +988,20 @@ light), so three dashboards left open on a big count do not keep rebuilding the 
 > *Midnight* (dark blue), *Graphite* (dark grey), *Daylight* and *Frost* (light) — nine accent
 > colours, the text size, how tightly the tables sit, the corners, the sidebar's width and the
 > strength of the lines. It is kept per computer, so the office TV can be dark and a desk can be
-> light. The same tab takes a **logo**: your company's mark at the top of the sidebar and, if you
-> tick it, in the header of every scanner.
+> light. The same tab holds the **site name**: what the app calls itself (*Full Harvest Inventory*
+> out of the box) and the location under it (*Front Royal*). Change either and it lands at once on
+> every supervisor page's sidebar, the sign-in screen, the window titles, the scanner app's header,
+> the office board and the name of the installed app; a blank name goes back to the default. The
+> tab also takes a **logo**: your company's mark at the top of the sidebar and, if you tick it, in
+> the header of every scanner.
 
 ![](images/settings-appearance.png)
 
 *Settings &rarr; Advanced &rarr; Appearance: theme, accent, text size, density, corners, sidebar and contrast — per computer.*
+
+![](images/settings-site-name.png)
+
+*The site name card: the name and the location, changed here and shown everywhere.*
 
 ![](images/settings-logo.png)
 
@@ -1354,6 +1362,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | A counter says they pressed SOS and nothing happened | The gun had no signal | The gun tells them: *"No signal — this has NOT been sent."* It sends itself the moment there is signal. In a dead zone, walking ten metres usually fixes it |
 | The printed barcodes will not scan | The page was printed “fit to page”, or on glossy paper | Print again at **100%** on plain white paper. If a gun still refuses them, print with **Per row: 1** — the bars are wider on a bigger label |
 | A code in the spreadsheet will not print | Code 128 carries plain ASCII only — an accented letter or a smart quote cannot be drawn | The book says which character it was; retype that code with plain letters and numbers |
+| The app still shows the old name somewhere | The name was changed under Settings → Advanced → Site name | Supervisor pages change at once. A scanner picks it up when it is next online; the board on its next refresh. The name under a home-screen icon comes from the app's install and updates when the app is next reinstalled |
 | You do not know what a message means | The gun or the dashboard said something unfamiliar | Paste it into **User guide → Ask the guide**: it knows every message the gun and the server can show, with the fix. A new starter should begin at the guide's *Your first day* |
 | You cannot find where something is set | The app has four pages and twenty-odd cards | Type what you would call it into the search box at the top of the sidebar — *"upload bin list"*, *"keyboard"*, *"approve"* — and the **Go to** hits take you straight there. **/** puts the cursor in it |
 | Not sure whether a gun has the latest version | — | The sign-on screen's bottom line reads *"App build a1b2c3d4e5f6 on the server — this scanner is up to date"*. Compare it across two guns, or against a fresh reload |

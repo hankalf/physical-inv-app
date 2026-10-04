@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ripe &amp; Ready — Count Progress</title>
+<title>Full Harvest — Count Progress</title>
 <link rel="icon" href="/icon.svg">
 <link rel="stylesheet" href="/admin.css">
 <style>
@@ -13,6 +13,7 @@
   .board { display: flex; flex-direction: column; min-height: 100vh; padding: 2.2vh 2vw; gap: 1.8vh; }
 
   .bhead { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+  .bhead .site { font-size: clamp(12px, 1.2vw, 16px); color: var(--muted, #8b95a7); margin-top: 2px; }
   .bhead h1 { margin: 0; font-size: clamp(20px, 2.4vw, 34px); font-weight: 800; letter-spacing: -.02em; }
   .bhead .sess { color: var(--muted); font-size: clamp(13px, 1.2vw, 18px); font-weight: 600; }
   .bhead .clock { margin-left: auto; color: var(--muted); font-size: clamp(13px, 1.2vw, 18px); font-variant-numeric: tabular-nums; }
@@ -83,6 +84,7 @@
 <div class="board">
   <div class="bhead">
     <h1 id="bTitle">Count progress</h1>
+    <div class="site" id="bSite"></div>
     <span class="sess" id="bSession"></span>
     <span class="clock" id="bClock"></span>
   </div>

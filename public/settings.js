@@ -1055,7 +1055,19 @@
     $('btnLogoRemove').hidden = !(b && b.logo);
     $('fLogoOnGuns').checked = b && b.logo ? b.onGuns !== false : true;
   }
-  async function refreshLogo() { renderLogo(await api.json('/api/admin/logo')); }
+  async function refreshLogo() {
+    const b = await api.json('/api/admin/logo');
+    renderLogo(b);
+    if (document.activeElement !== $('fSiteName') && document.activeElement !== $('fSitePlace')) { $('fSiteName').value = b.name || ''; $('fSitePlace').value = b.place || ''; }
+  }
+  $('btnSiteNameSave').onclick = async () => {
+    try {
+      const b = await api.post('/api/admin/site-name', { name: $('fSiteName').value, place: $('fSitePlace').value });
+      $('fSiteName').value = b.name; $('fSitePlace').value = b.place;
+      await api.refreshBranding();
+      msg($('siteNameMsg'), 'ok', `The site is now “${b.name}”${b.place ? ' · ' + b.place : ''}.`, 'Every page shows it now; the scanners and the board pick it up on their next refresh.');
+    } catch (err) { msg($('siteNameMsg'), 'err', 'Not saved', err.message); }
+  };
   const readLogo = (file) => new Promise((res, rej) => {
     const r = new FileReader();
     r.onload = () => res(String(r.result));

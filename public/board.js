@@ -2,6 +2,7 @@
    It polls, it never writes, and it survives the server going away. */
 (() => {
   'use strict';
+  let boardBrand = '';
 
   const $ = (id) => document.getElementById(id);
   const q = new URLSearchParams(location.search);
@@ -121,7 +122,7 @@
       $('bOf').textContent = 'Create one on the dashboard.';
       return;
     }
-    document.title = `${d.pct}% — ${d.session.name}`;
+    document.title = `${d.pct}% — ${d.session.name}${boardBrand ? ' — ' + boardBrand : ''}`;
     $('bSession').textContent = `${d.session.name}${d.session.mode === 'cycle' ? ' · cycle count' : ''}${d.session.trial ? ' · TRIAL RUN' : ''}`;
     /* The note from the office, above everything else: breaks, lunch, a dock
        nobody can get to. Gone entirely when there is nothing to say, rather
@@ -165,6 +166,7 @@
 
   async function tick() {
     try {
+      if (!boardBrand) fetch('/api/branding', { cache: 'no-cache' }).then((r) => r.json()).then((b) => { boardBrand = b.name || ''; const h = document.getElementById('bSite'); if (h) h.textContent = [b.name, b.place].filter(Boolean).join(' · '); }).catch(() => {});
       const res = await fetch('/api/board' + (sessionParam ? `?session=${encodeURIComponent(sessionParam)}` : ''), { cache: 'no-store' });
       if (!res.ok) throw new Error(String(res.status));
       paint(await res.json());

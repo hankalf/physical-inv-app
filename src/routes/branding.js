@@ -1,6 +1,9 @@
-/* The site's own logo, on the supervisor pages and - if wanted - the guns.
-   One image, kept in the settings table as a data URL so it travels with the
-   database and every backup, and is one small answer for a gun to cache. */
+/* The site's own name, place and logo, on the supervisor pages and the guns.
+   All three live in the settings table so they travel with the database and
+   every backup, and are one small answer for a gun to cache. The name and the
+   place start as the site's own and can be changed under Settings → Advanced;
+   every page, the scanner app, the board and the installed app's manifest
+   read them from here, so a change lands everywhere. */
 import { db } from '../db.js';
 
 const MAX_CHARS = 600_000;   // ~450 KB of image: plenty for a header mark, small enough to send to every gun
@@ -10,10 +13,34 @@ const get = (key) => { const r = db.prepare('SELECT value FROM settings WHERE ke
 const put = (key, value) => db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, value);
 const drop = (key) => db.prepare('DELETE FROM settings WHERE key = ?').run(key);
 
-/** What every page and gun asks for: the logo, and whether the guns show it. */
+export const DEFAULT_NAME = 'Full Harvest Inventory';
+export const DEFAULT_PLACE = 'Front Royal';
+const MAX_NAME = 60;
+
+const clean = (v, fallback) => {
+  const t = String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, MAX_NAME);
+  return t || fallback;
+};
+
+/** What every page and gun asks for: the name, the place, the logo, and whether the guns show it. */
 export function branding() {
   const logo = get('siteLogo');
-  return { logo: logo || null, onGuns: logo ? get('siteLogoOnGuns') !== '0' : false, updatedAt: logo ? get('siteLogoAt') : null };
+  return {
+    name: clean(get('siteName'), DEFAULT_NAME),
+    place: get('sitePlace') == null ? DEFAULT_PLACE : clean(get('sitePlace'), ''),
+    logo: logo || null, onGuns: logo ? get('siteLogoOnGuns') !== '0' : false, updatedAt: logo ? get('siteLogoAt') : null,
+  };
+}
+
+/** The name across the top and the place under it. An empty name goes back to
+    the default; an empty place is allowed, and means no second line. */
+export function saveName({ name, place } = {}) {
+  if (name !== undefined) {
+    const n = clean(name, '');
+    if (n) put('siteName', n); else drop('siteName');
+  }
+  if (place !== undefined) put('sitePlace', clean(place, ''));
+  return branding();
 }
 
 export function saveLogo({ dataUrl, onGuns } = {}) {

@@ -330,6 +330,7 @@ try {
   await saveCard(desk, '#btnSaveTeams', 'settings-teams-channel');
   await saveCard(desk, '#lookPick', 'settings-appearance');
   await saveCard(desk, '#fPalletSystemUrl', 'settings-pallet-system');
+  await saveCard(desk, '#fSiteName', 'settings-site-name');
   await saveCard(desk, '#fLogo', 'settings-logo');
 
   // the printable setup cards, as they come off the printer

@@ -19,7 +19,7 @@
 <body class="app">
 
 <aside class="side">
-  <div class="brand">Ripe &amp; Ready Inventory<span>Front Royal</span></div>
+  <div class="brand">Full Harvest Inventory<span>Front Royal</span></div>
   <nav id="navTabs"></nav>
   <div class="side-foot">
     <span class="chip" id="navWho" hidden></span>
@@ -613,6 +613,21 @@
         <div class="auto"><button class="primary fit" id="btnPalletSystemSave">Save</button></div>
       </div>
       <div class="feedback" id="palletSystemMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Site name <span class="muted">what the app calls itself, and the location under it</span></h2>
+      <div class="hint" style="margin-top:0">
+        Shown at the top of the sidebar on every supervisor page, on the sign-in screen, in the scanner app's header and
+        the office board, and as the name of the installed app. A change lands everywhere at once; scanners pick it up the
+        next time they are online. Leave the name empty to go back to <b>Full Harvest Inventory</b>; the location may be blank.
+      </div>
+      <div class="inline" style="margin-top:10px">
+        <div><label for="fSiteName">Name</label><input id="fSiteName" maxlength="60" placeholder="Full Harvest Inventory" autocomplete="off"></div>
+        <div><label for="fSitePlace">Location</label><input id="fSitePlace" maxlength="60" placeholder="Front Royal" autocomplete="off"></div>
+        <div class="auto"><button class="primary fit" id="btnSiteNameSave">Save</button></div>
+      </div>
+      <div class="feedback" id="siteNameMsg"></div>
     </div>
 
     <div class="card">

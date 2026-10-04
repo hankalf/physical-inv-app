@@ -545,12 +545,20 @@
 
   /* The site's logo in the header, if the office put one there for the guns.
      The last answer is kept, so a gun that starts up in a dead spot still has it. */
+  let brandName = 'Full Harvest Inventory';
   function drawBranding(b) {
     const img = $('hdrLogo');
     if (!img) return;
     const show = !!(b && b.logo && b.onGuns);
     if (show && img.src !== b.logo) img.src = b.logo;
     img.hidden = !show;
+    // the site's name, until a session takes the header
+    if (b && typeof b.name === 'string' && b.name.trim()) {
+      brandName = b.name.trim();
+      document.title = brandName;
+      const t = $('hdrTitle');
+      if (t && !t.textContent.startsWith('#')) t.textContent = brandName.replace(/\s+inventory$/i, '') || brandName;
+    }
   }
   async function loadBranding() {
     drawBranding(await metaGet('branding'));

@@ -1,4 +1,4 @@
-# Ripe & Ready Inventorying
+# Full Harvest Inventory
 
 A warehouse physical-inventory app for Zebra Android handhelds (MC9300 / TC-series),
 counting at **pallet level**. Each scanner asks four questions, one per screen:
@@ -105,6 +105,7 @@ sign-in covers all of them.
 | **Front bins** (`/front`) | Pallets to move back · Move desk · Front-placed bins |
 | **Not in Location** (`/missing`) | — |
 | **Testing Suite** (`/testing`) | the real scanner on a practice count of your own |
+| **Settings → Advanced → Site name** | the app's own name and the location under it, out of the box *Full Harvest Inventory · Front Royal*; a change lands on every page, the guns, the board and the installed app's manifest |
 | **User guide** (`/guide`) | the SOP inside the app: journeys, what goes wrong at each step, an Ask box that answers a question or a pasted message, and a live "Right now" read of the count. Open to every login |
 
 Two splits, both deliberate. **Running a count** is the Dashboard; **setting one up** is

@@ -532,6 +532,7 @@
     { q: 'Where is the backup kept?', a: 'On the server’s volume under Settings → ERP & backups. Download it after every count; a volume is not a backup.', goto: S('/settings', 'erp', 'Settings → ERP & backups') },
     { q: 'What is the practice count?', a: 'A count of your own the Testing Suite makes, with test data, that nobody else sees.', goto: S('/testing', '', 'Testing Suite') },
     { q: 'How do I change the look?', a: 'The theme and accent picker is at the bottom of the sidebar, and the site logo is under Settings → Advanced.', goto: S('/settings', 'advanced', 'Settings → Advanced') },
+    { q: 'How do I rename the app, or change the location under the name?', a: 'Settings → Advanced → Site name. The name and the location change at once on every page, the sign-in screen, the scanners, the board and the installed app. A blank name goes back to Full Harvest Inventory.', goto: S('/settings', 'advanced', 'Settings → Advanced') },
     { q: 'What time zone are the scan times in?', a: 'The server’s. A scanner with a wrong clock is corrected by its own send time, so the times on the dashboard are right either way.' },
     { q: 'Can I export everything?', a: 'Reports → Export everything gives a workbook with every sheet: counts, pallets, teams, adjustments, alerts, the log.', goto: S('/admin', 'reports', 'Dashboard → Reports') },
     { q: 'Who did what?', a: 'The log under Settings → ERP & backups records every change with the login that made it.', goto: S('/settings', 'erp', 'Settings → ERP & backups') },

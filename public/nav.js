@@ -300,9 +300,10 @@
     if (card && !card.querySelector('.splashbrand')) {
       const b = document.createElement('div');
       b.className = 'splashbrand';
-      b.innerHTML = '<img class="logo" alt="" hidden><div class="mark">▦</div><div class="name">Ripe &amp; Ready Inventory<span>Front Royal</span></div>';
+      b.innerHTML = '<img class="logo" alt="" hidden><div class="mark">▦</div><div class="name"></div>';
       card.prepend(b);
     }
+    if (card) nameInto(card.querySelector('.splashbrand .name'));
     const img = card && card.querySelector('.splashbrand img.logo');
     if (img) {
       let b = null;
@@ -805,6 +806,7 @@
     ['Microsoft Teams channel', '/settings', 'advanced', 'teams channel webhook alerts sos notify card advanced'],
     ['Appearance: theme, accent, text size, density', '/settings', 'advanced', 'theme dark light colour color accent look appearance text size density compact corners sidebar contrast advanced'],
     ['Pallet system address (move desk)', '/settings', 'advanced', 'pallet system url address frame move desk erp wms link advanced'],
+    ['Site name and location', '/settings', 'advanced', 'site name location place rename title company brand header sidebar advanced'],
     ['Site logo', '/settings', 'advanced', 'logo brand image picture upload company header scanner advanced'],
     ['Scanner setup and links', '/settings', 'gun', 'scanner device link qr register enrol setup card handheld gun'],
     ['One-tap reasons on the gun', '/settings', 'gun', 'reason comment override one tap chips damaged'],
@@ -1014,12 +1016,27 @@
     if (g) setTimeout(() => applyGoto(g), 400);
   }
 
-  /* ------------------------------------------------------------- the logo
-     Set under Settings → Advanced. It is drawn from this browser's copy at
-     once and checked against the server, so the sidebar never flashes. */
+  /* ------------------------------------------------- the name and the logo
+     Set under Settings → Advanced. They are drawn from this browser's copy at
+     once and checked against the server, so the sidebar never flashes. The
+     name and the place reach the sidebar, the splash and the window title. */
+  const DEFAULT_BRAND = { name: 'Full Harvest Inventory', place: 'Front Royal' };
+  let brandNow = { ...DEFAULT_BRAND };
+  api.brand = () => ({ ...brandNow });
+  const pageTitle = (() => { const t = document.title; return t.includes(' — ') ? t.split(' — ').pop() : (/Inventory$/.test(t) ? '' : t); })();
+  /** Writes "Name<span>Place</span>" into a brand box, keeping any logo in it. */
+  function nameInto(box) {
+    if (!box) return;
+    for (const n of [...box.childNodes]) if (!(n.nodeType === 1 && n.matches('img.logo'))) n.remove();
+    box.appendChild(document.createTextNode(brandNow.name));
+    if (brandNow.place) { const sp = document.createElement('span'); sp.textContent = brandNow.place; box.appendChild(sp); }
+  }
   function drawLogo(b) {
+    if (b && typeof b.name === 'string' && b.name.trim()) brandNow = { name: b.name.trim(), place: typeof b.place === 'string' ? b.place.trim() : brandNow.place };
+    document.title = pageTitle ? `${brandNow.name} — ${pageTitle}` : brandNow.name;
     const brand = document.querySelector('.side .brand');
     if (!brand) return;
+    nameInto(brand);
     let img = brand.querySelector('img.logo');
     if (b && b.logo) {
       if (!img) { img = document.createElement('img'); img.className = 'logo'; img.alt = ''; brand.prepend(img); }
@@ -1034,7 +1051,7 @@
     try {
       const b = await (await fetch('/api/branding', { cache: 'no-cache' })).json();
       drawLogo(b);
-      try { localStorage.setItem('siteBranding', JSON.stringify({ logo: b.logo })); } catch { /* private window */ }
+      try { localStorage.setItem('siteBranding', JSON.stringify({ logo: b.logo, name: b.name, place: b.place })); } catch { /* private window */ }
       splash();
       document.dispatchEvent(new CustomEvent('branding', { detail: b }));
       return b;

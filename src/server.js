@@ -25,7 +25,7 @@ import { endTrial, setTrial } from './routes/trial.js';
 import { exportEverything } from './routes/export-all.js';
 import { idleConfig, saveIdleConfig, teamClocks, checkIdle, answerIdle, openIdleAlerts, recentIdleAlerts, tellTeamsIdle, idleTick, recordSignoff } from './routes/idle.js';
 import { practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, practiceReadiness, practiceFromFile, practiceOptions, setPracticeOptions, practiceSandbox, setPracticeSandbox, practiceExport, ownerOf, practiceModes, startPracticeMode, MODE_ACCESS } from './routes/practice.js';
-import { branding, saveLogo, clearLogo } from './routes/branding.js';
+import { branding, saveLogo, clearLogo, saveName } from './routes/branding.js';
 import { raiseAlert, tellTeams, listAlerts, seeAlert, closeAlert, alertsForDevice, sosReasons, saveSosReasons, DEFAULT_REASONS } from './routes/alerts.js';
 import { teamsConfig, saveTeamsConfig, postToTeams, testCard, alertCard } from './util/teams.js';
 import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout } from './routes/scanner-prompts.js';
@@ -276,8 +276,16 @@ async function serveStatic(req, res, pathname) {
   try {
     const info = await stat(filePath);
     if (!info.isFile()) throw new Error('not a file');
-    const body = await readFile(filePath);
+    let body = await readFile(filePath);
     const ext = extname(filePath);
+    // the installed app carries the site's name, whatever it was renamed to
+    if (rel === '/manifest.webmanifest') {
+      const b = branding();
+      const m = JSON.parse(body.toString('utf8'));
+      m.name = b.name;
+      m.short_name = b.name.replace(/\s+inventory$/i, '').slice(0, 12) || b.name.slice(0, 12);
+      body = Buffer.from(JSON.stringify(m, null, 2));
+    }
     // The service worker must never be served from a stale cache.
     const cache = rel === '/sw.js' ? 'no-store' : 'no-cache';
     send(req, res, 200, body, { 'content-type': MIME[ext] || 'application/octet-stream', 'cache-control': cache });
@@ -1383,6 +1391,14 @@ async function handleAdmin(req, res, url, m) {
     const out = saveLogo(body);
     audit(actor, body.dataUrl !== undefined ? (out.logo ? 'uploaded the site logo' : 'removed the site logo') : 'changed where the logo shows',
       out.logo ? `${Math.round(out.logo.length * 0.75 / 1024)} KB · ${out.onGuns ? 'on the guns too' : 'supervisor pages only'}` : '');
+    return sendJson(req, res, 200, out);
+  }
+  // the site's name and place: the sidebar, the splash, the guns, the board, the installed app
+  if (p === '/api/admin/site-name' && method === 'POST') {
+    requireAccess('admin');
+    const body = await readJson(req);
+    const out = saveName(body);
+    audit(actor, 'renamed the site', `${out.name}${out.place ? ' · ' + out.place : ''}`);
     return sendJson(req, res, 200, out);
   }
   if (p === '/api/admin/logo' && method === 'DELETE') {

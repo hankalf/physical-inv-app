@@ -288,7 +288,7 @@ await sup.close();
   await narrow.goto(BASE + '/admin');
   await narrow.waitForSelector('#scrMain.active'); await narrow.waitForTimeout(1500);
   check('Narrow: the sidebar becomes a top bar and the tabs stay reachable',
-    (await narrow.$$('#navTabs .tab')).length === 7
+    (await narrow.$$('#navTabs .tab')).length === 8
       && await narrow.$eval('#navTabs .tab.current', (a) => a.getBoundingClientRect().top < 260),
     `tab top ${Math.round(await narrow.$eval('#navTabs .tab.current', (a) => a.getBoundingClientRect().top))}px`);
   await narrow.screenshot({ path: `${S}screenshots/settings-narrow.png` });
