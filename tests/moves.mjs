@@ -69,6 +69,7 @@ await gun.fill('#fEmployee', 'E4'); await gun.press('#fEmployee', 'Enter');
 await gun.click('#btnStart');
 await gun.waitForSelector('#scrMove.active', { timeout: 8000 });
 const aisleBtns = await gun.$$eval('#moveAisles button', (bs) => bs.map((b) => b.textContent));
+check('The header reads Front2Back, not the count', clean(await gun.textContent('#hdrTitle')) === 'Front2Back', clean(await gun.textContent('#hdrTitle')));
 check('The gun asks which aisle to work, with how many are waiting in each', aisleBtns.length === 2 && /F01.*3$/.test(aisleBtns[0]) && /F02.*1$/.test(aisleBtns[1]), aisleBtns.join(' | '));
 await gun.click('#moveAisles button >> nth=0');
 await gun.waitForTimeout(300);
@@ -108,7 +109,7 @@ check('…and sends it the moment there is signal', landed);
 /* SOS from here, and back */
 await gun.click('#btnMoveSos');
 await gun.waitForTimeout(300);
-check('SOS works from the move screen', await gun.isVisible('#scrSos'));
+check('SOS works from the move screen, and the way back is named Front2Back', await gun.isVisible('#scrSos') && clean(await gun.textContent('#btnSosBack')) === 'Back to Front2Back', clean(await gun.textContent('#btnSosBack')));
 await gun.click('#btnSosBack');
 await gun.waitForTimeout(300);
 check('…and comes back to it', await gun.isVisible('#scrMove'));

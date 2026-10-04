@@ -708,7 +708,7 @@
       holdUpright();          // now that this count's settings are in hand
       state.draft = {};
       state.stepIndex = 0;
-      $('hdrTitle').textContent = `#${session.id} · ${session.name}`;
+      $('hdrTitle').textContent = state.mode === 'move' ? 'Front2Back' : state.mode === 'missing' ? 'Not in Location' : `#${session.id} · ${session.name}`;
       $('btnToAssign').hidden = !session.guided && session.mode !== 'cycle';
       if (session.mode === 'cycle') $('btnToAssign').textContent = 'My list';
       updateChips();
@@ -2371,16 +2371,24 @@
     return a ? a.moves.filter((m) => !done.has(m.id)) : [];
   };
 
-  /** The pallet system under a desk: the frame when there is an address, the bar either way. */
+  /** The pallet system under a desk: the frame when there is an address, the bar
+      either way. The frame is made the first time it is needed, so a gun that
+      never opens a desk never carries an empty one. */
   function deskSystem(sysId, frameId, openId, noteId) {
     const url = state.palletSystem || '';
     $(sysId).hidden = !url;
     $(openId).hidden = !url;
     $(noteId).textContent = url ? `Pallet system: ${url}` : 'No pallet system address set — the office sets it under Settings → Advanced.';
-    if (url) {
-      if ($(frameId).getAttribute('src') !== url) $(frameId).src = url;
-      $(openId).href = url;
+    if (!url) return;
+    let frame = $(frameId);
+    if (!frame) {
+      frame = document.createElement('iframe');
+      frame.id = frameId;
+      frame.title = 'The pallet system';
+      $(sysId).appendChild(frame);
     }
+    if (frame.getAttribute('src') !== url) frame.src = url;
+    $(openId).href = url;
   }
 
   /** The aisle list: how many are waiting in each. */
@@ -2610,6 +2618,8 @@
   let sosSending = false;
 
   function openSos() {
+    // the way back is named after where the counter came from
+    $('btnSosBack').textContent = tr(state.sosReturn === 'scrMove' ? 'Back to Front2Back' : state.sosReturn === 'scrFind' ? 'Back to Not in Location' : 'Back to counting');
     /* The list is a site setting that can change mid-shift, and a gun that has
        just signed on may not have it yet. Ask now; the buttons are drawn from
        whatever we have and redrawn the moment the answer lands. */
@@ -2739,6 +2749,7 @@
 
   function backFromSos() {
     if (state.sosReturn === 'scrMove') { state.sosReturn = ''; showScreen('scrMove'); renderMoves(); return; }
+    if (state.sosReturn === 'scrFind') { state.sosReturn = ''; showScreen('scrFind'); renderFind(); return; }
     showScreen(state.session ? 'scrScan' : 'scrSignon');
     if (state.session) { renderStep(); focusScan(); }
   }
@@ -2857,6 +2868,7 @@
   $('btnMoreLabels').onclick = askExtraLabel;
   $('btnSos').onclick = openSos;
   $('btnSosBack').onclick = backFromSos;
+  $('btnSos').addEventListener('click', () => { if (!['scrMove', 'scrFind'].includes(state.sosReturn)) state.sosReturn = ''; }, true);
   $('btnSosKeyboard').onclick = () => {
     const f = $('fSosNote');
     f.inputMode = f.inputMode === 'none' ? 'text' : 'none';

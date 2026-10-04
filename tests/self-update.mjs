@@ -67,6 +67,7 @@ const errors = [];
 async function handheld() {
   const ctx = await browser.newContext({ viewport: { width: 400, height: 780 }, deviceScaleFactor: 2 });
   await ctx.addInitScript(() => {
+    if (window !== window.top) return;        // the page, not a frame it opens
     const n = Number(sessionStorage.getItem('loads') || 0) + 1;
     sessionStorage.setItem('loads', String(n));
   });

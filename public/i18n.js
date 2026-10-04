@@ -198,7 +198,7 @@
     // SOS
     'What is wrong?': '¿Qué pasa?',
     'Anything else (optional)': 'Algo más (opcional)', 'Tap to type': 'Toca para escribir',
-    'Back to counting': 'Volver a contar',
+    'Back to counting': 'Volver a contar', 'Back to Front2Back': 'Volver a Front2Back', 'Back to Not in Location': 'Volver a Not in Location',
     'Sending…': 'Enviando…',
     'Sent — a supervisor has been told': 'Enviado — ya se avisó a un supervisor',
     'You can carry on counting; the bar at the top says when somebody has seen it.':
