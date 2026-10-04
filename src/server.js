@@ -19,6 +19,7 @@ import { listAdjustments, adjustmentView, decideAdjustments, adjustmentReasons, 
 import { accuracy, accuracyCsv, deriveAbc, accuracyTargets, saveAccuracyTargets } from './routes/accuracy.js';
 import { setupState } from './routes/setup.js';
 import { searchAll } from './routes/search.js';
+import { buildMoves, importMoves, listMoves, movesForGun, finishMove, clearOpenMoves } from './routes/moves.js';
 import { autoPlan, applyPlan } from './routes/auto-plan.js';
 import { endTrial, setTrial } from './routes/trial.js';
 import { exportEverything } from './routes/export-all.js';
@@ -273,6 +274,7 @@ async function serveStatic(req, res, pathname) {
     : /^\/settings\/?$/.test(pathname) ? '/settings.html'
     : /^\/board\/?$/.test(pathname) ? '/board.html'
     : /^\/testing\/?$/.test(pathname) ? '/testing.html'
+    : /^\/front\/?$/.test(pathname) ? '/front.html'
     : pathname;
   const filePath = join(PUBLIC_DIR, normalize(rel).replace(/^(\.\.[/\\])+/, ''));
   if (!filePath.startsWith(PUBLIC_DIR)) return send(req, res, 403, 'forbidden');
@@ -357,6 +359,17 @@ async function handleHandheld(req, res, url, m) {
       return sendJson(req, res, 200, { unchanged: true, ...publicSession(s) });
     }
     return sendJson(req, res, 200, masterPayload(m[1]));
+  }
+
+  // --- pallets to move back: the list by aisle, and each one done or skipped
+  if ((m = p.match(/^\/api\/sessions\/(\d+)\/moves$/)) && method === 'GET') {
+    return sendJson(req, res, 200, movesForGun(m[1]));
+  }
+  if ((m = p.match(/^\/api\/sessions\/(\d+)\/moves\/(\d+)\/(done|skip)$/)) && method === 'POST') {
+    openSession(m[1]);
+    const body = await readJson(req);
+    const out = finishMove(m[1], m[2], { team: body.team, deviceId: device ? device.name : body.deviceId, actualBin: body.actualBin, status: m[3] === 'skip' ? 'skipped' : 'done', reason: body.reason });
+    return sendJson(req, res, 200, out);
   }
 
   /* The crew is done with this scanner: its clock stops, and nobody is told it
@@ -1074,6 +1087,34 @@ async function handleAdmin(req, res, url, m) {
       strategies: STRATEGIES,
       siteDate: localDate(), siteTimezone: siteTimezone(), siteHour: localHour(),
     });
+  }
+  // --- pallets to move back
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/moves$/)) && method === 'GET') {
+    return sendJson(req, res, 200, listMoves(m[1], { status: url.searchParams.get('status') || '', aisle: url.searchParams.get('aisle') || '' }));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/moves\.csv$/)) && method === 'GET') {
+    const rows = listMoves(m[1]).moves.map((r) => ({
+      Pallet: r.pallet_id, 'From bin': r.from_bin, 'To bin': r.to_bin, Aisle: r.aisle, Level: r.level,
+      Status: r.status === 'done' ? 'Moved' : r.status === 'skipped' ? 'Skipped' : 'To move', 'Put in': r.actual_bin || '', Reason: r.reason || '',
+      Team: r.team || '', Scanner: r.device_id || '', When: r.done_at || '', Source: r.source === 'upload' ? 'Uploaded' : 'From the report',
+    }));
+    return sendCsv(req, res, `moves-session-${m[1]}.csv`, toCsv(rows, ['Pallet', 'From bin', 'To bin', 'Aisle', 'Level', 'Status', 'Put in', 'Reason', 'Team', 'Scanner', 'When', 'Source']));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/moves\/build$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const out = buildMoves(m[1], body);
+    audit(actor, 'built the move list from the report', `${out.added} pallets to move back${body.aisle ? ' in ' + body.aisle : ''}`, m[1]);
+    return sendJson(req, res, 200, out);
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/moves\/import$/)) && method === 'POST') {
+    const out = importMoves(m[1], await readBody(req), { replace: url.searchParams.get('replace') === '1' });
+    audit(actor, 'uploaded a move list', `${out.added} pallets to move back`, m[1]);
+    return sendJson(req, res, 200, out);
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/moves$/)) && method === 'DELETE') {
+    const n = clearOpenMoves(m[1]);
+    audit(actor, 'cleared the open moves', `${n} taken off the list`, m[1]);
+    return sendJson(req, res, 200, { cleared: n });
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/bins$/)) && method === 'GET') {
     const q = Object.fromEntries(url.searchParams);

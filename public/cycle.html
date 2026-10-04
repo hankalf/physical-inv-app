@@ -88,29 +88,6 @@
     </div>
       </div>
 
-      <div data-sub="front" data-sub-label="Front bins">
-    <div class="card" id="frontCard">
-      <h2>Front-placed bins <span class="muted">the bins on the aisle face of the racking</span></h2>
-      <div class="hint" style="margin-top:0">
-        Which face a bin is on comes from the bin list's own description (“… Position # 001 – Front”), or, where the list
-        does not say, from the site drawing (odd positions front, even back). Narrow it by zone, aisle or level, then
-        download the list or send it to the scanners as a cycle count.
-      </div>
-      <div class="inline" style="margin-top:12px">
-        <div class="auto"><label for="fFrFace">Face</label>
-          <select id="fFrFace"><option value="front">Front</option><option value="back">Back</option><option value="">Both</option></select></div>
-        <div class="auto"><label for="fFrZone">Zone</label><input id="fFrZone" class="sm" style="width:110px" placeholder="any"></div>
-        <div class="auto"><label for="fFrAisle">Aisles</label><input id="fFrAisle" class="sm" placeholder="any, e.g. F01 F02"></div>
-        <div class="auto"><label for="fFrLevels">Levels</label><input id="fFrLevels" class="sm" style="width:80px" placeholder="any"></div>
-        <div class="auto"><button class="primary" id="btnFrList">Show the list</button></div>
-        <div class="auto"><button id="btnFrCsv">Download (CSV)</button></div>
-        <div class="auto"><button id="btnFrBatch" title="Puts every bin in the list (that has no open task already) on today's cycle count">Count these — make a batch</button></div>
-      </div>
-      <div class="feedback" id="frMsg"></div>
-      <div class="scroll" style="margin-top:12px"><table id="frTable"></table></div>
-    </div>
-      </div>
-
       <div data-sub="open" data-sub-label="Still open">
     <div class="card" id="batchCard">
       <h2>Batches</h2>

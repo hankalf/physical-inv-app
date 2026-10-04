@@ -36,7 +36,7 @@ await admin.fill('#fPassword', 'changeme'); await admin.click('#btnLogin');
 await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(500);
 check('Admin: login', true);
 check('Admin: the tab bar links the supervisor pages, and the Testing tab',
-  (await admin.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/cycle,/teams,/settings,/testing');
+  (await admin.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/cycle,/teams,/settings,/front,/testing');
 
 await admin.fill('#fNewName', 'Front Royal Q3 physical'); await admin.click('#btnCreate'); await admin.waitForTimeout(600);
 check('Admin: create session, and it points at what to upload next',

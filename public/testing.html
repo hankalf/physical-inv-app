@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Testing</title>
+<title>Testing Suite</title>
 <link rel="icon" href="/icon.svg">
 <link rel="stylesheet" href="/admin.css">
 <style>
@@ -67,6 +67,32 @@
   .check i { flex: 0 0 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--line); font-style: normal; font-size: 11px; display: grid; place-items: center; margin-top: 1px; }
   .check.done { color: var(--text); }
   .check.done i { background: var(--ok); border-color: var(--ok); color: #06210f; font-weight: 900; }
+  /* the coach: a bubble beside the thing to click next, with a pointer */
+  .coach { position: fixed; z-index: 40; max-width: 320px; pointer-events: none; transition: top .18s, left .18s; }
+  .coachbox { pointer-events: auto; background: #f0b429; color: #1a1300; border-radius: 12px; padding: 12px 14px; box-shadow: 0 10px 30px rgba(0,0,0,.45); position: relative; }
+  .coachbox::before { content: ""; position: absolute; width: 14px; height: 14px; background: #f0b429; transform: rotate(45deg); }
+  .coach.below .coachbox::before { top: -7px; left: 22px; }
+  .coach.above .coachbox::before { bottom: -7px; left: 22px; }
+  .coach.left .coachbox::before { right: -7px; top: 18px; }
+  .coachstep { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; opacity: .75; }
+  .coachtext { font-size: 14px; font-weight: 600; line-height: 1.45; margin-top: 3px; }
+  .coachtext b { font-weight: 900; }
+  .coachacts { margin-top: 8px; }
+  .coachacts button { background: rgba(0,0,0,.12); border-color: transparent; color: #1a1300; font-weight: 700; }
+  .spot { outline: 3px solid #f0b429 !important; outline-offset: 3px; border-radius: 8px; animation: spot 1.2s ease-in-out infinite; }
+  @keyframes spot { 50% { outline-color: rgba(240,180,41,.35); } }
+  .gun.spot { outline-offset: -3px; border-radius: 30px 30px 44px 44px; }
+  .guide .guidehead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .guide .guidehead h2 { margin: 0; }
+  .guide p { margin: 10px 0 0; line-height: 1.55; }
+  .guide .steps { margin: 12px 0 0; padding-left: 22px; line-height: 1.55; }
+  .guide .steps li { margin-bottom: 7px; }
+  .guide .steps li::marker { font-weight: 800; color: var(--accent); }
+  .guidegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; margin-top: 12px; }
+  .guidegrid > div { background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; font-size: 13px; line-height: 1.45; }
+  .guidegrid > div b { display: block; margin-bottom: 2px; }
+  .guidegrid > div span { color: var(--text-dim); }
+  .guide.collapsed #guideBody { display: none; }
   .checks.ready { grid-template-columns: 1fr; gap: 4px; margin-top: 4px; }
   .check .fix { display: block; font-size: 12.5px; color: var(--warn); margin-top: 2px; }
   .check.opt i { border-color: var(--warn); color: var(--warn); }
@@ -134,7 +160,7 @@
 
 <div class="shell">
   <header class="topbar">
-    <h1>Testing</h1>
+    <h1>Testing Suite</h1>
     <span class="tag practice" id="practiceChip" hidden>practice count</span>
     <span class="spacer"></span>
   </header>
@@ -168,11 +194,49 @@
             <button class="sm" id="btnReloadGun" title="Reload the app on this scanner, as if it had been switched off and on">Restart the gun</button>
             <button class="sm" id="btnDashboard">Open the dashboard on this count</button>
             <button class="sm danger" id="btnReset">Start over</button>
+            <button class="sm" id="btnTips">Hide tips</button>
           </div>
           <div class="feedback" id="rigMsg"></div>
         </div>
 
         <div class="sheet">
+          <div class="card guide" id="guideCard">
+            <div class="guidehead">
+              <h2>First time here? How this page works</h2>
+              <button type="button" class="sm" id="btnGuide">Hide</button>
+            </div>
+            <div id="guideBody">
+              <p>
+                This is a safe place to learn the scanner. The screen on the <b>left</b> is the real scanner app — the same
+                one on the Zebra guns — counting into a practice count that belongs to you alone. The <b>right</b> side is
+                the warehouse: what is on each shelf, and a checklist of things to try. Nothing you do here touches a real count.
+              </p>
+              <ol class="steps">
+                <li><b>Check “Before you start”.</b> It should say <i>ready to test</i>. If not, it tells you what to do.</li>
+                <li><b>Sign on.</b> Under <i>1 · Sign on</i>, click the team number <span class="scan" style="cursor:default">99</span> and a
+                  clock-in number — each click is a scan into the gun. Then tap <b>Sign on &amp; load list</b> on the gun itself.</li>
+                <li><b>Start counting.</b> Tap <b>Start counting</b> on the gun. It asks three things per pallet, one screen at a time:
+                  <b>pallet → quantity → bin</b>. Click those three on the sheet, in that order, for the first pallet. The comments
+                  screen moves on by itself, or tap <b>Skip</b>.</li>
+                <li><b>Work down the sheet.</b> A green edge on a bin means it is counted. Some bins have a <b>Try this</b> note — the
+                  shelf is wrong on purpose there, to show what the gun does about a short pallet, an empty bin, a label that will not scan.</li>
+                <li><b>Watch “Things to try” tick itself off.</b> It fills in from what actually reached the server, so when it reads
+                  <i>12 of 12</i> you have seen everything a counter meets on the floor.</li>
+                <li><b>See the office side.</b> <b>Open the dashboard on this count</b> shows what a supervisor sees: progress, the
+                  pallet report, adjustments, your SOS.</li>
+              </ol>
+              <div class="guidegrid">
+                <div><b>SCAN box</b><span>Type anything — a wrong pallet ID, a bin from another aisle — and press SCAN to see how the gun answers.</span></div>
+                <div><b>Español</b><span>The button at the top of the gun switches it to Spanish and back.</span></div>
+                <div><b>Try the features that ship off</b><span>Lot codes, best-before, approvals, ABC and more — switch them on for your practice only, then count a pallet and see the difference.</span></div>
+                <div><b>Your own test pallets</b><span>Upload a Bin / Pallet / Qty sheet to practise on your own data. It is the same sheet as the printed barcode book.</span></div>
+                <div><b>Restart the gun</b><span>Reloads the app on the scanner, as if it had been switched off and on. Nothing counted is lost.</span></div>
+                <div><b>Start over</b><span>Begins a fresh run. The one you were on is kept under <i>Your earlier runs</i>.</span></div>
+              </div>
+              <p class="muted" style="margin:10px 0 0">Stuck? The <b>SOS — I need help</b> button on the gun is real: press it here and it shows on the dashboard like any other, so you can see that side too.</p>
+            </div>
+          </div>
+
           <div class="card" id="readyCard">
             <h2>Before you start <span class="muted" id="readySum"></span></h2>
             <div class="checks ready" id="readyList"></div>
@@ -259,6 +323,16 @@
   </main>
 </div>
 
+<!-- the tip that points at the next thing to click -->
+<div class="coach" id="coach" hidden>
+  <div class="coachbox">
+    <div class="coachstep" id="coachStep"></div>
+    <div class="coachtext" id="coachText"></div>
+    <div class="coachacts">
+      <button type="button" class="sm" id="coachOff">I've got it — hide tips</button>
+    </div>
+  </div>
+</div>
 <script src="/nav.js"></script>
 <script src="/testing.js"></script>
 </body>

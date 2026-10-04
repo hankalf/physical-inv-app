@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Front bins</title>
+<link rel="icon" href="/icon.svg">
+<link rel="stylesheet" href="/admin.css">
+<style>
+  .mvtiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 12px; }
+  .how { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+  @media (max-width: 1000px) { .how { grid-template-columns: 1fr; } }
+  .how > div { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--surface-2); }
+  .how h3 { margin: 0 0 6px; }
+  .tlink { color: var(--accent); font-weight: 700; text-decoration: none; display: inline-block; padding: 8px 0; }
+</style>
+</head>
+<body class="app">
+
+<aside class="side">
+  <div class="brand">Inventory Count<span>Front Royal</span></div>
+  <nav id="navTabs"></nav>
+  <div class="side-foot">
+    <span class="chip" id="navWho" hidden></span>
+    <button id="navLogout" class="ghost sm" hidden>Log out</button>
+  </div>
+</aside>
+
+<div class="shell">
+  <header class="topbar">
+    <h1>Front bins</h1>
+    <div id="sessionPick"></div>
+    <span class="spacer"></span>
+    <nav class="subtabs" id="subTabs"></nav>
+  </header>
+
+  <main>
+    <section class="screen active" id="scrLogin">
+      <div class="card signin">
+        <h2>Supervisor sign-in</h2>
+        <label for="fUser">Username <span style="text-transform:none;letter-spacing:0">— or your name, if your site still uses the shared password</span></label>
+        <input id="fUser" autocomplete="username" placeholder="e.g. DANA">
+        <label for="fPassword">Password</label>
+        <input id="fPassword" type="password" autocomplete="current-password">
+        <button class="primary" id="btnLogin" style="width:100%;margin-top:14px">Sign in</button>
+        <div class="feedback" id="loginMsg"></div>
+      </div>
+    </section>
+
+    <section class="screen" id="scrMain">
+      <div data-sub="moves" data-sub-label="Pallets to move back">
+    <div class="card" id="movesCard">
+      <h2>Pallets to move back <span class="muted">a front pallet with an empty bin behind it</span></h2>
+      <div class="hint" style="margin-top:0">
+        In double-deep racking a pallet left in the <b>front</b> position with nothing behind it blocks the back slot.
+        This builds the list of those from the inventory report — or takes one you upload — and hands it to the scanners
+        as a job of its own: <b>Move pallets</b> at sign-on. The gun walks the aisle, asks for the pallet, then the bin
+        it went into. Each move updates the report, so the count that follows expects the pallet where it now is.
+      </div>
+      <div class="how">
+        <div>
+          <h3>From the report</h3>
+          <div class="muted">Every pallet the report puts in a front bin whose bin behind exists and is empty on the report.</div>
+          <div class="inline" style="margin-top:8px">
+            <div class="auto"><label for="fMvAisle">Aisles</label><input id="fMvAisle" class="sm" placeholder="any, e.g. F01 F02"></div>
+            <div class="auto"><label for="fMvZone">Zone</label><input id="fMvZone" class="sm" style="width:110px" placeholder="any"></div>
+            <div class="auto"><button class="primary fit" id="btnMvBuild">Build the list</button></div>
+          </div>
+        </div>
+        <div>
+          <h3>From a file</h3>
+          <div class="muted">A sheet with <b>Pallet</b>, <b>From bin</b> and <b>To bin</b>. Every bin has to be on this count's bin list.</div>
+          <div class="inline" style="margin-top:8px">
+            <div><label for="fMvFile">CSV or Excel</label><input type="file" id="fMvFile" accept=".csv,.txt,.xlsx,.xlsm"></div>
+            <div class="auto"><button class="fit" id="btnMvUpload">Upload</button></div>
+            <div class="auto"><a class="tlink" href="/templates/moves-template.csv" download>⬇ Template</a></div>
+          </div>
+        </div>
+      </div>
+      <div class="inline" style="margin-top:10px">
+        <div class="auto"><label class="cb" title="Take every pallet still waiting off the list first. Moves already done or skipped are kept."><input type="checkbox" id="fMvReplace"> Replace what is still waiting</label></div>
+      </div>
+      <div class="feedback" id="mvMsg"></div>
+      <div class="mvtiles">
+        <div class="stat"><div class="n" id="mvOpen">0</div><div class="l">To move</div></div>
+        <div class="stat"><div class="n" id="mvDone">0</div><div class="l">Moved</div></div>
+        <div class="stat"><div class="n" id="mvSkipped">0</div><div class="l">Skipped — needs a look</div></div>
+        <div class="stat"><div class="n" id="mvAisles">0</div><div class="l">Aisles with moves waiting</div></div>
+      </div>
+      <div class="toolbar" style="margin-top:12px">
+        <div class="seg" id="mvFilter">
+          <button type="button" data-status="">All</button>
+          <button type="button" data-status="open">To move</button>
+          <button type="button" data-status="done">Moved</button>
+          <button type="button" data-status="skipped">Skipped</button>
+        </div>
+        <span class="spacer"></span>
+        <button id="btnMvCsv">Download (CSV)</button>
+        <button id="btnMvClear" class="danger">Clear what is waiting</button>
+      </div>
+      <div class="scroll" style="margin-top:10px"><table id="mvTable"></table></div>
+    </div>
+      </div>
+
+      <div data-sub="bins" data-sub-label="Front-placed bins">
+    <div class="card" id="frontCard">
+      <h2>Front-placed bins <span class="muted">the bins on the aisle face of the racking</span></h2>
+      <div class="hint" style="margin-top:0">
+        Which face a bin is on comes from the bin list's own description (“… Position # 001 – Front”), or, where the list
+        does not say, from the site drawing (odd positions front, even back). Narrow it by zone, aisle or level, then
+        download the list, or send it to the scanners as a cycle count.
+      </div>
+      <div class="inline" style="margin-top:12px">
+        <div class="auto"><label for="fFrFace">Face</label>
+          <select id="fFrFace"><option value="front">Front</option><option value="back">Back</option><option value="">Both</option></select></div>
+        <div class="auto"><label for="fFrZone">Zone</label><input id="fFrZone" class="sm" style="width:110px" placeholder="any"></div>
+        <div class="auto"><label for="fFrAisle">Aisles</label><input id="fFrAisle" class="sm" placeholder="any, e.g. F01 F02"></div>
+        <div class="auto"><label for="fFrLevels">Levels</label><input id="fFrLevels" class="sm" style="width:80px" placeholder="any"></div>
+        <div class="auto"><button class="primary" id="btnFrList">Show the list</button></div>
+        <div class="auto"><button id="btnFrCsv">Download (CSV)</button></div>
+        <div class="auto"><button id="btnFrBatch" title="Puts every bin in the list (that has no open task already) on today's cycle count">Count these — make a batch</button></div>
+      </div>
+      <div class="feedback" id="frMsg"></div>
+      <div class="scroll" style="margin-top:12px"><table id="frTable"></table></div>
+    </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="/nav.js"></script>
+<script src="/front.js"></script>
+</body>
+</html>

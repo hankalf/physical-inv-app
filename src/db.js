@@ -594,6 +594,7 @@ export function deleteSession(sessionId, { confirmName = '' } = {}) {
 export const bumpMasterVersion = (sessionId) =>
   db.prepare('UPDATE sessions SET master_version = master_version + 1 WHERE id = ?').run(Number(sessionId));
 
+const movesOpenCount = { get: (id) => { try { return db.prepare("SELECT COUNT(*) n FROM moves WHERE session_id = ? AND status = 'open'").get(id); } catch { return { n: 0 }; } } };
 export const publicSession = (s) => ({
   id: s.id,
   name: s.name,
@@ -614,6 +615,8 @@ export const publicSession = (s) => ({
   // the count a scanner should land on at sign-on, if a supervisor picked one
   isDefault: defaultSessionId() === s.id,
   practice: !!s.practice,
+  // pallets waiting to be moved back on this count, for the gun's "Move pallets" choice
+  movesOpen: movesOpenCount.get(s.id).n,
   // a trial run says so on the gun; a trial that was cleared tells the gun to forget it
   trial: !!s.trial,
   clearedAt: s.cleared_at || null,

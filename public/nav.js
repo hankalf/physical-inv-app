@@ -8,8 +8,20 @@
     ['/cycle', 'Cycle counts', '↻'],
     ['/teams', 'Teams & crew', '☰'],
     ['/settings', 'Settings', '⚙'],
-    ['/testing', 'Testing', '▶'],
+    ['/front', 'Front bins', '▥'],
+    ['/testing', 'Testing Suite', '▶'],
   ];
+
+  /* Each page's sections, so the sidebar can open them out under the page.
+     The current page's list comes from its own markup; the others from here. */
+  const SUBS = {
+    '/admin': [['progress', 'Progress'], ['map', 'Map'], ['teams', 'Team plan'], ['second', 'Second counts'], ['adjust', 'Adjustments'], ['reports', 'Reports']],
+    '/cycle': [['today', 'Today'], ['open', 'Still open'], ['coverage', 'Coverage'], ['setup', 'Program & data']],
+    '/teams': [['crew', 'Crew & teams'], ['rules', 'Equipment rules']],
+    '/settings': [['start', 'Getting started'], ['gun', 'Scanner screen'], ['logins', 'Logins'], ['scanners', 'Scanners'], ['lists', 'Lists & racking'], ['erp', 'ERP & backups']],
+    '/front': [['moves', 'Pallets to move back'], ['bins', 'Front-placed bins']],
+    '/testing': [],
+  };
 
   const here = location.pathname.replace(/\/$/, '') || '/admin';
   const api = {
@@ -148,11 +160,29 @@
   };
   window.appUi = ui;
 
+  const subsOf = (href) => {
+    if (href === here) {
+      const panes = [...document.querySelectorAll('[data-sub]')];
+      if (panes.length) return panes.map((p) => [p.dataset.sub, p.dataset.subLabel || p.dataset.sub]);
+    }
+    return SUBS[href] || [];
+  };
+  const openKey = (href) => 'navOpen:' + href;
+  const isOpen = (href) => {
+    if (href === here) return true;                 // the page you are on is always opened out
+    try { return sessionStorage.getItem(openKey(href)) === '1'; } catch { return false; }
+  };
+
   function renderTabs() {
     const bar = document.getElementById('navTabs');
     if (!bar) return;
     bar.innerHTML = '';
+    const currentSub = (location.hash || '').replace('#', '') || (() => { try { return sessionStorage.getItem('sub:' + here); } catch { return ''; } })();
     for (const [href, label, ico] of TABS) {
+      const group = document.createElement('div');
+      group.className = 'navgroup' + (here === href ? ' here' : '');
+      const row = document.createElement('div');
+      row.className = 'navrow';
       const a = document.createElement('a');
       a.href = href;
       a.className = 'tab' + (here === href ? ' current' : '');
@@ -160,7 +190,44 @@
       i.className = 'ico';
       i.textContent = ico;
       a.append(i, document.createTextNode(label));
-      bar.appendChild(a);
+      row.appendChild(a);
+      const subs = subsOf(href);
+      if (subs.length) {
+        /* the sections, opened out under the page; the caret folds them away */
+        const open = isOpen(href);
+        const caret = document.createElement('button');
+        caret.type = 'button';
+        caret.className = 'caret';
+        caret.textContent = open ? '▾' : '▸';
+        caret.title = open ? 'Fold the sections away' : 'Show the sections';
+        caret.setAttribute('aria-expanded', String(open));
+        row.appendChild(caret);
+        const list = document.createElement('div');
+        list.className = 'subs';
+        list.hidden = !open;
+        for (const [sub, text] of subs) {
+          const s = document.createElement('a');
+          s.href = `${href}#${sub}`;
+          s.className = 'sub' + (here === href && sub === currentSub ? ' current' : '');
+          // not data-sub: that is how a page marks its own sections, and this is a link to one
+          s.dataset.navSub = sub;
+          s.dataset.page = href;
+          s.textContent = text;
+          if (here === href) s.onclick = (e) => { e.preventDefault(); api.showSub(sub); };
+          list.appendChild(s);
+        }
+        caret.onclick = () => {
+          const now = list.hidden;
+          list.hidden = !now;
+          caret.textContent = now ? '▾' : '▸';
+          caret.setAttribute('aria-expanded', String(now));
+          try { sessionStorage.setItem(openKey(href), now ? '1' : '0'); } catch { /* private window */ }
+        };
+        group.append(row, list);
+      } else {
+        group.appendChild(row);
+      }
+      bar.appendChild(group);
     }
     const who = document.getElementById('navWho');
     if (who) {
@@ -314,6 +381,7 @@
   api.showSub = function showSub(name) {
     for (const pane of document.querySelectorAll('[data-sub]')) pane.classList.toggle('active', pane.dataset.sub === name);
     for (const b of document.querySelectorAll('#subTabs button')) b.classList.toggle('current', b.dataset.goto === name);
+    for (const s of document.querySelectorAll(`#navTabs .sub[data-page="${here}"]`)) s.classList.toggle('current', s.dataset.navSub === name);
     try { sessionStorage.setItem(subKey, name); } catch { /* private window */ }
     if (location.hash.replace('#', '') !== name) history.replaceState(null, '', '#' + name);
     document.dispatchEvent(new CustomEvent('subshow', { detail: name }));
@@ -530,14 +598,14 @@
     ['Racking blocks', '/settings', 'lists', 'racking block back to back pair aisles conflict'],
     ['Send to the ERP', '/settings', 'erp', 'erp export send file layout columns adjustments posting'],
     ['Backups and the log', '/settings', 'erp', 'backup restore log audit who did what download'],
-    ['Try the scanner on test data', '/testing', '', 'testing test practice training try demo scanner gun emulator simulator learn new starter'],
+    ['Testing Suite — try the scanner on test data', '/testing', '', 'testing suite test practice training try demo scanner gun emulator simulator learn new starter'],
     ['Export everything to Excel', '/admin', 'reports', 'export everything excel workbook xlsx all data readable download report auditor'],
     ['Trial run — rehearse, then clear', '/admin', 'progress', 'trial run rehearsal dry run practice clear reset start fresh'],
     ['Positive and negative adjustments', '/admin', 'adjust', 'adjustments positive negative found more less add take off net variance'],
     ['Team clocks and stopped scanning', '/admin', 'progress', 'timer clock time on count idle stopped scanning quiet break lunch alert'],
     ['Stopped-scanning alert setting', '/settings', 'scanners', 'idle stopped scanning minutes alert teams break'],
     ['1st and 2nd shift teams', '/teams', 'crew', 'shift first second 1st 2nd night day team'],
-    ['Front-placed bins for cycle counts', '/cycle', 'front', 'front back face placed bins list cycle aisle side'],
+    ['Front bins — the list, and pallets to move back', '/front', 'bins', 'front back face placed bins list cycle aisle side move pallets behind empty'],
     ['Auto-assign the aisles — a staggered plan', '/admin', 'teams', 'auto assign plan stagger staggered aisles teams spread automatic queue every team'],
     ['Test with your own pallets, and try features that are off', '/testing', '', 'testing upload own pallets file lot expiry approval abc try features off practice'],
   ].map(([title, page, sub, words]) => ({ title, page, sub, words }));

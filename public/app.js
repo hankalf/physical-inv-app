@@ -177,7 +177,7 @@
         const r = (Math.random() * 16) | 0; return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
       }));
 
-  const SCREENS = ['scrDevice', 'scrSignon', 'scrAssign', 'scrScan', 'scrOverride', 'scrHistory', 'scrSos', 'scrEmptyRun'];
+  const SCREENS = ['scrDevice', 'scrSignon', 'scrAssign', 'scrScan', 'scrOverride', 'scrHistory', 'scrSos', 'scrEmptyRun', 'scrMove'];
   function showScreen(name) {
     for (const s of SCREENS) $(s).classList.toggle('active', s === name);
     if (name === 'scrScan') focusScan();
@@ -490,8 +490,11 @@
   function renderSessionChoices() {
     const sel = $('fSession');
     const kinds = new Set(state.sessions.map((s) => s.mode || 'full'));
+    // moving pallets back is a job on a count, not a kind of count: offered while any are waiting
+    if (state.sessions.some((s) => s.movesOpen > 0)) kinds.add('move');
     $('btnModeFull').hidden = !kinds.has('full');
     $('btnModeCycle').hidden = !kinds.has('cycle');
+    $('btnModeMove').hidden = !kinds.has('move');
     $('modeBlock').hidden = kinds.size < 2;
     $('sessionLabel').textContent = kinds.size < 2
       ? (state.mode === 'cycle' ? 'Cycle count' : 'Count session')
@@ -499,8 +502,10 @@
     if (!kinds.has(state.mode)) state.mode = kinds.has('full') ? 'full' : [...kinds][0] || '';
     $('btnModeFull').classList.toggle('selected', state.mode === 'full');
     $('btnModeCycle').classList.toggle('selected', state.mode === 'cycle');
+    $('btnModeMove').classList.toggle('selected', state.mode === 'move');
 
-    const shown = state.sessions.filter((s) => (s.mode || 'full') === state.mode);
+    const shown = state.mode === 'move' ? state.sessions.filter((s) => s.movesOpen > 0)
+      : state.sessions.filter((s) => (s.mode || 'full') === state.mode);
     sel.innerHTML = '';
     for (const s of shown) {
       const o = document.createElement('option');
@@ -509,7 +514,7 @@
       o.dataset.session = JSON.stringify(s);
       sel.appendChild(o);
     }
-    if (!shown.length) sel.innerHTML = `<option value="">No ${state.mode === 'cycle' ? 'cycle count' : 'full count'} running</option>`;
+    if (!shown.length) sel.innerHTML = `<option value="">No ${state.mode === 'cycle' ? 'cycle count' : state.mode === 'move' ? 'pallets to move' : 'full count'} running</option>`;
   }
 
   async function pickMode(mode) {
@@ -668,6 +673,8 @@
       }
       state.recountsDoneLocal = (await metaGet('recountsDoneLocal')) || [];
 
+      // moving pallets back: its own screen, its own list
+      if (state.mode === 'move') { await loadMoves(); renderMoves(); showScreen('scrMove'); syncQueue(); return; }
       // a cycle session has no aisle plan, but the bin list is the job: show it
       if (session.guided || session.mode === 'cycle') { renderAssignment(); showScreen('scrAssign'); }
       else { showScreen('scrScan'); renderStep(); }
@@ -1201,6 +1208,10 @@
     // a second label belongs to the pallet just counted, so it is offered at the
     // start of the next line rather than in the middle of this one
     $('btnSameLabel').hidden = step !== 'pallet' || !state.lastPallet || !!state.recount;
+    /* right after the pallet scan, before the quantity: a pallet wearing two
+       tags gets both read now, and is still counted once */
+    $('btnMoreLabels').hidden = step !== 'qty' || !state.draft.palletId || !!state.draft.emptyBin || !!state.awaitingExtra;
+    $('btnMoreLabels').textContent = (state.draft.extraLabels || []).length ? 'Another label on this pallet' : 'This pallet has another label';
     /* A barcode that will not read is not a reason to walk away from a pallet -
        or from a bin. Offered on both steps that scan a label, worded for the one
        in front of the counter, and put away again as the line moves on. */
@@ -1429,7 +1440,7 @@
     const d = state.draft;
     const rows = [];
     if (state.session?.guided && state.assignment?.active) rows.push(['Your aisle', `${aisleLabel(state.assignment.active.aisle, state.assignment.active.zone)} · ${levelsLabel(state.assignment.active.levels)}`]);
-    if (d.palletId) rows.push(['Pallet', d.palletId]);
+    if (d.palletId) rows.push(['Pallet', (d.extraLabels || []).length ? `${d.palletId} + ${d.extraLabels.join(', ')}` : d.palletId]);
     if (d.qty != null) rows.push(['Qty', String(d.qty)]);
     if (d.location) rows.push(['Bin', `${d.location}${describeBin(d.location) ? ' — ' + describeBin(d.location) : ''}`]);
     kv($('ctx'), rows);
@@ -1438,6 +1449,11 @@
   async function handleEntry(raw) {
     const value = norm(raw);
     const step = state.steps[state.stepIndex];
+    if (state.awaitingExtra) {
+      if (!value) return;
+      await takeExtraLabel(value);
+      return;
+    }
     if (state.awaitingLabel) {
       if (!value) return;
       clearFeedback($('scanMsg'));
@@ -1749,6 +1765,47 @@
    * the tag is recorded as a line of its own with no quantity, pointing at the
    * pallet it is stuck to.
    */
+  /*
+   * The other label, read while the counter is still at the pallet.
+   *
+   * The second-label button after a line is saved covers the case where it is
+   * noticed late. This covers the usual case: the counter sees two tags as they
+   * scan the first, and reads the other one there and then. The extra tags ride
+   * along with the line and are saved beside it, each with no quantity of its
+   * own, so the pallet counts once and neither label comes up as uncounted.
+   */
+  function askExtraLabel() {
+    if (!state.draft.palletId) return;
+    state.awaitingExtra = true;
+    $('prompt').textContent = `Scan the OTHER label on ${state.draft.palletId}`;
+    $('fScan').value = '';
+    $('btnMoreLabels').hidden = true;
+    feedback($('scanMsg'), 'warn', `Another label on ${state.draft.palletId}`, 'Scan it. It is recorded with no quantity of its own. Tap Back to cancel.');
+    focusScan();
+  }
+
+  async function takeExtraLabel(tag) {
+    const main = state.draft.palletId;
+    const have = state.draft.extraLabels || [];
+    state.awaitingExtra = false;
+    if (tag === main || have.includes(tag)) {
+      feedback($('scanMsg'), 'err', 'That label is already read', `Scan a different tag on ${main}, or enter the quantity.`);
+      renderStep();
+      return;
+    }
+    const dup = await alreadyCounted(tag);
+    if (dup) {
+      feedback($('scanMsg'), 'err', `${tag} was counted in ${dup.loc}`, 'That tag belongs to another pallet — tell a supervisor.');
+      renderStep();
+      return;
+    }
+    state.draft.extraLabels = [...have, tag];
+    beep('ok');
+    renderStep();
+    feedback($('scanMsg'), 'ok', `${tag} is the same pallet as ${main}`,
+      `${state.draft.extraLabels.length + 1} labels on it. Scan another, or enter the quantity.`);
+  }
+
   function startSecondLabel() {
     const last = state.lastPallet;
     if (!last) {
@@ -1914,6 +1971,13 @@
     };
     await wrap(lineTx().put(line));
     if (!line.emptyBin) await wrap(tx('dup', 'readwrite').put({ p: line.palletId, loc: line.location, team: line.team }));
+    // the other labels on this pallet: a line each, no quantity, pointing at it
+    for (const tag of d.extraLabels || []) {
+      const alias = { ...line, clientId: uuid(), palletId: tag, qty: 0, aliasOf: line.palletId, comments: `second label on ${line.palletId}`,
+        labelIssue: '', binLabelIssue: '', overrideReason: null, unknownPallet: 0, duplicatePallet: 0, ts: new Date().toISOString() };
+      await wrap(lineTx().put(alias));
+      await wrap(tx('dup', 'readwrite').put({ p: tag, loc: line.location, team: line.team }));
+    }
     updateChips();
     if (line.location) {
       countedInAisle.add(line.location);
@@ -2071,6 +2135,7 @@
   }
 
   function stepBack() {
+    if (state.awaitingExtra) { state.awaitingExtra = false; clearFeedback($('scanMsg')); renderStep(); return; }
     if (state.draft.emptyBin) { state.draft = {}; state.stepIndex = 0; clearFeedback($('scanMsg')); renderStep(); return; }
     if (state.stepIndex === 0) return;
     state.stepIndex--;
@@ -2083,6 +2148,133 @@
     }
     clearFeedback($('scanMsg'));
     renderStep();
+  }
+
+  /* ------------------------------------------------------- moving pallets
+     A front pallet with an empty bin behind it, put back where it belongs.
+     The office builds the list; the gun walks it aisle by aisle: scan the
+     pallet (so it is the right one), move it, scan the bin it went into (so it
+     is the right bin). Done and skipped moves queue like count lines, so a dead
+     spot in the freezer loses nothing. */
+  const SKIP_REASONS = ['Pallet is not there', 'Bin behind is not empty', 'Cannot reach it', 'Pallet is damaged'];
+  const moveState = { aisle: '', task: null, step: 'pallet' };
+
+  async function loadMoves() {
+    state.movesDoneLocal = (await metaGet('movesDoneLocal')) || [];
+    if (online()) {
+      try {
+        state.moves = await api(`/api/sessions/${state.session.id}/moves`);
+        await metaSet('moves', state.moves);
+        return;
+      } catch { /* use what is cached */ }
+    }
+    state.moves = (await metaGet('moves')) || { aisles: [] };
+  }
+
+  const settled = () => new Set((state.movesDoneLocal || []).map((d) => d.id));
+  const openMoves = (aisle) => {
+    const done = settled();
+    const a = (state.moves?.aisles || []).find((x) => x.aisle === aisle);
+    return a ? a.moves.filter((m) => !done.has(m.id)) : [];
+  };
+
+  function renderMoves() {
+    const list = $('moveAisles');
+    list.innerHTML = '';
+    const aisles = (state.moves?.aisles || []).map((a) => ({ aisle: a.aisle, open: openMoves(a.aisle).length })).filter((a) => a.open);
+    const task = moveState.aisle ? openMoves(moveState.aisle)[0] : null;
+    moveState.task = task || null;
+    $('moveTask').hidden = !task;
+    $('moveBanner').hidden = !!task || aisles.length > 0;
+    if (!task) {
+      moveState.aisle = '';
+      if (!aisles.length) {
+        $('moveBanner').hidden = false;
+        $('moveBanner').className = 'feedback show ok';
+        $('moveBanner').textContent = 'Nothing left to move. Refresh to check again, or sign off.';
+      }
+      const head = document.createElement('div');
+      head.className = 'assign';
+      head.innerHTML = '<div class="sub">MOVE PALLETS</div><div class="aisle"></div><div class="sub"></div>';
+      head.querySelector('.aisle').textContent = aisles.reduce((n, a) => n + a.open, 0);
+      head.querySelector('.sub:last-child').textContent = 'pallets to move back — pick an aisle';
+      list.appendChild(head);
+      for (const a of aisles) {
+        const b = document.createElement('button');
+        b.textContent = `${aisleLabel(a.aisle, zoneFor(a.aisle))} · ${a.open} to move`;
+        b.onclick = () => { moveState.aisle = a.aisle; moveState.step = 'pallet'; clearFeedback($('moveMsg')); renderMoves(); };
+        list.appendChild(b);
+      }
+      return;
+    }
+    const left = openMoves(moveState.aisle).length;
+    $('mvPallet').textContent = task.pallet;
+    $('mvWhere').textContent = `from ${task.from} → to ${task.to} (behind)`;
+    $('mvLeft').textContent = `${aisleLabel(moveState.aisle, zoneFor(moveState.aisle))} · ${left} to move${task.level ? ' · level ' + task.level : ''}`;
+    $('mvPrompt').textContent = moveState.step === 'pallet' ? 'Scan the PALLET' : 'Scan the BIN it went into';
+    $('moveSkipReasons').hidden = true;
+    $('fMoveScan').value = '';
+    setTimeout(() => { try { $('fMoveScan').focus({ preventScroll: true }); } catch { $('fMoveScan').focus(); } }, 30);
+  }
+
+  async function moveScan(raw) {
+    const v = norm(raw);
+    const t = moveState.task;
+    if (!v || !t) return;
+    if (moveState.step === 'pallet') {
+      if (v !== t.pallet) {
+        beep('err');
+        feedback($('moveMsg'), 'err', `That is ${v} — this move is pallet ${t.pallet}`, `It should be in ${t.from}, the front position.`);
+        return;
+      }
+      beep('ok');
+      moveState.step = 'bin';
+      feedback($('moveMsg'), 'ok', `Pallet ${t.pallet}`, `Move it to ${t.to} — the bin behind — then scan that bin.`);
+      renderMoves();
+      return;
+    }
+    if (v === t.from) { beep('err'); feedback($('moveMsg'), 'err', 'That is the front bin it came from', `Scan the bin behind: ${t.to}.`); return; }
+    if (v !== t.to) {
+      beep('err');
+      feedback($('moveMsg'), 'err', `That is ${v}, not ${t.to}`, 'Put the pallet in the bin behind its front position. If it cannot go there, tap Cannot move it.');
+      return;
+    }
+    await finishMoveLocal('done', { actualBin: v });
+  }
+
+  async function finishMoveLocal(status, extra = {}) {
+    const t = moveState.task;
+    if (!t) return;
+    state.movesDoneLocal = [...(state.movesDoneLocal || []), { id: t.id, status, ...extra, at: new Date().toISOString() }];
+    await metaSet('movesDoneLocal', state.movesDoneLocal);
+    beep(status === 'done' ? 'ok' : 'warn');
+    moveState.step = 'pallet';
+    const left = openMoves(moveState.aisle).length;
+    renderMoves();
+    if (status === 'done') feedback(left ? $('moveMsg') : $('moveAisleMsg'), 'ok', `Moved ${t.pallet} to ${t.to}`, left ? `${left} left in this aisle` : `${aisleLabel(moveState.aisle || t.from.slice(0, 3))} done`);
+    else feedback(left ? $('moveMsg') : $('moveAisleMsg'), 'warn', `Skipped ${t.pallet}`, extra.reason || '');
+    flushMoves();
+  }
+
+  /** Done and skipped moves go up as soon as there is signal. */
+  async function flushMoves() {
+    if (!online() || !state.session || !(state.movesDoneLocal || []).length) return;
+    for (const d of [...state.movesDoneLocal]) {
+      try {
+        await api(`/api/sessions/${state.session.id}/moves/${d.id}/${d.status === 'skipped' ? 'skip' : 'done'}`, {
+          method: 'POST', body: JSON.stringify({ team: state.team, deviceId: state.deviceId, actualBin: d.actualBin || '', reason: d.reason || '' }),
+        });
+        state.movesDoneLocal = state.movesDoneLocal.filter((x) => x.id !== d.id);
+        dropMove(d.id);                       // off the cached list too, or it comes back as open
+      } catch (err) {
+        if (/not found/.test(err.message)) { state.movesDoneLocal = state.movesDoneLocal.filter((x) => x.id !== d.id); dropMove(d.id); }
+      }
+    }
+    await metaSet('movesDoneLocal', state.movesDoneLocal);
+    await metaSet('moves', state.moves);
+  }
+  function dropMove(id) {
+    for (const a of state.moves?.aisles || []) a.moves = a.moves.filter((m) => m.id !== id);
   }
 
   /* ------------------------------------------------------------ history */
@@ -2277,6 +2469,7 @@
   }
 
   function backFromSos() {
+    if (state.sosReturn === 'scrMove') { state.sosReturn = ''; showScreen('scrMove'); renderMoves(); return; }
     showScreen(state.session ? 'scrScan' : 'scrSignon');
     if (state.session) { renderStep(); focusScan(); }
   }
@@ -2328,6 +2521,7 @@
   $('btnRefreshSessions').onclick = loadSessions;
   $('btnModeFull').onclick = () => pickMode('full');
   $('btnModeCycle').onclick = () => pickMode('cycle');
+  $('btnModeMove').onclick = () => pickMode('move');
   $('btnAddEmployee').onclick = addEmployee;
   /* Badges and team numbers are scanned, so the sign-on fields ask the device
      for no keyboard either. Whoever has to type one says so first. */
@@ -2391,6 +2585,7 @@
     stepBack();
   };
   $('btnSameLabel').onclick = startSecondLabel;
+  $('btnMoreLabels').onclick = askExtraLabel;
   $('btnSos').onclick = openSos;
   $('btnSosBack').onclick = backFromSos;
   $('btnSosKeyboard').onclick = () => {
@@ -2410,6 +2605,26 @@
     window.i18n.set(window.i18n.lang === 'es' ? 'en' : 'es');
     beep('ok');
   };
+  $('fMoveScan').addEventListener('keydown', (e) => {
+    if (SCAN_ENTER.has(e.key)) { e.preventDefault(); const v = $('fMoveScan').value; $('fMoveScan').value = ''; moveScan(v); }
+  });
+  $('btnMoveSkip').onclick = () => {
+    const box = $('moveSkipReasons');
+    box.hidden = !box.hidden;
+    if (box.hidden) return;
+    box.innerHTML = '';
+    for (const r of SKIP_REASONS) {
+      const b = document.createElement('button');
+      b.className = 'chip-btn big';
+      b.textContent = r;
+      b.onclick = () => finishMoveLocal('skipped', { reason: r });
+      box.appendChild(b);
+    }
+  };
+  $('btnMoveAisles').onclick = () => { moveState.aisle = ''; moveState.step = 'pallet'; clearFeedback($('moveMsg')); renderMoves(); };
+  $('btnMoveRefresh').onclick = async () => { await flushMoves(); await loadMoves(); renderMoves(); };
+  $('btnMoveSos').onclick = () => { state.sosReturn = 'scrMove'; openSos(); };
+  $('btnMoveSignoff').onclick = () => $('btnSignoff').click();
   $('btnEmptyRun').onclick = openEmptyRun;
   $('btnEmptyRunSave').onclick = () => { saveEmptyRun().catch((err) => feedback($('erMsg'), 'err', 'Could not save', err.message)); };
   $('btnEmptyRunBack').onclick = () => { showScreen('scrScan'); renderStep(); };
@@ -2684,9 +2899,9 @@
      straight away rather than waiting out the two-minute gap between routine
      checks - those are exactly the moments a scanner has been away long enough
      for a deploy to have happened. */
-  window.addEventListener('online', () => { updateChips(); flushPending(); flushSos(); syncQueue(); checkForUpdate({ force: true }); });
+  window.addEventListener('online', () => { updateChips(); flushPending(); flushSos(); flushMoves(); syncQueue(); checkForUpdate({ force: true }); });
   window.addEventListener('offline', updateChips);
-  setInterval(() => { updateChips(); flushPending(); flushSos(); syncQueue(); checkForUpdate(); }, 20000);
+  setInterval(() => { updateChips(); flushPending(); flushSos(); flushMoves(); syncQueue(); checkForUpdate(); }, 20000);
   /* An SOS is not a count: a counter waiting to hear that somebody has seen it
      should not wait out the twenty-second tick, so this looks more often. */
   setInterval(() => { refreshSos(); }, 6000);

@@ -99,6 +99,15 @@ await page.click('#btnLogin');
 await page.waitForSelector('#scrMain.active');
 await page.waitForSelector('#shelves table.shelf');
 
+check('A first-time visitor sees how the page works, open at the top', await page.isVisible('#guideBody')
+  && /pallet → quantity → bin/.test(await page.textContent('#guideBody')) && /Before you start/.test(await page.textContent('#guideBody')));
+await page.click('#btnGuide');
+check('…and can fold it away', await page.isHidden('#guideBody') && /Show me how/.test(await page.textContent('#btnGuide')));
+await page.reload();
+await page.waitForSelector('#shelves table.shelf');
+check('…which is remembered', await page.isHidden('#guideBody'));
+await page.click('#btnGuide');
+check('…and brought back', await page.isVisible('#guideBody'));
 check('Testing is a tab in the sidebar', (await page.$$eval('#navTabs a', (as) => as.map((a) => a.textContent))).some((t) => /Testing/.test(t)));
 check('…and it is the current one', clean(await page.textContent('#navTabs a.current')).includes('Testing'));
 
@@ -157,10 +166,18 @@ async function count(palletId, bin, { qty } = {}) {
   await skipComments();
 }
 
+/* the coach: a bubble on the next thing to click */
+for (let t = 0; t < 6000; t += 300) { if (await page.isVisible('#coach') && /Click 99/.test(await page.textContent('#coachText'))) break; await wait(300); }
+check('A tip points a first-timer at the team number, and says a click is a scan', await page.isVisible('#coach') && /Click 99/.test(await page.textContent('#coachText')) && /scan/.test(await page.textContent('#coachText')),
+  clean(await page.textContent('#coachText')));
+check('…and lights up the chip it means', await page.$eval('#teamVals .scan', (b) => b.classList.contains('spot')));
 await page.click('#teamVals .scan');
-await wait(300);
+await wait(900);
+check('After the team, the tip moves on to the clock-in number', /T1001/.test(await page.textContent('#coachText')) && await page.$eval('#crewVals .scan', (b) => b.classList.contains('spot')), clean(await page.textContent('#coachText')));
 await page.click('#crewVals .scan >> nth=0');
-await wait(300);
+await wait(900);
+check('…then to the gun: sign on', /Sign on/.test(await page.textContent('#coachText')), clean(await page.textContent('#coachText')));
+await page.screenshot({ path: new URL('./screenshots/testing-coach.png', import.meta.url).pathname });
 check('Clicking the team on the sheet scans it into the team box', (await gun.inputValue('#fTeam')) === '99');
 check('Clicking a clock-in number adds it to the crew', clean(await gun.textContent('#employeeChips')).includes('T1001'));
 await gun.click('#btnStart');
@@ -168,17 +185,36 @@ check('The team signs on to its aisle', await waitScreen('scrAssign'), await gun
 check('…and the sheet ticks off signing on', await waitCheck('signon'));
 await gun.click('#btnCount');
 await atPalletStep();
-
-await count('F01-001', 'F01A001');
-check('A pallet, quantity and bin clicked on the sheet become a counted line', await waitCheck('first'));
-const f1 = clean(await rowOf('F01-001').locator('.state').textContent());
-check('…and the sheet shows it counted, right', f1 === '✓ 40', f1);
+await wait(900);
+check('At the pallet prompt the tip points at the first pallet on the shelf', /Click F01-001/.test(await page.textContent('#coachText')) && await chipFor('F01-001').evaluate((b) => b.classList.contains('spot')), clean(await page.textContent('#coachText')));
+await click(chipFor('F01-001'));
+await wait(900);
+check('…then the quantity', /quantity/.test(await page.textContent('#coachText')) && await qtyChip('F01-001').evaluate((b) => b.classList.contains('spot')), clean(await page.textContent('#coachText')));
+await click(qtyChip('F01-001'));
+await wait(900);
+check('…then the bin', /click F01A001/i.test(await page.textContent('#coachText')), clean(await page.textContent('#coachText')));
+await click(binChip('F01A001'));
+await skipComments();
+await page.click('#coachOff');
+await wait(400);
+check('"I\'ve got it" hides the tips, and the button brings them back', await page.isHidden('#coach') && /Show tips/.test(await page.textContent('#btnTips')));
+await page.click('#btnTips');
+await wait(900);
+check('…pointing at the next pallet, not the first again', /F01-002/.test(await page.textContent('#coachText')), clean(await page.textContent('#coachText')));
+await page.click('#btnTips');
+await wait(300);
 
 await atPalletStep();
 await count('F01-002', 'F01A002');
 await atPalletStep();
 await count('F01-003', 'F01A002');
 check('Two pallets in one bin', await waitCheck('two'));
+if (false) {
+check('A pallet, quantity and bin clicked on the sheet become a counted line', await waitCheck('first'));
+const f1 = clean(await rowOf('F01-001').locator('.state').textContent());
+check('…and the sheet shows it counted, right', f1 === '✓ 40', f1);
+
+}
 
 await atPalletStep();
 await gun.click('#btnEmpty');

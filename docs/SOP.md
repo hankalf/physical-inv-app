@@ -327,9 +327,9 @@ dashboard — and a card in the Teams channel if **Send it to the Teams channel 
 
 *The SOS list and the channel it goes to.*
 
-### Step 8c — Try the scanner on the Testing tab
+### Step 8c — The Testing Suite: try the scanner on test data
 
-**Testing** in the sidebar. The fastest way to show somebody the gun, or to try a setting before
+**Testing Suite** in the sidebar. The fastest way to show somebody the gun, or to try a setting before
 a count, without a handheld and without touching a real count.
 
 On the left is the **real scanner app** — the same one the Zebras run — on a picture of an MC9300.
@@ -374,6 +374,12 @@ to see it all from the supervisor's side: progress, the pallet report, the SOS b
   practising at once never touch each other's, and a **new user** opens the tab to a fresh one.
   The test gun keeps its own storage in the browser, separate from a real scanner's and from
   anyone else's.
+
+**First time here?** The tab opens with a short guide at the top — what the two halves are, and the
+six steps from signing on to opening the dashboard — and a **tip bubble** that points at the next
+thing to click and follows the gun: *click 99*, *now a clock-in number*, *tap Sign on on the gun*,
+*click this pallet*, *now the quantity*, *now the bin*. Both fold away (**Hide**, **I've got it**)
+and stay folded for anyone who has counted here before; **Show tips** brings the bubble back.
 
 **Before you start** at the top of the tab is the checklist: signed in with your own login, test data
 loaded, the test scanner registered and signed in, team 99 with aisles, the gun running — each with

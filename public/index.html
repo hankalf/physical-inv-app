@@ -61,6 +61,7 @@
       <div class="row" id="modePick">
         <button id="btnModeFull" class="ghost">Full count</button>
         <button id="btnModeCycle" class="ghost">Cycle count</button>
+        <button id="btnModeMove" class="ghost" hidden>Move pallets</button>
       </div>
     </div>
 
@@ -154,6 +155,7 @@
     </div>
     <button id="btnEmpty" class="ghost" hidden>Bin is EMPTY — scan the bin</button>
     <button id="btnEmptyRun" class="ghost" hidden>Several empty bins in a row</button>
+    <button id="btnMoreLabels" class="ghost" hidden>This pallet has another label</button>
     <button id="btnSameLabel" class="ghost" hidden>Second label on the same pallet</button>
     <button id="btnNoScan" class="ghost" hidden>Label will not scan</button>
     <div class="row" id="noScanRow" hidden>
@@ -172,6 +174,35 @@
       <button id="btnHistory" class="ghost">History</button>
     </div>
     <button id="btnSos" class="sos">SOS — I need help</button>
+  </section>
+
+  <!-- ---------------- moving pallets back ---------------- -->
+  <section class="screen" id="scrMove">
+    <div class="feedback show warn" id="moveBanner" hidden></div>
+    <div id="moveAisles"></div>
+    <div id="moveTask" hidden>
+      <div class="assign">
+        <div class="sub">MOVE THIS PALLET</div>
+        <div class="aisle" id="mvPallet"></div>
+        <div class="sub" id="mvWhere"></div>
+        <div class="sub" id="mvLeft"></div>
+      </div>
+      <h2 class="prompt" id="mvPrompt">Scan the PALLET</h2>
+      <input id="fMoveScan" class="big" autocomplete="off" autocorrect="off" autocapitalize="characters"
+             spellcheck="false" inputmode="none" enterkeyhint="done">
+      <div class="feedback" id="moveMsg"></div>
+      <div class="row">
+        <button id="btnMoveSkip" class="ghost">Cannot move it</button>
+        <button id="btnMoveAisles" class="ghost">Aisles</button>
+      </div>
+      <div class="chips" id="moveSkipReasons" hidden></div>
+    </div>
+    <div class="feedback" id="moveAisleMsg"></div>
+    <button id="btnMoveSos" class="sos">SOS — I need help</button>
+    <div class="row">
+      <button class="ghost" id="btnMoveRefresh">Refresh</button>
+      <button class="ghost" id="btnMoveSignoff">Sign off this scanner</button>
+    </div>
   </section>
 
   <!-- ---------------- a run of empty bins ---------------- -->

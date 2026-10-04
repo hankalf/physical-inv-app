@@ -59,6 +59,7 @@
       chip.classList.add('flash');
       setTimeout(() => chip.classList.remove('flash'), 350);
     }
+    setTimeout(coach, 350);
     // the count lands on the server a moment after the last scan of a line
     setTimeout(() => refresh().catch(() => {}), 900);
     setTimeout(() => refresh().catch(() => {}), 2500);
@@ -67,6 +68,7 @@
   function chip(text, { cls = '', title = '', field = '' } = {}) {
     const b = el('button', 'scan ' + cls, text);
     b.type = 'button';
+    b.dataset.code = text;
     b.title = title || `Scan ${text} into the gun`;
     b.onclick = () => scan(text, b, field || undefined);
     return b;
@@ -129,6 +131,8 @@
         for (let i = 0; i < rows; i++) {
           const p = b.shelf[i];
           const tr = el('tr', (i === 0 ? 'binstart' : '') + (b.counted ? ' counted' : '') + (band ? '' : ' band'));
+          tr.dataset.bin = b.bin;
+          if (p) { tr.dataset.pallet = p.id; tr.dataset.done = p.counted ? '1' : '0'; } else { tr.dataset.empty = '1'; tr.dataset.done = b.counted ? '1' : '0'; }
           if (i === 0) {
             const tdBin = el('td');
             tdBin.rowSpan = span;
@@ -325,6 +329,8 @@
   async function start() {
     const next = await api.post('/api/admin/practice', {});
     render(next);
+    guideFirstTime();
+    tipsFirstTime();
     loadGun();
   }
 
@@ -346,6 +352,133 @@
       setTimeout(res, 3000);
     });
   }
+
+  /* ------------------------------------------------- the first-time guide
+     Open until somebody hides it; the choice is kept in this browser. A person
+     who has counted here before has read it, so it starts folded for them. */
+  const GUIDE_KEY = 'testingGuideHidden';
+  function setGuide(hidden) {
+    $('guideCard').classList.toggle('collapsed', hidden);
+    $('btnGuide').textContent = hidden ? 'Show me how this works' : 'Hide';
+    try { localStorage.setItem(GUIDE_KEY, hidden ? '1' : '0'); } catch { /* private window */ }
+  }
+  $('btnGuide').onclick = () => setGuide(!$('guideCard').classList.contains('collapsed'));
+  function guideFirstTime() {
+    let saved = null;
+    try { saved = localStorage.getItem(GUIDE_KEY); } catch { saved = null; }
+    if (saved !== null) { setGuide(saved === '1'); return; }
+    const seen = (data && ((data.history || []).length || (data.totals && data.totals.lines > 0)));
+    setGuide(!!seen);
+  }
+
+  /* ------------------------------------------------------------- the coach
+     A bubble beside the next thing to click, following what the gun is asking
+     for. It reads the gun's own screen - which prompt is up, what is in the
+     team box - so it is never a step ahead or behind. */
+  const TIPS_KEY = 'testingTipsOff';
+  let tipsOff = false;
+  let lastTarget = null;
+  let lastKey = '';
+
+  function gunPeek() {
+    try {
+      const d = frame().contentWindow.document;
+      const scr = d.querySelector('.screen.active');
+      return {
+        up: typeof frame().contentWindow.wedge === 'function',
+        screen: scr ? scr.id : '',
+        prompt: (d.querySelector('#prompt') || {}).textContent || '',
+        team: (d.querySelector('#fTeam') || {}).value || '',
+        crew: (d.querySelector('#employeeChips') || {}).textContent || '',
+        override: scr && scr.id === 'scrOverride' && !!d.querySelector('#ovYesNo:not([hidden])'),
+      };
+    } catch { return { up: false, screen: '' }; }
+  }
+
+  /** The next thing to do: a target to point at, and what to say. */
+  function nextTip() {
+    const g = gunPeek();
+    const lines = data ? data.totals.lines : 0;
+    if (!g.up) return { key: 'wait', target: $('gunFrame').closest('.gun'), step: 'Hang on', text: 'The scanner is starting up.' };
+    if (g.screen === 'scrSignon') {
+      if (!g.team) return { key: 'team', target: $('teamVals').querySelector('.scan'), step: 'Step 1 · sign on', text: 'Click <b>99</b>. Every click on this sheet is a <b>scan</b> — it types into the gun as if you had pulled the trigger.' };
+      if (!g.crew.trim()) return { key: 'crew', target: $('crewVals').querySelector('.scan'), step: 'Step 1 · sign on', text: 'Now a clock-in number. Click <b>T1001</b> — that scans a badge in.' };
+      return { key: 'start', target: $('gunFrame').closest('.gun'), step: 'Step 1 · sign on', text: 'Now on the gun itself: tap <b>Sign on &amp; load list</b>.', pos: 'left' };
+    }
+    if (g.screen === 'scrAssign') return { key: 'count', target: $('gunFrame').closest('.gun'), step: 'Step 2', text: 'This is the team\'s aisle. Tap <b>Start counting</b> on the gun.', pos: 'left' };
+    if (g.override) return { key: 'yesno', target: $('gunFrame').closest('.gun'), step: 'The gun is asking', text: 'That pallet is not on the report. On the gun, tap <b>YES</b> to count it anyway — it goes to a supervisor as a pallet to add.', pos: 'left' };
+    if (g.screen === 'scrScan') {
+      const row = $('shelves').querySelector('tr[data-pallet][data-done="0"]');
+      const p = /PALLET/i.test(g.prompt), q = /QUANTITY/i.test(g.prompt), b = /BIN/i.test(g.prompt), c = /Comments/i.test(g.prompt);
+      if (p && row) return { key: 'pallet:' + row.dataset.pallet, target: row.querySelector(`.scan[data-code="${row.dataset.pallet}"]`), step: lines ? 'Next pallet' : 'Step 3 · count a pallet',
+        text: `The gun wants a <b>pallet</b>. Click <b>${row.dataset.pallet}</b> — that is the pallet on this shelf.${lines ? '' : ' Then it will ask for the quantity, then the bin.'}` };
+      if (q && row) return { key: 'qty:' + row.dataset.pallet, target: row.querySelector('.scan.qty'), step: 'Step 3 · count a pallet', text: 'Now the <b>quantity</b>. Click the number — on a real gun the counter keys it in.' };
+      if (b && row) return { key: 'bin:' + row.dataset.pallet, target: row.querySelector(`.scan[data-code="${row.dataset.bin}"]`) || $('shelves').querySelector(`.scan[data-code="${row.dataset.bin}"]`), step: 'Step 3 · count a pallet', text: `Last, the <b>bin</b> — click <b>${row.dataset.bin}</b>, the rack label. That saves the line.` };
+      if (c) return { key: 'comments', target: $('gunFrame').closest('.gun'), step: 'Comments', text: 'Optional. Tap a reason on the gun, or <b>Skip</b> — or just wait, it moves on by itself.', pos: 'left' };
+      if (p && !row) return { key: 'done', target: $('checks'), step: 'All counted', text: 'Every pallet on the sheet is counted. See what is left under <b>Things to try</b> — then <b>Open the dashboard</b> to see the office side.' };
+    }
+    if (g.screen === 'scrEmptyRun' || g.screen === 'scrSos' || g.screen === 'scrHistory') return null;
+    return null;
+  }
+
+  function placeCoach(t) {
+    const box = $('coach');
+    if (!t || !t.target) { box.hidden = true; if (lastTarget) lastTarget.classList.remove('spot'); lastTarget = null; lastKey = ''; return; }
+    if (t.key !== lastKey) {
+      // a new step: light the target, bring it on screen, and say so
+      if (lastTarget) lastTarget.classList.remove('spot');
+      t.target.classList.add('spot');
+      lastTarget = t.target;
+      lastKey = t.key;
+      $('coachStep').textContent = t.step;
+      $('coachText').innerHTML = t.text;
+      const r = t.target.getBoundingClientRect();
+      if (r.top < 90 || r.bottom > window.innerHeight - 160) t.target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+    box.hidden = false;
+    const r = t.target.getBoundingClientRect();
+    const w = box.offsetWidth || 300;
+    const h = box.offsetHeight || 90;
+    box.className = 'coach';
+    let top, left;
+    if (t.pos === 'left') {           // beside the gun, pointing at it
+      box.classList.add('left');
+      top = Math.max(12, r.top + 40);
+      left = r.left - w - 16;
+    } else if (r.bottom + h + 20 < window.innerHeight) {
+      box.classList.add('below');
+      top = r.bottom + 12; left = r.left - 14;
+    } else {
+      box.classList.add('above');
+      top = r.top - h - 12; left = r.left - 14;
+    }
+    box.style.top = `${Math.max(8, top)}px`;
+    box.style.left = `${Math.max(8, Math.min(left, window.innerWidth - w - 8))}px`;
+  }
+
+  function coach() {
+    if (tipsOff || !data || $('scrMain').classList.contains('active') === false) { placeCoach(null); return; }
+    placeCoach(nextTip());
+  }
+
+  function setTips(off) {
+    tipsOff = off;
+    $('btnTips').textContent = off ? 'Show tips' : 'Hide tips';
+    try { localStorage.setItem(TIPS_KEY, off ? '1' : '0'); } catch { /* private window */ }
+    coach();
+  }
+  $('btnTips').onclick = () => setTips(!tipsOff);
+  $('coachOff').onclick = () => setTips(true);
+  function tipsFirstTime() {
+    let saved = null;
+    try { saved = localStorage.getItem(TIPS_KEY); } catch { saved = null; }
+    if (saved !== null) { setTips(saved === '1'); return; }
+    // somebody who has counted here before does not need to be shown where the pallet is
+    setTips(!!(data && ((data.history || []).length || data.totals.lines > 0)));
+  }
+  setInterval(coach, 700);
+  window.addEventListener('scroll', () => coach(), { passive: true });
+  window.addEventListener('resize', () => coach());
 
   /* ---------------------------------------------------------------- wiring */
   $('btnWedge').onclick = () => {
