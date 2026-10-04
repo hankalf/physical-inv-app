@@ -1,4 +1,4 @@
-/* Settings: supervisor logins, scanner setup, list uploads, racking blocks,
+/* Settings: scanner setup, list uploads, racking blocks, and under Advanced the logins, Teams channel, look and logo,
    the ERP export, and backups + the audit log. Everything a supervisor sets up
    once and then leaves alone lives here, off the working dashboard. */
 (() => {
@@ -941,6 +941,18 @@
   $('btnSaveSos').onclick = async () => {
     try {
       sosState = await api.post('/api/admin/sos-reasons', { reasons: sosState.reasons });
+      const idle = await api.post('/api/admin/idle-config', {
+        minutes: Number($('fIdleMinutes').value) || 0, teams: $('fIdleTeams').checked,
+      });
+      $('fIdleMinutes').value = idle.minutes;
+      renderSos();
+      msg($('sosMsg'), 'ok', 'Saved.', 'Scanners pick the list up within about half a minute.');
+    } catch (err) { msg($('sosMsg'), 'err', err.message); }
+  };
+
+  /* The Teams channel is its own card under Advanced: set once, left alone. */
+  $('btnSaveTeams').onclick = async () => {
+    try {
       /* An empty box means "leave the address alone" - the page only ever has
          the masked one - so typing nothing cannot wipe a working channel. */
       teamsState = await api.post('/api/admin/teams-webhook', {
@@ -948,23 +960,84 @@
         on: $('fTeamsOn').checked,
         tellWhenClosed: $('fTeamsClosed').checked,
       });
-      const idle = await api.post('/api/admin/idle-config', {
-        minutes: Number($('fIdleMinutes').value) || 0, teams: $('fIdleTeams').checked,
-      });
-      $('fIdleMinutes').value = idle.minutes;
       $('fTeamsUrl').value = '';
       renderSos();
-      msg($('sosMsg'), 'ok', 'Saved.', 'Scanners pick the list up within about half a minute.');
-    } catch (err) { msg($('sosMsg'), 'err', err.message); }
+      msg($('teamsMsg'), 'ok', 'Saved.', teamsState.configured ? `Alerts ${teamsState.on ? 'go' : 'would go'} to ${teamsState.masked}.` : 'No channel address yet.');
+    } catch (err) { msg($('teamsMsg'), 'err', err.message); }
   };
 
   $('btnTestTeams').onclick = async () => {
     try {
-      msg($('sosMsg'), 'warn', 'Sending a test card…');
+      msg($('teamsMsg'), 'warn', 'Sending a test card…');
       const out = await api.post('/api/admin/teams-webhook/test', {});
-      if (out.sent) msg($('sosMsg'), 'ok', 'Teams took it.', 'Check the channel — a test card should be in it.');
-      else msg($('sosMsg'), 'err', 'Teams did not take it', out.why);
-    } catch (err) { msg($('sosMsg'), 'err', err.message); }
+      if (out.sent) msg($('teamsMsg'), 'ok', 'Teams took it.', 'Check the channel — a test card should be in it.');
+      else msg($('teamsMsg'), 'err', 'Teams did not take it', out.why);
+    } catch (err) { msg($('teamsMsg'), 'err', err.message); }
+  };
+
+  /* ------------------------------------------------------------- the logo
+     Read in the browser, shrunk to a header-sized PNG if it is a big photo of
+     one, and kept on the server as a data URL. */
+  function renderLogo(b) {
+    const frame = $('logoFrame');
+    frame.innerHTML = '';
+    if (b && b.logo) {
+      const img = document.createElement('img');
+      img.src = b.logo; img.alt = 'The site logo';
+      frame.appendChild(img);
+    } else {
+      const none = document.createElement('span'); none.className = 'none'; none.textContent = 'No logo yet — the ▦ mark is shown.';
+      frame.appendChild(none);
+    }
+    $('btnLogoRemove').hidden = !(b && b.logo);
+    $('fLogoOnGuns').checked = b && b.logo ? b.onGuns !== false : true;
+  }
+  async function refreshLogo() { renderLogo(await api.json('/api/admin/logo')); }
+  const readLogo = (file) => new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result));
+    r.onerror = () => rej(new Error('could not read the file'));
+    r.readAsDataURL(file);
+  });
+  /* Anything but an SVG goes through a canvas: 400 px across is more than a
+     56 px header needs, and keeps a phone photo of a sign out of every gun. */
+  async function shrinkLogo(dataUrl, type) {
+    if (type === 'image/svg+xml' || dataUrl.length < 120_000) return dataUrl;
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('that image would not open')); i.src = dataUrl; });
+    const scale = Math.min(1, 400 / img.naturalWidth, 160 / img.naturalHeight);
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(img.naturalWidth * scale)); c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/png');
+  }
+  $('btnLogoUpload').onclick = async () => {
+    const file = $('fLogo').files[0];
+    if (!file) return msg($('logoMsg'), 'err', 'Choose an image first');
+    try {
+      msg($('logoMsg'), 'warn', 'Uploading…');
+      const dataUrl = await shrinkLogo(await readLogo(file), file.type);
+      const b = await api.post('/api/admin/logo', { dataUrl, onGuns: $('fLogoOnGuns').checked });
+      renderLogo(b);
+      $('fLogo').value = '';
+      if (api.refreshBranding) api.refreshBranding();
+      msg($('logoMsg'), 'ok', 'Logo saved.', b.onGuns ? 'It is in the sidebar now, and on the scanners the next time they are online.' : 'It is in the sidebar now.');
+    } catch (err) { msg($('logoMsg'), 'err', 'Not saved', err.message); }
+  };
+  $('fLogoOnGuns').onchange = async () => {
+    if ($('btnLogoRemove').hidden) return;          // no logo yet: the box just rides along with the upload
+    try {
+      const b = await api.post('/api/admin/logo', { onGuns: $('fLogoOnGuns').checked });
+      renderLogo(b);
+      msg($('logoMsg'), 'ok', b.onGuns ? 'The scanners will show it.' : 'The scanners will not show it.');
+    } catch (err) { msg($('logoMsg'), 'err', err.message); }
+  };
+  $('btnLogoRemove').onclick = async () => {
+    if (!confirm('Remove the logo?')) return;
+    try {
+      renderLogo(await api.json('/api/admin/logo', { method: 'DELETE' }));
+      if (api.refreshBranding) api.refreshBranding();
+      msg($('logoMsg'), 'warn', 'Logo removed.');
+    } catch (err) { msg($('logoMsg'), 'err', err.message); }
   };
 
   $('btnResetSos').onclick = async () => {
@@ -1205,7 +1278,7 @@
 
   async function load() {
     await refreshMe();
-    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshReasons(), refreshSosSettings()]);
+    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshReasons(), refreshSosSettings(), refreshLogo()]);
     await refreshGun().catch(() => {});
     await loadSessions();
     await refreshSetup().catch(() => {});

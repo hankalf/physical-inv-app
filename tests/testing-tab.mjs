@@ -99,8 +99,13 @@ await page.click('#btnLogin');
 await page.waitForSelector('#scrMain.active');
 await page.waitForSelector('#shelves table.shelf');
 
-check('A first-time visitor sees how the page works, open at the top', await page.isVisible('#guideBody')
-  && /pallet → quantity → bin/.test(await page.textContent('#guideBody')) && /Before you start/.test(await page.textContent('#guideBody')));
+check('A first-time visitor sees how the page works, open at the top', await page.isVisible('#guideBody') && /Before you start/.test(await page.textContent('#guideBody')));
+check('…one step at a time, starting on step 1', /Step 1 of 6/.test(await page.textContent('#stepN')) && /Before you start/.test(await page.textContent('#stepTitle')),
+  clean(await page.textContent('#stepN')) + ' ' + clean(await page.textContent('#stepTitle')));
+check('…with the dashboard on this count at the top of the page', await page.isVisible('#dashFrame') && /\/admin\?embed=\d+/.test(await page.getAttribute('#dashFrame', 'src')), await page.getAttribute('#dashFrame', 'src'));
+await page.click('#stepNext');
+check('Next reads ahead to step 2, and says so', /Step 2 of 6/.test(await page.textContent('#stepN')) && /look ahead/.test(await page.textContent('#stepState')), clean(await page.textContent('#stepState')));
+await page.click('#stepBack');
 await page.click('#btnGuide');
 check('…and can fold it away', await page.isHidden('#guideBody') && /Show me how/.test(await page.textContent('#btnGuide')));
 await page.reload();
@@ -186,6 +191,8 @@ check('…and the sheet ticks off signing on', await waitCheck('signon'));
 await gun.click('#btnCount');
 await atPalletStep();
 await wait(900);
+check('Signing on moves the guide on by itself, to counting the first pallet', /Step 3 of 6/.test(await page.textContent('#stepN')) && /pallet → quantity → bin/.test(await page.textContent('#stepText')),
+  clean(await page.textContent('#stepN')) + ' ' + clean(await page.textContent('#stepTitle')));
 check('At the pallet prompt the tip points at the first pallet on the shelf', /Click F01-001/.test(await page.textContent('#coachText')) && await chipFor('F01-001').evaluate((b) => b.classList.contains('spot')), clean(await page.textContent('#coachText')));
 await click(chipFor('F01-001'));
 await wait(900);
@@ -320,6 +327,18 @@ await page.locator('#shelves').screenshot({ path: new URL('./screenshots/testing
 const sheet = await get('/api/admin/practice');
 check('Every thing to try is ticked off', sheet.checklist.every((c) => c.done), sheet.checklist.filter((c) => !c.done).map((c) => c.key).join(','));
 check('The meter reads twelve of twelve', clean(await page.textContent('#checkCount')) === '12 of 12 done');
+check('…and the guide is on its last step: the office side', /Step 6 of 6/.test(await page.textContent('#stepN')) && (await page.$$('#stepDots button.done')).length === 5,
+  clean(await page.textContent('#stepN')) + ' ' + (await page.$$('#stepDots button.done')).length + ' done');
+await page.click('#stepGo');
+await wait(600);
+check('"Show me the dashboard" ticks the last step off', /You have seen the lot/.test(await page.textContent('#stepTitle')), clean(await page.textContent('#stepTitle')));
+/* the dashboard at the top is the real one, on this count only */
+const dash = page.frames().find((f) => /\/admin\?embed=/.test(f.url()));
+check('The dashboard at the top is the real admin page', !!dash && !!(await dash.$('#subTabs button[data-goto="progress"]')) && !!(await dash.$('#subTabs button[data-goto="adjust"]')));
+check('…without its sidebar or header', !!dash && await dash.evaluate(() => document.documentElement.classList.contains('embed') && getComputedStyle(document.querySelector('.side')).display === 'none'));
+check('…locked to the practice count', !!dash && (await dash.evaluate(() => window.appApi.currentSession())) === pid, String(dash && await dash.evaluate(() => window.appApi.currentSession())));
+check('…showing what was just counted', !!dash && /F01/.test(await dash.evaluate(() => (document.querySelector('#teamTable') || document.body).innerText)));
+check('…and its tabs can be switched from the page', !!dash && await dash.evaluate(() => { window.appApi.showSub('second'); return document.querySelector('[data-sub="second"]').classList.contains('active'); }));
 
 /* ---------------- nothing leaked ---------------- */
 const liveCounts = await get(`/api/admin/sessions/${live.id}/progress`);
@@ -347,6 +366,15 @@ check('…and keeps the last one as history, with how far it got', fresh.history
   JSON.stringify(fresh.history));
 await wait(3500);
 check('Your earlier runs are listed on the page', await page.isVisible('#historyCard') && /12 of 12/.test(await page.textContent('#historyTable')));
+/* everything from every run, as one workbook */
+const runsOut = await get('/api/admin/practice/export');
+check('Export my runs: this run and the earlier one, in one workbook', runsOut.runs === 2 && runsOut.sheets[0].name === 'Runs' && runsOut.sheets[0].rows.length === 2
+  && runsOut.sheets[0].rows.some((r) => r.Status === 'Earlier run' && r['Things tried'] === '12 of 12') && runsOut.sheets[0].rows.some((r) => r.Status === 'Current run'), JSON.stringify(runsOut.sheets[0].rows));
+check('…with what was tried on each, and every sheet of the real export per run', runsOut.sheets[1].name === 'Things tried' && runsOut.sheets[1].rows.length === 24
+  && runsOut.sheets.some((x) => x.name === `#${pid} Summary`) && runsOut.sheets.some((x) => x.name === `#${pid} Count lines`), runsOut.sheets.map((x) => x.name).join(' | '));
+check('…and nobody else\'s runs are in it', (await get('/api/admin/practice/export', O)).runs <= 1);
+const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 30000 }), page.click('#btnExportRuns')]);
+check('The button hands over an Excel file of it', /^practice-runs-.*\.xlsx$/.test(dl.suggestedFilename()), dl.suggestedFilename());
 check('…the sheet is back to nothing done', clean(await page.textContent('#checkCount')) === '0 of 12 done');
 gun = await gunFrame();
 await wait(800);
@@ -390,7 +418,7 @@ check('"Before you start" says the tab is ready, once the gun is up', /ready to 
 const readyText = clean(await page.textContent('#readyList'));
 check('…listing the test data, the test scanner, the team\'s aisles and the gun', /Test data loaded — 24 bins, 25 pallets/.test(readyText)
   && /Test scanner TEST-DANA-WHITFIELD registered/.test(readyText) && /Team 99 has 2 aisles/.test(readyText) && /scanner app is running/.test(readyText), readyText.slice(0, 260));
-check('…and says plainly when you are on the shared password, and what to do', /shared password/.test(readyText) && /Settings → Logins/.test(readyText));
+check('…and says plainly when you are on the shared password, and what to do', /shared password/.test(readyText) && /Settings → Advanced/.test(readyText));
 
 /* ---------------- your own test pallets ---------------- */
 const badUp = await fetch(`${BASE}/api/admin/practice/upload?name=bad.csv`, { method: 'POST', headers: { authorization: 'Bearer ' + tok, 'content-type': 'text/csv' },
@@ -516,14 +544,15 @@ const noLots = await fetch(`${BASE}/api/admin/practice/upload?name=plain.csv`, {
   body: 'Bin,Pallet,Qty\nY01A001,YP-1,10\n' }).then((r) => r.json());
 check('On a file with no lot codes, the lot option says what to add to the file', /Add a “Lot” column/.test(noLots.options.needs.askLot.text), noLots.options.needs.askLot.text);
 
-/* ---------------- over to the dashboard ---------------- */
-await page.click('#btnDashboard');
-await page.waitForURL(/\/admin/);
-await page.waitForSelector('#scrMain.active');
+/* ---------------- over to the dashboard, in its own tab ---------------- */
+const [tab] = await Promise.all([page.context().waitForEvent('page'), page.click('#btnDashboard')]);
+await tab.waitForURL(/\/admin/);
+await tab.waitForSelector('#scrMain.active');
 await wait(1500);
-const picked = clean(await page.textContent('#sessionPick .sess-btn'));
-check('"Open the dashboard" lands on the practice count', /Practice count/.test(picked), picked);
-check('…marked practice in the picker', /practice/i.test(await page.textContent('#sessionPick .sess-btn .tag.practice').catch(() => '')));
+const picked = clean(await tab.textContent('#sessionPick .sess-btn'));
+check('"Own tab" opens the full dashboard on the practice count', /Practice count/.test(picked), picked);
+check('…marked practice in the picker', /practice/i.test(await tab.textContent('#sessionPick .sess-btn .tag.practice').catch(() => '')));
+check('…with its sidebar, since it is the whole page', await tab.isVisible('#navTabs'));
 
 check('No script errors on the page', errors.length === 0, errors.join(' | '));
 await browser.close();

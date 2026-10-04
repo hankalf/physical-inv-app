@@ -88,9 +88,31 @@
   .guide .guidehead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .guide .guidehead h2 { margin: 0; }
   .guide p { margin: 10px 0 0; line-height: 1.55; }
-  .guide .guidesteps { margin: 12px 0 0; padding-left: 24px; line-height: 1.55; list-style: decimal; }
-  .guide .guidesteps li { margin-bottom: 7px; display: list-item; }
-  .guide .guidesteps li::marker { font-weight: 800; color: var(--accent); }
+  /* the dashboard card at the top: the real admin page in a frame, as tall
+     as the person wants it */
+  .dash .guidehead { flex-wrap: wrap; }
+  .dashtools { display: flex; gap: 6px; flex-wrap: wrap; }
+  .dashwrap { margin-top: 12px; height: 520px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); resize: vertical; min-height: 220px; }
+  .dashwrap.tall { height: 900px; }
+  .dashwrap iframe { display: block; width: 100%; height: 100%; border: 0; background: var(--bg); }
+  .dash.collapsed .dashwrap { display: none; }
+  /* the guide: one step at a time */
+  .stepper { margin-top: 12px; }
+  .stepdots { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .stepdots button { width: auto; margin: 0; padding: 4px 10px; font-size: 12px; font-weight: 700; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); cursor: pointer; }
+  .stepdots button.done { border-color: var(--ok); color: var(--ok); }
+  .stepdots button.done::before { content: "✓ "; }
+  .stepdots button.now { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .stepcard { border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 10px; padding: 12px 14px; background: var(--surface-2); }
+  .stepcard.done { border-left-color: var(--ok); }
+  .stepn { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .stepcard h3 { margin: 4px 0 6px; font-size: 16px; }
+  .steptext { line-height: 1.55; font-size: 14px; }
+  .steptext .scan { cursor: default; }
+  .stepacts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+  .stepacts button { width: auto; margin: 0; }
+  .guidemore { margin-top: 12px; }
+  .guidemore summary { cursor: pointer; font-weight: 700; color: var(--accent); font-size: 13px; }
   .guidegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; margin-top: 12px; }
   .guidegrid > div { background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; font-size: 13px; line-height: 1.45; }
   .guidegrid > div b { display: block; margin-bottom: 2px; }
@@ -187,6 +209,21 @@
     </section>
 
     <section class="screen" id="scrMain">
+      <!-- the office side, right here: the real dashboard on this person's
+           practice count, so nobody goes back and forth to see what a
+           supervisor sees -->
+      <div class="card dash" id="dashCard">
+        <div class="guidehead">
+          <h2>The office side <span class="muted">the dashboard on your practice count — progress, the pallet report, second counts, adjustments, your SOS</span></h2>
+          <div class="dashtools">
+            <button type="button" class="sm" id="btnDashTall" title="Make the dashboard taller or shorter">Taller</button>
+            <button type="button" class="sm" id="btnDashboard" title="The same dashboard in its own tab">Own tab ↗</button>
+            <button type="button" class="sm" id="btnDashHide">Hide</button>
+          </div>
+        </div>
+        <div class="dashwrap" id="dashWrap"><iframe id="dashFrame" title="The dashboard, on the practice count"></iframe></div>
+      </div>
+
       <div class="bench">
         <div class="rig">
           <div class="gun">
@@ -200,8 +237,8 @@
           </div>
           <div class="tools">
             <button class="sm" id="btnReloadGun" title="Reload the app on this scanner, as if it had been switched off and on">Restart the gun</button>
-            <button class="sm" id="btnDashboard">Open the dashboard on this count</button>
             <button class="sm danger" id="btnReset">Start over</button>
+            <button class="sm" id="btnExportMine" title="One Excel workbook of this run and every earlier run of yours">Export my runs</button>
             <button class="sm" id="btnTips">Hide tips</button>
           </div>
           <div class="feedback" id="rigMsg"></div>
@@ -217,31 +254,37 @@
               <p>
                 This is a safe place to learn the scanner. The screen on the <b>left</b> is the real scanner app — the same
                 one on the Zebra guns — counting into a practice count that belongs to you alone. The <b>right</b> side is
-                the warehouse: what is on each shelf, and a checklist of things to try. Nothing you do here touches a real count.
+                the warehouse: what is on each shelf, and a checklist of things to try. The dashboard at the <b>top</b> is the
+                office side of the same count. Nothing you do here touches a real count.
               </p>
-              <ol class="guidesteps">
-                <li><b>Check “Before you start”.</b> It should say <i>ready to test</i>. If not, it tells you what to do.</li>
-                <li><b>Sign on.</b> Under <i>1 · Sign on</i>, click the team number <span class="scan" style="cursor:default">99</span> and a
-                  clock-in number — each click is a scan into the gun. Then tap <b>Sign on &amp; load list</b> on the gun itself.</li>
-                <li><b>Start counting.</b> Tap <b>Start counting</b> on the gun. It asks three things per pallet, one screen at a time:
-                  <b>pallet → quantity → bin</b>. Click those three on the sheet, in that order, for the first pallet. The comments
-                  screen moves on by itself, or tap <b>Skip</b>.</li>
-                <li><b>Work down the sheet.</b> A green edge on a bin means it is counted. Some bins have a <b>Try this</b> note — the
-                  shelf is wrong on purpose there, to show what the gun does about a short pallet, an empty bin, a label that will not scan.</li>
-                <li><b>Watch “Things to try” tick itself off.</b> It fills in from what actually reached the server, so when it reads
-                  <i>12 of 12</i> you have seen everything a counter meets on the floor.</li>
-                <li><b>See the office side.</b> <b>Open the dashboard on this count</b> shows what a supervisor sees: progress, the
-                  pallet report, adjustments, your SOS.</li>
-              </ol>
-              <div class="guidegrid">
-                <div><b>SCAN box</b><span>Type anything — a wrong pallet ID, a bin from another aisle — and press SCAN to see how the gun answers.</span></div>
-                <div><b>Español</b><span>The button at the top of the gun switches it to Spanish and back.</span></div>
-                <div><b>Try the features that ship off</b><span>Lot codes, best-before, approvals, ABC and more — switch them on for your practice only, then count a pallet and see the difference.</span></div>
-                <div><b>Your own test pallets</b><span>Upload a Bin / Pallet / Qty sheet to practise on your own data. It is the same sheet as the printed barcode book.</span></div>
-                <div><b>Restart the gun</b><span>Reloads the app on the scanner, as if it had been switched off and on. Nothing counted is lost.</span></div>
-                <div><b>Start over</b><span>Begins a fresh run. The one you were on is kept under <i>Your earlier runs</i>.</span></div>
+              <!-- one step at a time: the step you are on, ticked off as the gun
+                   and the server see it done -->
+              <div class="stepper">
+                <div class="stepdots" id="stepDots"></div>
+                <div class="stepcard" id="stepCard">
+                  <div class="stepn" id="stepN"></div>
+                  <h3 id="stepTitle"></h3>
+                  <div class="steptext" id="stepText"></div>
+                  <div class="stepacts">
+                    <button type="button" class="sm" id="stepBack">‹ Back</button>
+                    <button type="button" class="sm primary" id="stepGo">Take me there</button>
+                    <button type="button" class="sm" id="stepNext">Next ›</button>
+                    <span class="muted" id="stepState"></span>
+                  </div>
+                </div>
               </div>
-              <p class="muted" style="margin:10px 0 0">Stuck? The <b>SOS — I need help</b> button on the gun is real: press it here and it shows on the dashboard like any other, so you can see that side too.</p>
+              <details class="guidemore">
+                <summary>More about this page</summary>
+                <div class="guidegrid">
+                  <div><b>SCAN box</b><span>Type anything — a wrong pallet ID, a bin from another aisle — and press SCAN to see how the gun answers.</span></div>
+                  <div><b>Español</b><span>The button at the top of the gun switches it to Spanish and back.</span></div>
+                  <div><b>Try the features that ship off</b><span>Lot codes, best-before, approvals, ABC and more — switch them on for your practice only, then count a pallet and see the difference.</span></div>
+                  <div><b>Your own test pallets</b><span>Upload a Bin / Pallet / Qty sheet to practise on your own data. It is the same sheet as the printed barcode book.</span></div>
+                  <div><b>Restart the gun</b><span>Reloads the app on the scanner, as if it had been switched off and on. Nothing counted is lost.</span></div>
+                  <div><b>Start over</b><span>Begins a fresh run. The one you were on is kept under <i>Your earlier runs</i>.</span></div>
+                </div>
+                <p class="muted" style="margin:10px 0 0">Stuck? The <b>SOS — I need help</b> button on the gun is real: press it here and it shows on the dashboard at the top like any other, so you can see that side too.</p>
+              </details>
             </div>
           </div>
 
@@ -262,7 +305,7 @@
             </div>
           </div>
 
-          <div class="card">
+          <div class="card" id="signonCard">
             <h2>1 · Sign on</h2>
             <div class="hint" style="margin-top:0">Scan the team and a clock-in number, then tap <b>Sign on &amp; load list</b> on the gun. Team 99 already has aisles F01 then F02.
               Your own clock-in number works too — T1001 and T1002 are made up, so the gun flags them as not on the crew list, which is exactly what it does with a mistyped one.</div>
@@ -273,7 +316,7 @@
             </div>
           </div>
 
-          <div class="card">
+          <div class="card" id="checksCard">
             <h2>2 · Things to try <span class="muted" id="checkCount"></span></h2>
             <div class="meter"><i id="checkMeter"></i></div>
             <div class="checks" id="checks"></div>
@@ -282,14 +325,13 @@
           <div class="card" id="optionsCard">
             <h2>Try the features that ship turned off <span class="muted">on your practice count only</span></h2>
             <div class="hint" style="margin-top:0">
-              These are off on a new count. Switch any of them on here to see what it does — on the gun and on the dashboard
-              (<b>Open the dashboard on this count</b>). It changes your practice count and nothing else; the gun picks it up between pallets.
+              These are off on a new count. Switch any of them on here to see what it does — on the gun and on the dashboard at the top of the page. It changes your practice count and nothing else; the gun picks it up between pallets.
             </div>
             <div id="optList" class="opts"></div>
             <div class="feedback" id="optMsg"></div>
             <h3>Set for the whole site, so not changed here</h3>
             <div class="hint" style="margin-top:0">
-              The <b>Teams channel</b>, the <b>stopped-scanning alert</b> (Settings → Scanners), and the scanner screen —
+              The <b>Teams channel</b> (Settings → Advanced), the <b>stopped-scanning alert</b> (Settings → Scanners), and the scanner screen —
               <b>large text</b>, <b>full screen</b>, the question order (Settings → Scanner screen) — apply to every scanner,
               so changing them for a test would change them on the floor too.
             </div>
@@ -355,11 +397,14 @@
           </div>
 
           <div class="card" id="historyCard" hidden>
-            <h2>Your earlier runs <span class="muted">kept for you — nobody else sees your practice</span></h2>
+            <div class="guidehead">
+              <h2>Your earlier runs <span class="muted">kept for you — nobody else sees your practice</span></h2>
+              <button type="button" class="sm" id="btnExportRuns" title="One Excel workbook: every run of yours, with every sheet the real export gives a count">Export all my runs</button>
+            </div>
             <div class="scroll"><table id="historyTable"></table></div>
           </div>
 
-          <div class="card">
+          <div class="card" id="shelvesCard">
             <h2>3 · What is on the shelves <span class="muted" id="shelfCount"></span></h2>
             <div class="hint" style="margin-top:0">
               This is what a counter would find — the <b>report</b> is what the system thinks, and it is wrong in places on purpose.

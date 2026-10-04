@@ -132,14 +132,14 @@ check('Shell: the sidebar links every page, Testing last, with this one marked',
   (await page.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/cycle,/front,/missing,/teams,/settings,/testing'
     && (await page.$eval('#navTabs .tab.current', (a) => a.getAttribute('href'))) === '/settings');
 check('Shell: Settings is split into sub-tabs',
-  (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.replace(/\d+$/, '').trim()))).join(' | ') === 'Getting started | Scanner screen | Logins | Scanners | Lists & racking | ERP & backups',
+  (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.replace(/\d+$/, '').trim()))).join(' | ') === 'Getting started | Scanner screen | Scanners | Lists & racking | ERP & backups | Advanced',
   (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.trim()))).join(' | '));
 check('Shell: exactly one pane is on screen at a time',
   (await page.$$eval('[data-sub]', (p) => p.filter((x) => x.classList.contains('active')).length)) === 1);
 await page.click('#subTabs button:text-is("Scanners")'); await page.waitForTimeout(500);
 check('Shell: clicking a sub-tab swaps the pane and marks the tab',
   await page.$eval('[data-sub="scanners"]', (el) => el.classList.contains('active'))
-    && !(await page.$eval('[data-sub="logins"]', (el) => el.classList.contains('active')))
+    && !(await page.$eval('[data-sub="advanced"]', (el) => el.classList.contains('active')))
     && await page.$eval('#subTabs button:text-is("Scanners")', (b) => b.classList.contains('current')));
 check('Shell: the session bar hides on a pane that has no session to act on',
   await page.$eval('#scopeBar', (el) => el.hidden));
@@ -153,7 +153,7 @@ check('Shell: the open sub-tab survives a reload',
     await page.reload(); await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(1200);
     return (await page.evaluate(() => location.hash)) === before && await page.$eval('[data-sub="lists"]', (el) => el.classList.contains('active'));
   })(), await page.evaluate(() => location.hash));
-await page.click('#subTabs button:text-is("Logins")'); await page.waitForTimeout(600);
+await page.click('#subTabs button:text-is("Advanced")'); await page.waitForTimeout(600);
 
 const headings = await page.$$eval('#scrMain .card > h2', (h) => h.map((x) => x.firstChild.textContent.trim()));
 check('Settings: every setup card is on this page, each list its own',
@@ -276,6 +276,51 @@ await sup.close();
     `tab top ${Math.round(await narrow.$eval('#navTabs .tab.current', (a) => a.getBoundingClientRect().top))}px`);
   await narrow.screenshot({ path: `${S}screenshots/settings-narrow.png` });
   await narrow.close();
+}
+
+/* ---------------- Advanced: logins, the Teams channel, the look, the logo ---------------- */
+{
+  const adv = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+  await adv.goto(BASE + '/settings#advanced');
+  await adv.waitForTimeout(900);
+  if (await adv.$('#scrLogin.active')) { await adv.fill('#fUser', 'DANA'); await adv.fill('#fPassword', 'freezer-2026'); await adv.click('#btnLogin'); }
+  await adv.waitForSelector('#scrMain.active'); await adv.waitForTimeout(1200);
+  check('Advanced: holds the logins, the Teams channel, the look and the logo in one pane',
+    await adv.$eval('[data-sub="advanced"]', (el) => el.classList.contains('active') && !!el.querySelector('#fNewUser') && !!el.querySelector('#fTeamsUrl')
+      && !!el.querySelector('#lookPick .themepick select') && !!el.querySelector('#fLogo')));
+  check('Advanced: the theme picker has left the sidebar', (await adv.$$('.side .themepick')).length === 0);
+  check('Advanced: the SOS card no longer carries the Teams address', (await adv.$$('[data-sub="scanners"] #fTeamsUrl')).length === 0 && !!(await adv.$('[data-sub="scanners"] #fIdleTeams')));
+  await adv.selectOption('#lookPick .themepick select', 'daylight');
+  check('Advanced: picking a theme applies it at once', (await adv.evaluate(() => document.documentElement.dataset.theme)) === 'daylight');
+  await adv.selectOption('#lookPick .themepick select', 'midnight');
+  /* the logo, through the API and on the page */
+  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+  const pub0 = await j(await fetch(`${BASE}/api/branding`));
+  check('Logo: nothing set to start with, and the branding call needs no sign-in', pub0.logo === null && pub0.onGuns === false);
+  const tooBig = await fetch(`${BASE}/api/admin/logo`, { method: 'POST', headers: A, body: JSON.stringify({ dataUrl: 'data:image/png;base64,' + 'A'.repeat(700000) }) });
+  check('Logo: a huge one is refused with a reason', tooBig.status === 413);
+  const notImg = await fetch(`${BASE}/api/admin/logo`, { method: 'POST', headers: A, body: JSON.stringify({ dataUrl: 'data:text/html;base64,PHNjcmlwdD4=' }) });
+  check('Logo: only an image is taken', notImg.status === 400);
+  const saved = await j(await fetch(`${BASE}/api/admin/logo`, { method: 'POST', headers: A, body: JSON.stringify({ dataUrl: PNG, onGuns: true }) }));
+  check('Logo: a PNG is kept, for the guns too', saved.logo === PNG && saved.onGuns === true);
+  const pub1 = await j(await fetch(`${BASE}/api/branding`));
+  check('Logo: the open branding call hands it to the guns', pub1.logo === PNG && pub1.onGuns === true);
+  await adv.reload(); await adv.waitForSelector('#scrMain.active'); await adv.waitForTimeout(1500);
+  check('Logo: it takes the place of the mark in the sidebar', await adv.$eval('.side .brand', (b) => b.classList.contains('has-logo') && !!b.querySelector('img.logo')));
+  check('Logo: the Advanced card shows it, with Remove', await adv.isVisible('#logoFrame img') && await adv.isVisible('#btnLogoRemove'));
+  const onlyOffice = await j(await fetch(`${BASE}/api/admin/logo`, { method: 'POST', headers: A, body: JSON.stringify({ onGuns: false }) }));
+  check('Logo: it can be kept off the guns', onlyOffice.logo === PNG && onlyOffice.onGuns === false && (await j(await fetch(`${BASE}/api/branding`))).onGuns === false);
+  const gone = await j(await fetch(`${BASE}/api/admin/logo`, { method: 'DELETE', headers: A }));
+  check('Logo: and removed again', gone.logo === null);
+  /* the sidebar: one group open at a time, and only the page you are on to start with */
+  await adv.goto(BASE + '/settings'); await adv.waitForSelector('#scrMain.active'); await adv.waitForTimeout(800);
+  const openGroups = async () => adv.$$eval('#navTabs .navgroup', (gs) => gs.filter((g) => g.querySelector('.subs') && !g.querySelector('.subs').hidden).map((g) => g.querySelector('.tab').getAttribute('href')));
+  check('Sidebar: only the page you are on is opened out', (await openGroups()).join(',') === '/settings', (await openGroups()).join(','));
+  await adv.click('#navTabs .navgroup:has(a[href="/admin"]) .caret');
+  check('Sidebar: opening another group folds the rest away', (await openGroups()).join(',') === '/admin', (await openGroups()).join(','));
+  await adv.click('#navTabs a.tab[href="/admin"]'); await adv.waitForSelector('#scrMain.active', { state: 'attached' }); await adv.waitForTimeout(800);
+  check('Sidebar: after clicking through to another tab, only that tab is open', (await openGroups()).join(',') === '/admin', (await openGroups()).join(','));
+  await adv.close();
 }
 
 console.log('\nerrors:', errors.length ? errors : 'none');

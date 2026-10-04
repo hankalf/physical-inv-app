@@ -15,6 +15,7 @@
   let data = null;
   let drawn = '';
   let gunUrl = '';
+  let dashUrl = '';
   let timer = null;
 
   function show(which) {
@@ -55,6 +56,8 @@
     }
     const b = el('b', '', text);
     say(['Scanned ', b], 'ok');
+    setTimeout(coach, 60);           // the gun has moved on: the tip moves with it
+    scheduleRefresh();
     if (chip) {
       chip.classList.add('flash');
       setTimeout(() => chip.classList.remove('flash'), 350);
@@ -209,7 +212,7 @@
       { key: 'gun', ok: gunUp, label: 'The scanner app is running on the left', fix: gunUp ? '' : 'Give it a few seconds, or press Restart the gun.' },
       { key: 'teams', ok: !!data.teamsChannel, optional: true,
         label: data.teamsChannel ? 'Teams channel set — an SOS from the test gun posts there too' : 'Teams channel — not set (optional)',
-        fix: data.teamsChannel ? '' : 'An SOS still shows on the dashboard. Set the channel under Settings → Scanners to test Teams as well.' }];
+        fix: data.teamsChannel ? '' : 'An SOS still shows on the dashboard. Set the channel under Settings → Advanced to test Teams as well.' }];
     const todo = items.filter((i) => !i.ok && !i.optional).length;
     $('readySum').textContent = todo ? `${todo} thing${todo === 1 ? '' : 's'} to do first` : 'ready to test';
     $('readySum').style.color = todo ? 'var(--warn)' : 'var(--ok)';
@@ -351,6 +354,7 @@
     if (sig === drawn) return;
     drawn = sig;
     $('gunName').textContent = data.device ? data.device.name : 'MC9300';
+    loadDash();
     renderSignon();
     renderChecks();
     renderShelves();
@@ -361,6 +365,18 @@
     const own = data.source === 'upload';
     $('dataSource').textContent = own ? `testing on “${data.label}”` : 'testing on the built-in data';
     $('btnBuiltIn').hidden = !own;
+  }
+
+  /* After a scan the gun posts its line at once, so the sheet is asked again
+     shortly, and once more in case the gun was a beat behind. */
+  let refreshSoon = 0;
+  function scheduleRefresh() {
+    if (refreshSoon) return;
+    refreshSoon = setTimeout(async () => {
+      refreshSoon = 0;
+      try { await refresh(); } catch { /* the next tick will */ }
+      setTimeout(() => { if (data) refresh().catch(() => {}); }, 1200);
+    }, 500);
   }
 
   async function refresh() {
@@ -376,6 +392,7 @@
     render(next);
     guideFirstTime();
     tipsFirstTime();
+    dashFirstTime();
     loadGun();
   }
 
@@ -421,6 +438,131 @@
     setGuide(true, { tell: false });
   }
 
+  /* ------------------------------------------------- the office side, on top
+     The real dashboard, in a frame, locked to this person's practice count
+     (?embed=<id>): progress, the pallet report, second counts, adjustments,
+     the SOS bar - every function it has, without leaving the page. A new run
+     is a new count, so the frame follows the session id. */
+  const DASH_KEY = () => `testingDashHidden:${data ? data.owner : ''}`;
+  const dashFrame = () => $('dashFrame');
+  let dashSeen = false;              // the person has looked at the office side
+  function loadDash() {
+    if (!data || !data.session) return;
+    const url = `/admin?embed=${data.session.id}#progress`;
+    if (dashUrl === url) return;
+    dashUrl = url;
+    dashFrame().src = url;
+  }
+  /** Switch the dashboard at the top to a sub-tab, and bring it on screen. */
+  function dashShow(sub) {
+    setDash(false);
+    try { const w = dashFrame().contentWindow; if (w && w.appApi && w.appApi.showSub) w.appApi.showSub(sub); } catch { /* still loading */ }
+    $('dashCard').scrollIntoView({ block: 'start', behavior: 'smooth' });
+    dashSeen = true;
+  }
+  function setDash(hidden) {
+    $('dashCard').classList.toggle('collapsed', hidden);
+    $('btnDashHide').textContent = hidden ? 'Show the dashboard' : 'Hide';
+    try { localStorage.setItem(DASH_KEY(), hidden ? '1' : '0'); } catch { /* private window */ }
+  }
+  $('btnDashHide').onclick = () => setDash(!$('dashCard').classList.contains('collapsed'));
+  $('btnDashTall').onclick = () => {
+    const tall = $('dashWrap').classList.toggle('tall');
+    $('dashWrap').style.height = '';
+    $('btnDashTall').textContent = tall ? 'Shorter' : 'Taller';
+  };
+  // the same dashboard in a tab of its own, on this count
+  $('btnDashboard').onclick = () => {
+    if (!data || !data.session) return;
+    try { sessionStorage.setItem('searchGoto', JSON.stringify({ page: '/admin', session: data.session.id, sub: 'progress' })); } catch { /* private window */ }
+    window.open('/admin#progress', '_blank');
+  };
+  // clicking into the dashboard counts as having seen it
+  window.addEventListener('blur', () => { setTimeout(() => { if (document.activeElement === dashFrame()) dashSeen = true; }, 0); });
+  function dashFirstTime() {
+    let saved = null;
+    try { saved = localStorage.getItem(DASH_KEY()); } catch { saved = null; }
+    setDash(saved === '1');
+  }
+
+  /* -------------------------------------------------- the guide, step by step
+     Six steps, shown one at a time. Each knows when it is done - from what the
+     server has and what the gun's screen says - so the guide moves on by
+     itself as the person gets through it. Back and Next still work for
+     reading ahead; the next thing actually done brings it back on track. */
+  const ck = (key) => !!(data && data.checklist.some((c) => c.key === key && c.done));
+  const STEPS = [
+    { title: 'Check “Before you start”', go: 'readyCard', goText: 'Show me',
+      text: 'The <b>Before you start</b> list just below should read <i>ready to test</i>. If anything is not ticked, it says what to do about it. Most of it this page does by itself.',
+      done: () => !!data && (data.ready || []).every((r) => r.ok || r.optional) && gunPeek().up },
+    { title: 'Sign on', go: 'signonCard', goText: 'Show me',
+      text: 'Under <b>1 · Sign on</b>, click the team number <span class="scan">99</span> and a clock-in number — each click is a <b>scan</b> into the gun, exactly as the trigger would be. Then, on the gun itself, tap <b>Sign on &amp; load list</b> and <b>Start counting</b>.',
+      done: () => ck('signon') || ['scrAssign', 'scrScan'].includes(gunPeek().screen) },
+    { title: 'Count your first pallet', go: 'shelvesCard', goText: 'Show me the shelves',
+      text: 'The gun asks three things per pallet, one screen at a time: <b>pallet → quantity → bin</b>. Under <b>3 · What is on the shelves</b>, click those three on the first row, in that order. The comments screen moves on by itself, or tap <b>Skip</b>. The yellow tip follows along and points at the next click.',
+      done: () => ck('first') || !!(data && data.totals.lines > 0) },
+    { title: 'Work down the sheet', go: 'shelvesCard', goText: 'Show me the shelves',
+      text: 'A green edge on a bin means it is counted. Some bins carry a <b>Try this</b> note — the shelf is wrong on purpose there, to show what the gun does about a short pallet, an empty bin, a pallet in the wrong bin, a label that will not scan. Count a few bins and watch.',
+      done: () => !!data && data.totals.binsCounted >= 3 },
+    { title: 'Watch “Things to try” tick itself off', go: 'checksCard', goText: 'Show me the list',
+      text: 'Under <b>2 · Things to try</b> the list fills in from what actually reached the server. Switch a feature on under <b>Try the features that ship turned off</b> and it grows a thing to try for it. When every line is ticked you have seen what a counter meets on the floor.',
+      done: () => !!data && data.checklist.length > 0 && data.checklist.every((c) => c.done) },
+    { title: 'See the office side', go: 'dash', goText: 'Show me the dashboard',
+      text: 'The dashboard at the <b>top of the page</b> is what a supervisor sees of this very count: <b>Progress</b> by aisle, the <b>pallet report</b>, <b>Second counts</b>, <b>Adjustments</b>, and your SOS on its bar. Click through its tabs — it is live, so count another pallet and watch it change.',
+      done: () => dashSeen },
+  ];
+  let stepManual = null;             // where Back / Next left it, if anywhere
+  let stepAuto = -1;                 // the first step not yet done
+  let stepDrawn = '';
+  function renderStepper() {
+    if (!data) return;
+    const dones = STEPS.map((st) => { try { return !!st.done(); } catch { return false; } });
+    const first = dones.indexOf(false);
+    const auto = first === -1 ? STEPS.length - 1 : first;
+    if (auto !== stepAuto) { stepAuto = auto; stepManual = null; }   // something got done: back on track
+    const at = stepManual == null ? auto : stepManual;
+    const all = first === -1;
+    const sig = JSON.stringify([dones, at]);
+    if (sig === stepDrawn) return;
+    stepDrawn = sig;
+    const st = STEPS[at];
+    $('stepDots').replaceChildren(...STEPS.map((x, i) => {
+      const b = el('button', (dones[i] ? 'done' : '') + (i === at ? ' now' : ''), `${i + 1}`);
+      b.type = 'button';
+      b.title = x.title;
+      b.onclick = () => { stepManual = i; renderStepper(); };
+      return b;
+    }));
+    $('stepN').textContent = `Step ${at + 1} of ${STEPS.length}` + (dones[at] ? ' · done' : '');
+    $('stepTitle').textContent = all && at === STEPS.length - 1 ? 'You have seen the lot' : st.title;
+    $('stepText').innerHTML = all && at === STEPS.length - 1
+      ? 'Every step is done and every thing to try is ticked. <b>Start over</b> begins a fresh run — or switch on a feature under <b>Try the features that ship turned off</b> and count with it on.'
+      : st.text;
+    $('stepCard').classList.toggle('done', dones[at]);
+    $('stepBack').disabled = at === 0;
+    $('stepNext').disabled = at === STEPS.length - 1;
+    $('stepGo').textContent = st.goText;
+    $('stepGo').hidden = all && at === STEPS.length - 1;
+    $('stepState').textContent = dones[at] ? (at < STEPS.length - 1 ? 'Done — the next step is up next.' : '') : (at > auto ? `You are on step ${auto + 1} — this is a look ahead.` : '');
+  }
+  $('stepBack').onclick = () => { stepManual = Math.max(0, (stepManual == null ? stepAuto : stepManual) - 1); renderStepper(); };
+  $('stepNext').onclick = () => {
+    const at = stepManual == null ? stepAuto : stepManual;
+    if (at === STEPS.length - 2) dashSeen = true;      // pressing on to the last step is going to look
+    stepManual = Math.min(STEPS.length - 1, at + 1);
+    renderStepper();
+  };
+  $('stepGo').onclick = () => {
+    const at = stepManual == null ? stepAuto : stepManual;
+    const st = STEPS[at];
+    if (st.go === 'dash') { dashShow('progress'); return; }
+    const card = $(st.go);
+    if (!card) return;
+    card.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    card.classList.add('found');
+    setTimeout(() => card.classList.remove('found'), 2200);
+  };
+
   /* ------------------------------------------------------------- the coach
      A bubble beside the next thing to click, following what the gun is asking
      for. It reads the gun's own screen - which prompt is up, what is in the
@@ -458,7 +600,7 @@
     if (g.screen === 'scrAssign') return { key: 'count', target: $('gunFrame').closest('.gun'), step: 'Step 2', text: 'This is the team\'s aisle. Tap <b>Start counting</b> on the gun.', pos: 'left' };
     if (g.override) return { key: 'yesno', target: $('gunFrame').closest('.gun'), step: 'The gun is asking', text: 'That pallet is not on the report. On the gun, tap <b>YES</b> to count it anyway — it goes to a supervisor as a pallet to add.', pos: 'left' };
     if (g.screen === 'scrScan') {
-      const row = $('shelves').querySelector('tr[data-pallet][data-done="0"]');
+      const row = [...$('shelves').querySelectorAll('tr[data-pallet][data-done="0"]')].find((r) => !justCounted(r.dataset.pallet)) || null;
       const p = /PALLET/i.test(g.prompt), q = /QUANTITY/i.test(g.prompt), b = /BIN/i.test(g.prompt), c = /Comments/i.test(g.prompt);
       if (p && row) return { key: 'pallet:' + row.dataset.pallet, target: row.querySelector(`.scan[data-code="${row.dataset.pallet}"]`), step: lines ? 'Next pallet' : 'Step 3 · count a pallet',
         text: `The gun wants a <b>pallet</b>. Click <b>${row.dataset.pallet}</b> — that is the pallet on this shelf.${lines ? '' : ' Then it will ask for the quantity, then the bin.'}` };
@@ -476,29 +618,38 @@
         const feat = (key, t) => (shownFeat.has(key) ? null : { key: 'feat:' + key, ...t });
         const f = (x.openSecondCounts > 0 && feat('second', { target: $('gunFrame').closest('.gun'), step: 'Second counts', pos: 'left',
             text: 'A pallet you counted disagreed with the report, so the gun raised a <b>second count</b>. Tap <b>My aisle</b>, then <b>Start second counts</b>, and count that bin again.' }))
-          || (x.pendingApprovals > 0 && feat('approve', { target: $('btnDashboard'), step: 'Approvals are on',
-            text: 'A difference is waiting to be signed for. <b>Open the dashboard</b> → <b>Adjustments</b>: approve it with a reason, or reject it.' }))
+          || (x.pendingApprovals > 0 && feat('approve', { target: $('dashCard'), step: 'Approvals are on',
+            text: 'A difference is waiting to be signed for. In the dashboard at the top, open <b>Adjustments</b>: approve it with a reason, or reject it.' }))
           || (o.palletMode === 'strict' && feat('strict', { target: $('fWedge'), step: 'No overrides is on',
             text: 'Type a pallet that is not on the report — <b>FOUND-99</b> — and press <b>SCAN</b>. With no overrides, the gun refuses it instead of asking.' }))
-          || (o.trackAbc && lines >= 3 && feat('abc', { target: $('btnDashboard'), step: 'ABC classes are on',
-            text: '<b>Open the dashboard</b> → <b>Reports</b> shows count accuracy by A, B and C class against the target for each.' }))
+          || (o.trackAbc && lines >= 3 && feat('abc', { target: $('dashCard'), step: 'ABC classes are on',
+            text: 'In the dashboard at the top, <b>Reports</b> shows count accuracy by A, B and C class against the target for each.' }))
           || (o.askComments === false && !shownFeat.has('nocomments') && feat('nocomments', { target: $('gunFrame').closest('.gun'), step: 'Comments step is off', pos: 'left',
             text: 'With the comments step off, the gun goes straight to the next pallet after the bin. Count one and watch.' }));
         if (f) return f;
       }
       if (c) return { key: 'comments', target: $('gunFrame').closest('.gun'), step: 'Comments', text: 'Optional. Tap a reason on the gun, or <b>Skip</b> — or just wait, it moves on by itself.', pos: 'left' };
-      if (p && !row) return { key: 'done', target: $('checks'), step: 'All counted', text: 'Every pallet on the sheet is counted. See what is left under <b>Things to try</b> — then <b>Open the dashboard</b> to see the office side.' };
+      if (p && !row) return { key: 'done', target: $('checks'), step: 'All counted', text: 'Every pallet on the sheet is counted. See what is left under <b>Things to try</b> — then look at the dashboard at the top: the office side of what you just did.' };
     }
     if (g.screen === 'scrEmptyRun' || g.screen === 'scrSos' || g.screen === 'scrHistory') return null;
     return null;
   }
 
   const shownFeat = new Set();     // a feature's tip has had its say once the person moves on
+  /* A pallet whose bin was just scanned is counted as far as the tips are
+     concerned, straight away - the server and the sheet catch up a moment
+     later. The memory is short, so a cancelled scan cannot hide a row for long. */
+  const walked = new Map();        // pallet -> when to forget it
+  const justCounted = (pallet) => { const t = walked.get(pallet); if (t && t > Date.now()) return true; walked.delete(pallet); return false; };
+  function leftTip(key) {
+    if (key.startsWith('feat:')) shownFeat.add(key.slice(5));
+    if (key.startsWith('bin:')) { walked.set(key.slice(4), Date.now() + 12000); scheduleRefresh(); }
+  }
   function placeCoach(t) {
     const box = $('coach');
-    if (!t || !t.target) { box.hidden = true; if (lastTarget) lastTarget.classList.remove('spot'); lastTarget = null; lastKey = ''; return; }
+    if (!t || !t.target) { box.hidden = true; if (lastTarget) lastTarget.classList.remove('spot'); if (lastKey) leftTip(lastKey); lastTarget = null; lastKey = ''; return; }
     if (t.key !== lastKey) {
-      if (lastKey.startsWith('feat:')) shownFeat.add(lastKey.slice(5));
+      leftTip(lastKey);
       // a new step: light the target, bring it on screen, and say so
       if (lastTarget) lastTarget.classList.remove('spot');
       t.target.classList.add('spot');
@@ -531,6 +682,7 @@
   }
 
   function coach() {
+    renderStepper();
     if (tipsOff || !data || $('scrMain').classList.contains('active') === false) { placeCoach(null); return; }
     placeCoach(nextTip());
   }
@@ -552,7 +704,7 @@
     if (saved !== null) { setTips(saved === '1', { tell: false }); return; }
     setTips(true, { tell: false });
   }
-  setInterval(coach, 700);
+  setInterval(coach, 200);
   window.addEventListener('scroll', () => coach(), { passive: true });
   window.addEventListener('resize', () => coach());
 
@@ -571,9 +723,30 @@
     try { frame().contentWindow.location.reload(); } catch { loadGun({ force: true }); }
   };
 
-  $('btnDashboard').onclick = () => {
-    if (data && data.session) api.goto({ page: '/admin', session: data.session.id, sub: 'progress' });
-  };
+  /* Everything this person has done here - this run and the earlier ones - as
+     one workbook, with the same sheets the real Export everything gives. */
+  async function exportRuns(btn) {
+    const was = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Building the workbook…';
+    try {
+      const [out, XLSX] = await Promise.all([api.json('/api/admin/practice/export'), window.appUi.loadXlsx()]);
+      const wb = XLSX.utils.book_new();
+      for (const sh of out.sheets) {
+        const ws = XLSX.utils.json_to_sheet(sh.rows, { header: sh.columns });
+        ws['!cols'] = sh.columns.map((c) => ({
+          wch: Math.min(60, Math.max(String(c).length, ...sh.rows.slice(0, 500).map((r) => String(r[c] ?? '').length)) + 2),
+        }));
+        if (sh.rows.length && !/Summary$/.test(sh.name)) ws['!autofilter'] = { ref: ws['!ref'] };
+        XLSX.utils.book_append_sheet(wb, ws, sh.name.slice(0, 31));
+      }
+      XLSX.writeFile(wb, out.filename);
+      msg($('rigMsg'), 'ok', `Exported ${out.runs} run${out.runs === 1 ? '' : 's'}.`, `${out.filename} — a Runs sheet, what was tried, then every sheet for each run.`);
+    } catch (err) { msg($('rigMsg'), 'err', 'Could not build the export', err.message); }
+    finally { btn.disabled = false; btn.textContent = was; }
+  }
+  $('btnExportMine').onclick = () => exportRuns($('btnExportMine'));
+  $('btnExportRuns').onclick = () => exportRuns($('btnExportRuns'));
 
   $('btnReset').onclick = async () => {
     if (!confirm('Start a new practice run?\n\nThis run is kept under "Your earlier runs", and the test gun starts clean. Real counts are not touched.')) return;
@@ -586,6 +759,7 @@
       const next = await api.post('/api/admin/practice/reset', {});
       await wipeGunStorage();
       drawn = '';
+      dashSeen = false; stepManual = null; walked.clear();
       render(next);
       loadGun({ force: true });
       msg($('rigMsg'), 'ok', 'Started over.', 'A fresh practice run, and a gun that has never seen it. Sign on again — your last run is kept below.');
@@ -603,6 +777,7 @@
     const next = await make();
     await wipeGunStorage();
     drawn = '';
+    dashSeen = false; stepManual = null; walked.clear();
     render(next);
     loadGun({ force: true });
     msg($('uploadMsg'), 'ok', okText(next), 'Sign on again on the gun — your last run is kept under “Your earlier runs”.');

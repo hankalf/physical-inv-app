@@ -541,6 +541,26 @@
     else if (has(last)) $('fSession').value = String(last);
   }
 
+  /* The site's logo in the header, if the office put one there for the guns.
+     The last answer is kept, so a gun that starts up in a dead spot still has it. */
+  function drawBranding(b) {
+    const img = $('hdrLogo');
+    if (!img) return;
+    const show = !!(b && b.logo && b.onGuns);
+    if (show && img.src !== b.logo) img.src = b.logo;
+    img.hidden = !show;
+  }
+  async function loadBranding() {
+    drawBranding(await metaGet('branding'));
+    try {
+      const r = await fetch('/api/branding', { cache: 'no-cache' });
+      if (!r.ok) return;
+      const b = await r.json();
+      await metaSet('branding', b);
+      drawBranding(b);
+    } catch { /* offline: the saved one stands */ }
+  }
+
   async function loadSessions() {
     const sel = $('fSession');
     sel.innerHTML = '';
@@ -3095,6 +3115,7 @@
     $('fTeam').value = (await metaGet('team')) || '';
     renderEmployees();
     await updateChips();
+    await loadBranding();
     await loadSessions();
     await describeCache();
     showScreen(state.deviceId ? 'scrSignon' : 'scrDevice');

@@ -21,13 +21,20 @@
     '/admin': [['progress', 'Progress'], ['map', 'Map'], ['teams', 'Team plan'], ['second', 'Second counts'], ['adjust', 'Adjustments'], ['reports', 'Reports']],
     '/cycle': [['today', 'Today'], ['open', 'Still open'], ['coverage', 'Coverage'], ['setup', 'Program & data']],
     '/teams': [['crew', 'Crew & teams'], ['rules', 'Equipment rules']],
-    '/settings': [['start', 'Getting started'], ['gun', 'Scanner screen'], ['logins', 'Logins'], ['scanners', 'Scanners'], ['lists', 'Lists & racking'], ['erp', 'ERP & backups']],
+    '/settings': [['start', 'Getting started'], ['gun', 'Scanner screen'], ['scanners', 'Scanners'], ['lists', 'Lists & racking'], ['erp', 'ERP & backups'], ['advanced', 'Advanced']],
     '/front': [['moves', 'Pallets to move back'], ['bins', 'Front-placed bins']],
     '/missing': [],
     '/testing': [],
   };
 
   const here = location.pathname.replace(/\/$/, '') || '/admin';
+
+  /* A page opened as ?embed=<session id> is a dashboard inside another page -
+     the Testing Suite puts the real one above its practice count. It loses its
+     sidebar and header, keeps its sub-tabs, and remembers its own sub-tab
+     rather than the one the full page is on. */
+  const EMBED = Number(new URLSearchParams(location.search).get('embed')) || 0;
+  if (EMBED) document.documentElement.classList.add('embed');
 
   /* ------------------------------------------------------------- themes
      Kept in this browser, applied before the page draws. Every colour in the
@@ -48,7 +55,7 @@
   }
   applyLook();
   function mountThemePicker() {
-    const foot = document.querySelector('.side-foot');
+    const foot = document.getElementById('lookPick');     // Settings → Advanced
     if (!foot || foot.querySelector('.themepick')) return;
     const box = document.createElement('div');
     box.className = 'themepick';
@@ -70,7 +77,7 @@
       acc.appendChild(b);
     }
     box.append(sel, acc);
-    foot.prepend(box);
+    foot.appendChild(box);
     applyLook();
   }
   const api = {
@@ -112,6 +119,7 @@
       document.dispatchEvent(new CustomEvent('auth', { detail: null }));
     },
   };
+  api.embed = EMBED;
   window.appApi = api;
 
   /* ------------------------------------------------------- small UI helpers
@@ -216,17 +224,16 @@
     }
     return SUBS[href] || [];
   };
-  const openKey = (href) => 'navOpen:' + href;
-  const isOpen = (href) => {
-    if (href === here) return true;                 // the page you are on is always opened out
-    try { return sessionStorage.getItem(openKey(href)) === '1'; } catch { return false; }
-  };
+  /* Only the page you are on starts opened out. A caret opens another group
+     to look, and folds the rest away - so nothing is left hanging open after a
+     click takes you to a different tab. */
+  const isOpen = (href) => href === here;
 
   function renderTabs() {
     const bar = document.getElementById('navTabs');
     if (!bar) return;
     bar.innerHTML = '';
-    const currentSub = (location.hash || '').replace('#', '') || (() => { try { return sessionStorage.getItem('sub:' + here); } catch { return ''; } })();
+    const currentSub = (location.hash || '').replace('#', '') || (() => { try { return sessionStorage.getItem('sub:' + here + (EMBED ? ':embed' : '')); } catch { return ''; } })();
     let lastSection = '';
     for (const [href, label, ico, section] of TABS) {
       if (section !== lastSection) {
@@ -275,10 +282,13 @@
         }
         caret.onclick = () => {
           const now = list.hidden;
+          for (const other of bar.querySelectorAll('.navgroup')) {      // one group open at a time
+            const l = other.querySelector('.subs'); const c = other.querySelector('.caret');
+            if (l && l !== list) { l.hidden = true; if (c) { c.textContent = '▸'; c.setAttribute('aria-expanded', 'false'); } }
+          }
           list.hidden = !now;
           caret.textContent = now ? '▾' : '▸';
           caret.setAttribute('aria-expanded', String(now));
-          try { sessionStorage.setItem(openKey(href), now ? '1' : '0'); } catch { /* private window */ }
         };
         group.append(row, list);
       } else {
@@ -410,7 +420,7 @@
      A page declares them by marking its sections <section data-sub="map"
      data-sub-label="Map">. One screen, one job - nobody scrolls past four
      cards to reach the one they came for. */
-  const subKey = 'sub:' + here;
+  const subKey = 'sub:' + here + (EMBED ? ':embed' : '');
 
   function renderSubTabs() {
     const bar = document.getElementById('subTabs');
@@ -652,7 +662,10 @@
     ['Level rules for equipment', '/teams', 'rules', 'level rules reach equipment which levels forklift high reach'],
     ['Getting started checklist', '/settings', 'start', 'getting started checklist setup first time what next'],
     ['Scanner screen layout', '/settings', 'gun', 'scanner screen questions order keyboard text size upright portrait update comments countdown gun handheld'],
-    ['Supervisor logins', '/settings', 'logins', 'login user password account supervisor admin shared'],
+    ['Supervisor logins', '/settings', 'advanced', 'login user password account supervisor admin shared advanced'],
+    ['Microsoft Teams channel', '/settings', 'advanced', 'teams channel webhook alerts sos notify card advanced'],
+    ['Theme and accent colour', '/settings', 'advanced', 'theme dark light colour color accent look appearance advanced'],
+    ['Site logo', '/settings', 'advanced', 'logo brand image picture upload company header scanner advanced'],
     ['Scanner setup and links', '/settings', 'scanners', 'scanner device link qr register enrol setup card handheld gun'],
     ['One-tap reasons on the gun', '/settings', 'scanners', 'reason comment override one tap chips damaged'],
     ['Adjustment reasons and accuracy targets', '/settings', 'scanners', 'adjustment reason code accuracy target abc percent'],
@@ -858,8 +871,39 @@
     if (g) setTimeout(() => applyGoto(g), 400);
   }
 
+  /* ------------------------------------------------------------- the logo
+     Set under Settings → Advanced. It is drawn from this browser's copy at
+     once and checked against the server, so the sidebar never flashes. */
+  function drawLogo(b) {
+    const brand = document.querySelector('.side .brand');
+    if (!brand) return;
+    let img = brand.querySelector('img.logo');
+    if (b && b.logo) {
+      if (!img) { img = document.createElement('img'); img.className = 'logo'; img.alt = ''; brand.prepend(img); }
+      if (img.src !== b.logo) img.src = b.logo;
+      brand.classList.add('has-logo');
+    } else {
+      if (img) img.remove();
+      brand.classList.remove('has-logo');
+    }
+  }
+  api.refreshBranding = async function refreshBranding() {
+    try {
+      const b = await (await fetch('/api/branding', { cache: 'no-cache' })).json();
+      drawLogo(b);
+      try { localStorage.setItem('siteBranding', JSON.stringify({ logo: b.logo })); } catch { /* private window */ }
+      document.dispatchEvent(new CustomEvent('branding', { detail: b }));
+      return b;
+    } catch { return null; }
+  };
+  function mountLogo() {
+    try { drawLogo(JSON.parse(localStorage.getItem('siteBranding') || 'null')); } catch { /* nothing cached */ }
+    api.refreshBranding();
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     renderTabs();
+    mountLogo();
     mountThemePicker();
     mountSearch();
     renderSubTabs();

@@ -11,6 +11,9 @@
 
   let sessionId = null;
   let sessions = [];
+  /* Inside the Testing Suite the page is about one count - the practice count -
+     and stays on it whatever the picker would have chosen. */
+  const EMBED = api.embed || 0;
 
   const needSession = (el) => {
     if (sessionId) return true;
@@ -53,7 +56,8 @@
       return;
     }
     // the list puts open sessions first, so the default is a live count
-    sessionId = sessions.some((s) => s.id === prior) ? prior : sessions[0].id;
+    sessionId = EMBED && sessions.some((s) => s.id === EMBED) ? EMBED
+      : sessions.some((s) => s.id === prior) ? prior : sessions[0].id;
     picker.render(sessions, sessionId);
     applySessionSettings();
     await refreshAll();

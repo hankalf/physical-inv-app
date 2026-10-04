@@ -68,6 +68,9 @@ body.app { display: grid; grid-template-columns: var(--side) 1fr; min-height: 10
 .side .brand::before { content: "▦"; display: inline-block; width: 28px; height: 28px; line-height: 28px; text-align: center;
   border-radius: 8px; background: var(--accent); color: #fff; font-size: 14px; margin-bottom: 8px; }
 .side .brand span { font-weight: 500; font-size: 12px; color: var(--muted); letter-spacing: 0; }
+/* a site logo takes the place of the mark */
+.side .brand.has-logo::before { display: none; }
+.side .brand img.logo { display: block; max-width: 100%; max-height: 56px; width: auto; object-fit: contain; object-position: left; margin-bottom: 8px; border-radius: 6px; }
 .side nav { display: flex; flex-direction: column; gap: 1px; }
 /* the groups the pages fall into */
 .navsection { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
@@ -126,6 +129,15 @@ body.app { display: grid; grid-template-columns: var(--side) 1fr; min-height: 10
 .subtabs button.current .n { background: var(--accent); color: #fff; }
 
 main { padding: 18px 22px 40px; min-width: 0; }
+
+/* the dashboard inside the Testing Suite: no sidebar, no header - the page
+   around it says which count this is - just the sub-tabs and the cards */
+html.embed body.app { grid-template-columns: 1fr; min-height: 0; }
+html.embed .side, html.embed .topbar h1, html.embed .topbar #sessionPick, html.embed .topbar .spacer,
+html.embed .topbar #refreshedAt, html.embed .topbar a[href="/board"], html.embed #sessionCard { display: none; }
+html.embed .topbar { padding: 4px 16px 0; position: static; }
+html.embed .subtabs { margin-top: 0; }
+html.embed main { padding: 14px 16px 24px; }
 .screen { display: none; }
 .screen.active { display: block; }
 [data-sub] { display: none; min-width: 0; }
@@ -631,9 +643,13 @@ td.neg { color: var(--err); font-weight: 700; }
 :root[data-theme="daylight"] .sosalert.idle .one, :root[data-theme="frost"] .sosalert.idle .one { background: var(--warn-ink); }
 :root[data-theme="daylight"] .trialbanner, :root[data-theme="frost"] .trialbanner { color: var(--warn-text); }
 
-/* the picker, at the foot of the sidebar */
-.themepick { display: flex; flex-direction: column; gap: 6px; }
-.themepick select { font-size: 12px; padding: 5px 8px; }
+/* the picker, under Settings → Advanced */
+.themepick { display: flex; flex-direction: column; gap: 10px; max-width: 360px; margin-top: 10px; }
+.themepick select { font-size: 13px; padding: 7px 10px; }
+.logoprev { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 10px; }
+.logoprev .frame { min-width: 180px; max-width: 320px; padding: 14px; border: 1px dashed var(--line); border-radius: 10px; background: var(--side-bg); }
+.logoprev .frame img { display: block; max-width: 100%; max-height: 80px; object-fit: contain; }
+.logoprev .frame .none { color: var(--muted); font-size: 13px; }
 .themepick .accents { display: flex; gap: 6px; align-items: center; padding: 0 2px; }
 .themepick .accents span { font-size: 11px; color: var(--muted); margin-right: 2px; }
 .themepick .accents button { width: 18px; height: 18px; border-radius: 50%; padding: 0; margin: 0; border: 2px solid transparent; }

@@ -149,56 +149,7 @@
     </div>
       </div>
 
-      <div data-sub="logins" data-sub-label="Logins">
-    <div class="card">
-      <h2>Supervisor logins <span class="chip" id="sharedChip" hidden></span>
-        <span class="muted">everyone who changes something is recorded by name in the log</span></h2>
-      <div class="feedback" id="sharedNote"></div>
-      <div id="adminOnly">
-        <div class="hint">
-          Give each supervisor their own login. <b>Admins</b> can manage accounts and everything else;
-          <b>supervisors</b> can do everything except manage accounts. Deactivating a login keeps its history
-          in the log but stops it being used.
-        </div>
-        <div class="inline" style="margin-top:10px">
-          <div class="auto"><label for="fNewUser">Username</label><input id="fNewUser" style="width:140px" placeholder="DANA"></div>
-          <div><label for="fNewFullName">Full name</label><input id="fNewFullName" placeholder="Dana Whitfield"></div>
-          <div class="auto"><label for="fNewPass">Password</label><input id="fNewPass" type="password" style="width:190px" autocomplete="new-password" placeholder="leave blank to generate"></div>
-          <div class="auto">
-            <label for="fNewRole">Role</label>
-            <select id="fNewRole">
-              <option value="supervisor">Supervisor</option>
-              <option value="admin">Admin — can manage logins</option>
-            </select>
-          </div>
-          <div class="auto"><button class="primary fit" id="btnAddUser">Add login</button></div>
-        </div>
-        <div class="hint">
-          Leave the password blank and one is generated for you — read it out once, and they choose
-          their own the first time they sign in. Type one instead and they still have to replace it,
-          so nobody but its owner ever knows a working password.
-        </div>
-        <div class="feedback" id="userMsg"></div>
-        <div class="scroll" style="margin-top:10px"><table id="userTable"></table></div>
-      </div>
-      <div class="feedback" id="starterBox" style="display:none"></div>
-      <div class="hint" id="notAdmin" hidden>
-        Only an admin can add or remove logins. You can still change your own password below.
-      </div>
-      <hr>
-      <h2 style="font-size:15px">Your password</h2>
-      <div class="inline" id="ownPassword">
-        <div class="auto"><label for="fCurPass">Current</label><input id="fCurPass" type="password" autocomplete="current-password" style="width:160px"></div>
-        <div class="auto"><label for="fNextPass">New</label><input id="fNextPass" type="password" autocomplete="new-password" style="width:160px" placeholder="8+ characters"></div>
-        <div class="auto"><button class="fit" id="btnChangePass">Change password</button></div>
-      </div>
-      <div class="hint" id="ownPasswordNA" hidden>You are signed in with the shared password, which has no account to change. Ask an admin for a login of your own.</div>
-      <div class="feedback" id="passMsg"></div>
-    </div>
-
     <!-- ============ scanners ============ -->
-      </div>
-
       <div data-sub="scanners" data-sub-label="Scanners">
     <div class="card">
       <h2>What the scanners offer <span class="chip" id="promptChip" hidden></span>
@@ -296,25 +247,12 @@
       <div class="hint" style="margin-top:0">
         Every gun has an <b>SOS</b> button. Pressing it offers this list, and whichever one the counter picks lands on
         the dashboard within seconds — with their team, aisle and last bin — and in a Teams channel if one is set up
-        below. Write the list in the words your floor uses; the counter is in a hurry.
+        under <b>Advanced</b>. Write the list in the words your floor uses; the counter is in a hurry.
       </div>
       <div class="chips" id="sosList" style="margin-top:10px"></div>
       <div class="row" style="margin-top:10px">
         <input id="fNewSos" placeholder="e.g. Blast freezer door will not close" maxlength="120">
         <button class="fit" id="btnAddSos">Add</button>
-      </div>
-      <hr>
-      <h3 style="margin-top:0">Microsoft Teams channel</h3>
-      <div class="hint" style="margin-top:0">
-        In Teams: <b>⋯</b> beside the channel → <b>Workflows</b> → <i>Post to a channel when a webhook request is
-        received</i>. That gives you an address — paste it here. (An older <i>Incoming Webhook</i> connector address
-        works too, while Microsoft still accepts them.) The address is a key: anyone who has it can post into that
-        channel, so it is stored here and never shown again in full.
-      </div>
-      <div class="inline" style="margin-top:12px">
-        <div><label for="fTeamsUrl">Webhook address</label><input id="fTeamsUrl" placeholder="https://…" autocomplete="off"></div>
-        <div class="auto"><label class="cb"><input type="checkbox" id="fTeamsOn"> Send alerts to Teams</label></div>
-        <div class="auto"><label class="cb" title="A second card when a supervisor closes the alert, so nobody drives over for something that was sorted twenty minutes ago."><input type="checkbox" id="fTeamsClosed"> Say when it is dealt with</label></div>
       </div>
       <h3>When a team stops scanning</h3>
       <div class="hint" style="margin-top:0">
@@ -323,14 +261,11 @@
       </div>
       <div class="inline">
         <div class="auto"><label for="fIdleMinutes">Alert after (minutes)</label><input id="fIdleMinutes" type="number" min="0" max="240" class="sm" style="width:110px"></div>
-        <div class="auto"><label class="cb"><input type="checkbox" id="fIdleTeams"> Send it to the Teams channel too</label></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fIdleTeams"> Send it to the Teams channel too <span class="muted">(set under Advanced)</span></label></div>
       </div>
       <div class="toolbar">
         <button class="primary" id="btnSaveSos">Save</button>
-        <button id="btnTestTeams">Send a test card</button>
         <button id="btnResetSos">Restore the shipped list</button>
-        <span class="spacer"></span>
-        <span class="muted" id="teamsWho"></span>
       </div>
       <div class="feedback" id="sosMsg"></div>
     </div>
@@ -485,6 +420,103 @@
       <div class="two" style="margin-top:12px">
         <div><div class="scroll"><table id="backupTable"></table></div></div>
         <div><div class="scroll" style="max-height:340px"><table id="auditTable"></table></div></div>
+      </div>
+    </div>
+      </div>
+
+    <!-- ============ advanced: the things set once and left alone ============ -->
+      <div data-sub="advanced" data-sub-label="Advanced">
+    <div class="card">
+      <h2>Supervisor logins <span class="chip" id="sharedChip" hidden></span>
+        <span class="muted">everyone who changes something is recorded by name in the log</span></h2>
+      <div class="feedback" id="sharedNote"></div>
+      <div id="adminOnly">
+        <div class="hint">
+          Give each supervisor their own login. <b>Admins</b> can manage accounts and everything else;
+          <b>supervisors</b> can do everything except manage accounts. Deactivating a login keeps its history
+          in the log but stops it being used.
+        </div>
+        <div class="inline" style="margin-top:10px">
+          <div class="auto"><label for="fNewUser">Username</label><input id="fNewUser" style="width:140px" placeholder="DANA"></div>
+          <div><label for="fNewFullName">Full name</label><input id="fNewFullName" placeholder="Dana Whitfield"></div>
+          <div class="auto"><label for="fNewPass">Password</label><input id="fNewPass" type="password" style="width:190px" autocomplete="new-password" placeholder="leave blank to generate"></div>
+          <div class="auto">
+            <label for="fNewRole">Role</label>
+            <select id="fNewRole">
+              <option value="supervisor">Supervisor</option>
+              <option value="admin">Admin — can manage logins</option>
+            </select>
+          </div>
+          <div class="auto"><button class="primary fit" id="btnAddUser">Add login</button></div>
+        </div>
+        <div class="hint">
+          Leave the password blank and one is generated for you — read it out once, and they choose
+          their own the first time they sign in. Type one instead and they still have to replace it,
+          so nobody but its owner ever knows a working password.
+        </div>
+        <div class="feedback" id="userMsg"></div>
+        <div class="scroll" style="margin-top:10px"><table id="userTable"></table></div>
+      </div>
+      <div class="feedback" id="starterBox" style="display:none"></div>
+      <div class="hint" id="notAdmin" hidden>
+        Only an admin can add or remove logins. You can still change your own password below.
+      </div>
+      <hr>
+      <h2 style="font-size:15px">Your password</h2>
+      <div class="inline" id="ownPassword">
+        <div class="auto"><label for="fCurPass">Current</label><input id="fCurPass" type="password" autocomplete="current-password" style="width:160px"></div>
+        <div class="auto"><label for="fNextPass">New</label><input id="fNextPass" type="password" autocomplete="new-password" style="width:160px" placeholder="8+ characters"></div>
+        <div class="auto"><button class="fit" id="btnChangePass">Change password</button></div>
+      </div>
+      <div class="hint" id="ownPasswordNA" hidden>You are signed in with the shared password, which has no account to change. Ask an admin for a login of your own.</div>
+      <div class="feedback" id="passMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Microsoft Teams channel <span class="muted">where an SOS and a stopped-scanning alert go, besides the dashboard</span></h2>
+      <div class="hint" style="margin-top:0">
+        In Teams: <b>⋯</b> beside the channel → <b>Workflows</b> → <i>Post to a channel when a webhook request is
+        received</i>. That gives you an address — paste it here. (An older <i>Incoming Webhook</i> connector address
+        works too, while Microsoft still accepts them.) The address is a key: anyone who has it can post into that
+        channel, so it is stored here and never shown again in full.
+      </div>
+      <div class="inline" style="margin-top:12px">
+        <div><label for="fTeamsUrl">Webhook address</label><input id="fTeamsUrl" placeholder="https://…" autocomplete="off"></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fTeamsOn"> Send alerts to Teams</label></div>
+        <div class="auto"><label class="cb" title="A second card when a supervisor closes the alert, so nobody drives over for something that was sorted twenty minutes ago."><input type="checkbox" id="fTeamsClosed"> Say when it is dealt with</label></div>
+      </div>
+      <div class="toolbar">
+        <button class="primary" id="btnSaveTeams">Save</button>
+        <button id="btnTestTeams">Send a test card</button>
+        <span class="spacer"></span>
+        <span class="muted" id="teamsWho"></span>
+      </div>
+      <div class="feedback" id="teamsMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Look <span class="muted">how the supervisor pages look on this computer</span></h2>
+      <div class="hint" style="margin-top:0">A theme and an accent colour. They are kept in this browser, so each person's computer can be set its own way; the scanners are not affected.</div>
+      <div id="lookPick"></div>
+    </div>
+
+    <div class="card">
+      <h2>Logo <span class="muted">your company's mark at the top of the sidebar, and on the scanners if you like</span></h2>
+      <div class="hint" style="margin-top:0">
+        PNG, JPEG, WebP, GIF or SVG, under about 400 KB. A wide mark on a clear or dark background sits best;
+        it is shown no taller than 56 pixels here and 22 on a gun. Scanners pick it up the next time they are online.
+      </div>
+      <div class="logoprev">
+        <div class="frame" id="logoFrame"><span class="none">No logo yet — the ▦ mark is shown.</span></div>
+        <div>
+          <div class="inline">
+            <div><label for="fLogo">Image file</label><input type="file" id="fLogo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"></div>
+            <div class="auto"><button class="primary fit" id="btnLogoUpload">Upload</button></div>
+            <div class="auto"><button class="fit danger" id="btnLogoRemove" hidden>Remove</button></div>
+          </div>
+          <label class="cb" style="margin-top:10px"><input type="checkbox" id="fLogoOnGuns" checked> Show it on the scanners too</label>
+          <div class="feedback" id="logoMsg"></div>
+        </div>
       </div>
     </div>
       </div>

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { db, norm, getSession, createSession, createDevice, listDevices, sandboxOf } from '../db.js';
 import { refreshAdjustments } from './adjustments.js';
+import { exportEverything, when } from './export-all.js';
 import { scannerPrompts, scannerLayout } from './scanner-prompts.js';
 import { sosReasons } from './alerts.js';
 import { importMaster } from './master.js';
@@ -280,6 +281,42 @@ export function practiceHistory(owner) {
 }
 
 /**
+ * Everything this person did here, in one workbook: a sheet per run of what
+ * was tried, and then every sheet the real "Export everything" gives a count,
+ * for the current run and each earlier one. Nobody else's practice is in it.
+ */
+export function practiceExport(owner) {
+  const cur = practiceSession(owner);
+  const runs = [...(cur ? [cur] : []),
+    ...db.prepare("SELECT * FROM sessions WHERE practice = 1 AND practice_owner = ? AND status = 'closed' ORDER BY id DESC").all(owner)];
+  const runRows = [];
+  const tryRows = [];
+  const sheets = [];
+  for (const s of runs) {
+    const sh = practiceSheet(s.id);
+    const done = sh.checklist.filter((c) => c.done).length;
+    runRows.push({
+      'Run': `#${s.id}`, 'Status': s.status === 'closed' ? 'Earlier run' : 'Current run',
+      'Started': when(s.created_at), 'Finished': when(s.closed_at),
+      'Test data': sh.source === 'upload' ? `Your file: ${sh.label}` : 'Built in',
+      'Things tried': `${done} of ${sh.checklist.length}`, 'Bins counted': sh.totals.binsCounted, 'Lines counted': sh.totals.lines,
+    });
+    for (const c of sh.checklist) tryRows.push({ 'Run': `#${s.id}`, 'Thing to try': c.label, 'Done': c.done ? 'Yes' : 'No' });
+    for (const x of exportEverything(s.id).sheets) sheets.push({ ...x, name: `#${s.id} ${x.name}`.slice(0, 31) });
+  }
+  const who = String(owner).replace(/^(user|name):/, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'me';
+  return {
+    filename: `practice-runs-${who}-${new Date().toISOString().slice(0, 10)}.xlsx`,
+    runs: runs.length,
+    sheets: [
+      { name: 'Runs', columns: ['Run', 'Status', 'Started', 'Finished', 'Test data', 'Things tried', 'Bins counted', 'Lines counted'], rows: runRows },
+      { name: 'Things tried', columns: ['Run', 'Thing to try', 'Done'], rows: tryRows },
+      ...sheets,
+    ],
+  };
+}
+
+/**
  * The scanner a supervisor tests with: one each, so two people trying the gun at
  * once do not sign each other's scanner out.
  */
@@ -460,7 +497,7 @@ export function practiceReadiness(who, sessionId, device) {
   return [
     { key: 'login', ok: own, optional: !own,
       label: own ? `Signed in as ${who.username} — your practice is kept under your login` : 'Signed in with the shared password',
-      fix: own ? '' : `Your practice is kept under the name you typed (“${(who && who.name) || ''}”). Sign in with your own login (Settings → Logins) so it is yours alone.` },
+      fix: own ? '' : `Your practice is kept under the name you typed (“${(who && who.name) || ''}”). Sign in with your own login (Settings → Advanced → Supervisor logins) so it is yours alone.` },
     { key: 'data', ok: bins > 0 && pallets > 0,
       label: bins && pallets ? `Test data loaded — ${bins} bins, ${pallets} pallets${s && s.practice_source === 'upload' ? ' from your file' : ' (built in)'}` : 'Test data loaded',
       fix: bins && pallets ? '' : 'Use the built-in data, or upload a Bin / Pallet / Qty file below.' },

@@ -33,6 +33,8 @@ header {
   border-bottom: 1px solid var(--line); flex: 0 0 auto;
 }
 header .title { font-weight: 700; font-size: 15px; flex: 1; }
+/* the site's logo, set under Settings → Advanced; the title gives way to it */
+header img.logo { height: 22px; max-width: 96px; object-fit: contain; flex: 0 0 auto; }
 header .chip {
   font-size: 12px; padding: 3px 8px; border-radius: 999px;
   background: var(--panel-2); border: 1px solid var(--line); color: var(--muted);

@@ -122,7 +122,7 @@ empty), or with the superadmin username and password if you set one.
 
 ### Step 4 — Create a login for each supervisor
 
-**Settings → Logins → Supervisor logins.**
+**Settings → Advanced → Supervisor logins.**
 
 1. Type the person's **name**, a **username** and choose their **role**:
    - **Admin** — can do everything, including managing logins.
@@ -137,7 +137,7 @@ gives them the new starter password. The same forced change happens again.
 
 ![](images/settings-logins.png)
 
-*Settings &rarr; Logins. Each person has their own login and their own password; the starter password is shown once.*
+*Settings &rarr; Advanced. Each person has their own login and their own password; the starter password is shown once.*
 
 ### Step 5 — Turn the shared password off
 
@@ -302,7 +302,7 @@ cold store, most urgent first: an injury, **equipment broken down**, **needing a
 somebody shut in, racking that looks unsafe, a spill, blocked bins, a scanner problem. Each SOS shows
 on the dashboard (a red bar above every tab, with a chime) and, if the channel is set up, in Teams.
 
-**To send alerts to a Teams channel as well:**
+**To send alerts to a Teams channel as well** (Settings → Advanced → Microsoft Teams channel):
 
 1. In Teams, click **⋯** beside the channel → **Workflows** → *Post to a channel when a webhook
    request is received*.
@@ -886,9 +886,11 @@ with an empty bin behind it — or takes one you upload (Pallet, From bin, To bi
 **Dashboard**, with the count picked in the header. It refreshes itself every 30
 seconds.
 
-> **How it looks** is up to you: the picker at the foot of the sidebar offers four themes —
+> **How it looks** is up to you: **Settings → Advanced → Look** offers four themes —
 > *Midnight* (dark blue), *Graphite* (dark grey), *Daylight* and *Frost* (light) — and an accent
-> colour. It is kept per computer, so the office TV can be dark and a desk can be light.
+> colour. It is kept per computer, so the office TV can be dark and a desk can be light. The same
+> tab takes a **logo**: your company's mark at the top of the sidebar and, if you tick it, in the
+> header of every scanner.
 
 - **Progress** — lines, bins counted, pallets, exceptions; and a row per team with its
   **shift**, what it is counting right now, **when it started**, a **clock** of its time on the

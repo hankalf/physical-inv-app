@@ -26,7 +26,8 @@ import { autoPlan, applyPlan } from './routes/auto-plan.js';
 import { endTrial, setTrial } from './routes/trial.js';
 import { exportEverything } from './routes/export-all.js';
 import { idleConfig, saveIdleConfig, teamClocks, checkIdle, answerIdle, openIdleAlerts, recentIdleAlerts, tellTeamsIdle, idleTick, recordSignoff } from './routes/idle.js';
-import { practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, practiceReadiness, practiceFromFile, practiceOptions, setPracticeOptions, practiceSandbox, setPracticeSandbox, ownerOf } from './routes/practice.js';
+import { practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, practiceReadiness, practiceFromFile, practiceOptions, setPracticeOptions, practiceSandbox, setPracticeSandbox, practiceExport, ownerOf } from './routes/practice.js';
+import { branding, saveLogo, clearLogo } from './routes/branding.js';
 import { raiseAlert, tellTeams, listAlerts, seeAlert, closeAlert, alertsForDevice, sosReasons, saveSosReasons, DEFAULT_REASONS } from './routes/alerts.js';
 import { teamsConfig, saveTeamsConfig, postToTeams, testCard, alertCard } from './util/teams.js';
 import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout } from './routes/scanner-prompts.js';
@@ -667,6 +668,9 @@ async function handleAdmin(req, res, url, m) {
     if (body.seen === false) db.prepare('DELETE FROM settings WHERE key = ?').run(tipsKey(owner));
     else db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(tipsKey(owner), new Date().toISOString());
     return sendJson(req, res, 200, { seen: body.seen !== false });
+  }
+  if (p === '/api/admin/practice/export' && method === 'GET') {
+    return sendJson(req, res, 200, practiceExport(ownerOf(currentUser(req, url))));
   }
   if (p === '/api/admin/practice/reset' && method === 'POST') {
     const who = currentUser(req, url);
@@ -1330,6 +1334,20 @@ async function handleAdmin(req, res, url, m) {
   }
 
   /* --- SOS: the list the gun offers, the alerts themselves, and the channel */
+  // --- the logo (Settings → Advanced)
+  if (p === '/api/admin/logo' && method === 'GET') return sendJson(req, res, 200, branding());
+  if (p === '/api/admin/logo' && method === 'POST') {
+    const body = await readJson(req);
+    const out = saveLogo(body);
+    audit(actor, body.dataUrl !== undefined ? (out.logo ? 'uploaded the site logo' : 'removed the site logo') : 'changed where the logo shows',
+      out.logo ? `${Math.round(out.logo.length * 0.75 / 1024)} KB · ${out.onGuns ? 'on the guns too' : 'supervisor pages only'}` : '');
+    return sendJson(req, res, 200, out);
+  }
+  if (p === '/api/admin/logo' && method === 'DELETE') {
+    const out = clearLogo();
+    audit(actor, 'removed the site logo');
+    return sendJson(req, res, 200, out);
+  }
   if (p === '/api/admin/sos-reasons' && method === 'GET') {
     return sendJson(req, res, 200, { ...sosReasons(), defaults: DEFAULT_REASONS });
   }
@@ -1571,6 +1589,12 @@ const server = http.createServer(async (req, res) => {
         // what the handhelds check themselves against - see appBuild above
         build: appBuild.version, shell: appBuild.files,
       });
+    }
+    // The site's logo: on the sign-in page before anybody has signed in, and on
+    // every gun, so it is open - it is a picture of the company, nothing more.
+    if (p === '/api/branding' && req.method === 'GET') {
+      res.setHeader('cache-control', 'no-cache');
+      return sendJson(req, res, 200, branding());
     }
     // The office board is deliberately open: it goes on a screen nobody signs in,
     // and it carries progress only - no pallet IDs, no clock in numbers, no controls.
