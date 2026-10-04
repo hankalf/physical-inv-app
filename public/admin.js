@@ -477,13 +477,40 @@
   };
 
   /* ------------------------------------------------------------ pallet report */
+  /* The whole report comes down once; the filters work on it here, at once,
+     so a supervisor reads the list they want without exporting it. */
+  let palletRows = [];
+  const lotTrouble = (r) => (r.lot_status && r.lot_status !== 'LOT MATCH') || r.expiry_status === 'EXPIRED' || r.expiry_status === 'EXPIRES SOON';
   async function refreshPallets() {
-    const only = $('fOnlyExceptions').checked ? '&only=exceptions' : '';
+    const src = sourceParam('fPalletSource');
+    const srcQ = src == null ? '' : `&source=${encodeURIComponent(src)}`;
+    palletRows = (await apiJson(`/api/admin/sessions/${sessionId}/pallets?limit=100000${srcQ}`)).rows;
+    renderPallets();
+  }
+  function palletFilters() {
+    return {
+      hideMatch: $('fOnlyExceptions').checked, hideMissing: $('fHideMissing').checked, status: $('fPalletStatus').value,
+      lotExp: $('fLotExpOnly').checked, bin: $('fPalletBin').value.trim().toUpperCase(), team: $('fPalletTeam').value.trim(),
+      find: $('fPalletFind').value.trim().toLowerCase(),
+    };
+  }
+  function renderPallets() {
+    const f = palletFilters();
+    const rows = palletRows.filter((r) => {
+      if (f.hideMatch && r.status === 'MATCH' && !lotTrouble(r)) return false;
+      if (f.hideMissing && (r.status === 'MISSING' || r.status === 'NOT COUNTED')) return false;
+      if (f.status && r.status !== f.status) return false;
+      if (f.lotExp && !lotTrouble(r)) return false;
+      if (f.bin && !(String(r.expected_location || '').toUpperCase().startsWith(f.bin) || String(r.found_location || '').toUpperCase().includes(f.bin))) return false;
+      if (f.team && !String(r.teams || '').split(/[,\s]+/).includes(f.team)) return false;
+      if (f.find && !`${r.pallet_id} ${r.sku || ''} ${r.description || ''}`.toLowerCase().includes(f.find)) return false;
+      return true;
+    });
     // a cap on the rows shown, so the report is read, not scrolled; the CSV has all of it
     const lim = $('fPalletLimit').value;
-    const data = await apiJson(`/api/admin/sessions/${sessionId}/pallets?limit=${lim === 'all' ? 100000 : lim}${only}`);
+    const data = { total: rows.length, rows: rows.slice(0, lim === 'all' ? rows.length : Number(lim)), all: palletRows.length };
     table($('palletTable'),
-      [{ label: 'Pallet' }, { label: 'SKU' }, { label: 'Description' }, { label: 'Expected', num: true }, { label: '1st count', num: true }, { label: 'Counted', num: true },
+      [{ label: 'Pallet' }, { label: 'System' }, { label: 'SKU' }, { label: 'Description' }, { label: 'Expected', num: true }, { label: '1st count', num: true }, { label: 'Counted', num: true },
        { label: 'Expected bin' }, { label: 'Found in' }, { label: 'Lot' }, { label: 'Expiry' }, { label: 'Team' }, { label: 'Comments' }, { label: 'Status' }, { label: '' }],
       data.rows,
       (r) => {
@@ -503,7 +530,7 @@
           t.style.marginLeft = '5px';
           tdPallet.appendChild(t);
         }
-        tr.append(tdPallet, cell(r.sku), cell(r.description, 'wrap'), cell(r.expected_qty, 'num'), cell(r.recounted ? r.first_count_qty : '', 'num'), cell(r.counted_qty, 'num'),
+        tr.append(tdPallet, cell(r.source || '—'), cell(r.sku), cell(r.description, 'wrap'), cell(r.expected_qty, 'num'), cell(r.recounted ? r.first_count_qty : '', 'num'), cell(r.counted_qty, 'num'),
           cell(r.expected_location), cell(r.found_location));
         // lot and expiry are blank unless the site tracks them, so they cost nothing when it does not
         const tdLot = document.createElement('td');
@@ -542,8 +569,9 @@
         tr.appendChild(tdBtn);
         return tr;
       }, 'No pallets to show.');
-    $('palletNote').textContent = data.total > data.rows.length
-      ? `Showing ${data.rows.length} of ${data.total} — export the CSV for the full list.` : `${data.total} row(s).`;
+    $('palletNote').textContent = (data.total > data.rows.length
+      ? `Showing ${data.rows.length} of ${data.total} that match — set Show to All, or export the CSV for the full list.` : `${data.total} row(s) match`)
+      + (data.total !== data.all ? ` · ${data.all.toLocaleString()} on the report in all` : '');
   }
 
   /* ------------------------------------------------------------ warehouse map */
@@ -980,9 +1008,45 @@
     picker.render(sessions, sessionId);
   }
 
+  /* ---------------------------------------------------------- the systems
+     Three ERPs share this warehouse. Each pallet row carries the system its
+     report came from, so the office can read the count one system at a time;
+     the guns never see it. The pickers here are filled from what is loaded. */
+  let sources = [];
+  const sourceValue = (src) => (src === '' ? '~none' : src);        // '' on a picker means "every system"
+  const sourceParam = (sel) => { const v = $(sel).value; return v === '' ? null : (v === '~none' ? '' : v); };
+  async function refreshSources() {
+    sources = (await apiJson(`/api/admin/sessions/${sessionId}/sources`)).sources || [];
+    const named = sources.filter((x) => x.source);
+    for (const id of ['fPalletSource', 'fAdjSource']) {
+      const sel = $(id);
+      const was = sel.value;
+      sel.innerHTML = '<option value="">Every system</option>';
+      for (const x of sources) {
+        const o = document.createElement('option');
+        o.value = sourceValue(x.source);
+        o.textContent = x.source || 'No system named';
+        sel.appendChild(o);
+      }
+      if ([...sel.options].some((o) => o.value === was)) sel.value = was;
+      sel.closest('label').hidden = !named.length;
+    }
+    const box = $('bySystem');
+    box.hidden = !named.length;
+    box.innerHTML = '';
+    for (const x of sources) {
+      const d = document.createElement('div');
+      d.className = 'stat';
+      d.innerHTML = '<div class="n"></div><div class="l"></div>';
+      d.querySelector('.n').textContent = `${Number(x.counted).toLocaleString()} / ${Number(x.pallets).toLocaleString()}`;
+      d.querySelector('.l').textContent = x.source ? `${x.source} — pallets found` : 'No system named — pallets found';
+      box.appendChild(d);
+    }
+  }
+
   async function refreshAll() {
     if (!sessionId) return;
-    await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts(),
+    await Promise.all([refreshSources().catch(() => {}), refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts(),
       refreshPicker(), refreshMessages(), refreshAdjustments(), refreshLabels(), refreshAlerts()]);
   }
 
@@ -1019,13 +1083,13 @@
     $('pnMinusSub').textContent = `${d.negative.pallets.toLocaleString()} pallet${d.negative.pallets === 1 ? '' : 's'}`;
     $('pnNet').textContent = signed(d.net);
     for (const b of document.querySelectorAll('#pnSide button, #pnTiles button')) b.classList.toggle('selected', b.dataset.side === pnSide);
-    const cols = [{ label: 'Pallet' }, { label: 'Item' }, { label: 'Bin' }, { label: 'Why' },
-      { label: 'System', num: true }, { label: 'Counted', num: true }, { label: 'Adjustment', num: true }];
+    const cols = [{ label: 'Pallet' }, { label: 'System' }, { label: 'Item' }, { label: 'Bin' }, { label: 'Why' },
+      { label: 'Report qty', num: true }, { label: 'Counted', num: true }, { label: 'Adjustment', num: true }];
     if (d.approvals) cols.push({ label: 'Approval' });
     table($('pnTable'), cols, pnRows(), (r) => {
       const tr = document.createElement('tr');
       const adj = cell(signed(r.variance_qty), 'num ' + (r.variance_qty > 0 ? 'pos' : 'neg'));
-      tr.append(cell(r.pallet_id), cell(r.sku || '—'), cell(r.location || '—'), cell(r.why, 'wrap'),
+      tr.append(cell(r.pallet_id), cell(r.source || '—'), cell(r.sku || '—'), cell(r.location || '—'), cell(r.why, 'wrap'),
         cell(r.expected_qty == null ? '—' : r.expected_qty, 'num'), cell(r.counted_qty, 'num'), adj);
       if (d.approvals) tr.appendChild(cell(r.status ? r.status + (r.decided_by ? ` · ${r.decided_by}` : '') : '—'));
       return tr;
@@ -1095,12 +1159,13 @@
     }
 
     const pendingOnly = $('fAdjPendingOnly').checked;
-    const rows = data.adjustments.filter((r) => !pendingOnly || r.status === 'pending');
+    const adjSrc = sourceParam('fAdjSource');
+    const rows = data.adjustments.filter((r) => (!pendingOnly || r.status === 'pending') && (adjSrc == null || (r.source || '') === adjSrc));
     for (const id of [...picked]) if (!rows.some((r) => r.pallet_id === id)) picked.delete(id);
 
     table($('adjustTable'),
-      [{ label: '' }, { label: 'Pallet' }, { label: 'Item' }, { label: 'Bin' }, { label: 'Found' },
-        { label: 'System', num: true }, { label: 'Counted', num: true }, { label: 'Adjustment', num: true },
+      [{ label: '' }, { label: 'Pallet' }, { label: 'System' }, { label: 'Item' }, { label: 'Bin' }, { label: 'Found' },
+        { label: 'Report qty', num: true }, { label: 'Counted', num: true }, { label: 'Adjustment', num: true },
         { label: 'Status' }, { label: 'Reason' }, { label: 'Signed by' }],
       rows,
       (r) => {
@@ -1114,7 +1179,7 @@
         box.onchange = () => { if (box.checked) picked.add(r.pallet_id); else picked.delete(r.pallet_id); };
         const td = document.createElement('td');
         td.appendChild(box);
-        tr.append(td, cell(r.pallet_id), cell(r.sku || '—'), cell(r.location || '—'), cell(r.kind),
+        tr.append(td, cell(r.pallet_id), cell(r.source || '—'), cell(r.sku || '—'), cell(r.location || '—'), cell(r.kind),
           cell(r.expected_qty == null ? '—' : r.expected_qty, 'num'),
           cell(r.counted_qty == null ? '—' : r.counted_qty, 'num'),
           cell((r.variance_qty > 0 ? '+' : '') + r.variance_qty, 'num'));
@@ -1433,8 +1498,17 @@
       .catch((err) => msg($('palletNote'), 'err', err.message));
 
   /* ------------------------------------------------------------ wiring */
-  $('fOnlyExceptions').onchange = refreshPallets;
-  $('fPalletLimit').onchange = () => { try { sessionStorage.setItem('palletLimit', $('fPalletLimit').value); } catch { /* private window */ } refreshPallets(); };
+  $('fOnlyExceptions').onchange = renderPallets;
+  $('fPalletSource').onchange = refreshPallets;
+  for (const id of ['fHideMissing', 'fPalletStatus', 'fLotExpOnly']) $(id).onchange = renderPallets;
+  for (const id of ['fPalletBin', 'fPalletTeam', 'fPalletFind']) $(id).oninput = renderPallets;
+  $('btnPalletClear').onclick = () => {
+    $('fOnlyExceptions').checked = true; $('fHideMissing').checked = false; $('fPalletStatus').value = ''; $('fLotExpOnly').checked = false;
+    $('fPalletBin').value = ''; $('fPalletTeam').value = ''; $('fPalletFind').value = '';
+    renderPallets();
+  };
+  $('fAdjSource').onchange = () => refreshAdjustments().catch(() => {});
+  $('fPalletLimit').onchange = () => { try { sessionStorage.setItem('palletLimit', $('fPalletLimit').value); } catch { /* private window */ } renderPallets(); };
   try { const saved = sessionStorage.getItem('palletLimit'); if (saved) $('fPalletLimit').value = saved; } catch { /* private window */ }
 
   async function queueAisles(force) {

@@ -87,11 +87,25 @@ await adm.goto(BASE + '/settings#advanced');
 await adm.fill('#fUser', 'DANA'); await adm.fill('#fPassword', 'freezer-2026'); await adm.click('#btnLogin');
 await adm.waitForSelector('#scrMain.active'); await adm.waitForTimeout(1800);
 const sueRow = adm.locator('#userTable tr', { hasText: 'SUE' });
-check('Logins: each supervisor row shows what they may use', /Dashboard/.test(await sueRow.textContent()) && (await sueRow.locator('input[type=checkbox][data-access]').count()) >= 8, clean(await sueRow.textContent()).slice(0, 160));
+check('Logins: each supervisor row sums up what they may use, in one line', /2 of 6 pages · 1 of 5 functions/.test(await sueRow.locator('details.accpick summary').textContent()), clean(await sueRow.locator('details.accpick summary').textContent()));
 check('…an admin row says everything', /everything/i.test(await adm.locator('#userTable tr', { hasText: 'DANA' }).textContent()));
+await sueRow.locator('details.accpick summary').click(); await adm.waitForTimeout(300);
+check('…and opens into a checklist', await sueRow.locator('.accpanel').isVisible() && (await sueRow.locator('input[type=checkbox][data-access]').count()) === 11);
 await sueRow.locator('input[data-access="testing"]').check(); await adm.waitForTimeout(900);
+check('…whose summary follows the ticks', /3 of 6 pages/.test(await sueRow.locator('details.accpick summary').textContent()), clean(await sueRow.locator('details.accpick summary').textContent()));
 check('Ticking a box saves it', (await j(await fetch(`${BASE}/api/admin/users`, { headers: A }))).users.find((u) => u.username === 'SUE').access.includes('testing'));
 check('…and the page itself has the Advanced tab, being an admin', (await adm.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.trim()))).some((t) => /Advanced/.test(t)));
+
+/* the Testing Suite follows the list too: Sue now has testing and the dashboard, but no exports and no approvals */
+await page.goto(BASE + '/testing'); await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(2500);
+check('Testing Suite: no export buttons for a login without exports', await page.isHidden('#btnExportMine') && await page.isHidden('#btnExportRuns'));
+check('…approvals are not offered to practise when she may not approve for real', (await page.$$('#optList .opt[data-key="requireApproval"]')).length === 0 && (await page.$$('#optList .opt[data-key="askLot"]')).length === 1);
+check('…the server says the same', (await fetch(`${BASE}/api/admin/practice/options`, { method: 'POST', headers: S, body: JSON.stringify({ requireApproval: true }) })).status === 403
+  && (await fetch(`${BASE}/api/admin/practice/export`, { headers: S })).status === 403);
+check('…the office side is there, since she has the dashboard', !(await page.$eval('#dashCard', (el) => el.hidden)) && (await page.$$('#stepDots button')).length === 6);
+await fetch(`${BASE}/api/admin/users/SUE`, { method: 'POST', headers: A, body: JSON.stringify({ access: ['testing', 'teams'] }) });
+await page.reload(); await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(2500);
+check('…and goes, with its step, when the dashboard is taken off her list', await page.$eval('#dashCard', (el) => el.hidden) && (await page.$$('#stepDots button')).length === 5, `${(await page.$$('#stepDots button')).length} steps`);
 
 check('No script errors', errors.length === 0, errors.join(' | '));
 await browser.close();

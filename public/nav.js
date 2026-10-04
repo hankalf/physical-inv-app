@@ -320,6 +320,20 @@
     }
     const out = document.getElementById('navLogout');
     if (out) out.hidden = !api.me;
+    const foot = document.querySelector('.side-foot');
+    if (foot) {
+      let pw = document.getElementById('navPassword');
+      if (!pw) {
+        pw = document.createElement('button');
+        pw.id = 'navPassword';
+        pw.className = 'ghost sm';
+        pw.type = 'button';
+        pw.textContent = 'Change my password';
+        pw.onclick = () => api.changePassword();
+        foot.insertBefore(pw, out || null);
+      }
+      pw.hidden = !(api.me && api.me.username);
+    }
   }
 
   async function signIn(usernameOrName, password) {
@@ -403,6 +417,7 @@
         <label for="npConfirm">Type it again</label>
         <input id="npConfirm" type="password" autocomplete="new-password">
         <button class="primary" id="npSave" style="width:100%;margin-top:10px">Save and carry on</button>
+        <button type="button" class="ghost" id="npCancel" style="width:100%;margin-top:8px" hidden>Never mind</button>
         <div class="feedback" id="npMsg"></div>
       </div>`;
     (document.querySelector('main') || document.body).appendChild(box);
@@ -420,28 +435,37 @@
         for (const id of ['npCurrent', 'npNext', 'npConfirm']) box.querySelector('#' + id).value = '';
         m.className = 'feedback';
         m.textContent = '';
+        if (voluntary) { voluntary = false; box.hidden = true; box.classList.remove('active'); }
         announce();
       } catch (err) { fail(err.message); }
     };
     box.querySelector('#npSave').onclick = save;
+    box.querySelector('#npCancel').onclick = () => { box.hidden = true; box.classList.remove('active'); voluntary = false; announce(); };
     for (const id of ['npCurrent', 'npNext', 'npConfirm']) {
       box.querySelector('#' + id).addEventListener('keydown', (e) => { if (e.key === 'Enter') save(); });
     }
     return box;
   }
 
+  let voluntary = false;           // came to change it, rather than being made to
   function setPassword() {
     // hide whatever the page is showing; this is the only thing on screen now
     for (const el of document.querySelectorAll('main > .screen')) el.classList.remove('active');
     const box = setPasswordPanel();
     box.hidden = false;
     box.classList.add('active');
-    box.querySelector('#npCurrentWrap').hidden = !!justTyped;
-    box.querySelector('#npWho').textContent = justTyped
-      ? `Signed in as ${api.me.username}. This login was handed to you with a starter password — pick one only you know, then you are through.`
-      : `Signed in as ${api.me.username}. Finish setting up this login: type the password you were given, then one only you know.`;
-    box.querySelector(justTyped ? '#npNext' : '#npCurrent').focus();
+    box.querySelector('#npCurrentWrap').hidden = !!justTyped && !voluntary;
+    box.querySelector('#npCancel').hidden = !voluntary;
+    box.querySelector('#npCurrentWrap label').textContent = voluntary ? 'Your current password' : 'The password you were given';
+    box.querySelector('#npWho').textContent = voluntary
+      ? `Signed in as ${api.me.username}. Type your current password, then the one you want instead.`
+      : justTyped
+        ? `Signed in as ${api.me.username}. This login was handed to you with a starter password — pick one only you know, then you are through.`
+        : `Signed in as ${api.me.username}. Finish setting up this login: type the password you were given, then one only you know.`;
+    box.querySelector(justTyped && !voluntary ? '#npNext' : '#npCurrent').focus();
   }
+  /* Settings is for admins, so everyone with a login changes their own password from the sidebar. */
+  api.changePassword = () => { if (!api.me || !api.me.username) return; voluntary = true; justTyped = ''; setPassword(); };
 
   /** Every page calls this on load: are we signed in, and who are we? */
   api.start = async function start() {

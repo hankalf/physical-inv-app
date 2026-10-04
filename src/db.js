@@ -438,6 +438,8 @@ if (!hasCol('sessions', 'board_note')) {
 if (!hasCol('sessions', 'track_abc')) db.exec('ALTER TABLE sessions ADD COLUMN track_abc INTEGER NOT NULL DEFAULT 0');
 /* What a login may use: a JSON list of keys (see routes/access.js), or NULL for everything its role allows. */
 if (!hasCol('users', 'access')) db.exec('ALTER TABLE users ADD COLUMN access TEXT');
+/* Three systems share one warehouse: which one a pallet row came from, so the office can tell them apart. The guns never see it. */
+if (!hasCol('pallets', 'source')) db.exec('ALTER TABLE pallets ADD COLUMN source TEXT');
 // a test scanner belongs to one person's practice
 if (!hasCol('devices', 'practice_owner')) db.exec('ALTER TABLE devices ADD COLUMN practice_owner TEXT');
 // whether the scanners are offered this count at sign-on (a count being set up, or kept for the office, is not)

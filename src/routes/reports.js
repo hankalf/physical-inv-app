@@ -18,6 +18,7 @@ export function progress(sessionId) {
     )
     .get(id);
 
+  const bySource = sourcesOf(id);
   const binsTotal = db.prepare('SELECT COUNT(*) n FROM locations WHERE session_id = ?').get(id).n;
   const palletsTotal = db.prepare('SELECT COUNT(*) n FROM pallets WHERE session_id = ?').get(id).n;
   const exceptions = db
@@ -60,6 +61,7 @@ export function progress(sessionId) {
       SUM(CASE WHEN status != 'done' THEN 1 ELSE 0 END) AS open, SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) AS done
       FROM recounts WHERE session_id = ?`).get(id);
   return {
+    bySource,
     ...totals,
     recounts_open: recounts.open || 0,
     recounts_done: recounts.done || 0,
@@ -115,7 +117,7 @@ export function palletReport(sessionId, { only = null } = {}) {
          SELECT pallet_id FROM counted
        )
        SELECT k.pallet_id,
-              p.sku, p.description, p.uom,
+              p.sku, p.description, p.uom, COALESCE(p.source, '') AS source,
               p.expected_qty, p.expected_location, p.lot AS expected_lot, p.expiry AS expected_expiry,
               c.times_counted, c.counted_qty, c.found_locations, c.teams, c.last_scan, c.comments, c.max_pass,
               c.counted_lots, c.counted_expiry, c.alias_lines, c.alias_of,
@@ -172,6 +174,7 @@ export function palletReport(sessionId, { only = null } = {}) {
 
     return {
       pallet_id: r.pallet_id,
+      source: r.source || '',
       sku: r.sku || '',
       description: r.description || '',
       uom: r.uom || '',
@@ -214,11 +217,23 @@ export function uncountedBins(sessionId) {
     .all(Number(sessionId));
 }
 
+/**
+ * The systems the report came from, and how far each is counted. Three ERPs
+ * share this warehouse, so the office reads the count per system; a report
+ * uploaded without a system shows as one unnamed group.
+ */
+export function sourcesOf(sessionId) {
+  return db.prepare(
+    `SELECT COALESCE(p.source, '') AS source, COUNT(*) AS pallets,
+            SUM(CASE WHEN EXISTS (SELECT 1 FROM counts c WHERE c.session_id = p.session_id AND c.pallet_id = p.pallet_id AND c.voided = 0) THEN 1 ELSE 0 END) AS counted
+       FROM pallets p WHERE p.session_id = ? GROUP BY COALESCE(p.source, '') ORDER BY COALESCE(p.source, '')`).all(Number(sessionId));
+}
+
 export function rawCounts(sessionId) {
   return db
     .prepare(
       `SELECT c.id, c.pallet_id, c.qty, c.location_code, c.aisle, c.sku,
-              COALESCE(p.description, '') AS description,
+              COALESCE(p.description, '') AS description, COALESCE(p.source, '') AS source,
               c.lot, c.expiry, c.alias_of,
               c.comments, c.team, c.employees, c.device_id,
               c.unknown_pallet, c.unknown_location, c.off_assignment, c.duplicate_pallet, c.empty_bin,

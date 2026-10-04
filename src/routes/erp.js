@@ -23,6 +23,7 @@ const FIELDS = {
   expected: (r) => r.expected,
   variance: (r) => r.variance,
   status: (r) => r.status,
+  system: (r) => r.source || '',
   countedAt: (r) => r.countedAt,
   countDate: () => localDate(),
   team: (r) => r.team,
@@ -109,31 +110,32 @@ export function saveFormat(id, format) {
 export const availableFields = () => Object.keys(FIELDS);
 
 /** The rows a format is built from, normalised so every field works everywhere. */
-function sourceRows(sessionId, rowsOf) {
+function sourceRows(sessionId, rowsOf, source = null) {
   const id = Number(sessionId);
   const reference = `PI-${id}-${localDate()}`;
   if (rowsOf === 'lines') {
     return db.prepare(
       `SELECT c.location_code, c.pallet_id, c.sku, c.qty, c.scanned_at, c.team, c.employees, c.empty_bin,
-              COALESCE(p.description,'') AS description, COALESCE(p.uom,'') AS uom,
+              COALESCE(p.description,'') AS description, COALESCE(p.uom,'') AS uom, COALESCE(p.source,'') AS source,
               COALESCE(l.zone,'') AS zone, COALESCE(l.aisle,'') AS aisle, COALESCE(l.level,'') AS level
          FROM counts c
          LEFT JOIN pallets p ON p.session_id = c.session_id AND p.pallet_id = c.pallet_id
          LEFT JOIN locations l ON l.session_id = c.session_id AND l.code = c.location_code
         WHERE c.session_id = ? AND c.voided = 0 ORDER BY c.id`).all(id)
+      .filter((r) => source == null || (r.source || '') === source)
       .map((r) => ({
-        location: r.location_code, pallet: r.empty_bin ? '' : r.pallet_id, sku: r.sku || '', description: r.description,
+        location: r.location_code, pallet: r.empty_bin ? '' : r.pallet_id, sku: r.sku || '', description: r.description, source: r.source,
         uom: r.uom, counted: r.qty, expected: '', variance: '', status: r.empty_bin ? 'EMPTY' : 'COUNTED',
         countedAt: r.scanned_at, team: r.team, employees: (JSON.parse(r.employees || '[]') || []).join('; '),
         zone: r.zone, aisle: r.aisle, level: r.level, reference,
       }));
   }
   const bins = new Map(db.prepare('SELECT code, COALESCE(zone,\'\') zone, COALESCE(aisle,\'\') aisle, COALESCE(level,\'\') level FROM locations WHERE session_id = ?').all(id).map((b) => [b.code, b]));
-  let rows = palletReport(id).map((r) => {
+  let rows = palletReport(id).filter((r) => source == null || (r.source || '') === source).map((r) => {
     const found = String(r.found_location || '').split(',')[0] || r.expected_location || '';
     const b = bins.get(found) || {};
     return {
-      location: found, pallet: r.pallet_id, sku: r.sku, description: r.description, uom: r.uom,
+      location: found, pallet: r.pallet_id, sku: r.sku, description: r.description, uom: r.uom, source: r.source || '',
       counted: r.counted_qty === '' ? 0 : r.counted_qty, expected: r.expected_qty, variance: r.variance_qty,
       status: r.status, countedAt: r.last_scan, team: r.teams, employees: '',
       zone: b.zone || '', aisle: b.aisle || '', level: b.level || '', reference,
@@ -163,11 +165,11 @@ function sourceRows(sessionId, rowsOf) {
   return out;
 }
 
-export function buildExport(sessionId, formatId) {
+export function buildExport(sessionId, formatId, { source = null } = {}) {
   const formats = listFormats();
   const format = formats[formatId];
   if (!format) throw Object.assign(new Error(`no export format called "${formatId}"`), { status: 404 });
-  const rows = sourceRows(sessionId, format.rowsOf);
+  const rows = sourceRows(sessionId, format.rowsOf, source);
   const headers = format.columns.map(([h]) => h);
   const out = rows.map((r) => {
     const o = {};

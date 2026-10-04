@@ -135,6 +135,16 @@ empty), or with the superadmin username and password if you set one.
 If somebody forgets their password, an admin presses **Reset password** on their row and
 gives them the new starter password. The same forced change happens again.
 
+**What each login may use.** Every supervisor row has a **May use** column: tick the
+**pages** they may open (Dashboard, Cycle counts, Front bins, Not in Location, Teams &
+crew, Testing Suite) and what they **can also** do (approve adjustments, message the floor,
+answer an SOS, queue aisles and raise second counts, downloads and printouts). A new login
+may use everything a supervisor can until you untick something; a tick takes effect on
+their very next click, with no sign-out needed. The sidebar shows them only the pages on
+their list, and the buttons they may not press are greyed out and say why. **Settings** —
+Advanced included — is for admins only, whatever the list says; supervisors change their
+own password from **Change my password** at the foot of the sidebar.
+
 ![](images/settings-logins.png)
 
 *Settings &rarr; Advanced. Each person has their own login and their own password; the starter password is shown once.*
@@ -1063,6 +1073,12 @@ machines — the ERP, a reconciliation sheet.)
 
 *The pallet report with **Hide matching pallets** ticked: a short pallet, an expired date, one expiring soon. This is the list to work down.*
 
+The filter row reads the report without exporting it: **Hide missing** drops the pallets nobody
+has found or counted yet, **Status** picks one kind of difference, **Lot / date problems only**
+keeps the wrong-lot and out-of-date rows, **System** one of the site's systems, and **Aisle / bin**,
+**Team** and **Find** narrow by place, crew, pallet, SKU or description. The line under the table
+says how many rows match out of the whole report; **Clear filters** is back to the usual view.
+
 - **Find a lot** — after a recall notice: type part of a lot code and get every case of
   it, both where it was actually counted and where the report expected it, so a pallet
   nobody found still shows up.
@@ -1137,6 +1153,11 @@ goes through without anybody being asked; APPROVED carries the reason and the na
 
 1. Choose the **layout** that matches your ERP. Column names and which rows are included
    are configuration — add a layout rather than editing the file by hand afterwards.
+   Where three systems share the warehouse, pick the **System** too: one file per system,
+   named for it, with only that system's pallets in it. (Each system's report is named when
+   it is uploaded — Settings → Lists & racking → Inventory report → **System** — or carries
+   a *System* column; the pallet report, adjustments and Export everything show it, and the
+   scanners never do.)
 2. **Preview** and read the first rows. On a count with approvals on, the preview says how
    many adjustments it left out because nobody has signed for them yet.
 3. **Download CSV** and import it into the ERP.

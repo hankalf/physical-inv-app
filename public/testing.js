@@ -247,6 +247,7 @@
     const box = $('optList');
     box.innerHTML = '';
     for (const def of OPTIONS) {
+      if (def.key === 'requireApproval' && !api.can('approve')) continue;   // not theirs to do for real, so not here either
       const row = el('label', 'opt');
       row.dataset.key = def.key;
       let input;
@@ -486,7 +487,7 @@
      itself as the person gets through it. Back and Next still work for
      reading ahead; the next thing actually done brings it back on track. */
   const ck = (key) => !!(data && data.checklist.some((c) => c.key === key && c.done));
-  const STEPS = [
+  const STEPS_ALL = [
     { title: 'Check “Before you start”', go: 'readyCard', goText: 'Show me',
       text: 'The <b>Before you start</b> list just below should read <i>ready to test</i>. If anything is not ticked, it says what to do about it. Most of it this page does by itself.',
       done: () => !!data && (data.ready || []).every((r) => r.ok || r.optional) && gunPeek().up },
@@ -506,6 +507,7 @@
       text: 'The dashboard at the <b>top of the page</b> is what a supervisor sees of this very count: <b>Progress</b> by aisle, the <b>pallet report</b>, <b>Second counts</b>, <b>Adjustments</b>, and your SOS on its bar. Click through its tabs — it is live, so count another pallet and watch it change.',
       done: () => dashSeen },
   ];
+  let STEPS = STEPS_ALL;             // minus the office-side step for a login with no dashboard
   let stepManual = null;             // where Back / Next left it, if anywhere
   let stepAuto = -1;                 // the first step not yet done
   let stepDrawn = '';
@@ -623,7 +625,7 @@
         const feat = (key, t) => (shownFeat.has(key) ? null : { key: 'feat:' + key, ...t });
         const f = (x.openSecondCounts > 0 && feat('second', { target: $('gunFrame').closest('.gun'), step: 'Second counts', pos: 'left',
             text: 'A pallet you counted disagreed with the report, so the gun raised a <b>second count</b>. Tap <b>My aisle</b>, then <b>Start second counts</b>, and count that bin again.' }))
-          || (x.pendingApprovals > 0 && feat('approve', { target: $('dashCard'), step: 'Approvals are on',
+          || (x.pendingApprovals > 0 && api.can('approve') && feat('approve', { target: $('dashCard'), step: 'Approvals are on',
             text: 'A difference is waiting to be signed for. In the dashboard at the top, open <b>Adjustments</b>: approve it with a reason, or reject it.' }))
           || (o.palletMode === 'strict' && feat('strict', { target: $('fWedge'), step: 'No overrides is on',
             text: 'Type a pallet that is not on the report — <b>F99999-999</b> — and press <b>SCAN</b>. With no overrides, the gun refuses it instead of asking.' }))
@@ -632,7 +634,9 @@
         if (f) return f;
       }
       if (c) return { key: 'comments', target: $('gunFrame').closest('.gun'), step: 'Comments', text: 'Optional. Tap a reason on the gun, or <b>Skip</b> — or just wait, it moves on by itself.', pos: 'left' };
-      if (p && !row) return { key: 'done', target: $('checks'), step: 'All counted', text: 'Every pallet on the sheet is counted. See what is left under <b>Things to try</b> — then look at the dashboard at the top: the office side of what you just did.' };
+      if (p && !row) return { key: 'done', target: $('checks'), step: 'All counted', text: api.can('dashboard')
+        ? 'Every pallet on the sheet is counted. See what is left under <b>Things to try</b> — then look at the dashboard at the top: the office side of what you just did.'
+        : 'Every pallet on the sheet is counted. See what is left under <b>Things to try</b>.' };
     }
     if (g.screen === 'scrEmptyRun' || g.screen === 'scrSos' || g.screen === 'scrHistory') return null;
     return null;
@@ -835,10 +839,22 @@
 
   frame().addEventListener('load', () => { $('gunLed').className = 'led'; setTimeout(() => { if (data) renderReady(); }, 1500); });
 
+  /* The suite follows the login's access: no dashboard means no office side
+     here (and no step for it), no exports means no export buttons, and a
+     feature they may not use for real is not offered to practise. */
+  function applyAccess() {
+    const dash = api.can('dashboard');
+    $('dashCard').hidden = !dash;
+    STEPS = dash ? STEPS_ALL : STEPS_ALL.filter((st) => st.go !== 'dash');
+    stepDrawn = '';
+    for (const id of ['btnExportMine', 'btnExportRuns']) $(id).hidden = !api.can('export');
+    optDrawn = '';
+  }
   document.addEventListener('auth', (e) => {
     clearInterval(timer);
     if (!e.detail) return show('login');
     show('main');
+    applyAccess();
     start().catch((err) => msg($('rigMsg'), 'err', 'Could not set up the practice count', err.message));
     timer = setInterval(() => { if (!document.hidden && data) refresh().catch(() => {}); }, 3000);
   });

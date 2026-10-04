@@ -659,9 +659,21 @@ td.neg { color: var(--err); font-weight: 700; }
 .themepick .accents button[data-accent="amber"] { background: #e0a020; }
 .themepick .accents button[data-accent="berry"] { background: #c2459a; }
 
-/* Settings → Advanced: what each login may use */
-td.access { min-width: 320px; }
-td.access .accrow { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; margin: 2px 0; }
-td.access .accrow b { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); min-width: 56px; }
-td.access label.cb { font-size: 12.5px; white-space: nowrap; }
-td.access input { width: 14px; height: 14px; }
+/* Settings → Advanced: what each login may use - a drop-down checklist, so the row stays one line */
+td.access { white-space: nowrap; }
+details.accpick { position: relative; display: inline-block; }
+details.accpick > summary { list-style: none; cursor: pointer; font-size: 12.5px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); color: var(--text); }
+details.accpick > summary::-webkit-details-marker { display: none; }
+details.accpick > summary::after { content: " ▾"; color: var(--muted); }
+details.accpick[open] > summary { border-color: var(--accent); }
+details.accpick .accpanel { position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; min-width: 300px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow, 0 10px 30px rgba(0,0,0,.35)); display: flex; flex-direction: column; gap: 5px; white-space: normal; }
+details.accpick .acchead { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-top: 6px; }
+details.accpick .acchead:first-child { margin-top: 0; }
+details.accpick label.cb { font-size: 13px; }
+details.accpick input { width: 15px; height: 15px; }
+details.accpick .muted { font-size: 11.5px; margin-top: 4px; }
+
+/* the pallet report's filter row */
+.palfilters { row-gap: 6px; }
+.palfilters label.cb { white-space: nowrap; }
+.palfilters input.sm { padding: 4px 8px; }

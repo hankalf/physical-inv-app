@@ -34,7 +34,7 @@ import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks,
 } from './routes/assignments.js';
-import { progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot, labelsToReplace } from './routes/reports.js';
+import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot, labelsToReplace } from './routes/reports.js';
 import {
   listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
   tasksForTeam, takeRecount, finishRecount, updateRecount, deleteRecount,
@@ -692,6 +692,7 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, { seen: body.seen !== false });
   }
   if (p === '/api/admin/practice/export' && method === 'GET') {
+    requireAccess('export');
     return sendJson(req, res, 200, practiceExport(ownerOf(currentUser(req, url))));
   }
   if (p === '/api/admin/practice/reset' && method === 'POST') {
@@ -707,6 +708,8 @@ async function handleAdmin(req, res, url, m) {
     const who = currentUser(req, url);
     const owner = ownerOf(who);
     const body = await readJson(req);
+    // a feature this login may not use for real is not offered to practise either
+    if (body.requireApproval && !allowed(whoNow, 'approve')) throw httpError(403, 'this login may not approve adjustments, so approvals are not something to try here');
     // working the classes out is asking to try the feature, so it goes on too
     const s = setPracticeOptions(owner, body);
     audit(actor, 'changed the options on their practice count', JSON.stringify(body), s.id);
@@ -841,8 +844,9 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/master$/)) && method === 'POST') {
     const kind = url.searchParams.get('kind') || 'bins';
     const text = await readBody(req);
-    const stats = importMaster(m[1], kind, text, { replace: url.searchParams.get('replace') === '1' });
-    audit(actor, `uploaded ${kind}`, `${stats.rows} rows, ${stats.skipped} skipped${url.searchParams.get('replace') === '1' ? ', replacing what was there' : ''}`, m[1]);
+    const source = String(url.searchParams.get('source') || '').trim().slice(0, 40);
+    const stats = importMaster(m[1], kind, text, { replace: url.searchParams.get('replace') === '1', source });
+    audit(actor, `uploaded ${kind}`, `${stats.rows} rows, ${stats.skipped} skipped${source ? `, system ${source}` : ''}${url.searchParams.get('replace') === '1' ? ', replacing what was there' : ''}`, m[1]);
     return sendJson(req, res, 200, stats);
   }
 
@@ -1008,13 +1012,15 @@ async function handleAdmin(req, res, url, m) {
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/erp\/([a-z0-9-]+)\.csv$/))) {
     if (getSession(m[1])?.trial) throw httpError(409, 'this count is a trial run - end the trial and count it for real before sending anything to the ERP');
-    const built = buildExport(m[1], m[2]);
+    const source = url.searchParams.has('source') ? url.searchParams.get('source') : null;
+    const built = buildExport(m[1], m[2], { source });
     audit(actor, 'exported to the ERP',
-      `${m[2]}: ${built.rows} rows${built.held ? `, ${built.held} held back waiting for approval` : ''}`, m[1]);
-    return sendCsv(req, res, `${m[2]}-session-${m[1]}-${localDate()}.csv`, built.csv);
+      `${m[2]}${source != null ? ` for ${source || 'rows with no system'}` : ''}: ${built.rows} rows${built.held ? `, ${built.held} held back waiting for approval` : ''}`, m[1]);
+    const tag = source ? `-${source.replace(/[^A-Za-z0-9]+/g, '-')}` : '';
+    return sendCsv(req, res, `${m[2]}${tag}-session-${m[1]}-${localDate()}.csv`, built.csv);
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/erp\/([a-z0-9-]+)\/preview$/)) && method === 'GET') {
-    const built = buildExport(m[1], m[2]);
+    const built = buildExport(m[1], m[2], { source: url.searchParams.has('source') ? url.searchParams.get('source') : null });
     return sendJson(req, res, 200, { rows: built.rows, held: built.held || 0, format: built.format, sample: built.csv.split('\r\n').slice(0, 6).join('\n') });
   }
 
@@ -1509,8 +1515,13 @@ async function handleAdmin(req, res, url, m) {
   }
 
   // --- reports
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/sources$/)) && method === 'GET') {
+    return sendJson(req, res, 200, { sources: sourcesOf(m[1]) });
+  }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/pallets$/)) && method === 'GET') {
     let rows = palletReport(m[1]);
+    // one system at a time, when three share the warehouse
+    if (url.searchParams.has('source')) { const src = url.searchParams.get('source'); rows = rows.filter((r) => (r.source || '') === src); }
     /* A pallet with the right count of the wrong lot, or one that is out of
        date, is an exception too - the quantity being right does not make it
        something a supervisor can ignore. */

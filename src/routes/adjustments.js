@@ -81,6 +81,7 @@ function adjustmentRows(sessionId, session) {
       const variance = r.variance_qty === '' ? (expected == null ? counted : counted - expected) : Number(r.variance_qty);
       return {
         pallet_id: r.pallet_id,
+        source: r.source || '',
         sku: r.sku || '',
         location: String(r.found_location || '').split(',')[0] || r.expected_location || '',
         expected_qty: expected,
@@ -191,13 +192,14 @@ export function listAdjustments(sessionId, { status = '', limit = 500 } = {}) {
   const rows = db
     .prepare(`SELECT * FROM adjustments WHERE session_id = ?${where} ORDER BY ABS(variance_qty) DESC, pallet_id LIMIT ?`)
     .all(...(status ? [id, status, Math.max(1, Math.min(2000, Number(limit) || 500))] : [id, Math.max(1, Math.min(2000, Number(limit) || 500))]));
+  const srcOf = new Map(db.prepare('SELECT pallet_id, source FROM pallets WHERE session_id = ?').all(id).map((r) => [r.pallet_id, r.source || '']));
   return {
     on: !!session.require_approval,
     thresholds: { minQty: session.approval_min_qty || 0, minPct: session.approval_min_pct || 0 },
     reopened: refreshed.reopened || 0,
     summary: summary(id),
     reasons: adjustmentReasons().reasons,
-    adjustments: rows,
+    adjustments: rows.map((r) => ({ ...r, source: srcOf.get(r.pallet_id) || '' })),
   };
 }
 

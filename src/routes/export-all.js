@@ -1,5 +1,5 @@
 import { db, getSession } from '../db.js';
-import { progress, palletReport, rawCounts } from './reports.js';
+import { progress, palletReport, rawCounts, sourcesOf } from './reports.js';
 import { adjustmentView } from './adjustments.js';
 import { teamClocks } from './idle.js';
 import { fixList } from './issues.js';
@@ -70,6 +70,7 @@ export function exportEverything(sessionId, { by = '' } = {}) {
     ['Bins still to count', Math.max(0, p.bins_total - p.bins_counted)],
     ['Percent of bins counted', p.bins_total ? `${Math.round((p.bins_counted / p.bins_total) * 1000) / 10}%` : '—'],
     ['Pallets on the report', p.pallets_total],
+    ['Systems on the report', sourcesOf(id).map((x) => `${x.source || 'no system named'}: ${x.counted} of ${x.pallets} found`).join(' · ') || '—'],
     ['Pallets counted', p.pallets_counted],
     ['Pallets found that are not on the report', p.pallets_unknown],
     ['Bins recorded empty', p.empty_bins || 0],
@@ -86,13 +87,13 @@ export function exportEverything(sessionId, { by = '' } = {}) {
   ].map(([w, v]) => ({ What: w, Value: v ?? '' })));
 
   const lines = sheet('Count lines', [
-    'Line', 'Scanned', 'Team', 'Clock-in numbers', 'Scanner', 'Aisle', 'Bin', 'Pallet', 'Quantity', 'Empty bin',
+    'Line', 'Scanned', 'Team', 'Clock-in numbers', 'Scanner', 'Aisle', 'Bin', 'Pallet', 'System', 'Quantity', 'Empty bin',
     'Item', 'Description', 'Lot', 'Best before', 'Second count', 'Pallet not on report', 'Bin not on list',
     'Outside the team\'s aisle', 'Pallet counted twice', 'Pallet label', 'Rack label', 'Second label of',
     'Flag / reason', 'Comments', 'Voided', 'Reached the server',
   ], counts.map((c) => ({
     'Line': c.id, 'Scanned': when(c.scanned_at), 'Team': c.team, 'Clock-in numbers': c.employees, 'Scanner': c.device_id,
-    'Aisle': c.aisle || '', 'Bin': c.location_code, 'Pallet': c.empty_bin ? '' : c.pallet_id, 'Quantity': c.qty,
+    'Aisle': c.aisle || '', 'Bin': c.location_code, 'Pallet': c.empty_bin ? '' : c.pallet_id, 'System': c.source || '', 'Quantity': c.qty,
     'Empty bin': yes(c.empty_bin), 'Item': c.sku || '', 'Description': c.description || '', 'Lot': c.lot || '',
     'Best before': c.expiry || '', 'Second count': yes(c.pass === 2), 'Pallet not on report': yes(c.unknown_pallet),
     'Bin not on list': yes(c.unknown_location), 'Outside the team\'s aisle': yes(c.off_assignment),
@@ -103,19 +104,19 @@ export function exportEverything(sessionId, { by = '' } = {}) {
   })));
 
   const report = sheet('Pallets', [
-    'Pallet', 'Item', 'Description', 'Result', 'Report quantity', 'Counted quantity', 'Difference', 'Report bin',
+    'Pallet', 'System', 'Item', 'Description', 'Result', 'Report quantity', 'Counted quantity', 'Difference', 'Report bin',
     'Found in', 'Times counted', 'Teams', 'Report lot', 'Counted lot', 'Best before', 'Second label', 'Last scanned', 'Comments',
   ], pallets.map((r) => ({
-    'Pallet': r.pallet_id, 'Item': r.sku || '', 'Description': r.description || '', 'Result': STATUS[r.status] || r.status,
+    'Pallet': r.pallet_id, 'System': r.source || '', 'Item': r.sku || '', 'Description': r.description || '', 'Result': STATUS[r.status] || r.status,
     'Report quantity': r.expected_qty, 'Counted quantity': r.counted_qty, 'Difference': r.variance_qty,
     'Report bin': r.expected_location || '', 'Found in': r.found_location || '', 'Times counted': r.times_counted || 0,
     'Teams': r.teams || '', 'Report lot': r.expected_lot || '', 'Counted lot': r.found_lot || '', 'Best before': r.expiry || '',
     'Second label': r.also_tagged || r.alias_of || '', 'Last scanned': when(r.last_scan), 'Comments': r.comments || '',
   })));
 
-  const adjCols = ['Side', 'Pallet', 'Item', 'Bin', 'Why', 'Report quantity', 'Counted quantity', 'Adjustment', 'Approval', 'Approval reason', 'Approved by'];
+  const adjCols = ['Side', 'Pallet', 'System', 'Item', 'Bin', 'Why', 'Report quantity', 'Counted quantity', 'Adjustment', 'Approval', 'Approval reason', 'Approved by'];
   const adjRow = (side) => (r) => ({
-    'Side': side, 'Pallet': r.pallet_id, 'Item': r.sku || '', 'Bin': r.location || '', 'Why': r.why,
+    'Side': side, 'Pallet': r.pallet_id, 'System': r.source || '', 'Item': r.sku || '', 'Bin': r.location || '', 'Why': r.why,
     'Report quantity': r.expected_qty ?? '', 'Counted quantity': r.counted_qty, 'Adjustment': r.variance_qty,
     'Approval': adj.approvals ? (r.status || 'waiting') : 'not required', 'Approval reason': r.reason || '', 'Approved by': r.decided_by || '',
   });

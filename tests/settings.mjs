@@ -235,7 +235,9 @@ await page.screenshot({ path: `${S}screenshots/settings-accounts.png`, clip: awa
   await np.close();
 }
 
-// a plain supervisor sees the page, but not the account controls.
+// Settings is for admins: a plain supervisor who signs in here is sent to the
+// dashboard, with no Settings tab to come back by - and changes their own
+// password from the sidebar instead.
 // RILEY was just reset, so settle on a password of their own first — otherwise
 // they land on "Choose your password", which is itself the point of the step.
 const rileyTok = (await j(await login({ username: 'RILEY', password: 'reset-password-42' }))).token;
@@ -243,11 +245,15 @@ await fetch(`${BASE}/api/admin/me/password`, { method: 'POST', headers: bearer(r
 const sup = await browser.newPage({ viewport: { width: 1200, height: 900 } });
 await sup.goto(BASE + '/settings');
 await sup.fill('#fUser', 'RILEY'); await sup.fill('#fPassword', 'riley-own-pass'); await sup.click('#btnLogin');
-await sup.waitForSelector('#scrMain.active'); await expandSubTabs(sup); await sup.waitForTimeout(1200);
-check('Settings: a supervisor is told account management is an admin job, and keeps the rest',
-  await sup.$eval('#adminOnly', (el) => el.hidden) && !(await sup.$eval('#notAdmin', (el) => el.hidden))
-    && !(await sup.$eval('#ownPassword', (el) => el.hidden)) && (await sup.$$('#deviceTable tbody tr')).length >= 0,
-  clean(await sup.textContent('#notAdmin')).slice(0, 80));
+await sup.waitForURL(/\/admin/, { timeout: 15000 }).catch(() => {});
+await sup.waitForSelector('#scrMain.active'); await sup.waitForTimeout(1200);
+check('Settings: a supervisor who signs in here is sent to the dashboard, and the sidebar has no Settings tab',
+  /\/admin/.test(sup.url()) && !(await sup.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).includes('/settings'), sup.url());
+await sup.click('#navPassword'); await sup.waitForTimeout(500);
+check('…and changes their own password from the sidebar', await sup.isVisible('#navSetPassword') && !(await sup.$eval('#npCurrentWrap', (el) => el.hidden)) && /current password/.test(await sup.textContent('#npWho')),
+  clean(await sup.textContent('#npWho')).slice(0, 80));
+await sup.fill('#npCurrent', 'riley-own-pass'); await sup.fill('#npNext', 'riley-newer-pass'); await sup.fill('#npConfirm', 'riley-newer-pass'); await sup.click('#npSave'); await sup.waitForTimeout(900);
+check('…which works, and hands the page back', (await login({ username: 'RILEY', password: 'riley-newer-pass' })).ok && await sup.isHidden('#navSetPassword'));
 await sup.close();
 
 /* ---- every supervisor page on a phone-width screen ---- */

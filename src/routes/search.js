@@ -41,7 +41,7 @@ export function searchAll(sessionId, rawQ) {
   /* ---------------- pallets: the report's, and any counted that were not on it */
   if (session) {
     const pallets = db.prepare(
-      `SELECT p.pallet_id, p.sku, p.description, p.uom, p.expected_qty, p.expected_location, p.lot, p.abc,
+      `SELECT p.pallet_id, p.sku, p.description, p.uom, p.expected_qty, p.expected_location, p.lot, p.abc, p.source,
               (SELECT SUM(c.qty) FROM counts c
                 WHERE c.session_id = p.session_id AND c.pallet_id = p.pallet_id AND c.voided = 0) AS counted_qty,
               (SELECT GROUP_CONCAT(DISTINCT c.location_code) FROM counts c
@@ -61,6 +61,7 @@ export function searchAll(sessionId, rawQ) {
         p.expected_qty == null ? '' : `report: ${p.expected_qty}${p.uom ? ' ' + p.uom : ''} in ${p.expected_location || 'no bin'}`,
         p.counted_qty == null ? 'not counted yet' : `counted: ${p.counted_qty} in ${p.found_in}${p.teams ? ' by team ' + p.teams : ''}`,
         p.lot ? `lot ${p.lot}` : '',
+        p.source ? `system ${p.source}` : '',
       ].filter(Boolean).join(' · '),
       goto: { page: '/admin', sub: 'reports' },
     })));

@@ -162,43 +162,59 @@
         const tdRole = document.createElement('td');
         tdRole.appendChild(tag(u.role));
         tr.appendChild(tdRole);
-        /* what this login may use: every box for a supervisor, one word for an admin */
+        /* what this login may use: a drop-down checklist for a supervisor, one word for an admin */
         const tdAcc = document.createElement('td');
-        tdAcc.className = 'wrap access';
+        tdAcc.className = 'access';
         if (u.role === 'admin') {
           tdAcc.textContent = 'everything';
           tdAcc.title = 'An admin may use every page and every function, Settings included.';
         } else {
           const list = Array.isArray(u.access) ? u.access : keys.map(([k]) => k);
+          const pick = document.createElement('details');
+          pick.className = 'accpick';
+          const sum = document.createElement('summary');
+          const panel = document.createElement('div');
+          panel.className = 'accpanel';
+          const say = () => {
+            const on = [...panel.querySelectorAll('input[data-access]:checked')].map((i) => i.dataset.access);
+            const pages = keys.filter(([k, , kind]) => kind === 'page' && on.includes(k)).length;
+            const fns = keys.filter(([k, , kind]) => kind === 'function' && on.includes(k)).length;
+            const allPages = keys.filter(([, , kind]) => kind === 'page').length;
+            const allFns = keys.filter(([, , kind]) => kind === 'function').length;
+            sum.textContent = pages === allPages && fns === allFns ? 'Everything a supervisor can'
+              : `${pages} of ${allPages} pages · ${fns} of ${allFns} functions`;
+          };
           const save = async () => {
-            const picked = [...tdAcc.querySelectorAll('input[data-access]:checked')].map((i) => i.dataset.access);
+            const picked = [...panel.querySelectorAll('input[data-access]:checked')].map((i) => i.dataset.access);
+            say();
             try { await api.post(`/api/admin/users/${u.username}`, { access: picked }); clearMsg($('userMsg')); }
             catch (err) { msg($('userMsg'), 'err', err.message); }
           };
           for (const group of ['page', 'function']) {
-            const row = document.createElement('div');
-            row.className = 'accrow';
-            const lbl = document.createElement('b');
-            lbl.textContent = group === 'page' ? 'Pages' : 'Can also';
-            row.appendChild(lbl);
+            const h = document.createElement('div');
+            h.className = 'acchead';
+            h.textContent = group === 'page' ? 'Pages they may open' : 'What they can also do';
+            panel.appendChild(h);
             for (const [k, label, kind] of keys) {
               if (kind !== group) continue;
               const l = document.createElement('label');
               l.className = 'cb';
-              l.title = label;
               const i = document.createElement('input');
               i.type = 'checkbox'; i.dataset.access = k; i.checked = list.includes(k);
               i.onchange = save;
               l.append(i, ' ', label);
-              row.appendChild(l);
+              panel.appendChild(l);
             }
-            tdAcc.appendChild(row);
           }
           const note = document.createElement('div');
           note.className = 'muted';
-          note.style.fontSize = '11.5px';
           note.textContent = 'Settings is for admins only.';
-          tdAcc.appendChild(note);
+          panel.appendChild(note);
+          pick.append(sum, panel);
+          // one list open at a time
+          pick.addEventListener('toggle', () => { if (pick.open) for (const o of document.querySelectorAll('details.accpick[open]')) if (o !== pick) o.open = false; });
+          say();
+          tdAcc.appendChild(pick);
         }
         tr.appendChild(tdAcc);
         const tdSt = document.createElement('td');
@@ -775,8 +791,10 @@
     if (!needSession(out)) return;
     msg(out, 'warn', `Uploading ${label}…`);
     try {
-      const stats = await api.json(`/api/admin/sessions/${sessionId}/master?kind=${kind}&replace=${$('fReplace-' + kind).checked ? 1 : 0}`,
+      const src = kind === 'pallets' ? ($('fSource-pallets').value || '').trim() : '';
+      const stats = await api.json(`/api/admin/sessions/${sessionId}/master?kind=${kind}&replace=${$('fReplace-' + kind).checked ? 1 : 0}${src ? `&source=${encodeURIComponent(src)}` : ''}`,
         { method: 'POST', headers: { 'content-type': 'text/csv' }, body: text });
+      if (kind === 'pallets') refreshSources().catch(() => {});
       const t = stats.totals;
       msg(out, 'ok', `Imported ${stats.rows.toLocaleString()} rows from ${label}`,
         `This count now has ${t.bins.toLocaleString()} bins in ${t.aisles} aisles, ${t.pallets.toLocaleString()} pallets, ${t.assignments} planned aisle assignments` +
@@ -880,7 +898,7 @@
   $('btnErpPreview').onclick = async () => {
     if (!needSession($('erpMsg'))) return;
     try {
-      const r = await api.json(`/api/admin/sessions/${sessionId}/erp/${$('fErpFormat').value}/preview`);
+      const r = await api.json(`/api/admin/sessions/${sessionId}/erp/${$('fErpFormat').value}/preview${erpSourceQuery()}`);
       msg($('erpMsg'), r.held ? 'warn' : 'ok', `${r.rows.toLocaleString()} rows — ${r.format.label}`,
         r.held
           ? `${r.held.toLocaleString()} adjustment${r.held === 1 ? '' : 's'} left out — still waiting for approval on the dashboard. First few lines below.`
@@ -891,7 +909,7 @@
   };
   $('btnErpDownload').onclick = () => {
     if (!needSession($('erpMsg'))) return;
-    api.download(`/api/admin/sessions/${sessionId}/erp/${$('fErpFormat').value}.csv`, `${$('fErpFormat').value}-${sessionId}.csv`)
+    api.download(`/api/admin/sessions/${sessionId}/erp/${$('fErpFormat').value}.csv${erpSourceQuery()}`, `${$('fErpFormat').value}${$('fErpSource').value && $('fErpSource').value !== '~none' ? '-' + $('fErpSource').value.replace(/[^A-Za-z0-9]+/g, '-') : ''}-${sessionId}.csv`)
       .catch((err) => msg($('erpMsg'), 'err', err.message));
   };
 
@@ -1448,7 +1466,30 @@
     catch (err) { msg($('sessionMsg'), 'err', err.message); }
   };
 
+  /* The systems this count's report came from: offered on the upload box and
+     on the ERP card, so one system's file can be made on its own. */
+  async function refreshSources() {
+    if (!sessionId) return;
+    const { sources } = await api.json(`/api/admin/sessions/${sessionId}/sources`);
+    const dl = $('sourceList');
+    dl.innerHTML = '';
+    for (const x of sources.filter((y) => y.source)) { const o = document.createElement('option'); o.value = x.source; dl.appendChild(o); }
+    const sel = $('fErpSource');
+    const was = sel.value;
+    sel.innerHTML = '<option value="">All systems, one file</option>';
+    for (const x of sources) {
+      const o = document.createElement('option');
+      o.value = x.source === '' ? '~none' : x.source;
+      o.textContent = x.source ? `${x.source} only (${x.pallets.toLocaleString()} pallets)` : `Rows with no system named (${x.pallets.toLocaleString()})`;
+      sel.appendChild(o);
+    }
+    if ([...sel.options].some((o) => o.value === was)) sel.value = was;
+    sel.closest('.auto').hidden = !sources.some((x) => x.source);
+  }
+  const erpSourceQuery = () => { const v = $('fErpSource').value; return v === '' ? '' : `?source=${encodeURIComponent(v === '~none' ? '' : v)}`; };
+
   function applyScope() {
+    refreshSources().catch(() => {});
     const s = sessions.find((x) => x.id === sessionId);
     // a cycle count has no aisle plan, so its racking blocks are not used
     $('btnLayoutBlocks').closest('.card').hidden = !!s && s.mode === 'cycle';

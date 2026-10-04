@@ -107,6 +107,8 @@
         </div>
       </div>
       <div class="grid" id="stats" style="margin-top:16px"></div>
+      <!-- three systems share the warehouse: how far each one's pallets are counted -->
+      <div class="grid" id="bySystem" style="margin-top:10px" hidden></div>
       <div class="tablehead">
         <h3>Teams on the count</h3>
         <div class="seg" id="shiftFilter">
@@ -329,6 +331,8 @@
         </div>
         <div class="toolbar" style="margin-top:6px">
           <label class="cb"><input type="checkbox" id="fAdjPendingOnly" checked> Only the ones still waiting</label>
+          <label class="cb" style="gap:6px">System
+            <select id="fAdjSource" class="sm" style="width:auto;padding:4px 8px"><option value="">Every system</option></select></label>
           <span class="spacer"></span>
           <button id="btnAdjAll">Select all shown</button>
           <button id="btnAdjNone">Select none</button>
@@ -381,12 +385,27 @@
 
     <div class="card">
       <h2>Pallet report</h2>
-      <div class="toolbar">
+      <!-- filters, so the report is read here rather than exported to be read -->
+      <div class="toolbar palfilters">
         <label class="cb"><input type="checkbox" id="fOnlyExceptions" checked> Hide matching pallets</label>
+        <label class="cb" title="Pallets the report expected that nobody has found, and pallets not counted yet"><input type="checkbox" id="fHideMissing"> Hide missing</label>
+        <label class="cb" style="gap:6px">Status
+          <select id="fPalletStatus" class="sm" style="width:auto;padding:4px 8px">
+            <option value="">Any</option><option value="QTY VARIANCE">Quantity differs</option><option value="WRONG BIN">Wrong bin</option>
+            <option value="MISSING">Missing</option><option value="NOT IN MASTER">Not on report</option><option value="COUNTED TWICE">Counted twice</option>
+            <option value="SECOND LABEL">Second label</option><option value="NOT COUNTED">Not counted yet</option><option value="MATCH">Matches</option>
+          </select></label>
+        <label class="cb" title="Wrong lot, lot not scanned, expired or expiring soon"><input type="checkbox" id="fLotExpOnly"> Lot / date problems only</label>
+        <label class="cb" style="gap:6px" title="Three systems share this warehouse: see one at a time">System
+          <select id="fPalletSource" class="sm" style="width:auto;padding:4px 8px"><option value="">Every system</option></select></label>
+        <label class="cb" style="gap:6px">Aisle / bin <input id="fPalletBin" class="sm" placeholder="F01 or F01A001" style="width:120px"></label>
+        <label class="cb" style="gap:6px">Team <input id="fPalletTeam" class="sm" placeholder="e.g. 4" style="width:64px"></label>
+        <label class="cb" style="gap:6px">Find <input id="fPalletFind" class="sm" placeholder="pallet, SKU or description" style="width:190px"></label>
         <label class="cb" style="gap:6px">Show
           <select id="fPalletLimit" class="sm" style="width:auto;padding:4px 8px">
             <option value="30">30</option><option value="50" selected>50</option><option value="100">100</option><option value="200">200</option><option value="all">All</option>
           </select> rows</label>
+        <button class="sm ghost" id="btnPalletClear" title="Back to the usual view: matching pallets hidden, everything else shown">Clear filters</button>
         <span class="spacer"></span>
         <button class="primary" id="btnExportAll" title="One Excel workbook: a summary, every count line, the pallet report, adjustments, bins, teams, sign-ons, SOS, second counts and the log — in plain words">Export everything (Excel)</button>
         <button id="btnExportPallets">Pallet report CSV</button>

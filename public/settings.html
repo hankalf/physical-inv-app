@@ -433,9 +433,11 @@
 
     <div class="card" data-kind="pallets">
       <h2>Inventory report <span class="muted">what the system thinks is on hand</span></h2>
-      <div class="hint" style="margin-top:0">What the count is compared against — it is where variances, second counts and the ERP adjustments come from. Re-upload it whenever the ERP moves on.</div>
+      <div class="hint" style="margin-top:0">What the count is compared against — it is where variances, second counts and the ERP adjustments come from. Re-upload it whenever the ERP moves on.
+        Three systems share the warehouse: name the <b>system</b> each report came from (or put a <b>System</b> column in the file) and the office side keeps them apart — the pallet report, adjustments and one ERP file per system. The scanners see no difference.</div>
       <div class="inline" style="margin-top:12px">
         <div><label for="fFile-pallets">CSV or Excel file</label><input type="file" id="fFile-pallets" accept=".csv,.tsv,.txt,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
+        <div class="auto"><label for="fSource-pallets">System</label><input id="fSource-pallets" list="sourceList" placeholder="e.g. NAV" maxlength="40" style="width:150px" autocomplete="off"><datalist id="sourceList"></datalist></div>
         <div class="auto"><label class="cb"><input type="checkbox" id="fReplace-pallets"> Replace what is there</label></div>
         <div class="auto"><button class="primary fit" id="btnUpload-pallets">Upload</button></div>
       </div>
@@ -471,6 +473,10 @@
         <div>
           <label for="fErpFormat">Layout</label>
           <select id="fErpFormat"></select>
+        </div>
+        <div class="auto">
+          <label for="fErpSource">System</label>
+          <select id="fErpSource"><option value="">All systems, one file</option></select>
         </div>
         <div class="auto"><button class="fit" id="btnErpPreview">Preview</button></div>
         <div class="auto"><button class="primary fit" id="btnErpDownload">Download CSV</button></div>
