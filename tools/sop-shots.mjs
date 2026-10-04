@@ -323,7 +323,8 @@ try {
       const top = Math.max(0, Math.min(r.y, pr ? pr.y : r.y) - 60);
       const bottom = Math.max(r.y + Math.min(r.height, 300), pr ? pr.y + pr.height : 0) + 12;
       await save({ screenshot: (o) => desk.screenshot({ ...o, clip: { x: Math.max(0, r.x - 10), y: top, width: Math.min(1540, r.width + 20), height: Math.min(900, bottom - top) } }) }, 'settings-access');
-      await desk.keyboard.press('Escape'); await wait(300);
+      await desk.evaluate(() => document.querySelectorAll('details.accpick[open]').forEach((d) => { d.open = false; }));
+      await desk.mouse.click(4, 4); await wait(400);
     }
   }
   await saveCard(desk, '#btnSaveTeams', 'settings-teams-channel');

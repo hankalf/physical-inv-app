@@ -411,17 +411,23 @@ try {
   }
 
   /* the team's active aisle, from the server's point of view */
+  /* one gun asks at a time: two asking together would each build the bin list
+     and the second copy would hand the first gun's bins out again */
   async function takeActive(t, H) {
-    const st = await get(`/api/sessions/${sess.id}/team-status?team=${t.name}`, H);
-    if (st.active && t.handed.has(st.active.id)) return st;        // the hand-back is still landing
-    if (st.active && (!t.active || t.active.id !== st.active.id)) {
-      t.active = st.active;
-      // the server says which bins the job covers (the aisle, on the levels given)
-      t.activeBins = (st.bins && st.bins.length ? st.bins : byAisle.get(st.active.aisle) || []).slice();
-      const i = t.queue.findIndex((j) => j.aisle === st.active.aisle && (!st.active.levels || j.levels === st.active.levels));
-      if (i >= 0) t.queue.splice(i, 1);
-    } else if (!st.active) { t.active = null; t.activeBins = null; }
-    return st;
+    if (t.taking) return t.taking;
+    t.taking = (async () => {
+      const st = await get(`/api/sessions/${sess.id}/team-status?team=${t.name}`, H);
+      if (st.active && t.handed.has(st.active.id)) return st;        // the hand-back is still landing
+      if (st.active && (!t.active || t.active.id !== st.active.id)) {
+        t.active = st.active;
+        // the server says which bins the job covers (the aisle, on the levels given)
+        t.activeBins = (st.bins && st.bins.length ? st.bins : byAisle.get(st.active.aisle) || []).slice();
+        const i = t.queue.findIndex((j) => j.aisle === st.active.aisle && (!st.active.levels || j.levels === st.active.levels));
+        if (i >= 0) t.queue.splice(i, 1);
+      } else if (!st.active) { t.active = null; t.activeBins = null; }
+      return st;
+    })().finally(() => { t.taking = null; });
+    return t.taking;
   }
 
   async function handBack(t, gun) {
@@ -496,7 +502,8 @@ try {
       if (!t.active) {
         await takeActive(t, gun.H).catch(() => {});
         if (!t.active) {
-          if (!t.queue.length && binsLeft > 0) { await doSecondCounts(gun, 2); }
+          // nothing of their own left: the second counts are everybody's
+          if (!t.queue.length) { await doSecondCounts(gun, 5); await wait(rnd(4000, 10000)); continue; }
           await wait(rnd(8000, 20000));
           continue;
         }
