@@ -44,6 +44,7 @@ const bad = await (await fetch(`${BASE}/api/admin/sessions/${sess.id}/moves/impo
 check('…and a bin not on the count is refused, naming the row', /row 2: Z99Z999 is not on this count/.test(bad.error || ''), bad.error);
 list = await get(`/api/admin/sessions/${sess.id}/moves`);
 check('The summary counts what is waiting, by aisle', list.summary.open === 4 && list.summary.aisles === 2, JSON.stringify(list.summary));
+await post('/api/admin/pallet-system', { url: `${BASE}/board` });     // the system the gun's move desk frames
 const dev = await post('/api/admin/devices', { name: 'MOVE-01' });
 const D = { ...hdr, authorization: 'Device ' + (await post(`/api/devices/${(await post('/api/admin/devices', { name: 'MOVE-02' })).uid}`, {}, hdr)).token };
 const forGun = await get(`/api/sessions/${sess.id}/moves`, D);
@@ -60,56 +61,48 @@ gun.on('pageerror', (e) => errors.push('gun: ' + e.message));
 gun.on('dialog', (d) => d.accept().catch(() => {}));
 await gun.goto(`${BASE}/?d=${dev.uid}`);
 await gun.waitForTimeout(1500);
-check('Sign-on offers "Move pallets" while any are waiting', await gun.isVisible('#btnModeMove'));
+check('Sign-on offers "Front2Back" while any moves are waiting', await gun.isVisible('#btnModeMove') && clean(await gun.textContent('#btnModeMove')) === 'Front2Back');
 await gun.click('#btnModeMove');
 await gun.waitForTimeout(300);
-check('…listing the counts that have moves', (await gun.$$eval('#fSession option', (os) => os.map((o) => o.textContent))).some((t) => /Moves test/.test(t)));
-await gun.fill('#fTeam', '4'); await gun.press('#fTeam', 'Enter');
+check('…and asks for a badge alone: no team, no count to pick', await gun.isHidden('#teamBlock') && await gun.isHidden('#fSession') && /Your clock-in number/.test(await gun.textContent('#employeeLabel')));
 await gun.fill('#fEmployee', 'E4'); await gun.press('#fEmployee', 'Enter');
 await gun.click('#btnStart');
 await gun.waitForSelector('#scrMove.active', { timeout: 8000 });
 const aisleBtns = await gun.$$eval('#moveAisles button', (bs) => bs.map((b) => b.textContent));
-check('The gun shows the aisles with moves waiting', aisleBtns.length === 2 && /F01.*3 to move/.test(aisleBtns[0]), aisleBtns.join(' | '));
+check('The gun asks which aisle to work, with how many are waiting in each', aisleBtns.length === 2 && /F01.*3$/.test(aisleBtns[0]) && /F02.*1$/.test(aisleBtns[1]), aisleBtns.join(' | '));
 await gun.click('#moveAisles button >> nth=0');
 await gun.waitForTimeout(300);
-const scan = async (v) => { await gun.fill('#fMoveScan', v); await gun.press('#fMoveScan', 'Enter'); await gun.waitForTimeout(400); };
-check('Picking an aisle shows the first pallet: which one, from where, to where', clean(await gun.textContent('#mvPallet')) === 'M-1' && /from F01A001 → to F01A002/.test(await gun.textContent('#mvWhere')) && /Scan the PALLET/.test(await gun.textContent('#mvPrompt')));
-await scan('M-2');
-check('The wrong pallet is refused', /That is M-2 — this move is pallet M-1/.test(await gun.textContent('#moveMsg')), clean(await gun.textContent('#moveMsg')));
-await scan('M-1');
-check('The right pallet moves on to the bin', /Scan the BIN it went into/.test(await gun.textContent('#mvPrompt')) && /Move it to F01A002/.test(await gun.textContent('#moveMsg')));
-await scan('F01A001');
-check('The front bin it came from is refused', /front bin it came from/.test(await gun.textContent('#moveMsg')));
-await scan('F01A003');
-check('…and so is any other bin', /That is F01A003, not F01A002/.test(await gun.textContent('#moveMsg')));
-await scan('F01A002');
-check('The bin behind finishes the move and brings up the next pallet', /Moved M-1 to F01A002/.test(await gun.textContent('#moveMsg')) && clean(await gun.textContent('#mvPallet')) === 'M-2' && /2 to move/.test(await gun.textContent('#mvLeft')), clean(await gun.textContent('#moveMsg')));
-await wait(1500);
+check('Picking an aisle opens the desk: the pallet, the bin it is in and the bin it goes to', clean(await gun.textContent('#mvPallet')) === 'M-1' && clean(await gun.textContent('#mvFrom')) === 'F01A001' && clean(await gun.textContent('#mvTo')) === 'F01A002' && /1 of 3 to move/.test(await gun.textContent('#mvLeft')), clean(await gun.textContent('#mvLeft')));
+check('…with the pallet system framed under it, from the address the office set, and a link to open it', await gun.isVisible('#moveSys') && (await gun.getAttribute('#moveFrame', 'src')) === `${BASE}/board` && (await gun.getAttribute('#moveOpen', 'href')) === `${BASE}/board` && /Pallet system:/.test(await gun.textContent('#mvUrlNote')));
+check('…and no scan box and no skip: the scanning happens in that screen', (await gun.$('#fMoveScan')) === null && (await gun.$('#btnMoveSkip')) === null);
+await gun.click('#btnMoveNext'); await gun.waitForTimeout(200);
+check('› steps to the next pallet in the aisle, ‹ back', clean(await gun.textContent('#mvPallet')) === 'M-2' && /2 of 3/.test(await gun.textContent('#mvLeft')));
+await gun.click('#btnMovePrev'); await gun.waitForTimeout(200);
+check('', clean(await gun.textContent('#mvPallet')) === 'M-1');
+await gun.click('#btnMoveDone'); await gun.waitForTimeout(1500);
+check('"Moved — next" ticks it off and brings up the next pallet', /Moved M-1 to F01A002/.test(await gun.textContent('#moveMsg')) && clean(await gun.textContent('#mvPallet')) === 'M-2' && /1 of 2 to move/.test(await gun.textContent('#mvLeft')), clean(await gun.textContent('#moveMsg')));
 list = await get(`/api/admin/sessions/${sess.id}/moves`);
-check('The move lands on the server as done, by team and scanner', list.moves.find((m) => m.pallet_id === 'M-1').status === 'done' && list.moves.find((m) => m.pallet_id === 'M-1').team === '4' && list.moves.find((m) => m.pallet_id === 'M-1').device_id === 'MOVE-01');
+check('The move lands on the server as done into the bin behind, by badge and scanner', list.moves.find((m) => m.pallet_id === 'M-1').status === 'done' && list.moves.find((m) => m.pallet_id === 'M-1').actual_bin === 'F01A002' && list.moves.find((m) => m.pallet_id === 'M-1').team === 'E4' && list.moves.find((m) => m.pallet_id === 'M-1').device_id === 'MOVE-01');
 const rep = (await get(`/api/admin/sessions/${sess.id}/pallets?limit=50`)).rows.find((r) => r.pallet_id === 'M-1');
 check('…and the report now expects the pallet in the bin behind', rep.expected_location === 'F01A002', rep.expected_location);
-
-/* skipping, with a reason */
-await gun.click('#btnMoveSkip');
-await gun.waitForTimeout(200);
-check('"Cannot move it" offers reasons', (await gun.$$eval('#moveSkipReasons button', (bs) => bs.length)) === 4);
-await gun.click('#moveSkipReasons button:has-text("Bin behind is not empty")');
-await gun.waitForTimeout(1500);
-list = await get(`/api/admin/sessions/${sess.id}/moves`);
-check('A skipped move keeps its reason for the office', list.moves.find((m) => m.pallet_id === 'M-2').status === 'skipped' && /not empty/.test(list.moves.find((m) => m.pallet_id === 'M-2').reason));
-check('…and the gun moves on to the next pallet', clean(await gun.textContent('#mvPallet')) === 'M-3');
+await gun.click('#btnMoveAisles'); await gun.waitForTimeout(200);
+check('Aisles goes back to the aisle list, with the counts moved on', (await gun.$$eval('#moveAisles button', (bs) => bs.map((b) => b.textContent)))[0].endsWith('· 2'));
+await gun.click('#moveAisles button >> nth=0'); await gun.waitForTimeout(200);
+await gun.click('#btnMoveDone'); await gun.waitForTimeout(600);
+await gun.click('#btnMoveDone'); await gun.waitForTimeout(1500);
+check('Finishing an aisle says so and returns to the aisle list', await gun.isHidden('#moveTask') && /Aisle F01 done|F01.*done/i.test(await gun.textContent('#moveAisleMsg')) && (await gun.$$eval('#moveAisles button', (bs) => bs.length)) === 1, clean(await gun.textContent('#moveAisleMsg')));
 
 /* a dead spot in the freezer */
 await ctx.setOffline(true);
 await gun.evaluate(() => window.dispatchEvent(new Event('offline')));
-await scan('M-3'); await scan('F02A006');
-check('A move finished with no signal is kept on the gun', /Moved M-3/.test(await gun.textContent('#moveAisleMsg') + await gun.textContent('#moveMsg')) && (await get(`/api/admin/sessions/${sess.id}/moves`)).moves.find((m) => m.pallet_id === 'M-3').status === 'open');
-check('…and the aisle is done, back at the aisle list', await gun.isHidden('#moveTask') && (await gun.$$eval('#moveAisles button', (bs) => bs.length)) === 1);
+await gun.click('#moveAisles button >> nth=0'); await gun.waitForTimeout(200);
+await gun.click('#btnMoveDone'); await gun.waitForTimeout(600);
+check('A move ticked off with no signal is kept on the gun', /Moved M-5/.test(await gun.textContent('#moveAisleMsg') + await gun.textContent('#moveMsg')) && (await get(`/api/admin/sessions/${sess.id}/moves`)).moves.find((m) => m.pallet_id === 'M-5').status === 'open');
+check('…and the desk says there is nothing left', await gun.isHidden('#moveTask') && /Nothing left to move/.test(await gun.textContent('#moveBanner')));
 await ctx.setOffline(false);
 await gun.evaluate(() => window.dispatchEvent(new Event('online')));
 let landed = false;
-for (let t = 0; t < 25000 && !landed; t += 1000) { await wait(1000); landed = (await get(`/api/admin/sessions/${sess.id}/moves`)).moves.find((m) => m.pallet_id === 'M-3').status === 'done'; }
+for (let t = 0; t < 25000 && !landed; t += 1000) { await wait(1000); landed = (await get(`/api/admin/sessions/${sess.id}/moves`)).moves.find((m) => m.pallet_id === 'M-5').status === 'done'; }
 check('…and sends it the moment there is signal', landed);
 
 /* SOS from here, and back */
@@ -129,11 +122,11 @@ await page.waitForTimeout(1200);
 check('Front bins is its own page in the sidebar, with no count to pick', clean(await page.textContent('#navTabs a.tab.current')).includes('Front bins') && (await page.$('#sessionPick')) === null);
 check('…working from the site\'s current bin list, and saying which', /bin list: 12 bins/.test(clean(await page.textContent('#frontRef'))), clean(await page.textContent('#frontRef')));
 const viaSite = await get('/api/admin/front/moves');
-check('The moves are reachable with no count in the address', viaSite.summary.open === 1 && viaSite.summary.done === 2);
-check('…with the moves summary', clean(await page.textContent('#mvOpen')) === '1' && clean(await page.textContent('#mvDone')) === '2' && clean(await page.textContent('#mvSkipped')) === '1',
+check('The moves are reachable with no count in the address', viaSite.summary.open === 0 && viaSite.summary.done === 4);
+check('…with the moves summary', clean(await page.textContent('#mvOpen')) === '0' && clean(await page.textContent('#mvDone')) === '4' && clean(await page.textContent('#mvSkipped')) === '0',
   `${await page.textContent('#mvOpen')} / ${await page.textContent('#mvDone')} / ${await page.textContent('#mvSkipped')}`);
 const rows = await page.$$eval('#mvTable tbody tr', (trs) => trs.map((tr) => tr.textContent));
-check('…and every move with its state and reason', rows.length === 4 && rows.some((r) => /M-2.*skipped.*not empty/.test(r)) && rows.some((r) => /M-1.*moved/.test(r)), rows.join(' | ').slice(0, 200));
+check('…and every move with its state', rows.length === 4 && rows.every((r) => /moved/.test(r)) && rows.some((r) => /M-1.*moved/.test(r)), rows.join(' | ').slice(0, 200));
 check('The front-placed bins list moved here too', await page.$('#frontCard') !== null && (await page.$$('#navTabs .sub[data-page="/front"]')).length === 3);
 const subs = await page.$$eval('#navTabs .navgroup.here .sub', (ss) => ss.map((s) => s.textContent));
 check('The sidebar opens the page\'s sections out under it', subs.join(',') === 'Pallets to move back,Move desk,Front-placed bins', subs.join(','));

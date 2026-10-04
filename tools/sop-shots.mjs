@@ -299,6 +299,11 @@ try {
   await saveCard(desk, '#btnBookTemplate', 'settings-barcode-book');
   await sub('gun');    await saveCard(desk, '#stepOrder', 'settings-scanner-screen');
   await saveCard(desk, '#deviceTable', 'settings-scanners');
+  await desk.uncheck('#fJobCycle').catch(() => {}); await desk.uncheck('#fJobMove').catch(() => {}); await desk.uncheck('#fJobMissing').catch(() => {});
+  await desk.click('#btnJobsSave').catch(() => {}); await wait(500);
+  await saveCard(desk, '#fJobFull', 'settings-jobs');
+  await desk.check('#fJobCycle').catch(() => {}); await desk.check('#fJobMove').catch(() => {}); await desk.check('#fJobMissing').catch(() => {});
+  await desk.click('#btnJobsSave').catch(() => {}); await wait(400);
   await saveCard(desk, '#commentList', 'settings-reason-codes');
   await saveCard(desk, '#sosList', 'settings-sos');
   await sub('lists');
@@ -452,6 +457,37 @@ try {
       await saveCard(desk, '#modeList', 'testing-modes', 8);
     }
   }
+  /* ---------- Not in Location: the find desk ---------- */
+  await post('/api/admin/missing', { pallet: 'FR10257294', sku: '2301', description: 'Blueberry wild 30lb', qty: 24, last: 'A02C019' }).catch(() => {});
+  await post('/api/admin/pallet-system', { url: `${BASE}/board?session=${sess.id}` }).catch(() => {});
+  await desk.goto(BASE + '/missing');
+  await desk.waitForSelector('#scrMain.active', { state: 'attached' }); await wait(2500);
+  await saveCard(desk, '#fdDeskStrip', 'missing-desk');
+
+  /* ---------- the desks on a gun: Front2Back and Not in Location ---------- */
+  {
+    const jd = await post('/api/admin/devices', { name: 'SCANNER-07' });
+    const g = await browser.newPage({ viewport: { width: 360, height: 640 }, deviceScaleFactor: 2 });
+    await g.goto(`${BASE}/?d=${jd.uid}`); await wait(1500);
+    if (await g.isVisible('#btnModeMove')) {
+      await g.click('#btnModeMove'); await wait(300);
+      await g.fill('#fEmployee', '10422'); await g.press('#fEmployee', 'Enter');
+      await g.click('#btnStart'); await g.waitForSelector('#scrMove.active', { timeout: 10000 }).catch(() => {}); await wait(800);
+      await save(g, 'gun-move-aisles');
+      if (await g.$('#moveAisles button')) { await g.click('#moveAisles button >> nth=0'); await wait(2500); await save(g, 'gun-move-desk'); }
+      await g.click('#btnMoveSignoff').catch(() => {}); await wait(800);
+    }
+    await g.goto(`${BASE}/?d=${jd.uid}`); await wait(1500);
+    if (await g.isVisible('#btnModeFind')) {
+      await g.click('#btnModeFind'); await wait(300);
+      await g.fill('#fEmployee', '10422'); await g.press('#fEmployee', 'Enter');
+      await g.click('#btnStart'); await g.waitForSelector('#scrFind.active', { timeout: 10000 }).catch(() => {}); await wait(800);
+      if (await g.$('#findAisles button')) { await g.click('#findAisles button >> nth=0'); await wait(2500); await save(g, 'gun-find-desk'); }
+    }
+    await g.close();
+  }
+  await post('/api/admin/pallet-system', { url: 'https://wms.example.com/pallets' }).catch(() => {});
+
   /* ---------- the user guide: a question answered, a journey open ---------- */
   await signIn('/guide');
   await desk.waitForSelector('#journeys .journey'); await wait(1200);

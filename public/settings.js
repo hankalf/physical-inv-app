@@ -554,6 +554,27 @@
     chip.textContent = promptState.isDefault ? 'the defaults' : 'set for this site';
   };
 
+  /* which jobs the sign-on screen offers */
+  const JOB_BOX = { full: 'fJobFull', cycle: 'fJobCycle', move: 'fJobMove', missing: 'fJobMissing' };
+  const JOB_NAME = { full: 'full count', cycle: 'cycle count', move: 'Front2Back', missing: 'Not in Location' };
+  function renderJobs(jobs) {
+    for (const [k, id] of Object.entries(JOB_BOX)) $(id).checked = jobs[k] !== false;
+    const on = Object.keys(JOB_BOX).filter((k) => jobs[k] !== false);
+    $('jobsChip').hidden = false;
+    $('jobsChip').textContent = on.length === 4 ? 'every job' : `only: ${on.map((k) => JOB_NAME[k]).join(', ')}`;
+    $('jobsChip').className = 'chip ' + (on.length === 4 ? 'online' : 'warn');
+  }
+  async function refreshJobs() { renderJobs((await api.json('/api/admin/scanner-jobs')).jobs); }
+  $('btnJobsSave').onclick = async () => {
+    try {
+      const body = {};
+      for (const [k, id] of Object.entries(JOB_BOX)) body[k] = $(id).checked;
+      const out = await api.post('/api/admin/scanner-jobs', body);
+      renderJobs(out.jobs);
+      const on = Object.keys(JOB_BOX).filter((k) => out.jobs[k]);
+      msg($('jobsMsg'), 'ok', on.length === 4 ? 'The scanners offer every job.' : `The scanners offer ${on.map((k) => JOB_NAME[k]).join(' and ')} now.`, 'Each scanner picks it up the next time it is online.');
+    } catch (err) { msg($('jobsMsg'), 'err', 'Not saved', err.message); }
+  };
   async function refreshPrompts() {
     promptState = await api.json('/api/admin/scanner-prompts');
     renderPrompts();
@@ -1560,7 +1581,7 @@
 
   async function load() {
     await refreshMe();
-    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshReasons(), refreshSosSettings(), refreshLogo(), refreshPalletSystem().catch(() => {})]);
+    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshJobs().catch(() => {}), refreshReasons(), refreshSosSettings(), refreshLogo(), refreshPalletSystem().catch(() => {})]);
     await refreshGun().catch(() => {});
     await loadLayouts().catch(() => {});
     await refreshDefaultSession().catch(() => {});

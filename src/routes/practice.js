@@ -763,7 +763,7 @@ function modeChecks(s) {
       done: db.prepare("SELECT 1 FROM recounts WHERE session_id = ? AND source = 'cycle' AND status = 'done'").get(c.id) != null });
   }
   if (db.prepare('SELECT 1 FROM moves WHERE session_id = ?').get(s.id)) {
-    checks.push({ key: 'move', label: 'Move a pallet back — Move pallets on the gun',
+    checks.push({ key: 'move', label: 'Move a pallet back — Front2Back on the gun',
       done: db.prepare("SELECT 1 FROM moves WHERE session_id = ? AND status = 'done'").get(s.id) != null });
     checks.push({ key: 'moveSkip', label: 'Skip a move whose bin behind is not empty',
       done: db.prepare("SELECT 1 FROM moves WHERE session_id = ? AND status = 'skipped'").get(s.id) != null });

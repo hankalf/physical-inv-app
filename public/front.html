@@ -14,33 +14,6 @@
   .how h3 { margin: 0 0 6px; }
   .tlink { color: var(--accent); font-weight: 700; text-decoration: none; display: inline-block; padding: 8px 0; }
   /* the move desk */
-  .deskstrip { display: grid; grid-template-columns: auto 1fr auto auto; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); margin-top: 10px; }
-  .deskstrip button.sm { width: auto; margin: 0; }
-  .deskpallet b, .deskbins b { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 22px; letter-spacing: .02em; }
-  .deskpallet, .deskbins { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-  .deskbins { margin-top: 4px; }
-  .deskbins .arrow { color: var(--accent); font-size: 22px; font-weight: 800; }
-  .deskstrip .lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
-  .deskacts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
-  .deskbar { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-  .deskbar button.sm { width: auto; margin: 0; }
-  /* The pallet system's screen is framed at the size of a Zebra's screen, the
-     same slab as the Testing Suite's gun: what the forklift crew see on the
-     handheld is what the desk shows, and a wide web page does not take the
-     whole screen. One button opens it out to the full width when a system's
-     own screens need the room. */
-  .deskwrap {
-    margin-top: 8px; width: 404px; max-width: 100%; box-sizing: border-box;
-    background: linear-gradient(180deg, #2a2f38, #1a1e25 60%, #15181e);
-    border: 1px solid #3a414d; border-radius: 30px 30px 44px 44px;
-    padding: 16px 16px 18px; box-shadow: 0 18px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
-  }
-  .deskwrap .glass { border-radius: 10px; overflow: hidden; background: #fff; border: 3px solid #0b0d11; box-shadow: inset 0 0 0 1px #000; }
-  .deskwrap iframe { display: block; width: 360px; max-width: 100%; height: min(620px, calc(100vh - 290px)); min-height: 440px; border: 0; background: #fff; margin: 0 auto; }
-  .deskwrap.wide { width: 100%; padding: 0; background: none; border: 0; border-radius: 10px; box-shadow: none; }
-  .deskwrap.wide .glass { border: 1px solid var(--line); border-radius: 10px; box-shadow: none; resize: vertical; overflow: hidden; height: 640px; min-height: 240px; }
-  .deskwrap.wide iframe { width: 100%; height: 100%; min-height: 0; }
-  .deskwrap.none { display: none; }
 </style>
 </head>
 <body class="app">
@@ -82,8 +55,8 @@
       <div class="hint" style="margin-top:0">
         In double-deep racking a pallet left in the <b>front</b> position with nothing behind it blocks the back slot.
         This builds the list of those from the site's inventory report — or takes one you upload — and hands it to the scanners
-        as a job of its own: <b>Move pallets</b> at sign-on. The gun walks the aisle, asks for the pallet, then the bin
-        it went into. It is a job on the warehouse, not on a count: it works from the site's current bin list and report
+        as a job of its own: <b>Front2Back</b> at sign-on, with a badge alone. The gun shows this page's move desk — the pallet,
+        from and to, the pallet system framed under it — aisle by aisle, and <b>Moved — next</b> ticks each one off. It is a job on the warehouse, not on a count: it works from the site's current bin list and report
         (the newest uploaded), and nothing here is a count line.
       </div>
       <div class="how">

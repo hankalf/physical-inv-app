@@ -149,6 +149,18 @@
           ],
         },
         {
+          title: 'Choose which jobs the scanners offer',
+          do: 'Settings → Scanner screen → Jobs on the scanners: the full count, the cycle count, Front2Back, Not in Location. Untick a job and no scanner offers it. On count day tick the full count alone; tick the rest back on afterwards. The practice gun always has every job.',
+          where: S('/settings', 'gun', 'Settings → Scanner screen'),
+          watch: [
+            { see: '"leave at least one job on, or the scanners have nothing to do"', means: 'Every job was unticked.', fix: 'Tick at least one.' },
+            { see: 'A gun still offers a job you unticked', means: 'It has not been online since.', fix: 'It picks the change up on its next refresh of the sign-on screen.' },
+          ],
+          ask: [
+            { q: 'Does unticking a job stop a gun already signed on to it?', a: 'No. It only changes what the sign-on screen offers next time. A gun mid-job finishes or signs off.' },
+          ],
+        },
+        {
           title: 'Set up the counting screen and the one-tap reasons',
           do: 'Settings → Scanner screen decides what the gun asks: lot and expiry, comments, text size, language, the Keyboard button. Settings → ERP & backups holds the adjustment reasons. Changes reach a running gun within about half a minute, between pallets.',
           where: S('/settings', 'gun', 'Settings → Scanner screen'),
@@ -420,12 +432,13 @@
           ask: [],
         },
         {
-          title: 'Move them on the gun',
-          do: 'Move pallets at sign-on. The gun goes aisle by aisle: scan the pallet, scan the destination bin, Done or Skip. It works offline like counting.',
+          title: 'Move them on the gun: Front2Back',
+          do: 'Front2Back at sign-on, with a clock-in number alone. Pick the aisle; the gun shows the office’s desk: the pallet, from → to, and the pallet system framed under it. Move it, book it in that screen, tap Moved — next. Nothing is scanned in the app. Ticks queue offline like counting.',
           where: S('/front', 'moves', 'Front bins → Pallets to move back'),
           watch: [
-            { see: 'Gun: "Both bins have to be in the same aisle"', means: 'The destination scanned is in another aisle.', fix: 'Pick an empty bin behind the front one in the same aisle.' },
-            { see: 'Gun: "That is the front bin it came from"', means: 'The destination scanned is the pallet’s current bin.', fix: 'Scan the bin behind it.' },
+            { see: 'The gun does not offer Front2Back', means: 'No moves are waiting, or the job is unticked under Settings → Scanner screen → Jobs on the scanners.', fix: 'Build a move list under Front bins; an admin ticks the job back on.' },
+            { see: 'A pallet on the desk cannot be moved', means: 'The bin behind is not empty, or the pallet is not there.', fix: 'Leave it with › on the gun; skip it with the reason from Front bins → Pallets to move back.' },
+            { see: 'No pallet system under the strip on the gun', means: 'No address set, or the system refuses to be framed.', fix: 'Settings → Advanced → Pallet system; a system that refuses a frame gets an Open in a new tab link.' },
           ],
           ask: [],
         },
@@ -452,8 +465,8 @@
           ask: [],
         },
         {
-          title: 'Let the scanners find them',
-          do: 'The moment any scanner scans one of these pallets, on any count or move, it is marked found with the bin, the team and the time, and the counter is told on the gun. Close the ones found another way.',
+          title: 'Let the scanners find them: Not in Location on the gun',
+          do: 'Any scan of a listed pallet, on any count or move, marks it found with the bin, the team and the time. There is also a job: Not in Location at sign-on with a badge alone, pick the aisle it was last seen in, and the gun shows the pallet, last seen in, what it is, and the pallet system under it; Found — next tells the office. The page has the same find desk at the bottom. Close the ones found another way.',
           where: S('/missing', '', 'Not in Location'),
           watch: [
             { see: 'Gun: "Count it here as normal; the office is told where it turned up."', means: 'The counter scanned a pallet from this list.', fix: 'Nothing: that is the system working.' },
@@ -585,7 +598,7 @@
     { see: 'Everyone was signed out of the dashboards', means: 'The server lost its database volume.', fix: 'Sign-ins survive a normal restart. If it happens, check the volume on the host.' },
     { see: 'The gun is still starting — give it a second', means: 'The Testing Suite’s scanner frame is loading.', fix: 'Wait a moment and click again.' },
     { see: 'Nothing on the gun’s screen takes a scan just now', means: 'The gun is on a screen with no scan box.', fix: 'Tap through to the next prompt on the gun first.' },
-    { see: 'Both bins have to be in the same aisle', means: 'A move destination in another aisle.', fix: 'Pick an empty bin behind the front one, same aisle.' },
+    { see: 'leave at least one job on, or the scanners have nothing to do', means: 'Every job was unticked under Jobs on the scanners.', fix: 'Tick at least one.', goto: S('/settings', 'gun', 'Scanner screen') },
     { see: 'That is a very large quantity', means: 'The number is out of the ordinary.', fix: 'Type it again to accept it, or type the right one.' },
     { see: 'That label belongs to another pallet', means: 'A second label already known under another id.', fix: 'Tell a supervisor; count under the first label.' },
     { see: 'That date has passed', means: 'An expiry in the past.', fix: 'Tell a supervisor; it is recorded.' },

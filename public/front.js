@@ -127,7 +127,7 @@
     try {
       const r = await postJson(`${F}/moves/build`, { aisle: $('fMvAisle').value, zone: $('fMvZone').value, replace: $('fMvReplace').checked });
       msg($('mvMsg'), r.added ? 'ok' : 'warn', r.added ? `${r.added.toLocaleString()} pallets to move back.` : 'Nothing to move.',
-        r.added ? 'They are on the scanners now — pick Move pallets at sign-on.' : r.found ? 'Every one found is already on the list.' : 'No front pallet on the report has an empty bin behind it (or the bin list does not say which bins are front and back).');
+        r.added ? 'They are on the scanners now — pick Front2Back at sign-on.' : r.found ? 'Every one found is already on the list.' : 'No front pallet on the report has an empty bin behind it (or the bin list does not say which bins are front and back).');
       await refresh();
     } catch (err) { msg($('mvMsg'), 'err', err.message); }
   };

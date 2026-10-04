@@ -175,3 +175,26 @@ export function saveScannerLayout(body = {}) {
 }
 
 export const defaultScannerLayout = () => ({ ...LAYOUT_DEFAULTS });
+
+/* ------------------------------------------------------------- the jobs
+   Which jobs the sign-on screen offers: the full count, the cycle count, moving
+   pallets. During a wall-to-wall an admin ticks the full count alone, so no
+   scanner wanders into a cycle batch. The practice guns in the Testing Suite
+   always see all three. */
+export const JOBS = [['full', 'Full count'], ['cycle', 'Cycle count'], ['move', 'Front2Back'], ['missing', 'Not in Location']];
+export function scannerJobs() {
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'scannerJobs'").get();
+  let saved = {};
+  try { saved = row ? JSON.parse(row.value) : {}; } catch { saved = {}; }
+  const out = {};
+  for (const [k] of JOBS) out[k] = saved[k] !== false;
+  return out;
+}
+export function saveScannerJobs(body = {}) {
+  const now = scannerJobs();
+  const next = {};
+  for (const [k] of JOBS) next[k] = body[k] === undefined ? now[k] : !!body[k];
+  if (!Object.values(next).some(Boolean)) throw Object.assign(new Error('leave at least one job on, or the scanners have nothing to do'), { status: 400 });
+  db.prepare("INSERT INTO settings (key, value) VALUES ('scannerJobs', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(JSON.stringify(next));
+  return next;
+}

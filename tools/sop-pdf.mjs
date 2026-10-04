@@ -1,13 +1,16 @@
 /*
- * docs/SOP.md -> docs/SOP.pdf, the manual as it is meant to be printed.
+ * docs/SOP.md -> docs/SOP.pdf, the manual as it is meant to be printed - and
+ * the role procedures under docs/roles/ the same way.
  *
- *   node tools/sop-pdf.mjs
+ *   node tools/sop-pdf.mjs                         # the manual
+ *   node tools/sop-pdf.mjs docs/roles/counter.md   # one role's procedure, PDF beside it
+ *   node tools/sop-pdf.mjs --roles                 # every file under docs/roles/
  *
  * Chromium does the typesetting (it is already here for the tests), so what
  * prints is what the screenshots were taken in. Two passes: the first lays the
  * manual out, the second puts the page numbers it found into the contents.
  */
-import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -15,22 +18,35 @@ import { chromium } from 'playwright-core';
 import { markdownToHtml, inline } from './md.mjs';
 
 const ROOT = join(new URL('.', import.meta.url).pathname, '..');
-const SRC = join(ROOT, 'docs', 'SOP.md');
-const OUT = join(ROOT, 'docs', 'SOP.pdf');
-
-const md = readFileSync(SRC, 'utf8');
-const title = /^#\s+(.*)$/m.exec(md)?.[1] || 'Standard Operating Procedure';
+const args = process.argv.slice(2);
+const SOURCES = args[0] === '--roles'
+  ? readdirSync(join(ROOT, 'docs', 'roles')).filter((f) => f.endsWith('.md') && f !== 'README.md').sort().map((f) => join(ROOT, 'docs', 'roles', f))
+  : [args[0] ? join(process.cwd(), args[0]) : join(ROOT, 'docs', 'SOP.md')];
 const printed = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-/* The manual's own contents list becomes the printed one, so the two can never
-   drift apart; the page numbers are filled in after the first pass. */
-const contents = [...md.matchAll(/^- \[([^\]]+)\]\(#([^)]+)\)$/gm)].map((m) => ({ label: m[1], id: m[2] }));
+/** Everything about one document that the layout needs, read from its markdown. */
+function readDoc(SRC) {
+  const OUT = SRC.replace(/\.md$/, '.pdf');
+  const md = readFileSync(SRC, 'utf8');
+  const title = /^#\s+(.*)$/m.exec(md)?.[1] || 'Standard Operating Procedure';
+  // a role procedure says who it is for; the manual says the site
+  const role = /^\*\*Role:\*\*\s*(.+?)\s{2,}|^\*\*Role:\*\*\s*(.+)$/m.exec(md);
+  const roleName = role ? (role[1] || role[2]).replace(/\*\*.*$/, '').trim() : '';
+  const siteLine = /^\*\*Site:\*\*\s*(.+?)\s{2,}/m.exec(md)?.[1] || 'Front Royal, VA cold storage';
+  return { SRC, OUT, md, title, roleName, siteLine, relOut: OUT.replace(ROOT + '/', '') };
+}
 
-/* Everything from the first heading after the contents block onwards is the
-   body: the cover page and the contents are set separately. */
-const bodyStart = md.indexOf('\n## Part 0');
-const intro = md.slice(md.indexOf('\n', md.indexOf('# ')), md.indexOf('## Contents')).trim();
-const body = markdownToHtml(md.slice(bodyStart));
+/* The document's own contents list becomes the printed one, so the two can never
+   drift apart; the page numbers are filled in after the first pass. Everything
+   from the first heading after the contents block onwards is the body: the
+   cover page and the contents are set separately. */
+function splitDoc(md) {
+  const contents = [...md.matchAll(/^- \[([^\]]+)\]\(#([^)]+)\)$/gm)].map((m) => ({ label: m[1], id: m[2] }));
+  const tocAt = md.indexOf('## Contents');
+  const bodyStart = md.indexOf('\n## ', tocAt + 11);
+  const intro = md.slice(md.indexOf('\n', md.indexOf('# ')), tocAt).trim();
+  return { contents, intro, body: markdownToHtml(md.slice(bodyStart)) };
+}
 
 const CSS = `
   @page { size: Letter; margin: 16mm 14mm 18mm; }
@@ -113,7 +129,7 @@ const CSS = `
               font-style: italic; page-break-before: avoid; }
 `;
 
-const tocHtml = (pages) => `
+const tocHtml = (contents, pages) => `
   <section class="toc">
     <h2 style="page-break-before:avoid">Contents</h2>
     <ol>
@@ -126,19 +142,19 @@ const tocHtml = (pages) => `
    image paths have to be pointed back at docs/images where the pictures live. */
 const absolute = (html) => html.replace(/src="images\//g, `src="file://${join(ROOT, 'docs')}/images/`);
 
-const page = (pages) => absolute(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>${title}</title><style>${CSS}</style></head>
+const page = (doc, parts, pages) => absolute(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>${doc.title}</title><style>${CSS}</style></head>
 <body>
   <section class="cover">
-    <div class="kicker">Standard Operating Procedure</div>
-    <h1>Physical Inventory<br>Counting</h1>
-    <div class="site">Front Royal, VA cold storage &middot; Zebra MC9000-series handhelds</div>
+    <div class="kicker">${doc.roleName ? 'Standard Operating Procedure &middot; by role' : 'Standard Operating Procedure'}</div>
+    <h1>${doc.roleName ? inline(doc.title.replace(/^SOP\s*[—-]\s*/, '')).replace(/ — /, '<br>') : 'Physical Inventory<br>Counting'}</h1>
+    <div class="site">${doc.roleName ? `For: ${inline(doc.roleName)} &middot; Full Harvest Inventory` : `${inline(doc.siteLine)} &middot; Zebra MC9000-series handhelds`}</div>
     <div class="rule"></div>
-    <div class="lede">${markdownToHtml(intro.replace(/^\*\*Site:.*$/m, ''))}</div>
+    <div class="lede">${markdownToHtml(parts.intro.replace(/^\*\*(Site|Role):.*$/mg, ''))}</div>
     <div class="foot">Printed ${printed}</div>
   </section>
-  ${tocHtml(pages)}
-  ${body}
+  ${tocHtml(parts.contents, pages)}
+  ${parts.body}
 </body></html>`);
 
 
@@ -166,7 +182,7 @@ print(json.dumps(out))
 
 const flat = (s) => s.replace(/\s+/g, ' ').replace(/[\u2013\u2014]/g, '-').trim();
 
-function pageNumbers(path) {
+function pageNumbers(path, contents) {
   const text = pdfText(path);
   if (!text) {
     console.warn('  (no page numbers in the contents: python3 with pypdfium2 is not available here)');
@@ -187,6 +203,10 @@ const dir = mkdtempSync(join(tmpdir(), 'soppdf-'));
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 try {
   const tab = await browser.newPage();
+  for (const SRC of SOURCES) {
+  const doc = readDoc(SRC);
+  const parts = splitDoc(doc.md);
+  const footLabel = doc.roleName ? `${inline(doc.title.replace(/^SOP\s*[—-]\s*/, ''))} &middot; SOP` : 'Physical Inventory Counting &middot; SOP';
   const pdfOptions = {
     format: 'Letter',
     printBackground: true,
@@ -194,14 +214,14 @@ try {
     headerTemplate: '<div></div>',
     footerTemplate: `<div style="width:100%;margin:0 14mm;font:8pt 'DejaVu Sans',Arial,sans-serif;color:#7b8694;
         display:flex;justify-content:space-between;border-top:1px solid #d5dae1;padding-top:2mm">
-        <span>Physical Inventory Counting &middot; SOP</span><span class="pageNumber"></span></div>`,
+        <span>${footLabel}</span><span class="pageNumber"></span></div>`,
     margin: { top: '16mm', bottom: '18mm', left: '14mm', right: '14mm' },
   };
 
   // pass 1: lay the manual out
   const render = async (pages, path) => {
     const file = join(dir, 'sop.html');
-    writeFileSync(file, page(pages));
+    writeFileSync(file, page(doc, parts, pages));
     await tab.goto(`file://${file}`, { waitUntil: 'load' });
     await tab.evaluate(() => Promise.all(
       Array.from(document.images).filter((i) => !i.complete).map((i) => i.decode().catch(() => {}))));
@@ -212,12 +232,13 @@ try {
 
   /* Which printed page each part landed on. Chromium will not say, so read it
      back off the PDF it just made - the only answer that cannot be wrong. */
-  const pages = pageNumbers(draft);
+  const pages = pageNumbers(draft, parts.contents);
 
   // pass 2: the real thing, with the contents numbered
-  await render(pages, OUT);
-  const total = Object.keys(pages).length ? pageCount(OUT) : 0;
-  console.log(`docs/SOP.pdf written${total ? ` - ${total} pages` : ''}`);
+  await render(pages, doc.OUT);
+  const total = Object.keys(pages).length ? pageCount(doc.OUT) : 0;
+  console.log(`${doc.relOut} written${total ? ` - ${total} pages` : ''}`);
+  }
 } finally {
   await browser.close();
   rmSync(dir, { recursive: true, force: true });

@@ -163,7 +163,7 @@
             tdP.appendChild(el('div', 'item' + (p.expired ? ' expired' : ''),
               `${p.desc}${p.uom ? ' · ' + p.uom : ''}${opt.askLot ? '' : ' · lot ' + p.lot} · best before ${p.bestBefore}${p.expired ? ' (expired)' : ''}`));
             const rep = [];
-            if (p.movedTo) { rep.push(`you moved it to ${p.movedTo} (Move pallets) — count it there`); tr.dataset.bin = p.movedTo; }
+            if (p.movedTo) { rep.push(`you moved it to ${p.movedTo} (Front2Back) — count it there`); tr.dataset.bin = p.movedTo; }
             else if (!p.report) rep.push('not on the report');
             else {
               if (Number(p.report.qty) !== p.qty) rep.push(`report says ${p.report.qty}`);
@@ -351,7 +351,7 @@
   const MODES = [
     { key: 'full', title: 'Full count', what: 'Team 99 walks its aisles: pallet, quantity, bin.' },
     { key: 'cycle', title: 'Cycle count', what: 'One person, a clock-in number, and a list of bins to count today.' },
-    { key: 'moves', title: 'Move pallets', what: 'Front pallets with an empty bin behind: scan the pallet, put it back, scan the bin.' },
+    { key: 'moves', title: 'Front2Back', what: 'Front pallets with an empty bin behind: the desk on the gun, the pallet system under it, Moved — next.' },
     { key: 'missing', title: 'Not in Location', what: 'Pallets the system has lost. Count as normal — the gun calls out one it finds.' },
   ];
   const MODE_KEY = () => `testingMode:${data ? data.owner : ''}`;
@@ -474,7 +474,7 @@
       pane.appendChild(wrap);
     } else if (modeSel === 'moves') {
       const mv = m.moves;
-      how.innerHTML = 'On the gun: tap <b>Move pallets</b> at the top of the sign-on screen, sign on with team <b>99</b> and a clock-in number, and pick the aisle. For each pallet: scan the <b>pallet</b> (so it is the right one), put it in the bin behind, scan that <b>bin</b>. When the bin behind turns out not to be empty, tap <b>Cannot move it</b> and say why — the office sees it under Front bins.';
+      how.innerHTML = 'On the gun: tap <b>Front2Back</b> at the top of the sign-on screen, sign on with a clock-in number alone, and pick the aisle. The gun shows the office\'s move desk: the pallet, the bin it is in, the bin it goes to, and the pallet system framed under it. Move it, book it in that screen, tap <b>Moved — next</b>. A bin behind that turns out not to be empty is skipped from the office\'s Front bins page with the reason.';
       pane.appendChild(how);
       pane.appendChild(el('div', 'muted', `${mv.done} moved · ${mv.skipped} skipped · ${mv.list.length - mv.done - mv.skipped} to move`));
       const { wrap, tbody } = binTable([['Pallet', 'c-bin'], ['From → to', ''], ['Try this', ''], ['State', 'c-state']]);
@@ -778,7 +778,7 @@
         recountBin: rb && !rb.hidden ? rb.dataset.bin || '' : '',
         recountKind: rb && !rb.hidden ? rb.dataset.kind || '' : '',
         moveTask: shown('#moveTask'),
-        movePrompt: (q('#mvPrompt') || {}).textContent || '',
+        moveTo: (q('#mvTo') || {}).textContent || '',
         movePallet: (q('#mvPallet') || {}).textContent || '',
       };
     } catch { return { up: false, screen: '' }; }
@@ -871,20 +871,17 @@
     }
     if (modeSel === 'moves') {
       if (g.screen === 'scrSignon') {
-        if (!g.offers.move) { restartGun(); return { key: 'mv:restart', target: GUN(), step: 'Move pallets', pos: 'left', text: 'Restarting the gun so it sees the pallets to move…' }; }
-        if (g.job !== 'move') return { key: 'mv:pick', target: GUN(), step: 'Move pallets', pos: 'left', text: 'On the gun, tap <b>Move pallets</b> at the top of the sign-on screen.' };
-        if (!g.team) return { key: 'mv:team', target: $('teamVals').querySelector('.scan'), step: 'Move pallets · sign on', text: 'Click <b>99</b> for the team.' };
-        if (!g.crew.trim()) return { key: 'mv:crew', target: $('crewVals').querySelector('.scan'), step: 'Move pallets · sign on', text: 'And a clock-in number — click <b>T1001</b>.' };
-        return { key: 'mv:start', target: GUN(), step: 'Move pallets · sign on', pos: 'left', text: 'Now on the gun: tap <b>Sign on &amp; load list</b>.' };
+        if (!g.offers.move) { restartGun(); return { key: 'mv:restart', target: GUN(), step: 'Front2Back', pos: 'left', text: 'Restarting the gun so it sees the pallets to move…' }; }
+        if (g.job !== 'move') return { key: 'mv:pick', target: GUN(), step: 'Front2Back', pos: 'left', text: 'On the gun, tap <b>Front2Back</b> at the top of the sign-on screen.' };
+        if (!g.crew.trim()) return { key: 'mv:crew', target: $('crewVals').querySelector('.scan'), step: 'Front2Back · sign on', text: 'Front2Back is one person with a gun: just a clock-in number, no team — click <b>T1001</b>.' };
+        return { key: 'mv:start', target: GUN(), step: 'Front2Back · sign on', pos: 'left', text: 'Now on the gun: tap <b>Sign on &amp; load list</b>.' };
       }
       if (g.screen === 'scrMove') {
-        if (!g.moveTask) return { key: 'mv:aisle', target: GUN(), step: 'Move pallets', pos: 'left', text: m.list.some((x) => x.status === 'open') ? 'Pick an <b>aisle</b> on the gun — F01 has two pallets to move, F02 has one.' : 'Nothing left to move. Tap <b>Sign off this scanner</b> on the gun to do something else.' };
+        if (!g.moveTask) return { key: 'mv:aisle', target: GUN(), step: 'Front2Back', pos: 'left', text: m.list.some((x) => x.status === 'open') ? 'Pick an <b>aisle</b> on the gun — F01 has two pallets to move, F02 has one.' : 'Nothing left to move. Tap <b>Sign off this scanner</b> on the gun to do something else.' };
         const x = m.list.find((y) => y.pallet === g.movePallet.trim()) || m.list.find((y) => y.status === 'open');
         if (!x) return null;
-        const row = $('modePane').querySelector(`tr[data-move="${x.id}"]`);
-        if (/PALLET/i.test(g.movePrompt)) return { key: 'mv:pal:' + x.id, target: row && row.querySelector(`.scan[data-code="${x.pallet}"]`), step: 'Move pallets', text: `The gun wants the pallet. Click <b>${x.pallet}</b> — it is in the front position, ${x.from}.` };
-        if (x.occupied.length) return { key: 'mv:skip:' + x.id, target: GUN(), step: 'Move pallets', pos: 'left', text: `<b>${x.to}</b> is not empty — ${x.occupied.join(', ')} is in it. On the gun tap <b>Cannot move it</b>, then <b>Bin behind is not empty</b>.` };
-        return { key: 'mv:bin:' + x.id, target: row && row.querySelector(`.scan[data-code="${x.to}"]`), step: 'Move pallets', text: `Put the pallet in <b>${x.to}</b>, the bin behind, then click that bin.` };
+        if (x.occupied.length) return { key: 'mv:skip:' + x.id, target: GUN(), step: 'Front2Back', pos: 'left', text: `The desk shows <b>${x.pallet}</b>, from ${x.from} to <b>${x.to}</b>. But ${x.to} is not empty — ${x.occupied.join(', ')} is in it. Tap <b>›</b> to leave it; the office skips it with the reason from Front bins.` };
+        return { key: 'mv:done:' + x.id, target: GUN(), step: 'Front2Back', pos: 'left', text: `The desk shows <b>${x.pallet}</b>: from ${x.from} to <b>${x.to}</b>, the bin behind, with the pallet system under it. Move it, book it there, then tap <b>Moved — next</b> on the gun.` };
       }
       return null;
     }

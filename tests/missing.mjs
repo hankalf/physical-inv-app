@@ -102,6 +102,42 @@ check('…and the box finds one by pallet, item or bin', (await page.$$('#msTabl
 const csvText = await (await fetch(`${BASE}/api/admin/missing.csv`, { headers: A })).text();
 check('It downloads as a readable CSV', /^﻿?Pallet,Item,Description,Qty,UOM,Lot,Last known location/.test(csvText) && /L-1,SKU-8810,Blueberry wild 30lb,24,,LOT1,F03B014,seen near dock,Found,F01A002,team 6/.test(csvText), csvText.split('\n').find((l) => l.startsWith('L-1')));
 check('No script errors', errors.length === 0, errors.join(' | '));
+/* ---------------- the find desk: on the gun, and on the page ---------------- */
+await post('/api/admin/missing', { pallet: 'L-7', sku: 'SKU-7', description: 'Mango chunks', qty: 48, last: 'F02B001' });
+await post('/api/admin/missing', { pallet: 'L-8', description: 'Raspberries', last: 'F03A005' });
+await post('/api/admin/missing', { pallet: 'L-9', description: 'Nowhere', last: '' });
+await post('/api/admin/pallet-system', { url: `${BASE}/board` });
+await gun.click('#btnSignoff').catch(() => {});
+await gun.goto(`${BASE}/?d=${dev.uid}`); await gun.waitForTimeout(1500);
+check('With pallets on the list, sign-on offers "Not in Location"', await gun.isVisible('#btnModeFind') && clean(await gun.textContent('#btnModeFind')) === 'Not in Location');
+await gun.click('#btnModeFind'); await gun.waitForTimeout(300);
+check('…and asks for a badge alone, no team and no count', await gun.isHidden('#teamBlock') && await gun.isHidden('#fSession'));
+await gun.fill('#fEmployee', 'E9'); await gun.press('#fEmployee', 'Enter');
+await gun.click('#btnStart');
+await gun.waitForSelector('#scrFind.active', { timeout: 8000 });
+await gun.waitForTimeout(500);
+const findAisles = await gun.$$eval('#findAisles button', (bs) => bs.map((b) => b.textContent));
+check('The gun asks which aisle to look in, by where each pallet was last seen', findAisles.length === 3 && /F02.*1$/.test(findAisles[0]) && /F03.*1$/.test(findAisles[1]) && /No location known/.test(findAisles[2]), findAisles.join(' | '));
+await gun.click('#findAisles button >> nth=0'); await gun.waitForTimeout(300);
+check('Picking the aisle opens the desk: the pallet, where it was last seen, what it is', clean(await gun.textContent('#fdPallet')) === 'L-7' && clean(await gun.textContent('#fdLast')) === 'F02B001' && /Mango chunks/.test(await gun.textContent('#fdWhat')) && /qty 48/.test(await gun.textContent('#fdWhat')), clean(await gun.textContent('#fdWhat')));
+check('…with the pallet system framed under it, and no scan box', await gun.isVisible('#findSys') && (await gun.getAttribute('#findFrame', 'src')) === `${BASE}/board` && (await gun.$('#fFindScan')) === null);
+await gun.click('#btnFindFound'); await gun.waitForTimeout(1500);
+list = await get('/api/admin/missing');
+const l7 = list.rows.find((r) => r.pallet_id === 'L-7');
+check('"Found — next" marks it found on the server: badge, scanner, how', l7.status === 'found' && l7.found_team === 'E9' && l7.found_device === 'LOST-01' && l7.found_how === 'found', JSON.stringify(l7));
+check('…and, the aisle done, the gun is back at the aisle list', await gun.isHidden('#findTask') && (await gun.$$eval('#findAisles button', (bs) => bs.length)) === 2 && /Found L-7/.test(await gun.textContent('#findDoneMsg')));
+
+/* the office desk */
+await page.reload(); await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(1500);
+check('The page has the same desk: the newest missing pallet first, the system framed below', clean(await page.textContent('#fdDeskPallet')) === 'L-9' && /1 of 2 missing/.test(await page.textContent('#fdDeskCount')) && (await page.getAttribute('#fdDeskFrame', 'src')) === `${BASE}/board`, [await page.textContent('#fdDeskPallet'), await page.textContent('#fdDeskCount')].join(' | '));
+await page.click('#fdDeskNext'); await page.waitForTimeout(200);
+check('› steps to the next, with where it was last seen', clean(await page.textContent('#fdDeskPallet')) === 'L-8' && clean(await page.textContent('#fdDeskLast')) === 'F03A005');
+check('…framed at handheld size, with Full width to open it out', Math.round(await page.$eval('#fdDeskFrame', (f) => f.getBoundingClientRect().width)) === 360 && await page.$eval('#fdDeskWide', (b) => b.textContent === 'Full width'));
+await page.fill('#fdDeskBin', 'f03a006'); await page.click('#fdDeskFound'); await page.waitForTimeout(800);
+list = await get('/api/admin/missing');
+check('Found from the desk marks it, with the bin, by hand', list.rows.find((r) => r.pallet_id === 'L-8').status === 'found' && list.rows.find((r) => r.pallet_id === 'L-8').found_bin === 'F03A006' && /L-8 found in F03A006/.test(await page.textContent('#fdDeskMsg')));
+check('…and the desk moves on to the one left', clean(await page.textContent('#fdDeskPallet')) === 'L-9' && list.summary.missing === 1);
+
 await browser.close();
 const failed = results.filter((r) => !r).length;
 console.log(`\n${results.length - failed}/${results.length} Not in Location checks passed`);

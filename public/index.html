@@ -62,7 +62,8 @@
       <div class="row" id="modePick">
         <button id="btnModeFull" class="ghost">Full count</button>
         <button id="btnModeCycle" class="ghost">Cycle count</button>
-        <button id="btnModeMove" class="ghost" hidden>Move pallets</button>
+        <button id="btnModeMove" class="ghost" hidden>Front2Back</button>
+        <button id="btnModeFind" class="ghost" hidden>Not in Location</button>
       </div>
     </div>
 
@@ -198,30 +199,65 @@
 
   <!-- ---------------- moving pallets back ---------------- -->
   <section class="screen" id="scrMove">
+    <!-- Front2Back on the gun: pick an aisle, then the desk as the office has it -
+         the pallet, from and to, and the pallet system's own screen under it. The
+         scanning happens in that screen, not here. -->
     <div class="feedback show warn" id="moveBanner" hidden></div>
     <div id="moveAisles"></div>
     <div id="moveTask" hidden>
-      <div class="assign">
-        <div class="sub">MOVE THIS PALLET</div>
-        <div class="aisle" id="mvPallet"></div>
-        <div class="sub" id="mvWhere"></div>
-        <div class="sub" id="mvLeft"></div>
+      <div class="gdesk">
+        <button id="btnMovePrev" class="ghost" type="button" title="The one before">‹</button>
+        <div class="gdeskwhat">
+          <div class="gl"><span class="lbl">Pallet</span><b id="mvPallet"></b></div>
+          <div class="gl"><span class="lbl">From</span><b id="mvFrom"></b><span class="arrow">⟶</span><span class="lbl">To</span><b id="mvTo"></b></div>
+          <div class="gmeta" id="mvLeft"></div>
+        </div>
+        <button id="btnMoveNext" class="ghost" type="button" title="The next one">›</button>
       </div>
-      <h2 class="prompt" id="mvPrompt">Scan the PALLET</h2>
-      <input id="fMoveScan" class="big" autocomplete="off" autocorrect="off" autocapitalize="characters"
-             spellcheck="false" inputmode="none" enterkeyhint="done">
-      <div class="feedback" id="moveMsg"></div>
-      <div class="row">
-        <button id="btnMoveSkip" class="ghost">Cannot move it</button>
+      <div class="row gdeskrow">
+        <button id="btnMoveDone" class="primary">Moved — next</button>
         <button id="btnMoveAisles" class="ghost">Aisles</button>
       </div>
-      <div class="chips" id="moveSkipReasons" hidden></div>
+      <div class="feedback" id="moveMsg"></div>
+      <div class="gbar"><span class="muted" id="mvUrlNote"></span><a id="moveOpen" target="_blank" rel="noopener" hidden>Open the pallet system ↗</a></div>
+      <div class="mvsys" id="moveSys" hidden><iframe id="moveFrame" title="The pallet system"></iframe></div>
     </div>
     <div class="feedback" id="moveAisleMsg"></div>
     <button id="btnMoveSos" class="sos">SOS — I need help</button>
     <div class="row">
       <button class="ghost" id="btnMoveRefresh">Refresh</button>
       <button class="ghost" id="btnMoveSignoff">Sign off this scanner</button>
+    </div>
+  </section>
+
+  <!-- ---------------- Not in Location on the gun ---------------- -->
+  <section class="screen" id="scrFind">
+    <div class="feedback show warn" id="findBanner" hidden></div>
+    <div id="findAisles"></div>
+    <div id="findTask" hidden>
+      <div class="gdesk">
+        <button id="btnFindPrev" class="ghost" type="button" title="The one before">‹</button>
+        <div class="gdeskwhat">
+          <div class="gl"><span class="lbl">Pallet</span><b id="fdPallet"></b></div>
+          <div class="gl"><span class="lbl">Last seen in</span><b id="fdLast"></b></div>
+          <div class="gmeta" id="fdWhat"></div>
+          <div class="gmeta" id="fdLeft"></div>
+        </div>
+        <button id="btnFindNext" class="ghost" type="button" title="The next one">›</button>
+      </div>
+      <div class="row gdeskrow">
+        <button id="btnFindFound" class="primary">Found — next</button>
+        <button id="btnFindAisles" class="ghost">Aisles</button>
+      </div>
+      <div class="feedback" id="findMsg"></div>
+      <div class="gbar"><span class="muted" id="fdUrlNote"></span><a id="findOpen" target="_blank" rel="noopener" hidden>Open the pallet system ↗</a></div>
+      <div class="mvsys" id="findSys" hidden><iframe id="findFrame" title="The pallet system"></iframe></div>
+    </div>
+    <div class="feedback" id="findDoneMsg"></div>
+    <button id="btnFindSos" class="sos">SOS — I need help</button>
+    <div class="row">
+      <button class="ghost" id="btnFindRefresh">Refresh</button>
+      <button class="ghost" id="btnFindSignoff">Sign off this scanner</button>
     </div>
   </section>
 

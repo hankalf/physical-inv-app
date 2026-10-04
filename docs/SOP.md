@@ -187,6 +187,11 @@ own password from **Change my password** at the foot of the sidebar.
 
 *May use, opened on one login: the pages, each page's tabs, and the functions — a tick takes effect on their next click.*
 
+**A procedure per role.** Each profile has a short SOP of its own under `docs/roles/` (and as a
+PDF beside it): Admin, Supervisor, Inventory control, Count supervisor, Warehouse jobs, Cycle
+counter, and one for the counters on the handhelds. Hand a new login the right one; this manual
+is the reference behind them.
+
 ### Step 5 — Change the superadmin's password
 
 Sign in as the superadmin, press **Change my password** at the foot of the sidebar, and
@@ -293,6 +298,19 @@ scanner is wiped and worth asking about otherwise.
 ![](images/scanner-setup-cards.png)
 
 *Print setup cards: one per scanner, each with its own QR code and the three steps to do on the device.*
+
+**Which jobs the scanners offer.** *Settings → Scanner screen → Jobs on the scanners.* A gun's
+sign-on screen offers the jobs that exist: the **full count** when one is open, the **cycle count**
+when the programme has a batch, **Front2Back** while any moves are waiting, **Not in Location**
+while that list has anything on it. Untick a job here and no scanner offers it. On the morning of
+a wall-to-wall, tick the full count alone, so nobody signs on to anything else by mistake; tick
+the others back on when it is over. At least one job has to stay on. Scanners pick the change up
+the next time they are online, and the practice gun in the Testing Suite always has every job,
+whatever is ticked here.
+
+![](images/settings-jobs.png)
+
+*Settings &rarr; Scanner screen &rarr; Jobs on the scanners: the full count alone, for count day.*
 
 ### Step 8a — A barcode test book, to practise on
 
@@ -454,7 +472,7 @@ your login may do for real (a login without Cycle counts is not offered the cycl
 | Pick | What is set up | What the gun does |
 |---|---|---|
 | **Cycle count** | A practice cycle count beside your run, with a five-bin list: a plain bin, two pallets, an empty bin, a short pallet, one whose pallet has gone | **Cycle count** at the top of the sign-on screen; sign on with a clock-in number alone; **Start counting the list**; every pallet in the bin, then **Bin done** |
-| **Move pallets** | Three front pallets to put back in the empty bin behind — one of them into a bin that turns out not to be empty | **Move pallets** at sign-on; pick the aisle; scan the pallet, put it back, scan the bin; **Cannot move it** with a reason for the one that will not go |
+| **Front2Back** | Three front pallets to put back in the empty bin behind — one of them into a bin that turns out not to be empty | **Front2Back** at sign-on with a clock-in number alone; pick the aisle; the gun shows the move desk — pallet, from → to, the pallet system under it; put it back, tap **Moved — next**; the one that will not go is left and skipped from the office with the reason |
 | **Not in Location** | Three lost pallets on the list, for you alone: two are on the shelves, one is nowhere | Count the full count as normal; the gun says **found!** the moment it scans one, and the office is told where |
 
 Each job adds its own lines to **Things to try**, the tips follow it on the gun, and the pane under the
@@ -960,19 +978,39 @@ is marked **found** with the bin, the team and the time, and the counter is told
 writes one off with the outcome. The list is the site's, not a count's: a pallet stays on it
 across counts until it turns up or is closed. It downloads as a CSV.
 
+**The find desk** is at the bottom of the page: the next missing pallet, what it is and where it
+was last seen, **‹ ›** to step through, and the pallet system framed under it — type the bin and
+press **Found**, or **Close** it. The guns have the same desk: **Not in Location** at sign-on with
+a clock-in number alone, **pick the aisle** the pallets were last seen in (pallets with no known
+location are their own group), and the gun shows the pallet, *last seen in* its bin, what it is,
+and the pallet system under it. **Found — next** ticks one off and tells the office — badge,
+scanner, time; **›** leaves one; **Aisles** goes back to the list. Nothing is scanned in the app;
+the pallet system under the strip is where the pallet is booked.
+
 **Moving pallets back** (a job of its own)
 
 **Front bins → Pallets to move back** builds the list — every pallet the report puts in a front bin
 with an empty bin behind it — or takes one you upload (Pallet, From bin, To bin). The guns then offer
 **Move pallets** at sign-on while any are waiting:
 
-1. Pick **Move pallets**, the count, team and clock-in numbers, **Sign on**.
-2. Pick an **aisle** — each shows how many are waiting.
-3. The gun names the pallet, where it is and where it goes. **Scan the pallet** (the wrong one is
-   refused), move it, **scan the bin it went into** (the front bin it came from, or any other bin,
-   is refused). The next pallet comes up.
-4. **Cannot move it** — the bin behind is not empty, the pallet is not there, cannot reach it,
-   damaged — skips it with the reason, for the office.
+1. Pick **Front2Back** and scan **your clock-in number** — it is one person with a gun, so there
+   is no team and no count to choose — then **Sign on**.
+2. **Pick the aisle** to work; each shows how many pallets are waiting in it.
+3. The gun opens the **move desk**, the same strip as the office's: the **pallet**, the bin it is
+   in (**from**) and the bin it goes to (**to**), **‹ ›** to step through the aisle, and
+   underneath, the **pallet system's own screen** (the address the office set under *Settings →
+   Advanced → Pallet system*, with an **Open the pallet system** link beside it). There is
+   nothing to scan in the app: the move is booked, and scanned, in that screen.
+4. Move the pallet, book it in the system, tap **Moved — next**. The next one comes up; when
+   the aisle is finished the gun says so and goes back to the aisle list (**Aisles** goes back
+   any time). A pallet that cannot be moved is left with **›**; the office skips it with the
+   reason from *Front bins → Pallets to move back*.
+
+Moves ticked off with no signal queue on the gun like count lines, so a dead spot loses nothing.
+
+![](images/gun-move-desk.png)
+
+*Front2Back on the gun: the office's strip — pallet, from → to — and the pallet system framed underneath.*
 
 **The move desk.** *Front bins → Move desk* is for the person doing the moves in the pallet
 system rather than on a gun: the next pallet, the bin it is in and the bin it goes to sit at the
@@ -1384,7 +1422,9 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | The printed barcodes will not scan | The page was printed “fit to page”, or on glossy paper | Print again at **100%** on plain white paper. If a gun still refuses them, print with **Per row: 1** — the bars are wider on a bigger label |
 | A code in the spreadsheet will not print | Code 128 carries plain ASCII only — an accented letter or a smart quote cannot be drawn | The book says which character it was; retype that code with plain letters and numbers |
 | The app still shows the old name somewhere | The name was changed under Settings → Advanced → Site name | Supervisor pages change at once. A scanner picks it up when it is next online; the board on its next refresh. The name under a home-screen icon comes from the app's install and updates when the app is next reinstalled |
+| The strip on the gun shows the pallet but no system under it | No pallet system address is set, or the system refuses to be framed | Settings → Advanced → Pallet system; a system that refuses a frame has the Open link beside the strip |
 | The site's address opens the supervisor sign-in, not the scanner | That is how it works: the bare address is the office's | A scanner is opened from its own link under Settings → Scanner screen (`/?d=…`); after that its home-screen icon lands on the app. If a handheld lost that (site data cleared), open its link again |
+| A gun does not offer the cycle count, Front2Back or Not in Location | That job is unticked under Settings → Scanner screen → Jobs on the scanners, or there is nothing waiting for it | Deliberate during a wall-to-wall; tick it back on when the count is over |
 | You do not know what a message means | The gun or the dashboard said something unfamiliar | Paste it into **User guide → Ask the guide**: it knows every message the gun and the server can show, with the fix. A new starter should begin at the guide's *Your first day* |
 | You cannot find where something is set | The app has four pages and twenty-odd cards | Type what you would call it into the search box at the top of the sidebar — *"upload bin list"*, *"keyboard"*, *"approve"* — and the **Go to** hits take you straight there. **/** puts the cursor in it |
 | Not sure whether a gun has the latest version | — | The sign-on screen's bottom line reads *"App build a1b2c3d4e5f6 on the server — this scanner is up to date"*. Compare it across two guns, or against a fresh reload |

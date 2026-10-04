@@ -250,7 +250,7 @@
     'Your clock-in number — scan it, then Enter': 'Tu número de empleado — escanéalo y luego Enter',
     'Just you. Scan your badge and sign on.': 'Solo tú. Escanea tu gafete y entra.',
     'Scan your clock-in number': 'Escanea tu número de empleado',
-    'Move pallets': 'Mover tarimas',
+    'Front2Back': 'Front2Back', 'Not in Location': 'Not in Location',
     'Count it here as normal; the office is told where it turned up.': 'Cuéntala aquí normal; la oficina sabrá dónde apareció.', 'MOVE THIS PALLET': 'MUEVE ESTA TARIMA', 'MOVE PALLETS': 'MOVER TARIMAS',
     'Scan the PALLET': 'Escanea la TARIMA', 'Scan the BIN it went into': 'Escanea la UBICACIÓN donde quedó',
     'Cannot move it': 'No se puede mover', 'Aisles': 'Pasillos',

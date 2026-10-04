@@ -343,6 +343,25 @@
       </div>
     </div>
     <div class="card">
+      <h2>Jobs on the scanners <span class="chip" id="jobsChip" hidden></span>
+        <span class="muted">which jobs the sign-on screen offers right now</span></h2>
+      <div class="hint" style="margin-top:0">
+        A scanner's sign-on screen offers the jobs that exist: a <b>full count</b> when one is open, a <b>cycle count</b> when the
+        programme has a batch, <b>Front2Back</b> while any moves are waiting, <b>Not in Location</b> while that list has
+        any. Untick a job here and no scanner offers it — during a wall-to-wall, tick the full count alone so nobody signs on
+        to anything else by mistake. Scanners pick the change up the next time they are online; the practice gun in the
+        Testing Suite always has every job.
+      </div>
+      <div class="inline" style="margin-top:10px" id="jobsRow">
+        <label class="cb"><input type="checkbox" id="fJobFull" checked> Full count</label>
+        <label class="cb"><input type="checkbox" id="fJobCycle" checked> Cycle count</label>
+        <label class="cb"><input type="checkbox" id="fJobMove" checked> Front2Back (move front pallets back)</label>
+        <label class="cb"><input type="checkbox" id="fJobMissing" checked> Not in Location (find lost pallets)</label>
+        <div class="auto"><button class="primary fit" id="btnJobsSave">Save</button></div>
+      </div>
+      <div class="feedback" id="jobsMsg"></div>
+    </div>
+    <div class="card">
       <h2>What the scanners offer <span class="chip" id="promptChip" hidden></span>
         <span class="muted">the one-tap reasons a counter can pick, without typing</span></h2>
       <div class="hint" style="margin-top:0">

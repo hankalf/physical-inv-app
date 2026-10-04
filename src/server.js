@@ -28,7 +28,7 @@ import { practiceSession, ensurePractice, resetPractice, practiceDevice, practic
 import { branding, saveLogo, clearLogo, saveName } from './routes/branding.js';
 import { raiseAlert, tellTeams, listAlerts, seeAlert, closeAlert, alertsForDevice, sosReasons, saveSosReasons, DEFAULT_REASONS } from './routes/alerts.js';
 import { teamsConfig, saveTeamsConfig, postToTeams, testCard, alertCard } from './util/teams.js';
-import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout } from './routes/scanner-prompts.js';
+import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout, scannerJobs, saveScannerJobs, JOBS } from './routes/scanner-prompts.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks,
@@ -367,6 +367,24 @@ async function handleHandheld(req, res, url, m) {
 
   // --- the Not in Location list, for the gun to watch for as it scans
   if (p === '/api/missing' && method === 'GET') return sendJson(req, res, 200, { pallets: missingForGun((device && device.practice_owner) || null) });
+
+  // --- a lost pallet found from the gun's find desk: the bin it is in
+  if (p === '/api/missing/found' && method === 'POST') {
+    const body = await readJson(req);
+    const r = markFound(body.pallet, { bin: body.bin, team: body.team, device: device ? device.name : body.deviceId, sessionId: body.sessionId || null, how: 'found', owner: (device && device.practice_owner) || null });
+    if (r) audit(device ? device.name : 'a scanner', 'found a Not in Location pallet', `${r.pallet_id} in ${r.found_bin || '?'}`, body.sessionId || null);
+    return sendJson(req, res, 200, r ? { found: true, pallet: r } : { found: false, already: true });
+  }
+  // --- which jobs the sign-on screen offers; a practice gun always has all of them
+  if (p === '/api/scanner-jobs' && method === 'GET') {
+    const practice = url.searchParams.get('practice') === '1' || !!(device && device.practice_owner);
+    return sendJson(req, res, 200, { jobs: practice ? Object.fromEntries(JOBS.map(([k]) => [k, true])) : scannerJobs() });
+  }
+  // --- the pallet system's address, for the move desk on the gun
+  if (p === '/api/pallet-system' && method === 'GET') {
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'palletSystemUrl'").get();
+    return sendJson(req, res, 200, { url: row ? row.value : '' });
+  }
 
   // --- the fix list: a problem seen on the floor, reported from the gun
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/issues$/)) && method === 'GET') {
@@ -1116,6 +1134,13 @@ async function handleAdmin(req, res, url, m) {
   }
 
   // --- what the gun offers as one-tap reasons
+  if (p === '/api/admin/scanner-jobs' && method === 'GET') return sendJson(req, res, 200, { jobs: scannerJobs(), all: JOBS });
+  if (p === '/api/admin/scanner-jobs' && method === 'POST') {
+    requireAccess('admin');
+    const jobs = saveScannerJobs(await readJson(req));
+    audit(actor, 'chose which jobs the scanners offer', JOBS.filter(([k]) => jobs[k]).map(([, l]) => l).join(', '));
+    return sendJson(req, res, 200, { jobs, all: JOBS });
+  }
   if (p === '/api/admin/scanner-prompts' && method === 'GET') {
     return sendJson(req, res, 200, { ...scannerPrompts(), defaults: defaultScannerPrompts() });
   }

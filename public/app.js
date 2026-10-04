@@ -177,7 +177,7 @@
         const r = (Math.random() * 16) | 0; return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
       }));
 
-  const SCREENS = ['scrDevice', 'scrSignon', 'scrAssign', 'scrScan', 'scrOverride', 'scrHistory', 'scrSos', 'scrEmptyRun', 'scrMove', 'scrIssue'];
+  const SCREENS = ['scrDevice', 'scrSignon', 'scrAssign', 'scrScan', 'scrOverride', 'scrHistory', 'scrSos', 'scrEmptyRun', 'scrMove', 'scrFind', 'scrIssue'];
   function showScreen(name) {
     for (const s of SCREENS) $(s).classList.toggle('active', s === name);
     if (name === 'scrScan') focusScan();
@@ -494,9 +494,14 @@
     const kinds = new Set(state.sessions.map((s) => s.mode || 'full'));
     // moving pallets back is a job on a count, not a kind of count: offered while any are waiting
     if (state.sessions.some((s) => s.movesOpen > 0)) kinds.add('move');
+    // finding the pallets the office has lost is a job too, while any are on the list
+    if (state.missingOpen > 0 && state.sessions.length) kinds.add('missing');
+    // and only the jobs the office has left switched on for the scanners
+    for (const k of [...kinds]) if (state.jobs && state.jobs[k] === false) kinds.delete(k);
     $('btnModeFull').hidden = !kinds.has('full');
     $('btnModeCycle').hidden = !kinds.has('cycle');
     $('btnModeMove').hidden = !kinds.has('move');
+    $('btnModeFind').hidden = !kinds.has('missing');
     $('modeBlock').hidden = kinds.size < 2;
     $('sessionLabel').textContent = kinds.size < 2
       ? (state.mode === 'cycle' ? 'Cycle count' : 'Count session')
@@ -505,19 +510,22 @@
     $('btnModeFull').classList.toggle('selected', state.mode === 'full');
     $('btnModeCycle').classList.toggle('selected', state.mode === 'cycle');
     $('btnModeMove').classList.toggle('selected', state.mode === 'move');
+    $('btnModeFind').classList.toggle('selected', state.mode === 'missing');
 
     /* A cycle count is one person with a gun, not a crew: no team number, just
        their own clock-in number. Several people can be on the same programme at
-       once - each signs on as themselves, and each takes their own bins. */
-    const solo = state.mode === 'cycle';
+       once - each signs on as themselves, and each takes their own bins. Moving
+       and finding pallets are the same: a badge, no team. */
+    const solo = state.mode === 'cycle' || state.mode === 'move' || state.mode === 'missing';
     $('teamBlock').hidden = solo;
-    // moving pallets is one job on the warehouse: nothing to choose
-    $('fSession').hidden = state.mode === 'move';
-    $('sessionLabel').hidden = state.mode === 'move';
+    // moving or finding pallets is one job on the warehouse: nothing to choose
+    $('fSession').hidden = state.mode === 'move' || state.mode === 'missing';
+    $('sessionLabel').hidden = state.mode === 'move' || state.mode === 'missing';
     $('employeeLabel').textContent = solo ? 'Your clock-in number — scan it, then Enter' : 'Clock In Numbers — scan them, then Enter';
     $('employeeHint').textContent = solo ? 'Just you. Scan your badge and sign on.' : 'Everyone on the crew — tap a number to remove it.';
 
     const shown = state.mode === 'move' ? state.sessions.filter((s) => s.movesOpen > 0)
+      : state.mode === 'missing' ? state.sessions                       // any open count: the find is site-wide
       : state.sessions.filter((s) => (s.mode || 'full') === state.mode);
     sel.innerHTML = '';
     for (const s of shown) {
@@ -527,7 +535,7 @@
       o.dataset.session = JSON.stringify(s);
       sel.appendChild(o);
     }
-    if (!shown.length) sel.innerHTML = `<option value="">No ${state.mode === 'cycle' ? 'cycle count' : state.mode === 'move' ? 'pallets to move' : 'full count'} running</option>`;
+    if (!shown.length) sel.innerHTML = `<option value="">No ${state.mode === 'cycle' ? 'cycle count' : state.mode === 'move' ? 'pallets to move' : state.mode === 'missing' ? 'count open' : 'full count'} running</option>`;
   }
 
   async function pickMode(mode) {
@@ -576,6 +584,10 @@
     sel.innerHTML = '';
     try {
       const sessions = await api(PRACTICE ? '/api/sessions?practice=1' : '/api/sessions');
+      // which jobs the office has switched on for the scanners; the last answer stands offline
+      try { state.jobs = (await api(PRACTICE ? '/api/scanner-jobs?practice=1' : '/api/scanner-jobs')).jobs; await metaSet('jobs', state.jobs); } catch { state.jobs = (await metaGet('jobs')) || null; }
+      // how many pallets the office is looking for: whether "Find pallets" is a job today
+      try { const d = await api('/api/missing'); state.missingOpen = (d.pallets || []).length; await metaSet('missing', d.pallets || []); } catch { state.missingOpen = ((await metaGet('missing')) || []).length; }
       if (!sessions.length) { sel.innerHTML = '<option value="">No open sessions on the server</option>'; $('modeBlock').hidden = true; return; }
       state.sessions = sessions;
       await metaSet('sessions', sessions);
@@ -648,9 +660,11 @@
   async function signon() {
     clearFeedback($('signonMsg'));
     if (norm($('fEmployee').value)) addEmployee();
-    const solo = state.mode === 'cycle';
+    const solo = state.mode === 'cycle' || state.mode === 'move' || state.mode === 'missing';
     // on a cycle count the person IS the team, so everything keyed by team - the
     // bins they take, their clock, their lines - is theirs alone
+    // on a solo job the badge scanned last is the person; chips left from an earlier crew are dropped
+    if (solo && state.employees.length > 1) state.employees = [state.employees[state.employees.length - 1]];
     const team = solo ? (state.employees[0] || '') : norm($('fTeam').value);
     if (!team) { feedback($('signonMsg'), 'err', solo ? 'Scan your clock-in number' : 'Enter your team number'); return; }
     if (!state.employees.length) { feedback($('signonMsg'), 'err', 'Add at least one clock in number'); return; }
@@ -720,6 +734,8 @@
 
       // moving pallets back: its own screen, its own list
       if (state.mode === 'move') { await loadMoves(); renderMoves(); showScreen('scrMove'); syncQueue(); return; }
+      // finding the office's lost pallets: the find desk
+      if (state.mode === 'missing') { await loadFind(); renderFind(); showScreen('scrFind'); syncQueue(); return; }
       // a cycle session has no aisle plan, but the bin list is the job: show it
       if (session.guided || session.mode === 'cycle') { renderAssignment(); showScreen('scrAssign'); }
       else { showScreen('scrScan'); renderStep(); }
@@ -2208,11 +2224,11 @@
       try {
         const d = await api('/api/missing');
         await metaSet('missing', d.pallets || []);
-        missingMap = new Map((d.pallets || []).map(([p, last, desc]) => [p, { last, desc }]));
+        missingMap = new Map((d.pallets || []).map(([p, last, desc, sku, qty]) => [p, { last, desc, sku, qty }]));
         return;
       } catch { /* use the cached list */ }
     }
-    missingMap = new Map(((await metaGet('missing')) || []).map(([p, last, desc]) => [p, { last, desc }]));
+    missingMap = new Map(((await metaGet('missing')) || []).map(([p, last, desc, sku, qty]) => [p, { last, desc, sku, qty }]));
   }
   function missingHit(palletId) {
     const m = missingMap.get(palletId);
@@ -2323,11 +2339,21 @@
      pallet (so it is the right one), move it, scan the bin it went into (so it
      is the right bin). Done and skipped moves queue like count lines, so a dead
      spot in the freezer loses nothing. */
-  const SKIP_REASONS = ['Pallet is not there', 'Bin behind is not empty', 'Cannot reach it', 'Pallet is damaged'];
-  const moveState = { aisle: '', task: null, step: 'pallet' };
+  /* ------------------------------------------------------- Front2Back
+     A front pallet with an empty bin behind it, put back where it belongs. The
+     office builds the list; the gun shows it as the office's own move desk,
+     aisle by aisle: the pallet, the bin it is in and the bin it goes to, with
+     the pallet system's screen underneath. The move is booked in that screen;
+     here it is only ticked off, and a tick with no signal waits for one. */
+  const moveState = { aisle: '', at: 0, task: null };
 
+  async function loadPalletSystem() {
+    if (online()) { try { state.palletSystem = (await api('/api/pallet-system')).url || ''; await metaSet('palletSystem', state.palletSystem); return; } catch { /* cached */ } }
+    state.palletSystem = (await metaGet('palletSystem')) || '';
+  }
   async function loadMoves() {
     state.movesDoneLocal = (await metaGet('movesDoneLocal')) || [];
+    await loadPalletSystem();
     if (online()) {
       try {
         state.moves = await api(`/api/sessions/${state.session.id}/moves`);
@@ -2345,68 +2371,64 @@
     return a ? a.moves.filter((m) => !done.has(m.id)) : [];
   };
 
+  /** The pallet system under a desk: the frame when there is an address, the bar either way. */
+  function deskSystem(sysId, frameId, openId, noteId) {
+    const url = state.palletSystem || '';
+    $(sysId).hidden = !url;
+    $(openId).hidden = !url;
+    $(noteId).textContent = url ? `Pallet system: ${url}` : 'No pallet system address set — the office sets it under Settings → Advanced.';
+    if (url) {
+      if ($(frameId).getAttribute('src') !== url) $(frameId).src = url;
+      $(openId).href = url;
+    }
+  }
+
+  /** The aisle list: how many are waiting in each. */
+  function aisleList(box, title, aisles, onPick) {
+    box.innerHTML = '';
+    const head = document.createElement('div');
+    head.className = 'assign';
+    head.innerHTML = '<div class="sub"></div><div class="aisle"></div><div class="sub"></div>';
+    head.querySelector('.sub').textContent = title;
+    head.querySelector('.aisle').textContent = aisles.reduce((n, a) => n + a.open, 0);
+    head.querySelector('.sub:last-child').textContent = 'waiting — pick an aisle';
+    box.appendChild(head);
+    for (const a of aisles) {
+      const b = document.createElement('button');
+      b.textContent = `${a.aisle === '—' ? 'No location known' : aisleLabel(a.aisle, zoneFor(a.aisle))} · ${a.open}`;
+      b.onclick = () => onPick(a.aisle);
+      box.appendChild(b);
+    }
+  }
+
   function renderMoves() {
     const list = $('moveAisles');
-    list.innerHTML = '';
     const aisles = (state.moves?.aisles || []).map((a) => ({ aisle: a.aisle, open: openMoves(a.aisle).length })).filter((a) => a.open);
-    const task = moveState.aisle ? openMoves(moveState.aisle)[0] : null;
-    moveState.task = task || null;
+    const open = moveState.aisle ? openMoves(moveState.aisle) : [];
+    if (moveState.at >= open.length) moveState.at = Math.max(0, open.length - 1);
+    const task = open[moveState.at] || null;
+    moveState.task = task;
     $('moveTask').hidden = !task;
     $('moveBanner').hidden = !!task || aisles.length > 0;
+    list.innerHTML = '';
     if (!task) {
       moveState.aisle = '';
       if (!aisles.length) {
         $('moveBanner').hidden = false;
         $('moveBanner').className = 'feedback show ok';
         $('moveBanner').textContent = 'Nothing left to move. Refresh to check again, or sign off.';
-      }
-      const head = document.createElement('div');
-      head.className = 'assign';
-      head.innerHTML = '<div class="sub">MOVE PALLETS</div><div class="aisle"></div><div class="sub"></div>';
-      head.querySelector('.aisle').textContent = aisles.reduce((n, a) => n + a.open, 0);
-      head.querySelector('.sub:last-child').textContent = 'pallets to move back — pick an aisle';
-      list.appendChild(head);
-      for (const a of aisles) {
-        const b = document.createElement('button');
-        b.textContent = `${aisleLabel(a.aisle, zoneFor(a.aisle))} · ${a.open} to move`;
-        b.onclick = () => { moveState.aisle = a.aisle; moveState.step = 'pallet'; clearFeedback($('moveMsg')); renderMoves(); };
-        list.appendChild(b);
-      }
-      return;
-    }
-    const left = openMoves(moveState.aisle).length;
-    $('mvPallet').textContent = task.pallet;
-    $('mvWhere').textContent = `from ${task.from} → to ${task.to} (behind)`;
-    $('mvLeft').textContent = `${aisleLabel(moveState.aisle, zoneFor(moveState.aisle))} · ${left} to move${task.level ? ' · level ' + task.level : ''}`;
-    $('mvPrompt').textContent = moveState.step === 'pallet' ? 'Scan the PALLET' : 'Scan the BIN it went into';
-    $('moveSkipReasons').hidden = true;
-    $('fMoveScan').value = '';
-    setTimeout(() => { try { $('fMoveScan').focus({ preventScroll: true }); } catch { $('fMoveScan').focus(); } }, 30);
-  }
-
-  async function moveScan(raw) {
-    const v = norm(raw);
-    const t = moveState.task;
-    if (!v || !t) return;
-    if (moveState.step === 'pallet') {
-      if (v !== t.pallet) {
-        beep('err');
-        feedback($('moveMsg'), 'err', `That is ${v} — this move is pallet ${t.pallet}`, `It should be in ${t.from}, the front position.`);
         return;
       }
-      beep('ok');
-      moveState.step = 'bin';
-      feedback($('moveMsg'), 'ok', `Pallet ${t.pallet}`, `Move it to ${t.to} — the bin behind — then scan that bin.`);
-      renderMoves();
+      aisleList(list, 'FRONT2BACK', aisles, (aisle) => { moveState.aisle = aisle; moveState.at = 0; clearFeedback($('moveMsg')); renderMoves(); });
       return;
     }
-    if (v === t.from) { beep('err'); feedback($('moveMsg'), 'err', 'That is the front bin it came from', `Scan the bin behind: ${t.to}.`); return; }
-    if (v !== t.to) {
-      beep('err');
-      feedback($('moveMsg'), 'err', `That is ${v}, not ${t.to}`, 'Put the pallet in the bin behind its front position. If it cannot go there, tap Cannot move it.');
-      return;
-    }
-    await finishMoveLocal('done', { actualBin: v });
+    $('mvPallet').textContent = task.pallet;
+    $('mvFrom').textContent = task.from;
+    $('mvTo').textContent = task.to;
+    $('mvLeft').textContent = `${aisleLabel(moveState.aisle, zoneFor(moveState.aisle))}${task.level ? ' · level ' + task.level : ''} · ${moveState.at + 1} of ${open.length} to move`;
+    $('btnMovePrev').disabled = moveState.at <= 0;
+    $('btnMoveNext').disabled = moveState.at >= open.length - 1;
+    deskSystem('moveSys', 'moveFrame', 'moveOpen', 'mvUrlNote');
   }
 
   async function finishMoveLocal(status, extra = {}) {
@@ -2415,16 +2437,96 @@
     state.movesDoneLocal = [...(state.movesDoneLocal || []), { id: t.id, status, ...extra, at: new Date().toISOString() }];
     await metaSet('movesDoneLocal', state.movesDoneLocal);
     beep(status === 'done' ? 'ok' : 'warn');
-    moveState.step = 'pallet';
-    const left = openMoves(moveState.aisle).length;
+    const aisle = moveState.aisle;
     renderMoves();
-    if (status === 'done') feedback(left ? $('moveMsg') : $('moveAisleMsg'), 'ok', `Moved ${t.pallet} to ${t.to}`, left ? `${left} left in this aisle` : `${aisleLabel(moveState.aisle || t.from.slice(0, 3))} done`);
-    else feedback(left ? $('moveMsg') : $('moveAisleMsg'), 'warn', `Skipped ${t.pallet}`, extra.reason || '');
+    const left = openMoves(aisle).length;
+    feedback(left ? $('moveMsg') : $('moveAisleMsg'), 'ok', `Moved ${t.pallet} to ${t.to}`, left ? `${left} left in this aisle` : `${aisleLabel(aisle, zoneFor(aisle))} done`);
     flushMoves();
+  }
+
+  /* ------------------------------------------------------- Not in Location
+     The office's list of lost pallets as the same desk: pick the aisle it was
+     last seen in, then the pallet, what it is and where it was, with the pallet
+     system under it. Found ticks it off; the office is told. */
+  const findState = { aisle: '', at: 0, task: null, rows: [] };
+  async function loadFind() {
+    state.foundLocal = (await metaGet('foundLocal')) || [];
+    await loadPalletSystem();
+    await refreshMissing();
+    // the aisle each pallet was last seen in, from the bin list where it knows the bin
+    const rows = [];
+    for (const [pallet, m] of missingMap.entries()) {
+      let aisle = '—';
+      if (m.last) {
+        const loc = await lookupLocation(m.last).catch(() => null);
+        aisle = (loc && loc.aisle) || (/^[A-Z]{1,2}\d{2}/.test(m.last) ? m.last.match(/^[A-Z]{1,2}\d{2}/)[0] : '—');
+      }
+      rows.push({ pallet, ...m, aisle });
+    }
+    findState.rows = rows;
+  }
+  const openFinds = (aisle) => {
+    const done = new Set((state.foundLocal || []).map((f) => f.pallet));
+    return findState.rows.filter((r) => !done.has(r.pallet) && (!aisle || r.aisle === aisle));
+  };
+  function renderFind() {
+    const list = $('findAisles');
+    const byAisle = new Map();
+    for (const r of openFinds('')) byAisle.set(r.aisle, (byAisle.get(r.aisle) || 0) + 1);
+    const aisles = [...byAisle.entries()].map(([aisle, open]) => ({ aisle, open })).sort((a, b) => (a.aisle === '—') - (b.aisle === '—') || a.aisle.localeCompare(b.aisle));
+    const open = findState.aisle ? openFinds(findState.aisle) : [];
+    if (findState.at >= open.length) findState.at = Math.max(0, open.length - 1);
+    const t = open[findState.at] || null;
+    findState.task = t;
+    $('findTask').hidden = !t;
+    $('findBanner').hidden = !!t || aisles.length > 0;
+    list.innerHTML = '';
+    if (!t) {
+      findState.aisle = '';
+      if (!aisles.length) {
+        $('findBanner').hidden = false;
+        $('findBanner').className = 'feedback show ok';
+        $('findBanner').textContent = 'Nothing left to find. Refresh to check again, or sign off.';
+        return;
+      }
+      aisleList(list, 'NOT IN LOCATION', aisles, (aisle) => { findState.aisle = aisle; findState.at = 0; clearFeedback($('findMsg')); renderFind(); });
+      return;
+    }
+    $('fdPallet').textContent = t.pallet;
+    $('fdLast').textContent = t.last || 'nowhere known';
+    $('fdWhat').textContent = [t.desc, t.sku ? `item ${t.sku}` : '', t.qty !== '' && t.qty != null ? `qty ${t.qty}` : ''].filter(Boolean).join(' · ') || 'no description';
+    $('fdLeft').textContent = `${t.aisle === '—' ? 'No known location' : aisleLabel(t.aisle, zoneFor(t.aisle))} · ${findState.at + 1} of ${open.length} to find`;
+    $('btnFindPrev').disabled = findState.at <= 0;
+    $('btnFindNext').disabled = findState.at >= open.length - 1;
+    deskSystem('findSys', 'findFrame', 'findOpen', 'fdUrlNote');
+  }
+  async function finishFindLocal() {
+    const t = findState.task;
+    if (!t) return;
+    state.foundLocal = [...(state.foundLocal || []), { pallet: t.pallet, at: new Date().toISOString() }];
+    await metaSet('foundLocal', state.foundLocal);
+    missingMap.delete(t.pallet);
+    beep('ok');
+    const aisle = findState.aisle;
+    renderFind();
+    const left = openFinds(aisle).length;
+    feedback(left ? $('findMsg') : $('findDoneMsg'), 'ok', `Found ${t.pallet}`, left ? `${left} left in this aisle. The office is told.` : 'That was the last one here. The office is told.');
+    flushFinds();
+  }
+  async function flushFinds() {
+    if (!online() || !(state.foundLocal || []).length) return;
+    for (const f of [...state.foundLocal]) {
+      try {
+        await api('/api/missing/found', { method: 'POST', body: JSON.stringify({ pallet: f.pallet, bin: f.bin || '', team: state.team, deviceId: state.deviceId, sessionId: state.session ? state.session.id : null }) });
+        state.foundLocal = state.foundLocal.filter((x) => x.pallet !== f.pallet);
+      } catch { /* next time */ }
+    }
+    await metaSet('foundLocal', state.foundLocal);
   }
 
   /** Done and skipped moves go up as soon as there is signal. */
   async function flushMoves() {
+    flushFinds().catch(() => {});
     if (!online() || !state.session || !(state.movesDoneLocal || []).length) return;
     for (const d of [...state.movesDoneLocal]) {
       try {
@@ -2772,24 +2874,19 @@
     window.i18n.set(window.i18n.lang === 'es' ? 'en' : 'es');
     beep('ok');
   };
-  $('fMoveScan').addEventListener('keydown', (e) => {
-    if (SCAN_ENTER.has(e.key)) { e.preventDefault(); const v = $('fMoveScan').value; $('fMoveScan').value = ''; moveScan(v); }
-  });
-  $('btnMoveSkip').onclick = () => {
-    const box = $('moveSkipReasons');
-    box.hidden = !box.hidden;
-    if (box.hidden) return;
-    box.innerHTML = '';
-    for (const r of SKIP_REASONS) {
-      const b = document.createElement('button');
-      b.className = 'chip-btn big';
-      b.textContent = r;
-      b.onclick = () => finishMoveLocal('skipped', { reason: r });
-      box.appendChild(b);
-    }
-  };
-  $('btnMoveAisles').onclick = () => { moveState.aisle = ''; moveState.step = 'pallet'; clearFeedback($('moveMsg')); renderMoves(); };
+  $('btnMoveDone').onclick = () => { const t = moveState.task; if (t) finishMoveLocal('done', { actualBin: t.to }); };
+  $('btnMovePrev').onclick = () => { moveState.at = Math.max(0, moveState.at - 1); clearFeedback($('moveMsg')); renderMoves(); };
+  $('btnMoveNext').onclick = () => { moveState.at += 1; clearFeedback($('moveMsg')); renderMoves(); };
+  $('btnMoveAisles').onclick = () => { moveState.aisle = ''; moveState.at = 0; clearFeedback($('moveMsg')); renderMoves(); };
   $('btnMoveRefresh').onclick = async () => { await flushMoves(); await loadMoves(); renderMoves(); };
+  $('btnFindFound').onclick = () => finishFindLocal();
+  $('btnFindPrev').onclick = () => { findState.at = Math.max(0, findState.at - 1); clearFeedback($('findMsg')); renderFind(); };
+  $('btnFindNext').onclick = () => { findState.at += 1; clearFeedback($('findMsg')); renderFind(); };
+  $('btnFindAisles').onclick = () => { findState.aisle = ''; findState.at = 0; clearFeedback($('findMsg')); renderFind(); };
+  $('btnFindRefresh').onclick = async () => { await flushFinds(); await loadFind(); renderFind(); };
+  $('btnFindSos').onclick = () => { state.sosReturn = 'scrFind'; openSos(); };
+  $('btnFindSignoff').onclick = () => $('btnSignoff').click();
+  $('btnModeFind').onclick = () => pickMode('missing');
   $('btnMoveSos').onclick = () => { state.sosReturn = 'scrMove'; openSos(); };
   $('btnIssue').onclick = openIssue;
   $('btnIssueBack').onclick = backFromIssue;

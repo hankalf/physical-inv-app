@@ -355,3 +355,22 @@ body.big-text .nextbin .nb-code { font-size: 30px; }
 .errow span { color: var(--muted); font-size: 14px; margin-left: auto; text-align: right; }
 .errow:nth-child(even) { background: var(--panel); }
 .errow.done { opacity: .55; }
+
+/* The desks on the gun (Front2Back, Not in Location): the office's strip - the
+   pallet, from and to - with the pallet system's own screen underneath. */
+.gdesk { display: grid; grid-template-columns: 40px 1fr 40px; gap: 6px; align-items: center;
+  background: var(--surface-2, #141a24); border: 1px solid var(--line, #2a3240); border-radius: 12px; padding: 10px 6px; }
+.gdesk > button { width: 40px; min-height: 60px; padding: 0; font-size: 22px; }
+.gdeskwhat { min-width: 0; }
+.gdesk .gl { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.gdesk .gl + .gl { margin-top: 4px; }
+.gdesk .lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted, #8b95a7); }
+.gdesk .gl b { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 22px; letter-spacing: .02em; word-break: break-all; }
+.gdesk .arrow { color: var(--accent, #4c9dff); font-size: 20px; font-weight: 800; }
+.gdesk .gmeta { color: var(--muted, #8b95a7); font-size: 13px; margin-top: 4px; }
+.gdeskrow { margin-top: 8px; }
+.gbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 12px; }
+.gbar .muted { color: var(--muted, #8b95a7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.gbar a { color: var(--ok, #3fcf68); white-space: nowrap; }
+.mvsys { margin-top: 6px; border: 1px solid var(--line, #2a3240); border-radius: 12px; overflow: hidden; background: #fff; }
+.mvsys iframe { display: block; width: 100%; height: max(380px, calc(100vh - 330px)); border: 0; background: #fff; }

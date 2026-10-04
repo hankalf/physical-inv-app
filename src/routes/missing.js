@@ -102,8 +102,8 @@ export function listMissing({ status = '', owner = null } = {}) {
 
 /** The gun's copy: every pallet still lost, and where it was last seen. */
 export const missingForGun = (owner = null) =>
-  db.prepare("SELECT pallet_id, last_location, description FROM missing WHERE status = 'missing' AND practice_owner IS ? ORDER BY id").all(owner)
-    .map((r) => [r.pallet_id, r.last_location || '', r.description || '']);
+  db.prepare("SELECT id, pallet_id, last_location, description, sku, qty FROM missing WHERE status = 'missing' AND practice_owner IS ? ORDER BY id").all(owner)
+    .map((r) => [r.pallet_id, r.last_location || '', r.description || '', r.sku || '', r.qty == null ? '' : r.qty, r.id]);
 
 /**
  * A pallet on the list has been scanned somewhere. Called for every count line

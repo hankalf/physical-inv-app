@@ -16,9 +16,73 @@
     $('scrMain').classList.toggle('active', which === 'main');
   }
 
+  /* ------------------------------------------------------------ the find desk
+     The list as a desk: the next pallet to look for, what it is, where it was
+     last seen, and the pallet system framed under it, the way the move desk
+     works on Front bins. */
+  let deskList = [];
+  let deskAt = 0;
+  let deskUrl = '';
+  let deskUrlLoaded = '';
+  function renderDesk() {
+    const m = deskList[deskAt] || null;
+    $('fdDeskNone').hidden = !!m;
+    $('fdDeskMove').hidden = !m;
+    $('fdDeskPrev').disabled = deskAt <= 0;
+    $('fdDeskNext').disabled = deskAt >= deskList.length - 1;
+    $('fdDeskFound').disabled = !m || !api.can('missing');
+    $('fdDeskClose').disabled = !m || !api.can('missing');
+    $('fdDeskBin').disabled = !m;
+    $('fdDeskCount').textContent = deskList.length ? `${deskAt + 1} of ${deskList.length} missing` : '';
+    if (m) {
+      $('fdDeskPallet').textContent = m.pallet_id;
+      $('fdDeskLast').textContent = m.last_location || '—';
+      $('fdDeskMeta').textContent = [m.description, m.sku ? `item ${m.sku}` : '', m.qty != null ? `qty ${m.qty}` : '', m.lot ? `lot ${m.lot}` : '', m.note].filter(Boolean).join(' · ') || 'no description';
+    }
+    $('fdDeskUrlNote').textContent = deskUrl ? `Pallet system: ${deskUrl}` : 'No pallet system address set — an admin can set it under Settings → Advanced → Pallet system. The strip above works without it.';
+    $('fdDeskOpen').hidden = !deskUrl;
+    $('fdDeskOpen').href = deskUrl || '#';
+    $('fdDeskWrap').classList.toggle('none', !deskUrl);
+    if (deskUrl && deskUrl !== deskUrlLoaded) { deskUrlLoaded = deskUrl; $('fdDeskFrame').src = deskUrl; }
+  }
+  async function refreshDesk() {
+    try { deskUrl = (await apiJson('/api/admin/pallet-system')).url || ''; } catch { deskUrl = ''; }
+    const d = await apiJson('/api/admin/missing?status=missing');
+    deskList = d.rows || [];
+    if (deskAt >= deskList.length) deskAt = Math.max(0, deskList.length - 1);
+    renderDesk();
+  }
+  $('fdDeskPrev').onclick = () => { deskAt = Math.max(0, deskAt - 1); renderDesk(); };
+  $('fdDeskNext').onclick = () => { deskAt = Math.min(deskList.length - 1, deskAt + 1); renderDesk(); };
+  $('fdDeskFound').onclick = async () => {
+    const m = deskList[deskAt];
+    if (!m) return;
+    const bin = $('fdDeskBin').value.trim();
+    if (!bin) { msg($('fdDeskMsg'), 'err', 'Type the bin it is in first'); $('fdDeskBin').focus(); return; }
+    try {
+      await postJson(`/api/admin/missing/${m.id}/found`, { bin });
+      $('fdDeskBin').value = '';
+      msg($('fdDeskMsg'), 'ok', `${m.pallet_id} found in ${bin.toUpperCase()}.`);
+      await refresh();
+    } catch (err) { msg($('fdDeskMsg'), 'err', err.message); }
+  };
+  $('fdDeskBin').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('fdDeskFound').click(); });
+  $('fdDeskClose').onclick = async () => {
+    const m = deskList[deskAt];
+    if (!m) return;
+    const outcome = prompt(`Close ${m.pallet_id} — what happened? (written off, shipped, never existed…)`);
+    if (outcome === null) return;
+    try { await postJson(`/api/admin/missing/${m.id}/close`, { outcome }); msg($('fdDeskMsg'), 'ok', `${m.pallet_id} closed.`); await refresh(); } catch (err) { msg($('fdDeskMsg'), 'err', err.message); }
+  };
+  const WIDE = 'finddesk:wide';
+  const setWide = (w) => { $('fdDeskWrap').classList.toggle('wide', w); $('fdDeskWide').textContent = w ? 'Handheld size' : 'Full width'; try { localStorage.setItem(WIDE, w ? '1' : ''); } catch { /* private window */ } };
+  try { setWide(localStorage.getItem(WIDE) === '1'); } catch { setWide(false); }
+  $('fdDeskWide').onclick = () => setWide(!$('fdDeskWrap').classList.contains('wide'));
+
   async function refresh() {
     const d = await apiJson(`/api/admin/missing${status ? '?status=' + status : ''}`);
     rows = d.rows;
+    refreshDesk().catch(() => {});
     $('msMissing').textContent = d.summary.missing.toLocaleString();
     $('msFound').textContent = d.summary.found.toLocaleString();
     $('msClosed').textContent = d.summary.closed.toLocaleString();

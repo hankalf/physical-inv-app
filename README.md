@@ -28,6 +28,12 @@ third-party runtime dependencies: Node 22's built-in HTTP server and `node:sqlit
 
 ---
 
+## Procedures by role
+
+`docs/SOP.md` is the whole manual. `docs/roles/` has one short SOP per login profile — admin,
+supervisor, inventory control, count supervisor, warehouse jobs, cycle counter — and one for the
+counters on the handhelds, each as Markdown and PDF (`node tools/sop-pdf.mjs --roles`).
+
 ## Offline-first
 
 Warehouse Wi-Fi has dead spots. So at sign-on the handheld downloads the session's bin
@@ -108,9 +114,10 @@ sign-in covers all of them.
 | **Cycle counts** (`/cycle`) | Today · Still open · Coverage · Program & data |
 | **Teams & crew** (`/teams`) | Crew & teams · Equipment rules |
 | **Settings** (`/settings`) | Getting started · Scanner screen · Lists & racking · ERP & backups · Advanced |
-| **Front bins** (`/front`) | Pallets to move back · Move desk · Front-placed bins |
-| **Not in Location** (`/missing`) | — |
+| **Front bins** (`/front`) | Pallets to move back · Move desk · Front-placed bins. The gun has the same desk: Front2Back at sign-on with a badge alone, pick the aisle, the pallet and its two bins, the pallet system framed under them, Moved — next |
+| **Not in Location** (`/missing`) | the list, and a find desk; on the gun, Not in Location at sign-on with a badge alone, the aisle it was last seen in, the pallet system framed under the strip, Found — next |
 | **Testing Suite** (`/testing`) | the real scanner on a practice count of your own |
+| **Settings → Scanner screen → Jobs on the scanners** | which jobs the sign-on screen offers (full count, cycle count, Front2Back, Not in Location); tick the full count alone on count day |
 | **Settings → Advanced → Site name** | the app's own name and the location under it, out of the box *Full Harvest Inventory · Front Royal*; a change lands on every page, the guns, the board and the installed app's manifest |
 | **User guide** (`/guide`) | the SOP inside the app: journeys, what goes wrong at each step, an Ask box that answers a question or a pasted message, and a live "Right now" read of the count. Open to every login |
 

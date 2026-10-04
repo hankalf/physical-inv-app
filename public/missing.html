@@ -96,6 +96,42 @@
       </div>
       <div class="scroll" style="margin-top:10px"><table id="msTable"></table></div>
     </div>
+
+    <div class="card" id="findDeskCard">
+      <h2>Find desk <span class="muted">the next pallet to look for, with the pallet system below</span></h2>
+      <div class="hint" style="margin-top:0">
+        For the person working the list from the pallet system rather than walking: the pallet, what it is and where it was
+        last seen at the top, <b>‹ ›</b> to step through, and the system's own screen underneath. When it turns up, type the
+        bin and press <b>Found</b>; <b>Close</b> writes one off with what happened. The scanners have the same desk under
+        <b>Find pallets</b> at sign-on.
+      </div>
+      <div class="deskstrip" id="fdDeskStrip">
+        <button type="button" class="sm" id="fdDeskPrev" title="The one before">‹</button>
+        <div class="deskwhat">
+          <div class="desknone muted" id="fdDeskNone">Nothing missing.</div>
+          <div class="deskmove" id="fdDeskMove" hidden>
+            <div class="deskpallet"><span class="lbl">Pallet</span><b id="fdDeskPallet"></b></div>
+            <div class="deskbins"><span class="lbl">Last seen in</span><b id="fdDeskLast"></b></div>
+            <div class="muted" id="fdDeskMeta"></div>
+          </div>
+        </div>
+        <button type="button" class="sm" id="fdDeskNext" title="The next one">›</button>
+        <div class="deskacts">
+          <input id="fdDeskBin" class="sm" placeholder="bin it is in" style="width:120px" autocomplete="off">
+          <button type="button" class="primary sm" id="fdDeskFound" title="It turned up: in this bin">Found</button>
+          <button type="button" class="sm" id="fdDeskClose" title="Written off, shipped, never existed…">Close</button>
+          <span class="muted" id="fdDeskCount"></span>
+        </div>
+      </div>
+      <div class="feedback" id="fdDeskMsg"></div>
+      <div class="deskbar">
+        <span class="muted" id="fdDeskUrlNote"></span>
+        <span class="spacer"></span>
+        <a class="tlink" id="fdDeskOpen" target="_blank" rel="noopener" hidden>Open the pallet system in a new tab ↗</a>
+        <button type="button" class="sm" id="fdDeskWide" title="Handheld-sized, like the Testing Suite's gun, or the full width of the page">Full width</button>
+      </div>
+      <div class="deskwrap" id="fdDeskWrap"><div class="glass"><iframe id="fdDeskFrame" title="The pallet system"></iframe></div></div>
+    </div>
     </section>
   </main>
 </div>
