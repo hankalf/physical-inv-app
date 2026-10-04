@@ -1417,8 +1417,10 @@ Three things in a real export, and what the upload does with them:
 
 - **Empty positions.** A row with a bin and no container (System `OPEN`) is a position the count
   expects to find empty. It is not a pallet; the summary says how many there were.
-- **A container on two rows.** The first row stands; the summary lists the rest, with both bins,
-  so somebody can look. Nothing is overwritten quietly.
+- **A container on two rows.** In the same bin it is two ledger entries for one pallet (a −134
+  and a +180 are a pallet of 46): the quantities are added up. In two different bins the first row
+  stands and the summary lists the rest, with both bins, so somebody can look. Nothing is
+  overwritten quietly.
 - **Odd quantities.** Zero and negative quantities are kept exactly as the report has them, and
   the summary counts them.
 

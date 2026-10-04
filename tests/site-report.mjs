@@ -39,6 +39,7 @@ check('Every container becomes a pallet once', up.pallets === containers.size, `
 check(`OPEN rows are empty positions, not pallets: ${open} of them`, up.openBins === open, `${up.openBins}`);
 check('A container on two rows is reported, and the first row stands', up.duplicates === 1 && /4822666 \(F16B039 and F15E045\)/.test(up.duplicateList.join(' ')), up.duplicateList.join(' | '));
 check('Zero and negative quantities are counted and kept', up.nonPositive >= 3, `${up.nonPositive}`);
+check('A container on two rows in the same bin is one pallet with the quantities added up (-134 and 180)', up.merged === 1 && /4879964 in F18A109/.test(up.mergedList.join(' ')), up.mergedList.join(' | '));
 check('The four systems are told apart', up.bySource && up.bySource.JUSTFOOD > 0 && up.bySource.SGI > 0 && up.bySource.NTFF > 0, JSON.stringify(up.bySource));
 
 const report = await get(`/api/admin/sessions/${sess.id}/pallets?limit=5000`);
@@ -49,6 +50,8 @@ check('Item No., Description, Unit of Measure Code and Lot No. land in their col
   got && got.sku === first.item.toUpperCase() && got.description === first.desc && got.uom === first.uom.toUpperCase() && got.expected_lot === first.lot.toUpperCase(),
   got && `${got.sku} / ${got.uom} / ${got.expected_lot}`);
 check('Entry No. and Variant Code come through to the pallet report', got && got.entry_no === first.entry && got.variant === first.variant.toUpperCase(), got && `${got.entry_no} ${got.variant}`);
+const merged = byId.get('4879964');
+check('…and the pallet report expects 46 of it', merged && Number(merged.expected_qty) === 46, merged && String(merged.expected_qty));
 const dup = byId.get('4822666');
 check('The duplicated container is expected where its first row said', dup && dup.expected_location === 'F16B039', dup && dup.expected_location);
 const lower = rows.find((r) => r.bin !== r.bin.toUpperCase() && r.container);

@@ -97,7 +97,7 @@ export function importMaster(sessionId, kind, text, { replace = false, source = 
   const { headers, records } = parseRecords(text);
   if (!records.length) throw Object.assign(new Error('no data rows found'), { status: 400 });
 
-  const stats = { kind, rows: records.length, bins: 0, aisles: 0, pallets: 0, planned: 0, skipped: 0, headers, openBins: 0, duplicates: 0, duplicateList: [], nonPositive: 0 };
+  const stats = { kind, rows: records.length, bins: 0, aisles: 0, pallets: 0, planned: 0, skipped: 0, headers, openBins: 0, duplicates: 0, duplicateList: [], merged: 0, mergedList: [], nonPositive: 0 };
   const seenPallets = new Map();        // container -> the bin it was first listed in, within this file
   const newAisles = new Set();
   const layout = loadLayout(session.layout);
@@ -155,16 +155,24 @@ export function importMaster(sessionId, kind, text, { replace = false, source = 
           if (binOfRow) { stats.openBins = (stats.openBins || 0) + 1; continue; }
           stats.skipped++; continue;
         }
+        const qtyRaw = pick(rec, QTY_ALIASES);
+        const qty = Number(String(qtyRaw).replace(/[, ]/g, ''));
         if (seenPallets.has(pallet)) {
-          /* the same container on two rows (two bins, two entries): the first
-             row stands, the rest are reported rather than quietly overwriting it */
-          stats.duplicates = (stats.duplicates || 0) + 1;
-          if (stats.duplicateList.length < 25) stats.duplicateList.push(`${pallet} (${seenPallets.get(pallet)} and ${binOfRow || 'no bin'})`);
+          /* The same container on two rows. In the same bin it is two ledger
+             entries for one pallet (a -134 and a +180 are a pallet of 46): the
+             quantities are added up. In two different bins the first row stands
+             and the rest are reported, rather than quietly overwriting it. */
+          if (binOfRow && seenPallets.get(pallet) === binOfRow) {
+            if (qtyRaw !== '' && Number.isFinite(qty)) db.prepare('UPDATE pallets SET expected_qty = COALESCE(expected_qty, 0) + ? WHERE session_id = ? AND pallet_id = ?').run(qty, id, pallet);
+            stats.merged = (stats.merged || 0) + 1;
+            if (stats.mergedList.length < 25) stats.mergedList.push(`${pallet} in ${binOfRow}`);
+          } else {
+            stats.duplicates = (stats.duplicates || 0) + 1;
+            if (stats.duplicateList.length < 25) stats.duplicateList.push(`${pallet} (${seenPallets.get(pallet)} and ${binOfRow || 'no bin'})`);
+          }
           continue;
         }
         seenPallets.set(pallet, binOfRow || 'no bin');
-        const qtyRaw = pick(rec, QTY_ALIASES);
-        const qty = Number(String(qtyRaw).replace(/[, ]/g, ''));
         if (qtyRaw !== '' && Number.isFinite(qty) && qty <= 0) stats.nonPositive = (stats.nonPositive || 0) + 1;
         upPallet.run(
           id, pallet,
