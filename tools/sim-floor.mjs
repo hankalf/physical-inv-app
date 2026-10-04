@@ -227,7 +227,7 @@ try {
   const teams = [];
   for (let t = 1; t <= TEAMS; t++) {
     const crew = [0, 1].map((k) => ({ badge: `E${pad(1000 + t * 10 + k, 4)}`, name: `${FIRST[(t * 2 + k) % FIRST.length]} ${LAST[(t * 3 + k * 7) % LAST.length]}`, equipment: k === 0 ? ['HIGH REACH', 'SCISSOR LIFT'] : ['DOCK TRUCK', 'FOOT'] }));
-    teams.push({ name: String(t), crew, guns: [], queue: [], active: null, handed: new Set(), bins: 0, done: 0, lines: 0 });
+    teams.push({ name: String(t), crew, guns: [], queue: [], active: null, handed: new Set(), claimed: new Set(), bins: 0, done: 0, lines: 0 });
   }
   let rosterCsv = 'Clock in number,Name,Department,Equipment\n';
   for (const t of teams) for (const c of t.crew) rosterCsv += `${c.badge},${c.name},${Number(t.name) <= 10 ? 'Freezer A' : 'Freezer B'},"${c.equipment.join(', ')}"\n`;
@@ -449,6 +449,9 @@ try {
     const list = await get(`/api/sessions/${sess.id}/recounts?team=${t.name}`, gun.H).catch(() => ({ tasks: [] }));
     for (const task of (list.tasks || []).filter((x) => x.kind !== 'cycle')) {
       if (done >= max || !clock().counting) break;
+      // the team's other gun may already be on this bin: one of them walks it
+      if (t.claimed.has(task.id) || (task.status === 'taken' && !task.mine)) continue;
+      t.claimed.add(task.id);
       try { await post(`/api/sessions/${sess.id}/recounts/${task.id}/take`, { team: t.name }, gun.H); } catch { continue; }
       await wait(rnd(1500, 4000));
       const lines = linesFor(gun, task.bin).map((l) => ({ ...l, pass: 2, recountId: task.id }));
