@@ -976,8 +976,11 @@ with an empty bin behind it — or takes one you upload (Pallet, From bin, To bi
 
 **The move desk.** *Front bins → Move desk* is for the person doing the moves in the pallet
 system rather than on a gun: the next pallet, the bin it is in and the bin it goes to sit at the
-top, with **‹ ›** to step through the list, and the pallet system's own screen opens underneath
-(its address is set once under *Settings → Advanced → Pallet system*). Make the move there, press
+top, with **‹ ›** to step through the list, and the pallet system's own screen opens underneath,
+framed at the size of a Zebra's screen — the same slab as the Testing Suite's gun — so it shows
+what the crew see on a handheld; **Full width** opens it out across the page when a system's own
+screens need the room, and the choice is kept on that computer (the address is set once under
+*Settings → Advanced → Pallet system*). Make the move there, press
 **Mark moved**, and the next one comes up; **Skip** leaves one for a look, with the reason. A
 system that refuses to be shown inside another page is a click away with **Open the pallet
 system in a new tab**.

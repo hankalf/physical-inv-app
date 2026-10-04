@@ -41,6 +41,14 @@ check('Front bins has a Move desk tab', (await page.$$eval('#subTabs button', (b
 check('The desk shows the next pallet and its bins at the top', clean(await page.textContent('#deskPallet')) === 'F12311-111' && clean(await page.textContent('#deskFrom')) === 'F01A001' && clean(await page.textContent('#deskTo')) === 'F01A002' && /1 of 2 waiting/.test(await page.textContent('#deskCount')),
   clean(await page.textContent('#deskStrip')).slice(0, 120));
 check('…with the pallet system framed underneath, and a new-tab link', (await page.getAttribute('#deskFrame', 'src')) === `${BASE}/board` && await page.isVisible('#deskOpen') && !(await page.$eval('#deskWrap', (el) => el.classList.contains('none'))));
+const frameW = async () => Math.round(await page.$eval('#deskFrame', (f) => f.getBoundingClientRect().width));
+check('…framed at the size of a Zebra’s screen, like the Testing Suite’s gun', (await frameW()) === 360 && await page.$eval('#deskWide', (b) => b.textContent === 'Full width'), `${await frameW()}px`);
+await page.click('#deskWide'); await page.waitForTimeout(200);
+check('…and Full width opens it out across the card', (await frameW()) > 600 && await page.$eval('#deskWide', (b) => b.textContent === 'Handheld size'), `${await frameW()}px`);
+await page.reload(); await page.waitForSelector('#scrMain.active', { state: 'attached' }); await page.waitForTimeout(1500);
+check('…a choice this browser remembers', await page.$eval('#deskWrap', (el) => el.classList.contains('wide')));
+await page.click('#deskWide'); await page.waitForTimeout(200);
+check('…and back to handheld size', (await frameW()) === 360, `${await frameW()}px`);
 await page.click('#deskNext'); await page.waitForTimeout(300);
 check('Next steps to the second move', clean(await page.textContent('#deskPallet')) === 'F12312-111');
 await page.click('#deskPrev'); await page.waitForTimeout(300);

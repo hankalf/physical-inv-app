@@ -115,7 +115,11 @@
   }
   $('deskDone').onclick = () => finishFromDesk('done');
   $('deskSkip').onclick = () => finishFromDesk('skip');
-  $('deskTall').onclick = () => { const t = $('deskWrap').classList.toggle('tall'); $('deskWrap').style.height = ''; $('deskTall').textContent = t ? 'Shorter' : 'Taller'; };
+  // handheld-sized by default; the choice is kept in this browser
+  const WIDE = 'desk:wide';
+  const setWide = (w) => { $('deskWrap').classList.toggle('wide', w); $('deskWide').textContent = w ? 'Handheld size' : 'Full width'; try { localStorage.setItem(WIDE, w ? '1' : ''); } catch { /* private window */ } };
+  try { setWide(localStorage.getItem(WIDE) === '1'); } catch { setWide(false); }
+  $('deskWide').onclick = () => setWide(!$('deskWrap').classList.contains('wide'));
   document.addEventListener('subshow', (e) => { if (e.detail === 'desk') refreshDesk().catch(() => {}); });
 
   $('btnMvBuild').onclick = async () => {
