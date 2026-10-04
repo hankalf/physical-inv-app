@@ -19,7 +19,7 @@
   /* ------------------------------------------------------- fixed phrases */
   const ES = {
     // header and bars
-    'Inventory Count': 'Conteo de inventario',
+    'Inventory Count': 'Conteo de inventario', 'Ripe & Ready': 'Ripe & Ready',
     'online': 'en línea', 'OFFLINE': 'SIN SEÑAL', 'PRACTICE': 'PRÁCTICA', 'TRIAL RUN': 'PRUEBA',
     'Update ready': 'Actualización lista',
     'It will load by itself when you finish this pallet — or tap here to take it now.':

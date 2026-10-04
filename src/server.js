@@ -54,7 +54,7 @@ import { countSheet, scannerCards, barcodeBook } from './routes/printing.js';
 import {
   countUsers, countAdmins, listUsers, createUser, updateUser, deleteUser, authenticate, changeOwnPassword, getUser, ensureSuperadmin,
 } from './routes/users.js';
-import { routeNeed, allowed, parseAccess, ACCESS } from './routes/access.js';
+import { routeNeeds, allowed, parseAccess, ACCESS, PROFILES, TABS } from './routes/access.js';
 import { listFormats, saveFormat, buildExport, availableFields } from './routes/erp.js';
 
 // people.js parses uploaded rosters with the shared CSV helpers
@@ -566,10 +566,7 @@ async function handleAdmin(req, res, url, m) {
     if (allowed(whoNow, key)) return;
     throw httpError(403, key === 'admin' ? 'only an admin can change the site\'s settings' : `this login is not able to do that (${key}) - an admin can give it under Settings → Advanced → Supervisor logins`);
   };
-  {
-    const need = routeNeed(p, method);
-    if (need) requireAccess(need);
-  }
+  for (const need of routeNeeds(p, method)) requireAccess(need);
 
   // --- team clocks and stopped-scanning alerts
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/clocks$/)) && method === 'GET') {
@@ -876,7 +873,7 @@ async function handleAdmin(req, res, url, m) {
     if (!who) throw httpError(401, 'unauthorized');
     const account = who.username ? getUser(who.username) : null;
     return sendJson(req, res, 200, {
-      ...who, role: whoNow.role, access: whoNow.access, accessKeys: ACCESS, mustChange: !!(account && account.must_change),
+      ...who, role: whoNow.role, access: whoNow.access, accessKeys: ACCESS, tabs: TABS, profiles: PROFILES.map(([key, label, list]) => ({ key, label, access: list === undefined ? null : list })), mustChange: !!(account && account.must_change),
       accounts: countUsers(), admins: countAdmins(),
     });
   }
@@ -1171,6 +1168,21 @@ async function handleAdmin(req, res, url, m) {
 
   // --- Front bins: a job on the warehouse, not on a count. The site's bin list
   //     is the newest real count's; the page never asks which.
+  /* The pallet system's own web UI, framed under the move desk on Front bins.
+     Its address is a site setting; the office side alone sees it. */
+  if (p === '/api/admin/pallet-system' && method === 'GET') {
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'palletSystemUrl'").get();
+    return sendJson(req, res, 200, { url: row ? row.value : '' });
+  }
+  if (p === '/api/admin/pallet-system' && method === 'POST') {
+    const body = await readJson(req);
+    const u = String(body.url || '').trim().slice(0, 500);
+    if (u && !/^https?:\/\//i.test(u)) throw httpError(400, 'the address has to start with http:// or https://');
+    if (u) db.prepare("INSERT INTO settings (key, value) VALUES ('palletSystemUrl', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(u);
+    else db.prepare("DELETE FROM settings WHERE key = 'palletSystemUrl'").run();
+    audit(actor, u ? 'set the pallet system address' : 'cleared the pallet system address', u);
+    return sendJson(req, res, 200, { url: u });
+  }
   if (p.startsWith('/api/admin/front/')) {
     const ref = referenceSession();
     const sub = p.slice('/api/admin/front/'.length);
@@ -1186,6 +1198,15 @@ async function handleAdmin(req, res, url, m) {
   }
 
   // --- pallets to move back
+  /* A move finished from the office's desk rather than a gun: the person at the
+     desk did it in the pallet system and ticks it off here. */
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/moves\/(\d+)\/(done|skip)$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const out = finishMove(m[1], m[2], { team: 'desk', deviceId: actor, actualBin: body.actualBin, status: m[3] === 'skip' ? 'skipped' : 'done', reason: body.reason });
+    if (!out.already && out.move.status === 'done') markFound(out.move.pallet_id, { bin: out.move.actual_bin, team: 'desk', device: actor, sessionId: m[1], how: 'moved' });
+    audit(actor, m[3] === 'skip' ? 'skipped a move from the desk' : 'finished a move from the desk', `${out.move.pallet_id} ${out.move.from_bin} → ${out.move.actual_bin || out.move.to_bin}`, m[1]);
+    return sendJson(req, res, 200, out);
+  }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/moves$/)) && method === 'GET') {
     return sendJson(req, res, 200, listMoves(m[1], { status: url.searchParams.get('status') || '', aisle: url.searchParams.get('aisle') || '' }));
   }
@@ -1403,15 +1424,50 @@ async function handleAdmin(req, res, url, m) {
   }
 
   // --- a line on the office board: when lunch is, which dock is blocked
-  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/note$/)) && method === 'POST') {
+  /* The notes the office writes for the board: several at once, each one
+     changed or taken down on its own. The old single-note call still works:
+     text adds a note, nothing clears the board. */
+  const noteRows = (sid) => db.prepare('SELECT id, text, by, at, updated_at, updated_by FROM board_notes WHERE session_id = ? ORDER BY id').all(sid);
+  const cleanNote = (v) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, 300);
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/notes$/)) && method === 'GET') {
+    if (!getSession(m[1])) throw httpError(404, 'session not found');
+    return sendJson(req, res, 200, { notes: noteRows(m[1]) });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/notes?$/)) && method === 'POST') {
     const body = await readJson(req);
     const s = getSession(m[1]);
     if (!s) throw httpError(404, 'session not found');
-    const note = String(body.note == null ? '' : body.note).replace(/\s+/g, ' ').trim().slice(0, 300);
-    db.prepare('UPDATE sessions SET board_note = ?, board_note_by = ?, board_note_at = ? WHERE id = ?')
-      .run(note || null, note ? actor : null, note ? new Date().toISOString() : null, s.id);
-    audit(actor, note ? 'put a note on the board' : 'cleared the board note', note, m[1]);
-    return sendJson(req, res, 200, { note, noteBy: note ? actor : '', noteAt: note ? new Date().toISOString() : '' });
+    const text = cleanNote(body.text != null ? body.text : body.note);
+    if (!text) {
+      // the old call with an empty box: the board is cleared
+      db.prepare('DELETE FROM board_notes WHERE session_id = ?').run(s.id);
+      audit(actor, 'cleared the board note', '', m[1]);
+      return sendJson(req, res, 200, { note: '', noteBy: '', noteAt: '', notes: [] });
+    }
+    const at = new Date().toISOString();
+    db.prepare('INSERT INTO board_notes (session_id, text, by, at) VALUES (?, ?, ?, ?)').run(s.id, text, actor, at);
+    audit(actor, 'put a note on the board', text, m[1]);
+    return sendJson(req, res, 200, { note: text, noteBy: actor, noteAt: at, notes: noteRows(s.id) });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/notes\/(\d+)$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const text = cleanNote(body.text);
+    if (!text) throw httpError(400, 'a note needs some words - delete it instead');
+    const r = db.prepare('UPDATE board_notes SET text = ?, updated_at = ?, updated_by = ? WHERE id = ? AND session_id = ?').run(text, new Date().toISOString(), actor, m[2], m[1]);
+    if (!r.changes) throw httpError(404, 'that note is not on the board');
+    audit(actor, 'changed a note on the board', text, m[1]);
+    return sendJson(req, res, 200, { notes: noteRows(m[1]) });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/notes\/(\d+)$/)) && method === 'DELETE') {
+    const r = db.prepare('DELETE FROM board_notes WHERE id = ? AND session_id = ?').run(m[2], m[1]);
+    if (!r.changes) throw httpError(404, 'that note is not on the board');
+    audit(actor, 'took a note off the board', `#${m[2]}`, m[1]);
+    return sendJson(req, res, 200, { notes: noteRows(m[1]) });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/notes$/)) && method === 'DELETE') {
+    db.prepare('DELETE FROM board_notes WHERE session_id = ?').run(m[1]);
+    audit(actor, 'cleared the board note', '', m[1]);
+    return sendJson(req, res, 200, { notes: [] });
   }
 
   // --- approvals on adjustments

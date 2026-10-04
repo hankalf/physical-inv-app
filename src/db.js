@@ -459,6 +459,26 @@ if (!hasCol('sessions', 'cleared_at')) db.exec('ALTER TABLE sessions ADD COLUMN 
 if (!hasCol('signons', 'ended_at')) db.exec('ALTER TABLE signons ADD COLUMN ended_at TEXT');
 // which shift a team works: '1', '2', or '' when it is not set
 if (!hasCol('teams', 'shift')) db.exec("ALTER TABLE teams ADD COLUMN shift TEXT NOT NULL DEFAULT ''");
+/* The notes the office writes for the board: several at once, each its own
+   row, so one can be changed or taken down without the others. The old single
+   board_note on the session is carried over once. */
+db.exec(`
+CREATE TABLE IF NOT EXISTS board_notes (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  text       TEXT    NOT NULL,
+  by         TEXT,
+  at         TEXT    NOT NULL,
+  updated_at TEXT,
+  updated_by TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_board_notes_session ON board_notes(session_id, id);
+INSERT INTO board_notes (session_id, text, by, at)
+  SELECT id, board_note, board_note_by, COALESCE(board_note_at, created_at) FROM sessions
+   WHERE board_note IS NOT NULL AND board_note != ''
+     AND NOT EXISTS (SELECT 1 FROM board_notes b WHERE b.session_id = sessions.id);
+UPDATE sessions SET board_note = NULL, board_note_by = NULL, board_note_at = NULL WHERE board_note IS NOT NULL;
+`);
 db.exec(`
 CREATE TABLE IF NOT EXISTS idle_alerts (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,

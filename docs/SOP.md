@@ -1,4 +1,4 @@
-# Standard Operating Procedure — Physical Inventory Counting
+# Standard Operating Procedure — Ripe & Ready Inventorying
 
 **Site:** Front Royal, VA cold storage  **Scanners:** Zebra MC9000-series handhelds
 
@@ -125,8 +125,16 @@ taken as the superadmin's). There is no shared password.
 **Settings → Advanced → Supervisor logins.**
 
 1. Type the person's **name**, a **username** and choose their **role**:
-   - **Admin** — can do everything, including managing logins.
-   - **Supervisor** — runs counts; cannot add or remove logins.
+   - **Admin** — everything, Settings and logins included.
+   - **Supervisor** — everything a supervisor can: every page and function except Settings.
+   - **Inventory control** — the count only: Dashboard, Testing Suite, approving adjustments,
+     downloads. Nothing on teams, warehouse jobs or cycle counts.
+   - **Count supervisor** — runs the floor: Dashboard, Teams & crew, messages, SOS, queueing
+     aisles, downloads, Testing Suite.
+   - **Warehouse jobs** — Front bins, Not in Location, Cycle counts, downloads, Testing Suite.
+   - **Cycle counter** — Cycle counts and the Testing Suite only.
+   The role can be changed on the person's row at any time, and **May use** fine-tunes it
+   (which shows the role as **Custom**).
 2. Press **Add**. The app shows a **starter password** once — something like
    `winter-4k2p`. Write it down and hand it to them; it is not shown again.
 3. The first time they sign in they are made to choose their own password before they
@@ -878,6 +886,14 @@ with an empty bin behind it — or takes one you upload (Pallet, From bin, To bi
    is refused). The next pallet comes up.
 4. **Cannot move it** — the bin behind is not empty, the pallet is not there, cannot reach it,
    damaged — skips it with the reason, for the office.
+
+**The move desk.** *Front bins → Move desk* is for the person doing the moves in the pallet
+system rather than on a gun: the next pallet, the bin it is in and the bin it goes to sit at the
+top, with **‹ ›** to step through the list, and the pallet system's own screen opens underneath
+(its address is set once under *Settings → Advanced → Pallet system*). Make the move there, press
+**Mark moved**, and the next one comes up; **Skip** leaves one for a look, with the reason. A
+system that refuses to be shown inside another page is a click away with **Open the pallet
+system in a new tab**.
 5. Done moves update the report, so the count that follows expects the pallet where it now is.
    With no signal they queue and send later, like count lines.
 
@@ -886,11 +902,12 @@ with an empty bin behind it — or takes one you upload (Pallet, From bin, To bi
 **Dashboard**, with the count picked in the header. It refreshes itself every 30
 seconds.
 
-> **How it looks** is up to you: **Settings → Advanced → Look** offers four themes —
-> *Midnight* (dark blue), *Graphite* (dark grey), *Daylight* and *Frost* (light) — and an accent
-> colour. It is kept per computer, so the office TV can be dark and a desk can be light. The same
-> tab takes a **logo**: your company's mark at the top of the sidebar and, if you tick it, in the
-> header of every scanner.
+> **How it looks** is up to you: **Settings → Advanced → Appearance** offers four themes —
+> *Midnight* (dark blue), *Graphite* (dark grey), *Daylight* and *Frost* (light) — nine accent
+> colours, the text size, how tightly the tables sit, the corners, the sidebar's width and the
+> strength of the lines. It is kept per computer, so the office TV can be dark and a desk can be
+> light. The same tab takes a **logo**: your company's mark at the top of the sidebar and, if you
+> tick it, in the header of every scanner.
 
 - **Progress** — lines, bins counted, pallets, exceptions; and a row per team with its
   **shift**, what it is counting right now, **when it started**, a **clock** of its time on the
@@ -996,12 +1013,13 @@ session to the address: `/board?session=12`.
 *The note across the top of the board, above everything else — because it is the one thing
 somebody walking past is looking for.*
 
-**The note across the top.** *Dashboard → Progress → Note on the office board* writes one
-line that appears above the progress bar on the board, big enough to read from across the
-room: *"Lunch 11:30–12:00 · Team 4 breaks first"*, *"Dock 4 blocked until 2pm"*. It belongs
-to the count, it says who wrote it and when, and clearing the box takes it off the board.
+**The notes across the top.** *Dashboard → Progress → Notes on the office board* writes
+lines that appear above the progress bar on the board, big enough to read from across the
+room: *"Lunch 11:30–12:00 · Team 4 breaks first"*, *"Dock 4 blocked until 2pm"*. They belong
+to the count and say who wrote them and when; each has **Edit** and **Delete**, and **Clear
+the board** takes them all down.
 
-Use the note for anything the floor reads walking past. To reach the **scanners** instead —
+Use the notes for anything the floor reads walking past. To reach the **scanners** instead —
 one team, or all of them, with a read receipt — use **Message the floor** under Alerts
 (step 16).
 

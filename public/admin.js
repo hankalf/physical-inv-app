@@ -80,10 +80,6 @@
       tab.hidden = cycle;
       if (cycle && tab.classList.contains('current')) api.showSub('progress');
     }
-    $('fBoardNote').value = s.board_note || '';
-    $('noteWho').textContent = s.board_note
-      ? `On the board since ${new Date(s.board_note_at).toLocaleString()}${s.board_note_by ? ', put there by ' + s.board_note_by : ''}.`
-      : 'Nothing on the board at the moment.';
   }
 
   /* ------------------------------------------------------------ progress */
@@ -1044,10 +1040,17 @@
     }
   }
 
+  /* Only the tabs this login has are fetched: a tab it may not open would be
+     refused by the server, and one refusal must not stop the rest. */
+  const tab = (name) => api.canTab('/admin', name);
   async function refreshAll() {
     if (!sessionId) return;
-    await Promise.all([refreshSources().catch(() => {}), refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts(),
-      refreshPicker(), refreshMessages(), refreshAdjustments(), refreshLabels(), refreshAlerts()]);
+    const jobs = [
+      [true, refreshSources], [tab('progress'), refreshNotes], [tab('progress'), refreshProgress], [tab('teams'), refreshAssignments],
+      [tab('reports'), refreshPallets], [tab('map'), refreshMap], [tab('second'), refreshRecounts], [true, refreshPicker],
+      [tab('alerts'), refreshMessages], [tab('adjust'), refreshAdjustments], [tab('reports'), refreshLabels], [tab('alerts'), refreshAlerts],
+    ];
+    await Promise.all(jobs.filter(([ok]) => ok).map(([, f]) => Promise.resolve().then(f).catch(() => {})));
   }
 
   /* ------------------------------------------------------- adjustments
@@ -1288,17 +1291,58 @@
   /* --------------------------------------------------- a note on the board
      One line across the top of the board screen: when lunch is, which dock is
      blocked. The floor reads it walking past; the scanners have messages. */
+  /* The notes on the board: added, changed and taken down one by one. */
+  let notes = [];
+  function renderNotes() {
+    const box = $('noteList');
+    box.innerHTML = '';
+    for (const x of notes) {
+      const row = document.createElement('div');
+      row.className = 'noterow';
+      const t = document.createElement('div'); t.className = 'txt'; t.textContent = x.text;
+      const who = document.createElement('div'); who.className = 'muted';
+      who.textContent = `${x.by || 'somebody'} · ${new Date(x.at).toLocaleString()}${x.updated_at ? ` · changed ${new Date(x.updated_at).toLocaleString()}${x.updated_by ? ' by ' + x.updated_by : ''}` : ''}`;
+      const acts = document.createElement('div'); acts.className = 'acts';
+      acts.appendChild(button('Edit', 'sm', async () => {
+        const next = prompt('Change the note:', x.text);
+        if (next === null) return;
+        try { notes = (await postJson(`/api/admin/sessions/${sessionId}/notes/${x.id}`, { text: next })).notes; renderNotes(); msg($('noteMsg'), 'ok', 'Changed.', 'The board picks it up within a few seconds.'); }
+        catch (err) { msg($('noteMsg'), 'err', err.message); }
+      }));
+      acts.appendChild(button('Delete', 'sm danger', async () => {
+        if (!confirm('Take this note off the board?')) return;
+        try { notes = (await apiJson(`/api/admin/sessions/${sessionId}/notes/${x.id}`, { method: 'DELETE' })).notes; renderNotes(); msg($('noteMsg'), 'ok', 'Taken off the board.'); }
+        catch (err) { msg($('noteMsg'), 'err', err.message); }
+      }));
+      if (!api.can('assign')) for (const b of acts.querySelectorAll('button')) { b.disabled = true; b.title = 'Not able to: this login may not change the board.'; }
+      row.append(t, who, acts);
+      box.appendChild(row);
+    }
+    $('noteWho').textContent = notes.length ? `${notes.length} note${notes.length === 1 ? '' : 's'} on the board.` : 'Nothing on the board at the moment.';
+  }
+  async function refreshNotes() {
+    if (!sessionId) return;
+    notes = (await apiJson(`/api/admin/sessions/${sessionId}/notes`)).notes || [];
+    renderNotes();
+  }
   async function saveNote(text) {
     if (!needSession($('noteMsg'))) return;
     try {
-      const out = await postJson(`/api/admin/sessions/${sessionId}/note`, { note: text });
-      msg($('noteMsg'), 'ok', out.note ? 'On the board.' : 'Taken off the board.',
-        out.note ? 'The board picks it up within a few seconds.' : '');
-      await loadSessions();
+      if (!String(text || '').trim()) {
+        notes = (await apiJson(`/api/admin/sessions/${sessionId}/notes`, { method: 'DELETE' })).notes || [];
+        renderNotes();
+        msg($('noteMsg'), 'ok', 'Taken off the board.', '');
+        return;
+      }
+      const out = await postJson(`/api/admin/sessions/${sessionId}/notes`, { text });
+      notes = out.notes || [];
+      renderNotes();
+      $('fBoardNote').value = '';
+      msg($('noteMsg'), 'ok', 'On the board.', 'The board picks it up within a few seconds.');
     } catch (err) { msg($('noteMsg'), 'err', err.message); }
   }
   $('btnSaveNote').onclick = () => saveNote($('fBoardNote').value);
-  $('btnClearNote').onclick = () => { $('fBoardNote').value = ''; saveNote(''); };
+  $('btnClearNote').onclick = () => { if (!notes.length || confirm('Take every note off the board?')) { $('fBoardNote').value = ''; saveNote(''); } };
   $('fBoardNote').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveNote($('fBoardNote').value); });
 
   /* ------------------------------------------------------- SOS from the floor

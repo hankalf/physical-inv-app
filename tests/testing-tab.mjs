@@ -95,7 +95,7 @@ page.on('pageerror', (e) => errors.push(e.message));
 /* every confirm - "complete the aisle anyway?", "start over?" - is a yes */
 page.on('dialog', (d) => d.accept().catch(() => {}));
 await page.goto(BASE + '/testing');
-await page.fill('#fUser', 'Dana Whitfield');
+await page.fill('#fUser', 'DANA-WHITFIELD');
 await page.fill('#fPassword', 'changeme');
 await page.click('#btnLogin');
 await page.waitForSelector('#scrMain.active');
@@ -409,7 +409,7 @@ await wait(600);
 check('Hiding the tips is remembered with the login', (await get('/api/admin/practice', N)).firstTime === false);
 await page.evaluate(() => { sessionStorage.removeItem('admToken'); });
 await page.goto(BASE + '/testing');
-await page.fill('#fUser', 'Dana Whitfield'); await page.fill('#fPassword', 'changeme'); await page.click('#btnLogin');
+await page.fill('#fUser', 'DANA-WHITFIELD'); await page.fill('#fPassword', 'changeme'); await page.click('#btnLogin');
 await page.waitForSelector('#shelves table.shelf');
 await wait(800);
 const nsMade = await post('/api/admin/practice', {}, N);

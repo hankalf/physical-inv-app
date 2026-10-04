@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Physical Inventory Count",
-  "short_name": "Count",
+  "name": "Ripe & Ready Inventory",
+  "short_name": "Ripe & Ready",
   "start_url": "/",
   "scope": "/",
   "display": "fullscreen",

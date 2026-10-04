@@ -46,6 +46,28 @@ check('Refused: Settings — the logo, the Teams channel, the SOS list', await s
 check('Refused: Settings — a list upload', await st(`/api/admin/sessions/${sess.id}/master?kind=bins`, { method: 'POST', headers: { 'content-type': 'text/csv' }, body: 'Bin Location\nX\n' }) === 403);
 check('Allowed: reading the site settings the dashboard needs', await st('/api/admin/layouts') === 200 && await st('/api/admin/sessions') === 200);
 
+/* the roles: presets of the list */
+const ivy = await j(await fetch(`${BASE}/api/admin/users`, { method: 'POST', headers: A, body: JSON.stringify({ username: 'IVY', name: 'Ivy Chen', password: 'count-desk-11', mustChange: false, profile: 'inventory' }) }));
+check('A login can be made with a role: Inventory control is the count, adjustments and downloads', ivy.profile === 'inventory' && ivy.role === 'supervisor' && ivy.access.join() === 'dashboard,testing,approve,export', JSON.stringify([ivy.profile, ivy.access]));
+const ivyIn = await login({ username: 'IVY', password: 'count-desk-11' });
+const I = { ...hdr, authorization: 'Bearer ' + ivyIn.token };
+const stI = async (path, init = {}) => (await fetch(BASE + path, { ...init, headers: { ...I, ...(init.headers || {}) } })).status;
+check('…so Inventory control may read the count and approve', await stI(`/api/admin/sessions/${sess.id}/progress`) === 200 && await stI(`/api/admin/sessions/${sess.id}/adjustments/decide`, { method: 'POST', body: JSON.stringify({ palletIds: [], decision: 'approve' }) }) !== 403);
+check('…but nothing on teams, warehouse jobs or cycle counts', await stI('/api/admin/people') === 403 && await stI('/api/admin/missing') === 403 && await stI(`/api/admin/sessions/${sess.id}/cycle/batches`) === 403 && await stI(`/api/admin/sessions/${sess.id}/moves`) === 403);
+check('Who am I lists the roles on offer', ((await j(await fetch(`${BASE}/api/admin/me`, { headers: A }))).profiles || []).some((pr) => pr.key === 'inventory'));
+check('A list ticked by hand reads as Custom', (await j(await fetch(`${BASE}/api/admin/users/IVY`, { method: 'POST', headers: A, body: JSON.stringify({ access: ['dashboard'] }) }))).profile === 'custom');
+check('…and picking the role again puts the preset back', (await j(await fetch(`${BASE}/api/admin/users/IVY`, { method: 'POST', headers: A, body: JSON.stringify({ profile: 'inventory' }) }))).access.join() === 'dashboard,testing,approve,export');
+check('A role that is not on offer is refused', (await fetch(`${BASE}/api/admin/users/IVY`, { method: 'POST', headers: A, body: JSON.stringify({ profile: 'overlord' }) })).status === 400);
+
+/* down to the tab: a page, or just some of its tabs */
+const tabbed = await j(await fetch(`${BASE}/api/admin/users/IVY`, { method: 'POST', headers: A, body: JSON.stringify({ access: ['dashboard.progress', 'dashboard.reports', 'export'] }) }));
+check('A login can be given single tabs of a page', tabbed.access.join() === 'dashboard.progress,dashboard.reports,export', JSON.stringify(tabbed.access));
+check('…which lets her into the page, and those tabs', await stI(`/api/admin/sessions/${sess.id}/progress`) === 200 && await stI(`/api/admin/sessions/${sess.id}/pallets`) === 200 && await stI(`/api/admin/sessions/${sess.id}/export/counts.csv`) === 200);
+check('…and not the other tabs', await stI(`/api/admin/sessions/${sess.id}/map`) === 403 && await stI(`/api/admin/sessions/${sess.id}/adjustments`) === 403 && await stI(`/api/admin/sessions/${sess.id}/recounts`) === 403 && await stI(`/api/admin/sessions/${sess.id}/alerts`) === 403);
+check('Giving the whole page drops the tab keys as redundant', (await j(await fetch(`${BASE}/api/admin/users/IVY`, { method: 'POST', headers: A, body: JSON.stringify({ access: ['dashboard', 'dashboard.map', 'export'] }) }))).access.join() === 'dashboard,export');
+check('Who am I says which tabs each page has', Array.isArray((await j(await fetch(`${BASE}/api/admin/me`, { headers: A }))).tabs.dashboard));
+await fetch(`${BASE}/api/admin/users/IVY`, { method: 'POST', headers: A, body: JSON.stringify({ access: ['dashboard.progress', 'dashboard.reports', 'export'] }) });
+
 /* a supervisor with no list is as before, bar Settings */
 const samIn = await login({ username: 'SAM', password: 'reach-truck-9' });
 const M = { ...hdr, authorization: 'Bearer ' + samIn.token };
@@ -88,11 +110,15 @@ await adm.fill('#fUser', 'DANA'); await adm.fill('#fPassword', 'freezer-2026'); 
 await adm.waitForSelector('#scrMain.active'); await adm.waitForTimeout(1800);
 const sueRow = adm.locator('#userTable tr', { hasText: 'SUE' });
 check('Logins: each supervisor row sums up what they may use, in one line', /2 of 6 pages · 1 of 5 functions/.test(await sueRow.locator('details.accpick summary').textContent()), clean(await sueRow.locator('details.accpick summary').textContent()));
-check('…an admin row says everything', /everything/i.test(await adm.locator('#userTable tr', { hasText: 'DANA' }).textContent()));
+check('…an admin row says everything', /everything/i.test(await adm.locator('#userTable tr', { hasText: 'DANA-WHITFIELD' }).textContent()));
 await sueRow.locator('details.accpick summary').click(); await adm.waitForTimeout(300);
 check('…and opens into a checklist', await sueRow.locator('.accpanel').isVisible() && (await sueRow.locator('input[type=checkbox][data-access]').count()) === 11);
 await sueRow.locator('input[data-access="testing"]').check(); await adm.waitForTimeout(900);
 check('…whose summary follows the ticks', /3 of 6 pages/.test(await sueRow.locator('details.accpick summary').textContent()), clean(await sueRow.locator('details.accpick summary').textContent()));
+check('Logins: the Role column is a picker with the presets', (await sueRow.locator('select.rolepick option').allTextContents()).some((t) => /Inventory control/.test(t)) && await sueRow.locator('select.rolepick').inputValue() === 'custom');
+await sueRow.locator('select.rolepick').selectOption('inventory'); await adm.waitForTimeout(900);
+check('…and picking Inventory control sets the list to the count, adjustments and downloads', (await j(await fetch(`${BASE}/api/admin/users`, { headers: A }))).users.find((u) => u.username === 'SUE').access.join() === 'dashboard,testing,approve,export');
+await fetch(`${BASE}/api/admin/users/SUE`, { method: 'POST', headers: A, body: JSON.stringify({ access: ['testing', 'dashboard'] }) });
 check('Ticking a box saves it', (await j(await fetch(`${BASE}/api/admin/users`, { headers: A }))).users.find((u) => u.username === 'SUE').access.includes('testing'));
 check('…and the page itself has the Advanced tab, being an admin', (await adm.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.trim()))).some((t) => /Advanced/.test(t)));
 
@@ -106,6 +132,26 @@ check('…the office side is there, since she has the dashboard', !(await page.$
 await fetch(`${BASE}/api/admin/users/SUE`, { method: 'POST', headers: A, body: JSON.stringify({ access: ['testing', 'teams'] }) });
 await page.reload(); await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(2500);
 check('…and goes, with its step, when the dashboard is taken off her list', await page.$eval('#dashCard', (el) => el.hidden) && (await page.$$('#stepDots button')).length === 5, `${(await page.$$('#stepDots button')).length} steps`);
+
+/* Ivy, with two tabs of the dashboard: the page shows just those */
+const ivyPage = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+ivyPage.on('pageerror', (e) => errors.push('ivy: ' + e.message));
+await ivyPage.goto(BASE + '/admin');
+await ivyPage.fill('#fUser', 'IVY'); await ivyPage.fill('#fPassword', 'count-desk-11'); await ivyPage.click('#btnLogin');
+await ivyPage.waitForSelector('#scrMain.active'); await ivyPage.waitForTimeout(2000);
+const ivyTabs = await ivyPage.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.replace(/\d+$/, '').trim()));
+check('Tabs: the dashboard shows only the tabs she was given', ivyTabs.join(' | ') === 'Progress | Reports', ivyTabs.join(' | '));
+check('…the sidebar lists only those sections too', (await ivyPage.$$eval('#navTabs .sub', (a) => a.map((x) => x.textContent.trim()))).join(' | ') === 'Progress | Reports', (await ivyPage.$$eval('#navTabs .sub', (a) => a.map((x) => x.textContent.trim()))).join(' | '));
+check('…and the page still works on what she has', /Count progress/.test(await ivyPage.textContent('#scrMain')) && (await ivyPage.$$('#palletTable tr')).length >= 1);
+await ivyPage.close();
+/* the popover offers the tabs under each page */
+await adm.reload(); await adm.waitForSelector('#scrMain.active'); await adm.waitForTimeout(1500);
+const ivyRow = adm.locator('#userTable tr', { hasText: 'IVY' });
+await ivyRow.locator('details.accpick summary').click(); await adm.waitForTimeout(300);
+check('Logins: the checklist shows each page\'s tabs underneath it', (await ivyRow.locator('input[data-tab^="dashboard."]').count()) === 7 && await ivyRow.locator('input[data-tab="dashboard.progress"]').isChecked() && !(await ivyRow.locator('input[data-tab="dashboard.map"]').isChecked()));
+check('…and says the page is held in part', /in part/.test(await ivyRow.locator('details.accpick summary').textContent()), clean(await ivyRow.locator('details.accpick summary').textContent()));
+await ivyRow.locator('input[data-tab="dashboard.map"]').check(); await adm.waitForTimeout(900);
+check('…ticking a tab grants that tab', (await j(await fetch(`${BASE}/api/admin/users`, { headers: A }))).users.find((u) => u.username === 'IVY').access.includes('dashboard.map'));
 
 check('No script errors', errors.length === 0, errors.join(' | '));
 await browser.close();

@@ -110,7 +110,21 @@
         const tr = document.createElement('tr');
         tr.append(cell(u.username), cell(u.name, 'wrap'));
         const tdRole = document.createElement('td');
-        tdRole.appendChild(tag(u.role));
+        /* the role is a picker: a preset of the list, or Admin; ticking by hand shows as Custom */
+        const profiles = (api.me && api.me.profiles) || [];
+        const rsel = document.createElement('select');
+        rsel.className = 'sm rolepick';
+        for (const pr of profiles) {
+          if (pr.key === 'custom' && u.profile !== 'custom') continue;
+          const o = document.createElement('option'); o.value = pr.key; o.textContent = pr.label.split(' — ')[0]; o.title = pr.label; rsel.appendChild(o);
+        }
+        rsel.value = u.profile || (u.role === 'admin' ? 'admin' : 'supervisor');
+        rsel.title = (profiles.find((pr) => pr.key === rsel.value) || {}).label || '';
+        rsel.onchange = async () => {
+          try { await api.post(`/api/admin/users/${u.username}`, { profile: rsel.value }); clearMsg($('userMsg')); await refreshUsers(); }
+          catch (err) { msg($('userMsg'), 'err', err.message); await refreshUsers(); }
+        };
+        tdRole.appendChild(rsel);
         tr.appendChild(tdRole);
         /* what this login may use: a drop-down checklist for a supervisor, one word for an admin */
         const tdAcc = document.createElement('td');
@@ -125,25 +139,41 @@
           const sum = document.createElement('summary');
           const panel = document.createElement('div');
           panel.className = 'accpanel';
+          const pickedNow = () => {
+            const whole = [...panel.querySelectorAll('input[data-access]:checked')].map((i) => i.dataset.access);
+            const tabs = [...panel.querySelectorAll('input[data-tab]:checked')].map((i) => i.dataset.tab).filter((t) => !whole.includes(t.split('.')[0]));
+            return [...whole, ...tabs];
+          };
           const say = () => {
-            const on = [...panel.querySelectorAll('input[data-access]:checked')].map((i) => i.dataset.access);
-            const pages = keys.filter(([k, , kind]) => kind === 'page' && on.includes(k)).length;
+            const on = pickedNow();
+            const pages = keys.filter(([k, , kind]) => kind === 'page' && (on.includes(k) || on.some((x) => x.startsWith(k + '.')))).length;
+            const partial = keys.filter(([k, , kind]) => kind === 'page' && !on.includes(k) && on.some((x) => x.startsWith(k + '.'))).length;
             const fns = keys.filter(([k, , kind]) => kind === 'function' && on.includes(k)).length;
             const allPages = keys.filter(([, , kind]) => kind === 'page').length;
             const allFns = keys.filter(([, , kind]) => kind === 'function').length;
-            sum.textContent = pages === allPages && fns === allFns ? 'Everything a supervisor can'
-              : `${pages} of ${allPages} pages · ${fns} of ${allFns} functions`;
+            const match = (api.me.profiles || []).find((pr) => Array.isArray(pr.access) && pr.access.length === on.length && pr.access.every((k) => on.includes(k)));
+            sum.textContent = pages === allPages && fns === allFns && !partial ? 'Everything a supervisor can'
+              : match ? `${match.label.split(' — ')[0]} · ${pages} of ${allPages} pages · ${fns} of ${allFns} functions`
+                : `${pages} of ${allPages} pages${partial ? ` (${partial} in part)` : ''} · ${fns} of ${allFns} functions`;
           };
           const save = async () => {
-            const picked = [...panel.querySelectorAll('input[data-access]:checked')].map((i) => i.dataset.access);
+            const picked = pickedNow();
             say();
-            try { await api.post(`/api/admin/users/${u.username}`, { access: picked }); clearMsg($('userMsg')); }
-            catch (err) { msg($('userMsg'), 'err', err.message); }
+            try {
+              await api.post(`/api/admin/users/${u.username}`, { access: picked }); clearMsg($('userMsg'));
+              const fresh = (await api.json('/api/admin/users')).users.find((x) => x.username === u.username);
+              const rs = tr.querySelector('select.rolepick');
+              if (fresh && rs) {
+                if (fresh.profile === 'custom' && ![...rs.options].some((o) => o.value === 'custom')) { const o = document.createElement('option'); o.value = 'custom'; o.textContent = 'Custom'; rs.appendChild(o); }
+                rs.value = fresh.profile;
+              }
+            } catch (err) { msg($('userMsg'), 'err', err.message); }
           };
+          const tabsOf = (api.me && api.me.tabs) || {};
           for (const group of ['page', 'function']) {
             const h = document.createElement('div');
             h.className = 'acchead';
-            h.textContent = group === 'page' ? 'Pages they may open' : 'What they can also do';
+            h.textContent = group === 'page' ? 'Pages they may open — and which tabs' : 'What they can also do';
             panel.appendChild(h);
             for (const [k, label, kind] of keys) {
               if (kind !== group) continue;
@@ -151,9 +181,27 @@
               l.className = 'cb';
               const i = document.createElement('input');
               i.type = 'checkbox'; i.dataset.access = k; i.checked = list.includes(k);
-              i.onchange = save;
               l.append(i, ' ', label);
               panel.appendChild(l);
+              const subs = kind === 'page' ? (tabsOf[k] || []) : [];
+              if (subs.length) {
+                /* the page's tabs, indented: the whole page ticks them all; untick the page to pick tabs */
+                const row = document.createElement('div');
+                row.className = 'acctabs';
+                for (const [sub, slabel] of subs) {
+                  const tl = document.createElement('label');
+                  tl.className = 'cb';
+                  const ti = document.createElement('input');
+                  ti.type = 'checkbox'; ti.dataset.tab = `${k}.${sub}`;
+                  ti.checked = list.includes(k) || list.includes(`${k}.${sub}`);
+                  ti.disabled = list.includes(k);
+                  ti.onchange = save;
+                  tl.append(ti, ' ', slabel);
+                  row.appendChild(tl);
+                }
+                panel.appendChild(row);
+                i.onchange = () => { for (const ti of row.querySelectorAll('input')) { ti.checked = i.checked; ti.disabled = i.checked; } save(); };
+              } else i.onchange = save;
             }
           }
           const note = document.createElement('div');
@@ -202,8 +250,6 @@
           try { await api.post(`/api/admin/users/${u.username}`, body); clearMsg($('userMsg')); await refreshUsers(); }
           catch (err) { msg($('userMsg'), 'err', err.message); }
         };
-        act.appendChild(button(u.role === 'admin' ? 'Make supervisor' : 'Make admin', 'sm', () =>
-          change({ role: u.role === 'admin' ? 'supervisor' : 'admin' })));
         act.appendChild(button(u.active ? 'Deactivate' : 'Reactivate', 'sm', () =>
           change({ active: !u.active }, u.active ? `Deactivate ${u.username}? They will not be able to sign in.` : '')));
         act.appendChild(button('Reset password', 'sm', async () => {
@@ -250,7 +296,7 @@
     try {
       const u = await api.post('/api/admin/users', {
         username: $('fNewUser').value, name: $('fNewFullName').value,
-        password: $('fNewPass').value, role: $('fNewRole').value,
+        password: $('fNewPass').value, profile: $('fNewRole').value,
       });
       $('fNewUser').value = ''; $('fNewFullName').value = ''; $('fNewPass').value = '';
       if (u.starterPassword) { clearMsg($('userMsg')); showStarter(u.username, u.starterPassword); }
@@ -978,6 +1024,15 @@
     } catch (err) { msg($('teamsMsg'), 'err', err.message); }
   };
 
+  /* ------------------------------------------------- the pallet system's address */
+  async function refreshPalletSystem() { $('fPalletSystemUrl').value = (await api.json('/api/admin/pallet-system')).url || ''; }
+  $('btnPalletSystemSave').onclick = async () => {
+    try {
+      const r = await api.post('/api/admin/pallet-system', { url: $('fPalletSystemUrl').value });
+      msg($('palletSystemMsg'), 'ok', r.url ? 'Saved.' : 'Cleared.', r.url ? 'Front bins → Move desk frames it now.' : 'The move desk shows the strip alone.');
+    } catch (err) { msg($('palletSystemMsg'), 'err', err.message); }
+  };
+
   /* ------------------------------------------------------------- the logo
      Read in the browser, shrunk to a header-sized PNG if it is a big photo of
      one, and kept on the server as a data URL. */
@@ -1488,7 +1543,7 @@
 
   async function load() {
     await refreshMe();
-    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshReasons(), refreshSosSettings(), refreshLogo()]);
+    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshReasons(), refreshSosSettings(), refreshLogo(), refreshPalletSystem().catch(() => {})]);
     await refreshGun().catch(() => {});
     await loadLayouts().catch(() => {});
     await refreshDefaultSession().catch(() => {});

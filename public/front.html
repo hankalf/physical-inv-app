@@ -13,12 +13,27 @@
   .how > div { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--surface-2); }
   .how h3 { margin: 0 0 6px; }
   .tlink { color: var(--accent); font-weight: 700; text-decoration: none; display: inline-block; padding: 8px 0; }
+  /* the move desk */
+  .deskstrip { display: grid; grid-template-columns: auto 1fr auto auto; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); margin-top: 10px; }
+  .deskstrip button.sm { width: auto; margin: 0; }
+  .deskpallet b, .deskbins b { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 22px; letter-spacing: .02em; }
+  .deskpallet, .deskbins { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .deskbins { margin-top: 4px; }
+  .deskbins .arrow { color: var(--accent); font-size: 22px; font-weight: 800; }
+  .deskstrip .lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .deskacts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+  .deskbar { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .deskbar button.sm { width: auto; margin: 0; }
+  .deskwrap { margin-top: 8px; height: 640px; min-height: 240px; resize: vertical; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+  .deskwrap.tall { height: 1000px; }
+  .deskwrap iframe { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+  .deskwrap.none { display: none; }
 </style>
 </head>
 <body class="app">
 
 <aside class="side">
-  <div class="brand">Inventory Count<span>Front Royal</span></div>
+  <div class="brand">Ripe &amp; Ready Inventory<span>Front Royal</span></div>
   <nav id="navTabs"></nav>
   <div class="side-foot">
     <span class="chip" id="navWho" hidden></span>
@@ -101,6 +116,40 @@
         <button id="btnMvClear" class="danger">Clear what is waiting</button>
       </div>
       <div class="scroll" style="margin-top:10px"><table id="mvTable"></table></div>
+    </div>
+      </div>
+
+      <div data-sub="desk" data-sub-label="Move desk">
+    <!-- the desk: the next pallet to move, and the pallet system's own screen
+         underneath it, so the move is made in the system without leaving here -->
+    <div class="card" id="deskCard">
+      <h2>Move desk <span class="muted">the pallet and bins to move, with the pallet system below</span></h2>
+      <div class="feedback show warn" id="deskNotReady" hidden></div>
+      <div class="deskstrip" id="deskStrip">
+        <button type="button" class="sm" id="deskPrev" title="The one before">‹</button>
+        <div class="deskwhat">
+          <div class="desknone muted" id="deskNone">Nothing waiting to be moved.</div>
+          <div class="deskmove" id="deskMove" hidden>
+            <div class="deskpallet"><span class="lbl">Pallet</span><b id="deskPallet"></b></div>
+            <div class="deskbins"><span class="lbl">From</span><b id="deskFrom"></b><span class="arrow">→</span><span class="lbl">To</span><b id="deskTo"></b></div>
+            <div class="muted" id="deskMeta"></div>
+          </div>
+        </div>
+        <button type="button" class="sm" id="deskNext" title="The next one">›</button>
+        <div class="deskacts">
+          <button type="button" class="primary sm" id="deskDone" title="Moved in the pallet system: tick it off here">Mark moved</button>
+          <button type="button" class="sm" id="deskSkip" title="Leave it for a look">Skip</button>
+          <span class="muted" id="deskCount"></span>
+        </div>
+      </div>
+      <div class="feedback" id="deskMsg"></div>
+      <div class="deskbar">
+        <span class="muted" id="deskUrlNote"></span>
+        <span class="spacer"></span>
+        <a class="tlink" id="deskOpen" target="_blank" rel="noopener" hidden>Open the pallet system in a new tab ↗</a>
+        <button type="button" class="sm" id="deskTall">Taller</button>
+      </div>
+      <div class="deskwrap" id="deskWrap"><iframe id="deskFrame" title="The pallet system"></iframe></div>
     </div>
       </div>
 

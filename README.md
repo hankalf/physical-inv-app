@@ -1,4 +1,4 @@
-# Physical Inventory Counting
+# Ripe & Ready Inventorying
 
 A warehouse physical-inventory app for Zebra Android handhelds (MC9300 / TC-series),
 counting at **pallet level**. Each scanner asks four questions, one per screen:

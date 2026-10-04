@@ -1,5 +1,5 @@
 import { db, norm } from '../db.js';
-import { parseAccess, cleanAccess } from './access.js';
+import { parseAccess, cleanAccess, profileOf, applyProfile } from './access.js';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 
 /*
@@ -33,6 +33,7 @@ export const countAdmins = () => db.prepare("SELECT COUNT(*) n FROM users WHERE 
 const shape = (u) => ({
   username: u.username, name: u.name, role: u.role, active: !!u.active,
   access: u.role === 'admin' ? null : parseAccess(u.access),
+  profile: profileOf(u.role, u.role === 'admin' ? null : parseAccess(u.access)),
   created_at: u.created_at, last_login: u.last_login, created_by: u.created_by,
   mustChange: !!u.must_change,
 });
@@ -52,7 +53,8 @@ export const getUser = (username) => db.prepare('SELECT * FROM users WHERE usern
  * invent, somebody else's real password. The starter is returned once, here,
  * and is not recoverable afterwards.
  */
-export function createUser({ username, name, password, role = 'supervisor', mustChange, access }, createdBy = '') {
+export function createUser({ username, name, password, role = 'supervisor', mustChange, access, profile }, createdBy = '') {
+  if (profile) { const p = applyProfile(profile); role = p.role; if (p.access !== undefined) access = p.access; }
   const u = norm(username).replace(/\s+/g, '');
   if (!u) throw Object.assign(new Error('a username is required'), { status: 400 });
   if (!/^[A-Z0-9._-]{2,32}$/.test(u)) throw Object.assign(new Error('usernames are 2-32 characters: letters, digits, . _ -'), { status: 400 });
@@ -68,7 +70,8 @@ export function createUser({ username, name, password, role = 'supervisor', must
   return { ...shape(getUser(u)), starterPassword: starter || undefined };
 }
 
-export function updateUser(username, { name, role, active, password, mustChange, access }) {
+export function updateUser(username, { name, role, active, password, mustChange, access, profile }) {
+  if (profile) { const p = applyProfile(profile); role = p.role; if (p.access !== undefined) access = p.access; }
   const existing = getUser(username);
   if (!existing) throw Object.assign(new Error('no such account'), { status: 404 });
   // never leave the place with no way in

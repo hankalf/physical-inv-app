@@ -134,10 +134,10 @@ check('…with the moves summary', clean(await page.textContent('#mvOpen')) === 
   `${await page.textContent('#mvOpen')} / ${await page.textContent('#mvDone')} / ${await page.textContent('#mvSkipped')}`);
 const rows = await page.$$eval('#mvTable tbody tr', (trs) => trs.map((tr) => tr.textContent));
 check('…and every move with its state and reason', rows.length === 4 && rows.some((r) => /M-2.*skipped.*not empty/.test(r)) && rows.some((r) => /M-1.*moved/.test(r)), rows.join(' | ').slice(0, 200));
-check('The front-placed bins list moved here too', await page.$('#frontCard') !== null && (await page.$$('#navTabs .sub[data-page="/front"]')).length === 2);
+check('The front-placed bins list moved here too', await page.$('#frontCard') !== null && (await page.$$('#navTabs .sub[data-page="/front"]')).length === 3);
 const subs = await page.$$eval('#navTabs .navgroup.here .sub', (ss) => ss.map((s) => s.textContent));
-check('The sidebar opens the page\'s sections out under it', subs.join(',') === 'Pallets to move back,Front-placed bins', subs.join(','));
-check('…and lists the other pages\' sections folded', (await page.$$('#navTabs .sub[data-page="/admin"]')).length === 6 && await page.$eval('#navTabs .sub[data-page="/admin"]', (s) => s.closest('.subs').hidden));
+check('The sidebar opens the page\'s sections out under it', subs.join(',') === 'Pallets to move back,Move desk,Front-placed bins', subs.join(','));
+check('…and lists the other pages\' sections folded', (await page.$$('#navTabs .sub[data-page="/admin"]')).length === 7 && await page.$eval('#navTabs .sub[data-page="/admin"]', (s) => s.closest('.subs').hidden));
 await page.click('#navTabs .sub[data-page="/front"][data-nav-sub="bins"]');
 await page.waitForTimeout(300);
 check('Clicking a section in the sidebar switches to it', await page.$eval('[data-sub="bins"]', (p) => p.classList.contains('active')) && await page.$eval('#navTabs .sub[data-nav-sub="bins"]', (s) => s.classList.contains('current')));

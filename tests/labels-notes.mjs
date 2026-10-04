@@ -211,9 +211,26 @@ check('Dashboard: the labels to replace are on the Fix list, rack labels and pal
   /NO-LABEL/.test(clean(await page.textContent('#fixTable')))
   && /LABEL rack/.test(clean(await page.textContent('#fixTable'))),
   clean(await page.textContent('#fixTable')).slice(0, 160));
+/* a second note, then each one changed or taken down on its own */
+await page.fill('#fBoardNote', 'Team 2 breaks at 10');
+await page.click('#btnSaveNote');
+await page.waitForTimeout(1000);
+let onBoard = await j(await fetch(`${BASE}/api/board?session=${sess.id}`));
+check('Dashboard: a second note joins the first on the board', onBoard.notes.length === 2 && onBoard.notes[0].text === 'Dock 4 blocked until 2pm' && onBoard.note === 'Team 2 breaks at 10', JSON.stringify(onBoard.notes.map((x) => x.text)));
+check('Dashboard: each note is listed with Edit and Delete', (await page.$$('#noteList .noterow')).length === 2 && (await page.$$('#noteList .noterow button')).length === 4);
+page.removeAllListeners('dialog');
+page.on('dialog', (d) => (d.type() === 'prompt' ? d.accept('Dock 4 open again') : d.accept()));
+await page.click('#noteList .noterow:nth-child(1) button:text-is("Edit")');
+await page.waitForTimeout(1000);
+onBoard = await j(await fetch(`${BASE}/api/board?session=${sess.id}`));
+check('Dashboard: Edit changes that note alone', onBoard.notes[0].text === 'Dock 4 open again' && onBoard.notes[1].text === 'Team 2 breaks at 10', JSON.stringify(onBoard.notes.map((x) => x.text)));
+await page.click('#noteList .noterow:nth-child(2) button:text-is("Delete")');
+await page.waitForTimeout(1000);
+onBoard = await j(await fetch(`${BASE}/api/board?session=${sess.id}`));
+check('Dashboard: Delete takes that note alone off the board', onBoard.notes.length === 1 && onBoard.notes[0].text === 'Dock 4 open again', JSON.stringify(onBoard.notes.map((x) => x.text)));
 await page.click('#btnClearNote');
 await page.waitForTimeout(1000);
-check('Dashboard: and Clear takes it down',
+check('Dashboard: and Clear the board takes the rest down',
   !(await j(await fetch(`${BASE}/api/board?session=${sess.id}`))).note);
 
 check('No script errors anywhere', errors.length === 0, errors.join(' | '));

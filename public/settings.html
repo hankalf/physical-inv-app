@@ -19,7 +19,7 @@
 <body class="app">
 
 <aside class="side">
-  <div class="brand">Inventory Count<span>Front Royal</span></div>
+  <div class="brand">Ripe &amp; Ready Inventory<span>Front Royal</span></div>
   <nav id="navTabs"></nav>
   <div class="side-foot">
     <span class="chip" id="navWho" hidden></span>
@@ -528,8 +528,9 @@
         <span class="muted">everyone who changes something is recorded by name in the log</span></h2>
       <div id="adminOnly">
         <div class="hint">
-          Give each supervisor their own login. <b>Admins</b> can manage accounts, Settings and everything else;
-          <b>supervisors</b> get the pages and functions ticked under <b>May use</b>. Deactivating a login keeps its history
+          Give each supervisor their own login. The <b>role</b> sets what they may use — <b>Inventory control</b> gets the count,
+          adjustments and downloads and nothing on teams, warehouse jobs or cycle counts; <b>Admins</b> get everything, Settings
+          included — and <b>May use</b> fine-tunes it, which makes the role <b>Custom</b>. Deactivating a login keeps its history
           in the log but stops it being used. The <b>superadmin</b> is the login the site started with, set in the server's
           environment (Railway variables); there is no shared password.
         </div>
@@ -540,8 +541,12 @@
           <div class="auto">
             <label for="fNewRole">Role</label>
             <select id="fNewRole">
-              <option value="supervisor">Supervisor</option>
-              <option value="admin">Admin — can manage logins</option>
+              <option value="supervisor">Supervisor — everything a supervisor can</option>
+              <option value="inventory">Inventory control — the count, adjustments, downloads</option>
+              <option value="floor">Count supervisor — runs the floor</option>
+              <option value="jobs">Warehouse jobs — front bins, Not in Location, cycle counts</option>
+              <option value="cycle">Cycle counter — cycle counts only</option>
+              <option value="admin">Admin — everything, Settings included</option>
             </select>
           </div>
           <div class="auto"><button class="primary fit" id="btnAddUser">Add login</button></div>
@@ -591,9 +596,23 @@
     </div>
 
     <div class="card">
-      <h2>Look <span class="muted">how the supervisor pages look on this computer</span></h2>
-      <div class="hint" style="margin-top:0">A theme and an accent colour. They are kept in this browser, so each person's computer can be set its own way; the scanners are not affected.</div>
+      <h2>Appearance <span class="muted">how the supervisor pages look on this computer</span></h2>
+      <div class="hint" style="margin-top:0">A theme, an accent colour, the text size, how tightly the tables sit, the corners, the sidebar's width and the strength of the lines. Kept in this browser, so each person's computer can be set its own way; the scanners are not affected.</div>
       <div id="lookPick"></div>
+    </div>
+
+    <div class="card">
+      <h2>Pallet system <span class="muted">the web address of the system the pallets live in, framed under the Front bins move desk</span></h2>
+      <div class="hint" style="margin-top:0">
+        On <b>Front bins → Move desk</b> the pallet and bins to move sit at the top and this address opens underneath, so the move
+        is made in that system without leaving the page. Some systems refuse to be shown inside another page (their
+        <i>X-Frame-Options</i> or content-security policy); the desk then offers <b>Open in a new tab</b> instead.
+      </div>
+      <div class="inline" style="margin-top:10px">
+        <div><label for="fPalletSystemUrl">Address</label><input id="fPalletSystemUrl" placeholder="https://…" autocomplete="off"></div>
+        <div class="auto"><button class="primary fit" id="btnPalletSystemSave">Save</button></div>
+      </div>
+      <div class="feedback" id="palletSystemMsg"></div>
     </div>
 
     <div class="card">

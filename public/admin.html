@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Inventory Count — Dashboard</title>
+<title>Ripe &amp; Ready Inventory — Dashboard</title>
 <link rel="icon" href="/icon.svg">
 <link rel="stylesheet" href="/admin.css">
 <style>
@@ -54,7 +54,7 @@
 <body class="app">
 
 <aside class="side">
-  <div class="brand">Inventory Count<span>Front Royal</span></div>
+  <div class="brand">Ripe &amp; Ready Inventory<span>Front Royal</span></div>
   <nav id="navTabs"></nav>
   <div class="side-foot">
     <span class="chip" id="navWho" hidden></span>
@@ -119,18 +119,19 @@
       </div>
       <div class="scroll"><table id="teamTable"></table></div>
       <hr>
-      <h3 style="margin-top:0">Note on the office board</h3>
+      <h3 style="margin-top:0">Notes on the office board</h3>
       <div class="hint" style="margin-top:0">
-        One line across the top of the board screen (<b>/board</b>), above the progress bar — when lunch is,
-        which dock is blocked, when the next break starts. It belongs to this count, and clearing the box
-        takes it off the board. To reach the <b>scanners</b> instead, use <b>Message the floor</b> under Alerts.
+        Lines across the top of the board screen (<b>/board</b>), above the progress bar — when lunch is,
+        which dock is blocked, when the next break starts. They belong to this count; each one can be changed or
+        taken down on its own. To reach the <b>scanners</b> instead, use <b>Message the floor</b> under Alerts.
       </div>
       <div class="inline" style="margin-top:10px">
-        <div><label for="fBoardNote">Note</label><input id="fBoardNote" maxlength="300" placeholder="e.g. Lunch 11:30–12:00 · Team 4 breaks first"></div>
-        <div class="auto"><button class="primary fit" id="btnSaveNote">Put it on the board</button></div>
-        <div class="auto"><button class="fit" id="btnClearNote">Clear</button></div>
+        <div><label for="fBoardNote">New note</label><input id="fBoardNote" maxlength="300" placeholder="e.g. Lunch 11:30–12:00 · Team 4 breaks first"></div>
+        <div class="auto"><button class="primary fit" id="btnSaveNote">Add to the board</button></div>
+        <div class="auto"><button class="fit" id="btnClearNote" title="Take every note off the board">Clear the board</button></div>
       </div>
       <div class="feedback" id="noteMsg"></div>
+      <div class="notes" id="noteList"></div>
       <div class="muted" id="noteWho"></div>
     </div>
       </div>

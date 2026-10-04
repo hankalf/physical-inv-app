@@ -22,7 +22,7 @@
     '/cycle': [['today', 'Today'], ['open', 'Still open'], ['coverage', 'Coverage'], ['setup', 'Program & data']],
     '/teams': [['crew', 'Crew & teams'], ['rules', 'Equipment rules']],
     '/settings': [['start', 'Getting started'], ['gun', 'Scanner screen'], ['lists', 'Lists & racking'], ['erp', 'ERP & backups'], ['advanced', 'Advanced']],
-    '/front': [['moves', 'Pallets to move back'], ['bins', 'Front-placed bins']],
+    '/front': [['moves', 'Pallets to move back'], ['desk', 'Move desk'], ['bins', 'Front-placed bins']],
     '/missing': [],
     '/testing': [],
   };
@@ -40,18 +40,35 @@
      Kept in this browser, applied before the page draws. Every colour in the
      stylesheet is a token, so a theme is a set of tokens on <html>. */
   const THEMES = [['midnight', 'Midnight (dark blue)'], ['graphite', 'Graphite (dark grey)'], ['daylight', 'Daylight (light)'], ['frost', 'Frost (light, cool)']];
-  const ACCENTS = ['blue', 'teal', 'amber', 'berry'];
+  const ACCENTS = ['blue', 'teal', 'green', 'amber', 'orange', 'coral', 'berry', 'violet', 'slate'];
+  /* The rest of the look: each is a data attribute on <html> the stylesheet
+     answers to, kept in this browser like the theme. The first value is the
+     default and sets no attribute at all. */
+  const LOOKS = [
+    ['size', 'Text size', [['normal', 'Normal'], ['small', 'Smaller'], ['large', 'Larger']]],
+    ['density', 'Density', [['comfortable', 'Comfortable'], ['compact', 'Compact — more rows on the screen']]],
+    ['corners', 'Corners', [['round', 'Rounded'], ['soft', 'Softly rounded'], ['square', 'Square']]],
+    ['side', 'Sidebar', [['normal', 'Normal'], ['narrow', 'Narrow'], ['wide', 'Wide']]],
+    ['contrast', 'Lines & borders', [['normal', 'Normal'], ['high', 'High contrast']]],
+  ];
   const look = { theme: 'midnight', accent: 'blue' };
+  for (const [k, , opts] of LOOKS) look[k] = opts[0][0];
   try {
     look.theme = THEMES.some(([k]) => k === localStorage.getItem('adminTheme')) ? localStorage.getItem('adminTheme') : 'midnight';
     look.accent = ACCENTS.includes(localStorage.getItem('adminAccent')) ? localStorage.getItem('adminAccent') : 'blue';
+    for (const [k, , opts] of LOOKS) { const v = localStorage.getItem('adminLook:' + k); if (opts.some(([o]) => o === v)) look[k] = v; }
   } catch { /* private window */ }
   function applyLook() {
     const root = document.documentElement;
     if (look.theme === 'midnight') root.removeAttribute('data-theme'); else root.dataset.theme = look.theme;
     if (look.accent === 'blue') root.removeAttribute('data-accent'); else root.dataset.accent = look.accent;
-    try { localStorage.setItem('adminTheme', look.theme); localStorage.setItem('adminAccent', look.accent); } catch { /* private window */ }
+    for (const [k, , opts] of LOOKS) { if (look[k] === opts[0][0]) root.removeAttribute('data-' + k); else root.dataset[k] = look[k]; }
+    try {
+      localStorage.setItem('adminTheme', look.theme); localStorage.setItem('adminAccent', look.accent);
+      for (const [k] of LOOKS) localStorage.setItem('adminLook:' + k, look[k]);
+    } catch { /* private window */ }
     for (const b of document.querySelectorAll('.themepick .accents button')) b.classList.toggle('on', b.dataset.accent === look.accent);
+    for (const sel of document.querySelectorAll('.themepick select[data-look]')) sel.value = look[sel.dataset.look];
   }
   applyLook();
   function mountThemePicker() {
@@ -77,6 +94,23 @@
       acc.appendChild(b);
     }
     box.append(sel, acc);
+    for (const [k, label, opts] of LOOKS) {
+      const row = document.createElement('label');
+      row.className = 'lookrow';
+      const t = document.createElement('span'); t.textContent = label;
+      const ls = document.createElement('select');
+      ls.dataset.look = k;
+      ls.className = 'sm';
+      for (const [v, l] of opts) { const o = document.createElement('option'); o.value = v; o.textContent = l; ls.appendChild(o); }
+      ls.value = look[k];
+      ls.onchange = () => { look[k] = ls.value; applyLook(); };
+      row.append(t, ls);
+      box.appendChild(row);
+    }
+    const reset = document.createElement('button');
+    reset.type = 'button'; reset.className = 'sm'; reset.id = 'btnLookReset'; reset.textContent = 'Back to the defaults';
+    reset.onclick = () => { look.theme = 'midnight'; look.accent = 'blue'; for (const [k, , opts] of LOOKS) look[k] = opts[0][0]; sel.value = 'midnight'; applyLook(); };
+    box.appendChild(reset);
     foot.appendChild(box);
     applyLook();
   }
@@ -237,7 +271,18 @@
     if (!me) return true;
     if (me.role === 'admin') return true;
     if (key === 'admin') return false;
-    return !Array.isArray(me.access) || me.access.includes(key);
+    if (!Array.isArray(me.access)) return true;
+    if (key.includes('.')) return me.access.includes(key) || me.access.includes(key.split('.')[0]);
+    return me.access.includes(key) || me.access.some((k) => k.startsWith(key + '.'));
+  };
+  /* A tab of a page: the whole page, or that tab by name. Pages without tabs
+     in the list (Settings, the Testing Suite) are all or nothing. */
+  api.canTab = (href, sub) => {
+    const page = PAGE_KEY[href] || '';
+    if (!page || page === 'admin') return api.can(page);
+    const me = api.me;
+    if (!me || me.role === 'admin' || !Array.isArray(me.access)) return true;
+    return me.access.includes(page) || me.access.includes(`${page}.${sub}`);
   };
   const mayOpen = (href) => api.can(PAGE_KEY[href] || '');
 
@@ -249,7 +294,7 @@
     if (card && !card.querySelector('.splashbrand')) {
       const b = document.createElement('div');
       b.className = 'splashbrand';
-      b.innerHTML = '<img class="logo" alt="" hidden><div class="mark">▦</div><div class="name">Inventory Count<span>Front Royal</span></div>';
+      b.innerHTML = '<img class="logo" alt="" hidden><div class="mark">▦</div><div class="name">Ripe &amp; Ready Inventory<span>Front Royal</span></div>';
       card.prepend(b);
     }
     const img = card && card.querySelector('.splashbrand img.logo');
@@ -306,6 +351,7 @@
         list.className = 'subs';
         list.hidden = !open;
         for (const [sub, text] of subs) {
+          if (!api.canTab(href, sub)) continue;
           const s = document.createElement('a');
           s.href = `${href}#${sub}`;
           s.className = 'sub' + (here === href && sub === currentSub ? ' current' : '');
@@ -409,6 +455,7 @@
 
   function announce() {
     renderTabs();
+    renderSubTabs();
     if (api.me && api.me.mustChange) return setPassword();
     if (keepOut()) return;
     const box = setPasswordPanel();
@@ -508,9 +555,13 @@
     const bar = document.getElementById('subTabs');
     const panes = [...document.querySelectorAll('[data-sub]')];
     if (!bar || !panes.length) return;
-    const wanted = (location.hash || '').replace('#', '') || sessionStorage.getItem(subKey) || panes[0].dataset.sub;
+    const may = panes.filter((pane) => api.canTab(here, pane.dataset.sub));
+    const first = (may[0] || panes[0]).dataset.sub;
+    let wanted = (location.hash || '').replace('#', '') || sessionStorage.getItem(subKey) || first;
+    if (!may.some((p) => p.dataset.sub === wanted)) wanted = first;
     bar.innerHTML = '';
     for (const pane of panes) {
+      if (!api.canTab(here, pane.dataset.sub)) continue;
       const b = document.createElement('button');
       b.type = 'button';
       b.dataset.goto = pane.dataset.sub;
@@ -523,7 +574,7 @@
       b.onclick = () => api.showSub(pane.dataset.sub);
       bar.appendChild(b);
     }
-    api.showSub(panes.some((p) => p.dataset.sub === wanted) ? wanted : panes[0].dataset.sub);
+    api.showSub(wanted);
   }
 
   /** Switch sub-tab. Pages listen for `subshow` to refresh what just appeared. */
@@ -746,7 +797,8 @@
     ['Scanner screen layout', '/settings', 'gun', 'scanner screen questions order keyboard text size upright portrait update comments countdown gun handheld'],
     ['Supervisor logins', '/settings', 'advanced', 'login user password account supervisor admin access advanced'],
     ['Microsoft Teams channel', '/settings', 'advanced', 'teams channel webhook alerts sos notify card advanced'],
-    ['Theme and accent colour', '/settings', 'advanced', 'theme dark light colour color accent look appearance advanced'],
+    ['Appearance: theme, accent, text size, density', '/settings', 'advanced', 'theme dark light colour color accent look appearance text size density compact corners sidebar contrast advanced'],
+    ['Pallet system address (move desk)', '/settings', 'advanced', 'pallet system url address frame move desk erp wms link advanced'],
     ['Site logo', '/settings', 'advanced', 'logo brand image picture upload company header scanner advanced'],
     ['Scanner setup and links', '/settings', 'gun', 'scanner device link qr register enrol setup card handheld gun'],
     ['One-tap reasons on the gun', '/settings', 'gun', 'reason comment override one tap chips damaged'],

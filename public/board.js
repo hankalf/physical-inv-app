@@ -126,10 +126,13 @@
     /* The note from the office, above everything else: breaks, lunch, a dock
        nobody can get to. Gone entirely when there is nothing to say, rather
        than an empty box taking room from the progress bar. */
-    $('bNote').hidden = !d.note;
-    $('bNoteText').textContent = d.note || '';
-    $('bNoteWho').textContent = d.note && d.noteAt
-      ? `${d.noteBy ? d.noteBy + ' · ' : ''}${new Date(d.noteAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+    const notes = d.notes || (d.note ? [{ text: d.note, by: d.noteBy, at: d.noteAt }] : []);
+    $('bNote').hidden = !notes.length;
+    const txt = $('bNoteText');
+    txt.replaceChildren(...notes.map((x) => { const l = document.createElement('div'); l.className = 'line'; l.textContent = x.text; return l; }));
+    const last = notes[notes.length - 1];
+    $('bNoteWho').textContent = last && last.at
+      ? `${last.by ? last.by + ' · ' : ''}${new Date(last.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
       : '';
     $('bPct').textContent = d.pct;
     $('bOf').textContent = `${n(d.pallets.found)} of ${n(d.pallets.total)} listed pallets found`;

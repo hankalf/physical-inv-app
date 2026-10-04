@@ -29,6 +29,7 @@
     $('frontNotReady').hidden = ready;
     $('frontNotReady').textContent = ready ? '' : `Nothing to work from yet — ${st.why}.`;
     if (ready) await refresh();
+    await refreshDesk().catch(() => {});
   }
 
   async function refresh() {
@@ -55,6 +56,67 @@
   }
 
   for (const b of document.querySelectorAll('#mvFilter button')) b.onclick = () => { mvStatus = b.dataset.status; refresh(); };
+
+  /* ------------------------------------------------------------ the desk
+     The next pallet to move, from the open list, and the pallet system's own
+     screen framed beneath it: the move is made in the system, then ticked off
+     here. The address comes from Settings → Advanced → Pallet system; a system
+     that refuses to be framed is a click away in a new tab instead. */
+  let deskList = [];
+  let deskAt = 0;
+  let deskUrl = '';
+  let deskUrlLoaded = '';
+  function renderDesk() {
+    const m = deskList[deskAt] || null;
+    $('deskNone').hidden = !!m || !ready;
+    $('deskMove').hidden = !m;
+    $('deskPrev').disabled = deskAt <= 0;
+    $('deskNext').disabled = deskAt >= deskList.length - 1;
+    $('deskDone').disabled = !m || !api.can('front');
+    $('deskSkip').disabled = !m || !api.can('front');
+    $('deskCount').textContent = deskList.length ? `${deskAt + 1} of ${deskList.length} waiting` : '';
+    if (m) {
+      $('deskPallet').textContent = m.pallet_id;
+      $('deskFrom').textContent = m.from_bin;
+      $('deskTo').textContent = m.to_bin;
+      $('deskMeta').textContent = `aisle ${m.aisle || '—'}${m.level ? ' · level ' + m.level : ''}${m.source === 'upload' ? ' · from the uploaded list' : ' · from the report'}`;
+    }
+    $('deskUrlNote').textContent = deskUrl ? `Pallet system: ${deskUrl}` : 'No pallet system address set — an admin can set it under Settings → Advanced → Pallet system. The strip above works without it.';
+    $('deskOpen').hidden = !deskUrl;
+    $('deskOpen').href = deskUrl || '#';
+    $('deskWrap').classList.toggle('none', !deskUrl);
+    if (deskUrl && deskUrl !== deskUrlLoaded) { deskUrlLoaded = deskUrl; $('deskFrame').src = deskUrl; }
+  }
+  async function refreshDesk() {
+    try { deskUrl = (await apiJson('/api/admin/pallet-system')).url || ''; } catch { deskUrl = ''; }
+    if (ready) {
+      const d = await apiJson(`${F}/moves?status=open`);
+      deskList = d.moves || [];
+      if (deskAt >= deskList.length) deskAt = Math.max(0, deskList.length - 1);
+    } else deskList = [];
+    $('deskNotReady').hidden = ready;
+    $('deskNotReady').textContent = ready ? '' : 'Nothing to work from yet — upload the site\'s bin list under Settings → Lists & racking first.';
+    renderDesk();
+  }
+  $('deskPrev').onclick = () => { deskAt = Math.max(0, deskAt - 1); renderDesk(); };
+  $('deskNext').onclick = () => { deskAt = Math.min(deskList.length - 1, deskAt + 1); renderDesk(); };
+  async function finishFromDesk(kind) {
+    const m = deskList[deskAt];
+    if (!m) return;
+    const st = await apiJson(`${F}/status`);
+    const sid = st.binList && st.binList.sessionId;
+    try {
+      const body = kind === 'skip' ? { reason: prompt('Why is it being skipped?', '') || 'skipped from the desk' } : {};
+      await postJson(`/api/admin/sessions/${sid}/moves/${m.id}/${kind}`, body);
+      msg($('deskMsg'), 'ok', kind === 'skip' ? `${m.pallet_id} skipped.` : `${m.pallet_id} marked moved to ${m.to_bin}.`, 'The next one is up.');
+      await refreshDesk();
+      await refresh().catch(() => {});
+    } catch (err) { msg($('deskMsg'), 'err', err.message); }
+  }
+  $('deskDone').onclick = () => finishFromDesk('done');
+  $('deskSkip').onclick = () => finishFromDesk('skip');
+  $('deskTall').onclick = () => { const t = $('deskWrap').classList.toggle('tall'); $('deskWrap').style.height = ''; $('deskTall').textContent = t ? 'Shorter' : 'Taller'; };
+  document.addEventListener('subshow', (e) => { if (e.detail === 'desk') refreshDesk().catch(() => {}); });
 
   $('btnMvBuild').onclick = async () => {
     if (!needSession($('mvMsg'))) return;
