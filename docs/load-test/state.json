@@ -1,10 +1,10 @@
 {
-  "phase": "afternoon break",
+  "phase": "counting",
   "day": 3,
-  "simTime": "Wednesday 13:18 (afternoon break)",
+  "simTime": "Wednesday 14:07",
   "lines": 21788,
   "startedAt": "2026-10-04T09:19:28.471Z",
-  "snapshots": 37,
+  "snapshots": 39,
   "sos": 25,
   "approved": 300,
   "rejected": 63,
@@ -12,5 +12,5 @@
   "handbacks": 71,
   "failures": 0,
   "failed": [],
-  "at": "2026-10-04T15:02:37.230Z"
+  "at": "2026-10-04T15:14:07.249Z"
 }
