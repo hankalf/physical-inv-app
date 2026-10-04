@@ -84,6 +84,24 @@ Dockerfile, and the app listens on the port Railway gives it. Attach a **persist
 volume** and point `DB_PATH` at it — see step 2 — or the database is wiped on every
 redeploy.
 
+**Your own address (e.g. `fullharvest-inventory.app`).** Railway gives the service a
+`*.up.railway.app` address; a name of your own goes on top of it. In Railway: the service
+→ **Settings → Networking → Custom Domain**, type the name, and Railway shows the DNS
+record to add at the registrar. Then at the registrar:
+
+- a **subdomain** such as `count.fullharvest-inventory.app` takes a plain **CNAME** to the
+  target Railway shows — the simplest, and what we suggest for the scanners;
+- the **bare name** `fullharvest-inventory.app` cannot carry a CNAME under ordinary DNS,
+  so it needs a registrar or DNS host that offers *CNAME flattening* / an *ALIAS* record
+  (Cloudflare, for one), or point the bare name at the subdomain with a redirect.
+
+Railway issues the HTTPS certificate itself within a few minutes. A `.app` name is
+HTTPS-only by design (the whole top-level domain is on the browsers' preload list), which
+the app needs anyway for the scanners' offline mode. Once the new address answers, open
+**Settings → Scanner screen** on it: the scanner links shown there carry the new address,
+and each handheld is opened from its new link and installed again — an app installed from
+the old address is a different app to the device. Supervisors just use the new address.
+
 **On a PC inside the warehouse (no internet needed).**
 
 ```bash

@@ -71,6 +71,12 @@ Deploy from this repo — `railway.json` builds the Dockerfile. Then:
    app starts with a warning and counts are lost on redeploy.
 2. Set `SUPERADMIN_PASSWORD` (and `SUPERADMIN_USER`, or take the default `ADMIN`).
 
+3. Optionally a **custom domain** (Service → Settings → Networking → Custom Domain), e.g.
+   `fullharvest-inventory.app`: a subdomain takes a CNAME to the target Railway shows; the
+   bare name needs a DNS host with CNAME flattening or an ALIAS record. Railway issues the
+   certificate. Re-open each scanner's link from Settings → Scanner screen on the new
+   address afterwards, since an installed app is tied to the address it came from.
+
 Scanners need internet access for this option, not just warehouse Wi-Fi.
 
 ### Environment variables
