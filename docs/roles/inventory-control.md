@@ -67,13 +67,9 @@ A count compares the floor with a report. If the report is wrong, every variance
    report, and *Reports → Pallet report* with **Hide missing** off lists them all. Pick the
    **System** filter and confirm each system's pallet count against the file you sent.
 4. **Agree the thresholds** with whoever sets the count up (*Settings → Count session*):
-   - **Recount over N units / or over N %**: a difference smaller than both raises no second
-     count. 2 to 5 units and 5 to 10 % is usual; at 0/0 every difference is recounted and the
-     list becomes unworkable;
+   - **Recount over N units / or over N %**: a difference smaller than both raises no second count. 2 to 5 units and 5 to 10 % is usual; at 0/0 every difference is recounted and the list becomes unworkable;
    - **a cap** on second counts;
-   - **Adjustments need approval**, and its own threshold under which a difference goes
-     through as **AUTO** without a signature. Decide this before the count: switching it on
-     afterwards is allowed but means signing everything at once.
+   - **Adjustments need approval**, and its own threshold under which a difference goes through as **AUTO** without a signature. Decide this before the count: switching it on afterwards is allowed but means signing everything at once.
 5. **Agree the reason codes** (*Settings → ERP & backups → Adjustment reasons*). They are what
    you will pick for every approval and what the ERP file carries. Match them to the ERP's own
    list.
@@ -113,19 +109,11 @@ When the floor reports every aisle handed back and *Progress* shows every bin wi
    (**Request second count** on a bin) or **Raise from all variances now**: it skips aisles
    nobody has reached and says how many it skipped.
 2. **The pallet report, status by status.** Use the **Status** filter and work each list:
-   - `QTY VARIANCE`: the real stock differences. Biggest first. Each will become an
-     adjustment;
-   - `WRONG BIN`: right pallet, right quantity, wrong place. No stock adjustment, but the
-     bin on the ERP is wrong and a put-away or transfer is needed; the **Found in** column has
-     the bin it is in;
-   - `NOT IN MASTER`: pallets on the floor the report did not know. A real pallet (a receipt
-     not yet posted, a pallet from another system's report) or a mistyped id. The
-     adjustments list carries them as additions; rows named `NO-LABEL-F01A001-1` are pallets
-     with no readable label counted under their bin, on the **Fix list** to relabel;
-   - `MISSING`: on the report, never found. Until the count is closed these are not
-     adjustments. Once it is closed they are, in full;
-   - `COUNTED TWICE`: one pallet scanned by two teams, or a second label; the lines say who
-     and when. Decide which count stands; the supervisor can void a line.
+   - `QTY VARIANCE`: the real stock differences. Biggest first. Each will become an adjustment;
+   - `WRONG BIN`: right pallet, right quantity, wrong place. No stock adjustment, but the bin on the ERP is wrong and a put-away or transfer is needed; the **Found in** column has the bin it is in;
+   - `NOT IN MASTER`: pallets on the floor the report did not know. A real pallet (a receipt not yet posted, a pallet from another system's report) or a mistyped id. The adjustments list carries them as additions; rows named `NO-LABEL-F01A001-1` are pallets with no readable label counted under their bin, on the **Fix list** to relabel;
+   - `MISSING`: on the report, never found. Until the count is closed these are not adjustments. Once it is closed they are, in full;
+   - `COUNTED TWICE`: one pallet scanned by two teams, or a second label; the lines say who and when. Decide which count stands; the supervisor can void a line.
 3. **By system.** With three systems in one warehouse, read the report once per **System**.
    A pallet counted in the wrong system's bin is a `WRONG BIN` to one system and `NOT IN
    MASTER` to the other; the *System* column on the pallet report and the *Summary* sheet's
