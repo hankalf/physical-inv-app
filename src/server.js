@@ -25,7 +25,7 @@ import { autoPlan, applyPlan } from './routes/auto-plan.js';
 import { endTrial, setTrial } from './routes/trial.js';
 import { exportEverything } from './routes/export-all.js';
 import { idleConfig, saveIdleConfig, teamClocks, checkIdle, answerIdle, openIdleAlerts, recentIdleAlerts, tellTeamsIdle, idleTick, recordSignoff } from './routes/idle.js';
-import { practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, practiceReadiness, practiceFromFile, practiceOptions, setPracticeOptions, practiceSandbox, setPracticeSandbox, practiceExport, ownerOf } from './routes/practice.js';
+import { practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, practiceReadiness, practiceFromFile, practiceOptions, setPracticeOptions, practiceSandbox, setPracticeSandbox, practiceExport, ownerOf, practiceModes, startPracticeMode, MODE_ACCESS } from './routes/practice.js';
 import { branding, saveLogo, clearLogo } from './routes/branding.js';
 import { raiseAlert, tellTeams, listAlerts, seeAlert, closeAlert, alertsForDevice, sosReasons, saveSosReasons, DEFAULT_REASONS } from './routes/alerts.js';
 import { teamsConfig, saveTeamsConfig, postToTeams, testCard, alertCard } from './util/teams.js';
@@ -353,7 +353,7 @@ async function handleHandheld(req, res, url, m) {
   }
 
   // --- the Not in Location list, for the gun to watch for as it scans
-  if (p === '/api/missing' && method === 'GET') return sendJson(req, res, 200, { pallets: missingForGun() });
+  if (p === '/api/missing' && method === 'GET') return sendJson(req, res, 200, { pallets: missingForGun((device && device.practice_owner) || null) });
 
   // --- the fix list: a problem seen on the floor, reported from the gun
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/issues$/)) && method === 'GET') {
@@ -375,7 +375,7 @@ async function handleHandheld(req, res, url, m) {
     openSession(m[1]);
     const body = await readJson(req);
     const out = finishMove(m[1], m[2], { team: body.team, deviceId: device ? device.name : body.deviceId, actualBin: body.actualBin, status: m[3] === 'skip' ? 'skipped' : 'done', reason: body.reason });
-    if (!out.already && out.move.status === 'done') markFound(out.move.pallet_id, { bin: out.move.actual_bin, team: body.team, device: device ? device.name : body.deviceId, sessionId: m[1], how: 'moved' });
+    if (!out.already && out.move.status === 'done') markFound(out.move.pallet_id, { bin: out.move.actual_bin, team: body.team, device: device ? device.name : body.deviceId, sessionId: m[1], how: 'moved', owner: (device && device.practice_owner) || null });
     return sendJson(req, res, 200, out);
   }
 
@@ -480,7 +480,7 @@ async function handleHandheld(req, res, url, m) {
     result.found = [];
     for (const r of rows) {
       if (!ok.has(r.clientId) || r.emptyBin || !r.palletId) continue;
-      const f = markFound(r.palletId, { bin: r.location, team: r.team, device: device ? device.name : r.deviceId, sessionId: m[1], how: 'counted' });
+      const f = markFound(r.palletId, { bin: r.location, team: r.team, device: device ? device.name : r.deviceId, sessionId: m[1], how: 'counted', owner: (device && device.practice_owner) || null });
       if (f) { result.found.push({ pallet: f.pallet_id, bin: f.found_bin }); audit(f.found_device || 'a scanner', 'found a pallet from the Not in Location list', `${f.pallet_id} in ${f.found_bin}`, m[1]); }
     }
     return sendJson(req, res, 200, result);
@@ -531,6 +531,8 @@ function practicePayload(who, owner, s, dev) {
     ready: practiceReadiness(who, s.id, dev),
     options: practiceOptions(s.id),
     sandbox: practiceSandbox(s),
+    // the other jobs a scanner does, each ready to practise on this run
+    modes: practiceModes(who, owner, s),
     teamsChannel: teamsConfig().on,
   };
 }
@@ -658,6 +660,21 @@ async function handleAdmin(req, res, url, m) {
     const s = resetPractice(owner, { builtIn: !!body.builtIn });
     audit(actor, 'started a new practice run', `now #${s.id}${body.builtIn ? ' on the built-in data' : ''}`, s.id);
     return sendJson(req, res, 200, practicePayload(who, owner, s, practiceDevice(who)));
+  }
+  /* The other jobs a scanner does - a cycle count, moving pallets back, the
+     Not in Location list - set up on this person's practice alone, and only
+     the jobs their login may do for real. */
+  if (p === '/api/admin/practice/mode' && method === 'POST') {
+    const who = currentUser(req, url);
+    const owner = ownerOf(who);
+    const body = await readJson(req);
+    const mode = String(body.mode || '');
+    if (!MODE_ACCESS[mode]) throw httpError(400, 'that is not a practice mode');
+    requireAccess(MODE_ACCESS[mode]);
+    const s = ensurePractice(owner);
+    const out = startPracticeMode(owner, mode);
+    audit(actor, `set up ${mode === 'cycle' ? 'a practice cycle count' : mode === 'moves' ? 'practice pallet moves' : 'a practice Not in Location list'}`, out.note || '', s.id);
+    return sendJson(req, res, 200, practicePayload(who, owner, getSession(s.id), practiceDevice(who)));
   }
   // the features that ship off, switched on for this person's practice count only
   if (p === '/api/admin/practice/options' && method === 'POST') {
@@ -1203,7 +1220,7 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/moves\/(\d+)\/(done|skip)$/)) && method === 'POST') {
     const body = await readJson(req);
     const out = finishMove(m[1], m[2], { team: 'desk', deviceId: actor, actualBin: body.actualBin, status: m[3] === 'skip' ? 'skipped' : 'done', reason: body.reason });
-    if (!out.already && out.move.status === 'done') markFound(out.move.pallet_id, { bin: out.move.actual_bin, team: 'desk', device: actor, sessionId: m[1], how: 'moved' });
+    if (!out.already && out.move.status === 'done') markFound(out.move.pallet_id, { bin: out.move.actual_bin, team: 'desk', device: actor, sessionId: m[1], how: 'moved', owner: (getSession(m[1]) || {}).practice_owner || null });
     audit(actor, m[3] === 'skip' ? 'skipped a move from the desk' : 'finished a move from the desk', `${out.move.pallet_id} ${out.move.from_bin} → ${out.move.actual_bin || out.move.to_bin}`, m[1]);
     return sendJson(req, res, 200, out);
   }

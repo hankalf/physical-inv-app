@@ -30,6 +30,10 @@ CREATE TABLE IF NOT EXISTS missing (
 );
 CREATE INDEX IF NOT EXISTS idx_missing_status ON missing(status, pallet_id);
 `);
+/* A row planted by the Testing Suite belongs to one person's practice: their
+   practice gun is the only gun that watches for it, and the real Not in
+   Location page never lists it. NULL is the site's own list. */
+if (!db.prepare("PRAGMA table_info('missing')").all().some((c) => c.name === 'practice_owner')) db.exec('ALTER TABLE missing ADD COLUMN practice_owner TEXT');
 
 const now = () => new Date().toISOString();
 const COL = {
@@ -44,7 +48,7 @@ const COL = {
 };
 
 /** Upload a list. A pallet already open on the list is updated, not doubled. */
-export function importMissing(text, { label = '' } = {}) {
+export function importMissing(text, { label = '', owner = null } = {}) {
   const { records } = parseRecords(String(text || ''));
   if (!records.length) throw Object.assign(new Error('no rows found - the headings should include Pallet and Last known location'), { status: 400 });
   const batch = String(label || '').replace(/\.(csv|xlsx?|xlsm|txt)$/i, '').slice(0, 60) || now().slice(0, 10);
@@ -60,20 +64,20 @@ export function importMissing(text, { label = '' } = {}) {
       if (rawQty !== '' && !Number.isFinite(qty)) throw Object.assign(new Error(`row ${i + 2}: "${rawQty}" is not a quantity for ${pallet}`), { status: 400 });
       const vals = [pick(r, COL.sku) || null, pick(r, COL.description) || null, qty, pick(r, COL.uom) || null, norm(pick(r, COL.lot)) || null,
         norm(pick(r, COL.last)) || null, pick(r, COL.note) || null, batch];
-      const open = db.prepare("SELECT id FROM missing WHERE pallet_id = ? AND status = 'missing'").get(pallet);
+      const open = db.prepare("SELECT id FROM missing WHERE pallet_id = ? AND status = 'missing' AND practice_owner IS ?").get(pallet, owner);
       if (open) {
         db.prepare(`UPDATE missing SET sku = COALESCE(?, sku), description = COALESCE(?, description), qty = COALESCE(?, qty), uom = COALESCE(?, uom),
                       lot = COALESCE(?, lot), last_location = COALESCE(?, last_location), note = COALESCE(?, note), batch = ? WHERE id = ?`).run(...vals, open.id);
         updated++;
       } else {
-        db.prepare(`INSERT INTO missing (pallet_id, sku, description, qty, uom, lot, last_location, note, batch, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-          .run(pallet, ...vals, now());
+        db.prepare(`INSERT INTO missing (pallet_id, sku, description, qty, uom, lot, last_location, note, batch, created_at, practice_owner) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+          .run(pallet, ...vals, now(), owner);
         added++;
       }
     });
     db.exec('COMMIT');
   } catch (err) { db.exec('ROLLBACK'); throw err; }
-  return { added, updated, batch, summary: missingSummary() };
+  return { added, updated, batch, summary: missingSummary(owner) };
 }
 
 export function addMissing(body = {}) {
@@ -83,32 +87,32 @@ export function addMissing(body = {}) {
     .map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')}\n`, { label: 'typed in' });
 }
 
-export function missingSummary() {
+export function missingSummary(owner = null) {
   const out = { missing: 0, found: 0, closed: 0 };
-  for (const r of db.prepare('SELECT status, COUNT(*) n FROM missing GROUP BY status').all()) out[r.status] = r.n;
+  for (const r of db.prepare('SELECT status, COUNT(*) n FROM missing WHERE practice_owner IS ? GROUP BY status').all(owner)) out[r.status] = r.n;
   out.total = out.missing + out.found + out.closed;
   return out;
 }
 
-export function listMissing({ status = '' } = {}) {
-  const rows = status ? db.prepare('SELECT * FROM missing WHERE status = ? ORDER BY id DESC').all(status)
-    : db.prepare("SELECT * FROM missing ORDER BY status = 'closed', status = 'found', id DESC").all();
-  return { summary: missingSummary(), rows };
+export function listMissing({ status = '', owner = null } = {}) {
+  const rows = status ? db.prepare('SELECT * FROM missing WHERE status = ? AND practice_owner IS ? ORDER BY id DESC').all(status, owner)
+    : db.prepare("SELECT * FROM missing WHERE practice_owner IS ? ORDER BY status = 'closed', status = 'found', id DESC").all(owner);
+  return { summary: missingSummary(owner), rows };
 }
 
 /** The gun's copy: every pallet still lost, and where it was last seen. */
-export const missingForGun = () =>
-  db.prepare("SELECT pallet_id, last_location, description FROM missing WHERE status = 'missing'").all()
+export const missingForGun = (owner = null) =>
+  db.prepare("SELECT pallet_id, last_location, description FROM missing WHERE status = 'missing' AND practice_owner IS ? ORDER BY id").all(owner)
     .map((r) => [r.pallet_id, r.last_location || '', r.description || '']);
 
 /**
  * A pallet on the list has been scanned somewhere. Called for every count line
  * and every move that lands; cheap when the list is empty.
  */
-export function markFound(palletId, { bin, team = '', device = '', sessionId = null, how = 'counted' } = {}) {
+export function markFound(palletId, { bin, team = '', device = '', sessionId = null, how = 'counted', owner = null } = {}) {
   const p = norm(palletId);
   if (!p) return null;
-  const row = db.prepare("SELECT id FROM missing WHERE pallet_id = ? AND status = 'missing'").get(p);
+  const row = db.prepare("SELECT id FROM missing WHERE pallet_id = ? AND status = 'missing' AND practice_owner IS ?").get(p, owner);
   if (!row) return null;
   db.prepare(`UPDATE missing SET status = 'found', found_bin = ?, found_team = ?, found_device = ?, found_session = ?, found_at = ?, found_how = ? WHERE id = ?`)
     .run(norm(bin) || null, norm(team) || null, norm(device) || null, sessionId ? Number(sessionId) : null, now(), how, row.id);
@@ -132,3 +136,7 @@ export function closeMissing(id, { by, outcome = '', reopen = false }) {
 }
 
 export const deleteMissing = (id) => db.prepare('DELETE FROM missing WHERE id = ?').run(Number(id)).changes;
+
+/* The Testing Suite's own rows: planted for one person, cleared with their run. */
+export const practiceMissingRows = (owner) => db.prepare('SELECT * FROM missing WHERE practice_owner = ? ORDER BY id').all(owner);
+export const clearPracticeMissing = (owner) => db.prepare('DELETE FROM missing WHERE practice_owner = ?').run(owner).changes;

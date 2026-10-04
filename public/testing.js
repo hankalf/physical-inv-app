@@ -100,7 +100,7 @@
     if (p.counted.right) return el('span', 'state ok', `✓ ${p.counted.qty}`);
     const bits = [];
     if (Number(p.counted.qty) !== p.qty) bits.push(`${p.counted.qty} counted`);
-    if (p.counted.bin !== p.bin) bits.push(`in ${p.counted.bin}`);
+    if (p.counted.bin !== (p.movedTo || p.bin)) bits.push(`in ${p.counted.bin}`);
     return el('span', 'state warn', `⚠ ${bits.join(', ') || 'counted'}`);
   }
 
@@ -163,7 +163,8 @@
             tdP.appendChild(el('div', 'item' + (p.expired ? ' expired' : ''),
               `${p.desc}${p.uom ? ' · ' + p.uom : ''}${opt.askLot ? '' : ' · lot ' + p.lot} · best before ${p.bestBefore}${p.expired ? ' (expired)' : ''}`));
             const rep = [];
-            if (!p.report) rep.push('not on the report');
+            if (p.movedTo) { rep.push(`you moved it to ${p.movedTo} (Move pallets) — count it there`); tr.dataset.bin = p.movedTo; }
+            else if (!p.report) rep.push('not on the report');
             else {
               if (Number(p.report.qty) !== p.qty) rep.push(`report says ${p.report.qty}`);
               if (p.report.bin && p.report.bin !== b.bin) rep.push(`report says bin ${p.report.bin}`);
@@ -340,11 +341,187 @@
       });
   }
 
+
+  /* ------------------------------------------------- what to practise
+     The full count is the lesson; the other jobs a scanner does - a cycle
+     count off a list, putting front pallets back, the Not in Location list -
+     are each a button here. The first click sets the job up on this person's
+     practice (and nowhere else); the gun then offers it at sign-on exactly as
+     it would on the floor. Only the jobs this login may do for real appear. */
+  const MODES = [
+    { key: 'full', title: 'Full count', what: 'Team 99 walks its aisles: pallet, quantity, bin.' },
+    { key: 'cycle', title: 'Cycle count', what: 'One person, a clock-in number, and a list of bins to count today.' },
+    { key: 'moves', title: 'Move pallets', what: 'Front pallets with an empty bin behind: scan the pallet, put it back, scan the bin.' },
+    { key: 'missing', title: 'Not in Location', what: 'Pallets the system has lost. Count as normal — the gun calls out one it finds.' },
+  ];
+  const MODE_KEY = () => `testingMode:${data ? data.owner : ''}`;
+  let modeSel = 'full';
+  let modeDrawn = '';
+  const modeOn = (k) => !!(data && data.modes && data.modes[k] && data.modes[k].on);
+  function loadModeChoice() {
+    let saved = null;
+    try { saved = localStorage.getItem(MODE_KEY()); } catch { saved = null; }
+    modeSel = saved && MODES.some((m) => m.key === saved) ? saved : 'full';
+    // a job that is not set up (a new run) is not the one you are on
+    if (modeSel !== 'full' && !modeOn(modeSel)) modeSel = 'full';
+  }
+  function renderModes() {
+    const m = data && data.modes;
+    const card = $('modesCard');
+    if (!m) { card.hidden = true; return; }
+    const offered = MODES.filter((x) => x.key === 'full' || (m[x.key] && m[x.key].allowed));
+    card.hidden = offered.length < 2;
+    if (card.hidden) return;
+    const sig = JSON.stringify([m, modeSel]);
+    if (sig === modeDrawn) return;
+    modeDrawn = sig;
+    $('modeList').replaceChildren(...offered.map((x) => {
+      const b = el('button', (x.key === modeSel ? 'now' : '') + (x.key !== 'full' && modeOn(x.key) ? ' set' : ''));
+      b.type = 'button';
+      b.dataset.mode = x.key;
+      b.append(el('b', '', x.title), el('span', '', x.what));
+      b.onclick = () => chooseMode(x.key);
+      return b;
+    }));
+    renderModePane();
+  }
+  async function chooseMode(key) {
+    clearMsg($('modeMsg'));
+    if (key !== 'full' && !modeOn(key)) {
+      if (!data.modes.available) { msg($('modeMsg'), 'err', 'The other jobs are practised on the built-in test data.', 'Press “Back to the built-in test data” under Your own test pallets first.'); return; }
+      try {
+        const next = await api.post('/api/admin/practice/mode', { mode: key });
+        drawn = '';
+        render(next);
+      } catch (err) { msg($('modeMsg'), 'err', err.message); return; }
+    }
+    modeSel = key;
+    try { localStorage.setItem(MODE_KEY(), key); } catch { /* private window */ }
+    modeDrawn = '';
+    renderModes();
+    const g = gunPeek();
+    if (key !== 'full') {
+      // the gun reads the list of counts at start-up: on the sign-on screen it is simply restarted
+      if (g.screen === 'scrSignon') { restartGun(); msg($('modeMsg'), 'ok', `${MODES.find((x) => x.key === key).title} is set up on your practice.`, 'The gun has been restarted on its sign-on screen so it can see it.'); }
+      else msg($('modeMsg'), 'ok', `${MODES.find((x) => x.key === key).title} is set up on your practice.`, 'Sign off the gun (My aisle → Sign off this scanner) and it is offered at sign-on; the tips take it from there.');
+    }
+    coach();
+  }
+  let restarted = 0;
+  function restartGun() {
+    if (Date.now() - restarted < 8000) return;
+    restarted = Date.now();
+    try { frame().contentWindow.location.reload(); } catch { loadGun({ force: true }); }
+  }
+  const binTable = (heads) => {
+    const wrap = el('div', 'scroll');
+    const t = el('table', 'shelf');
+    const hr = el('tr');
+    for (const [h, c] of heads) hr.appendChild(el('th', c, h));
+    const thead = el('thead'); thead.appendChild(hr);
+    const tbody = el('tbody');
+    t.append(thead, tbody);
+    wrap.appendChild(t);
+    return { wrap, tbody };
+  };
+  const stateOf = (cls, text) => el('span', 'state ' + cls, text);
+  function renderModePane() {
+    const pane = $('modePane');
+    const m = data.modes;
+    if (modeSel === 'full' || !m[modeSel] || !m[modeSel].on) { pane.hidden = true; pane.innerHTML = ''; return; }
+    pane.hidden = false;
+    pane.innerHTML = '';
+    const how = el('div', 'how');
+    if (modeSel === 'cycle') {
+      const c = m.cycle;
+      how.innerHTML = 'On the gun: tap <b>Cycle count</b> at the top of the sign-on screen, click a clock-in number below (on a cycle count the person is the team), then <b>Sign on &amp; load list</b> and <b>Start counting the list</b>. The gun takes you bin by bin: scan every pallet in the bin, then tap <b>Bin done</b> — or <b>Bin is EMPTY</b> when there is nothing there.';
+      pane.appendChild(how);
+      const so = el('div', 'signon');
+      const crewBox = el('div');
+      crewBox.append(el('div', 'lbl', 'Clock-in number'));
+      const vals = el('div', 'vals');
+      vals.append(...data.crew.map((x) => chip(x, { title: 'Scan this clock-in number into the gun', field: 'fEmployee' })));
+      crewBox.appendChild(vals);
+      const prog = el('div');
+      prog.append(el('div', 'lbl', 'Today\'s list'), el('div', 'muted', `${c.done} of ${c.bins.length} bins done`));
+      so.append(crewBox, prog);
+      pane.appendChild(so);
+      const { wrap, tbody } = binTable([['Bin', 'c-bin'], ['On the shelf', ''], ['Qty', 'c-qty'], ['Done', 'c-state']]);
+      wrap.style.marginTop = '10px';
+      for (const b of c.bins) {
+        const rows = Math.max(1, b.shelf.length);
+        for (let i = 0; i < rows; i++) {
+          const pl = b.shelf[i];
+          const tr = el('tr', (i === 0 ? 'binstart' : '') + (b.status === 'done' ? ' counted' : ''));
+          tr.dataset.cycleBin = b.bin;
+          if (pl) { tr.dataset.pallet = pl.id; tr.dataset.done = pl.counted ? '1' : '0'; } else { tr.dataset.empty = '1'; tr.dataset.done = b.recordedEmpty ? '1' : '0'; }
+          if (i === 0) { const td = el('td'); td.rowSpan = rows; td.appendChild(chip(b.bin)); tr.appendChild(td); }
+          const tdP = el('td'); const tdQ = el('td'); const tdS = el('td');
+          if (pl) {
+            tdP.appendChild(chip(pl.id));
+            tdP.appendChild(el('div', 'item', `${pl.desc} · ${pl.uom} · lot ${pl.lot}`));
+            tdQ.appendChild(chip(String(pl.qty), { cls: 'qty', title: 'Key this quantity into the gun' }));
+            tdS.appendChild(pl.counted ? stateOf('ok', '✓ counted') : stateOf('todo', 'not yet'));
+          } else {
+            tdP.appendChild(el('span', 'none', 'nothing here — Bin is EMPTY on the gun'));
+            tdS.appendChild(b.recordedEmpty ? stateOf('ok', '✓ recorded empty') : stateOf('todo', 'not yet'));
+          }
+          if (i === rows - 1 && b.status === 'done') tdS.appendChild(el('div', 'item', 'bin done'));
+          tr.append(tdP, tdQ, tdS);
+          tbody.appendChild(tr);
+        }
+      }
+      pane.appendChild(wrap);
+    } else if (modeSel === 'moves') {
+      const mv = m.moves;
+      how.innerHTML = 'On the gun: tap <b>Move pallets</b> at the top of the sign-on screen, sign on with team <b>99</b> and a clock-in number, and pick the aisle. For each pallet: scan the <b>pallet</b> (so it is the right one), put it in the bin behind, scan that <b>bin</b>. When the bin behind turns out not to be empty, tap <b>Cannot move it</b> and say why — the office sees it under Front bins.';
+      pane.appendChild(how);
+      pane.appendChild(el('div', 'muted', `${mv.done} moved · ${mv.skipped} skipped · ${mv.list.length - mv.done - mv.skipped} to move`));
+      const { wrap, tbody } = binTable([['Pallet', 'c-bin'], ['From → to', ''], ['Try this', ''], ['State', 'c-state']]);
+      wrap.style.marginTop = '10px';
+      for (const x of mv.list) {
+        const tr = el('tr', 'binstart mvrow' + (x.status !== 'open' ? ' counted' : ''));
+        tr.dataset.move = x.id; tr.dataset.pallet = x.pallet; tr.dataset.to = x.to; tr.dataset.done = x.status !== 'open' ? '1' : '0';
+        const td1 = el('td'); td1.appendChild(chip(x.pallet));
+        const td2 = el('td'); const ch = el('div', 'chips'); ch.append(chip(x.from, { title: 'The front bin it is in now' }), el('span', 'arrow', '→'), chip(x.to, { title: 'The bin behind — scan it once the pallet is in' })); td2.appendChild(ch);
+        if (x.occupied.length) td2.appendChild(el('div', 'rep', `${x.to} is not empty: ${x.occupied.join(', ')} is in it`));
+        const td3 = el('td'); td3.appendChild(el('div', 'what', x.try));
+        const td4 = el('td');
+        td4.appendChild(x.status === 'done' ? stateOf('ok', `✓ moved to ${x.actual || x.to}`) : x.status === 'skipped' ? stateOf('warn', `⚠ skipped — ${x.reason}`) : stateOf('todo', 'to move'));
+        tr.append(td1, td2, td3, td4);
+        tbody.appendChild(tr);
+      }
+      pane.appendChild(wrap);
+    } else if (modeSel === 'missing') {
+      const ms = m.missing;
+      how.innerHTML = 'These pallets are on the <b>Not in Location</b> list — the system has lost track of them. Count the shelves as normal, on the full count: the moment the gun scans one of them it says <b>found!</b>, and the office is told where it turned up. Two of them are on the shelves below; one is nowhere, and stays on the list.';
+      pane.appendChild(how);
+      pane.appendChild(el('div', 'muted', `${ms.found} of ${ms.rows.length} found`));
+      const { wrap, tbody } = binTable([['Pallet', 'c-bin'], ['Last seen', ''], ['Actually', ''], ['State', 'c-state']]);
+      wrap.style.marginTop = '10px';
+      for (const r of ms.rows) {
+        const tr = el('tr', 'binstart' + (r.status !== 'missing' ? ' counted' : ''));
+        tr.dataset.lost = r.pallet; tr.dataset.where = r.where; tr.dataset.done = r.status !== 'missing' ? '1' : '0';
+        const td1 = el('td'); td1.appendChild(chip(r.pallet)); td1.appendChild(el('div', 'item', r.desc));
+        const td2 = el('td', '', r.last);
+        const td3 = el('td');
+        if (r.where) { td3.appendChild(el('span', '', 'on the shelf in ')); td3.appendChild(chip(r.where)); } else td3.appendChild(el('span', 'none', 'nowhere — it has gone'));
+        const td4 = el('td');
+        td4.appendChild(r.status !== 'missing' ? stateOf('ok', `✓ found in ${r.foundBin}${r.foundHow === 'moved' ? ' (moving it)' : ''}`) : stateOf('todo', 'still missing'));
+        tr.append(td1, td2, td3, td4);
+        tbody.appendChild(tr);
+      }
+      pane.appendChild(wrap);
+    }
+  }
+
   function render(next) {
+    const fresh = !data || !next || (data.session && next.session && data.session.id !== next.session.id);
     data = next;
     const sig = JSON.stringify(next);
     if (sig === drawn) return;
     drawn = sig;
+    if (fresh) loadModeChoice();
     $('gunName').textContent = data.device ? data.device.name : 'MC9300';
     loadDash();
     renderSignon();
@@ -354,6 +531,7 @@
     renderReady();
     renderOptions();
     renderSandbox();
+    renderModes();
     const own = data.source === 'upload';
     $('dataSource').textContent = own ? `testing on “${data.label}”` : 'testing on the built-in data';
     $('btnBuiltIn').hidden = !own;
@@ -583,13 +761,25 @@
     try {
       const d = frame().contentWindow.document;
       const scr = d.querySelector('.screen.active');
+      const q = (sel) => d.querySelector(sel);
+      const shown = (sel) => { const e = q(sel); return !!e && !e.hidden && e.offsetParent !== null; };
+      const rb = q('#recountBanner');
       return {
         up: typeof frame().contentWindow.wedge === 'function',
         screen: scr ? scr.id : '',
-        prompt: (d.querySelector('#prompt') || {}).textContent || '',
-        team: (d.querySelector('#fTeam') || {}).value || '',
-        crew: (d.querySelector('#employeeChips') || {}).textContent || '',
-        override: scr && scr.id === 'scrOverride' && !!d.querySelector('#ovYesNo:not([hidden])'),
+        prompt: (q('#prompt') || {}).textContent || '',
+        team: (q('#fTeam') || {}).value || '',
+        crew: (q('#employeeChips') || {}).textContent || '',
+        override: scr && scr.id === 'scrOverride' && !!q('#ovYesNo:not([hidden])'),
+        // the job picked at the top of the sign-on screen, and which are offered
+        job: shown('#btnModeCycle.selected') ? 'cycle' : shown('#btnModeMove.selected') ? 'move' : shown('#btnModeFull.selected') ? 'full' : '',
+        offers: { cycle: shown('#btnModeCycle'), move: shown('#btnModeMove') },
+        // a cycle count or second count in hand, and the move in hand
+        recountBin: rb && !rb.hidden ? rb.dataset.bin || '' : '',
+        recountKind: rb && !rb.hidden ? rb.dataset.kind || '' : '',
+        moveTask: shown('#moveTask'),
+        movePrompt: (q('#mvPrompt') || {}).textContent || '',
+        movePallet: (q('#mvPallet') || {}).textContent || '',
       };
     } catch { return { up: false, screen: '' }; }
   }
@@ -599,6 +789,8 @@
     const g = gunPeek();
     const lines = data ? data.totals.lines : 0;
     if (!g.up) return { key: 'wait', target: $('gunFrame').closest('.gun'), step: 'Hang on', text: 'The scanner is starting up.' };
+    const job = modeTip(g);
+    if (job) return job;
     if (g.screen === 'scrSignon') {
       if (!g.team) return { key: 'team', target: $('teamVals').querySelector('.scan'), step: 'Step 1 · sign on', text: 'Click <b>99</b>. Every click on this sheet is a <b>scan</b> — it types into the gun as if you had pulled the trigger.' };
       if (!g.crew.trim()) return { key: 'crew', target: $('crewVals').querySelector('.scan'), step: 'Step 1 · sign on', text: 'Now a clock-in number. Click <b>T1001</b> — that scans a badge in.' };
@@ -607,7 +799,9 @@
     if (g.screen === 'scrAssign') return { key: 'count', target: $('gunFrame').closest('.gun'), step: 'Step 2', text: 'This is the team\'s aisle. Tap <b>Start counting</b> on the gun.', pos: 'left' };
     if (g.override) return { key: 'yesno', target: $('gunFrame').closest('.gun'), step: 'The gun is asking', text: 'That pallet is not on the report. On the gun, tap <b>YES</b> to count it anyway — it goes to a supervisor as a pallet to add.', pos: 'left' };
     if (g.screen === 'scrScan') {
-      const row = [...$('shelves').querySelectorAll('tr[data-pallet][data-done="0"]')].find((r) => !justCounted(r.dataset.pallet)) || null;
+      const lost = modeSel === 'missing' && modeOn('missing') ? (data.modes.missing.rows.find((y) => y.status === 'missing' && y.where && !justCounted(y.pallet)) || null) : null;
+      const row = (lost && $('shelves').querySelector(`tr[data-pallet="${lost.pallet}"][data-done="0"]`))
+        || [...$('shelves').querySelectorAll('tr[data-pallet][data-done="0"]')].find((r) => !justCounted(r.dataset.pallet)) || null;
       const p = /PALLET/i.test(g.prompt), q = /QUANTITY/i.test(g.prompt), b = /BIN/i.test(g.prompt), c = /Comments/i.test(g.prompt);
       if (p && row) return { key: 'pallet:' + row.dataset.pallet, target: row.querySelector(`.scan[data-code="${row.dataset.pallet}"]`), step: lines ? 'Next pallet' : 'Step 3 · count a pallet',
         text: `The gun wants a <b>pallet</b>. Click <b>${row.dataset.pallet}</b> — that is the pallet on this shelf.${lines ? '' : ' Then it will ask for the quantity, then the bin.'}` };
@@ -642,6 +836,70 @@
     return null;
   }
 
+  /* The tips for the other jobs. The gun only learns of a new job at start-up,
+     so a gun sitting on its sign-on screen without the job on offer is simply
+     restarted; one mid-count is asked to sign off first. */
+  const GUN = () => $('gunFrame').closest('.gun');
+  const paneChip = (code) => $('modePane').querySelector(`.scan[data-code="${code}"]`);
+  function modeTip(g) {
+    if (!data || modeSel === 'full' || !modeOn(modeSel)) return null;
+    const m = data.modes[modeSel];
+    const name = MODES.find((x) => x.key === modeSel).title;
+    if (modeSel === 'cycle') {
+      if (g.screen === 'scrSignon') {
+        if (!g.offers.cycle) { restartGun(); return { key: 'cyc:restart', target: GUN(), step: 'Cycle count', pos: 'left', text: 'Restarting the gun so it sees the cycle count…' }; }
+        if (g.job !== 'cycle') return { key: 'cyc:pick', target: GUN(), step: 'Cycle count', pos: 'left', text: 'On the gun, tap <b>Cycle count</b> at the top of the sign-on screen.' };
+        if (!g.crew.trim()) return { key: 'cyc:crew', target: paneChip(data.crew[0]) || $('crewVals').querySelector('.scan'), step: 'Cycle count · sign on', text: `Click <b>${data.crew[0]}</b>. On a cycle count the person is the team — no team number.` };
+        return { key: 'cyc:start', target: GUN(), step: 'Cycle count · sign on', pos: 'left', text: 'Now on the gun: tap <b>Sign on &amp; load list</b>.' };
+      }
+      if (g.screen === 'scrAssign') return { key: 'cyc:list', target: GUN(), step: 'Cycle count', pos: 'left', text: `Your list has <b>${m.bins.length} bins</b>. Tap <b>Start counting the list</b> on the gun.` };
+      if (g.screen === 'scrScan' && g.recountKind === 'cycle' && g.recountBin) {
+        const b = m.bins.find((x) => x.bin === g.recountBin);
+        if (!b) return null;
+        const next = b.shelf.find((p) => !p.counted && !justCounted(p.id));
+        const p = /PALLET/i.test(g.prompt), q = /QUANTITY/i.test(g.prompt), bn = /BIN/i.test(g.prompt), c = /Comments/i.test(g.prompt);
+        const row = next ? $('modePane').querySelector(`tr[data-pallet="${next.id}"]`) : null;
+        if (p && next && row) return { key: 'cyc:pal:' + next.id, target: row.querySelector(`.scan[data-code="${next.id}"]`), step: `Cycle count · bin ${b.bin}`, text: `The gun is on bin <b>${b.bin}</b>. Click <b>${next.id}</b>, the pallet on that shelf.` };
+        if (q && next && row) return { key: 'cyc:qty:' + next.id, target: row.querySelector('.scan.qty'), step: `Cycle count · bin ${b.bin}`, text: 'Now the <b>quantity</b>.' };
+        if (bn && next) return { key: 'cyc:bin:' + next.id, target: paneChip(b.bin), step: `Cycle count · bin ${b.bin}`, text: `And the <b>bin</b> — click <b>${b.bin}</b>.` };
+        if (c) return { key: 'comments', target: GUN(), step: 'Comments', pos: 'left', text: 'Optional. Tap a reason on the gun, or <b>Skip</b> — or just wait, it moves on by itself.' };
+        if (p && !b.shelf.length && !b.recordedEmpty) return { key: 'cyc:empty:' + b.bin, target: paneChip(b.bin), step: `Cycle count · bin ${b.bin}`, text: `Nothing is in <b>${b.bin}</b>. On the gun tap <b>Bin is EMPTY — scan the bin</b>, then click <b>${b.bin}</b>.` };
+        if (p) return { key: 'cyc:done:' + b.bin, target: GUN(), step: `Cycle count · bin ${b.bin}`, pos: 'left', text: `Everything in <b>${b.bin}</b> is counted. Tap <b>Bin done — nothing more here</b> on the gun; it moves to the next bin on the list.` };
+      }
+      if (g.screen === 'scrScan' && !g.recountBin) return { key: 'cyc:back', target: GUN(), step: 'Cycle count', pos: 'left', text: 'Tap <b>My list</b> on the gun, then <b>Start counting the list</b>, to count off today\'s list.' };
+      return null;
+    }
+    if (modeSel === 'moves') {
+      if (g.screen === 'scrSignon') {
+        if (!g.offers.move) { restartGun(); return { key: 'mv:restart', target: GUN(), step: 'Move pallets', pos: 'left', text: 'Restarting the gun so it sees the pallets to move…' }; }
+        if (g.job !== 'move') return { key: 'mv:pick', target: GUN(), step: 'Move pallets', pos: 'left', text: 'On the gun, tap <b>Move pallets</b> at the top of the sign-on screen.' };
+        if (!g.team) return { key: 'mv:team', target: $('teamVals').querySelector('.scan'), step: 'Move pallets · sign on', text: 'Click <b>99</b> for the team.' };
+        if (!g.crew.trim()) return { key: 'mv:crew', target: $('crewVals').querySelector('.scan'), step: 'Move pallets · sign on', text: 'And a clock-in number — click <b>T1001</b>.' };
+        return { key: 'mv:start', target: GUN(), step: 'Move pallets · sign on', pos: 'left', text: 'Now on the gun: tap <b>Sign on &amp; load list</b>.' };
+      }
+      if (g.screen === 'scrMove') {
+        if (!g.moveTask) return { key: 'mv:aisle', target: GUN(), step: 'Move pallets', pos: 'left', text: m.list.some((x) => x.status === 'open') ? 'Pick an <b>aisle</b> on the gun — F01 has two pallets to move, F02 has one.' : 'Nothing left to move. Tap <b>Sign off this scanner</b> on the gun to do something else.' };
+        const x = m.list.find((y) => y.pallet === g.movePallet.trim()) || m.list.find((y) => y.status === 'open');
+        if (!x) return null;
+        const row = $('modePane').querySelector(`tr[data-move="${x.id}"]`);
+        if (/PALLET/i.test(g.movePrompt)) return { key: 'mv:pal:' + x.id, target: row && row.querySelector(`.scan[data-code="${x.pallet}"]`), step: 'Move pallets', text: `The gun wants the pallet. Click <b>${x.pallet}</b> — it is in the front position, ${x.from}.` };
+        if (x.occupied.length) return { key: 'mv:skip:' + x.id, target: GUN(), step: 'Move pallets', pos: 'left', text: `<b>${x.to}</b> is not empty — ${x.occupied.join(', ')} is in it. On the gun tap <b>Cannot move it</b>, then <b>Bin behind is not empty</b>.` };
+        return { key: 'mv:bin:' + x.id, target: row && row.querySelector(`.scan[data-code="${x.to}"]`), step: 'Move pallets', text: `Put the pallet in <b>${x.to}</b>, the bin behind, then click that bin.` };
+      }
+      return null;
+    }
+    if (modeSel === 'missing') {
+      // the full count, with one eye on the list: the first lost pallet that is on a shelf
+      if (g.screen !== 'scrScan' || !/PALLET/i.test(g.prompt)) return null;
+      const r = m.rows.find((y) => y.status === 'missing' && y.where && !justCounted(y.pallet));
+      if (!r) return { key: 'ms:done', target: $('modePane'), step: name, text: m.rows.some((y) => y.status === 'missing') ? 'Every lost pallet that was on a shelf is found. The one left is nowhere — it stays on the list for the office.' : 'Every pallet on the list is found.' };
+      const row = $('shelves').querySelector(`tr[data-pallet="${r.pallet}"]`);
+      return { key: 'ms:pal:' + r.pallet, target: (row && row.querySelector(`.scan[data-code="${r.pallet}"]`)) || paneChip(r.pallet), step: name,
+        text: `<b>${r.pallet}</b> is on the Not in Location list — the system last saw it in ${r.last}. It is sitting in <b>${r.where}</b>: click it, and watch the gun call it out. Then the quantity and the bin as usual.` };
+    }
+    return null;
+  }
+
   const shownFeat = new Set();     // a feature's tip has had its say once the person moves on
   /* A pallet whose bin was just scanned is counted as far as the tips are
      concerned, straight away - the server and the sheet catch up a moment
@@ -666,6 +924,8 @@
   function leftTip(key) {
     if (key.startsWith('feat:')) shownFeat.add(key.slice(5));
     if (key.startsWith('bin:')) { walked.set(key.slice(4), Date.now() + 30000); awaiting.set(key.slice(4), Date.now()); scheduleRefresh(); }
+    if (key.startsWith('cyc:bin:')) { walked.set(key.slice(8), Date.now() + 30000); scheduleRefresh(); }
+    if (key.startsWith('mv:bin:') || key.startsWith('mv:skip:') || key.startsWith('cyc:done:') || key.startsWith('cyc:empty:')) scheduleRefresh();
   }
   /* A tip only changes once the gun has settled on it: the screens flick past
      between scans, and a bubble that chased every one of them would jump all
@@ -793,7 +1053,7 @@
       const next = await api.post('/api/admin/practice/reset', {});
       await wipeGunStorage();
       drawn = '';
-      dashSeen = false; stepManual = null; walked.clear(); awaiting.clear(); stepDone.clear(); stepAuto = -1;
+      dashSeen = false; stepManual = null; walked.clear(); awaiting.clear(); stepDone.clear(); stepAuto = -1; modeSel = 'full'; modeDrawn = '';
       render(next);
       loadGun({ force: true });
       msg($('rigMsg'), 'ok', 'Started over.', 'A fresh practice run, and a gun that has never seen it. Sign on again — your last run is kept below.');
@@ -811,7 +1071,7 @@
     const next = await make();
     await wipeGunStorage();
     drawn = '';
-    dashSeen = false; stepManual = null; walked.clear(); awaiting.clear(); stepDone.clear(); stepAuto = -1;
+    dashSeen = false; stepManual = null; walked.clear(); awaiting.clear(); stepDone.clear(); stepAuto = -1; modeSel = 'full'; modeDrawn = '';
     render(next);
     loadGun({ force: true });
     msg($('uploadMsg'), 'ok', okText(next), 'Sign on again on the gun — your last run is kept under “Your earlier runs”.');

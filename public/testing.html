@@ -123,6 +123,19 @@
   .guidegrid > div span { color: var(--text-dim); }
   .guide.collapsed #guideBody { display: none; }
   .checks.ready { grid-template-columns: 1fr; gap: 4px; margin-top: 4px; }
+  /* what to practise: one button per job a scanner does */
+  .modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin-top: 12px; }
+  .modes button { width: auto; margin: 0; text-align: left; display: block; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); color: var(--text); cursor: pointer; }
+  .modes button b { display: block; font-size: 14px; }
+  .modes button span { display: block; font-size: 12.5px; color: var(--text-dim); margin-top: 3px; line-height: 1.4; }
+  .modes button.now { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-ink); }
+  .modes button.set::after { content: "set up"; float: right; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ok); }
+  .modepane { margin-top: 12px; }
+  .modepane .how { border-left: 3px solid var(--accent); background: var(--accent-ink); border-radius: 0 8px 8px 0; padding: 8px 12px; font-size: 13.5px; line-height: 1.5; margin-bottom: 10px; }
+  .modepane .how b { font-weight: 800; }
+  .modepane .chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .modepane table.shelf th.c-bin { width: 150px; }
+  .modepane .mvrow .arrow { color: var(--accent); font-weight: 800; padding: 0 6px; }
   .check .fix { display: block; font-size: 12.5px; color: var(--warn); margin-top: 2px; }
   .check.opt i { border-color: var(--warn); color: var(--warn); }
   .sbgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; }
@@ -291,6 +304,16 @@
                 <p class="muted" style="margin:10px 0 0">Stuck? The <b>SOS — I need help</b> button on the gun is real: press it here and it shows on the dashboard at the top like any other, so you can see that side too.</p>
               </details>
             </div>
+          </div>
+
+          <!-- the other jobs a scanner does, each ready to practise here on the
+               same two aisles: a cycle count, pallets to move back, the Not in
+               Location list - only the jobs this login may do for real -->
+          <div class="card" id="modesCard" hidden>
+            <h2>What to practise <span class="muted">the full count, or the other jobs a scanner does</span></h2>
+            <div class="modes" id="modeList"></div>
+            <div class="feedback" id="modeMsg"></div>
+            <div class="modepane" id="modePane" hidden></div>
           </div>
 
           <div class="card" id="readyCard">

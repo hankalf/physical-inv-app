@@ -8,6 +8,9 @@ import { sosReasons } from './alerts.js';
 import { importMaster } from './master.js';
 import { parseRecords, pick } from '../util/csv.js';
 import { queueAssignments } from './assignments.js';
+import { importMoves } from './moves.js';
+import { importMissing, practiceMissingRows, clearPracticeMissing } from './missing.js';
+import { allowed } from './access.js';
 
 /*
  * The practice count behind the Testing tab.
@@ -160,7 +163,10 @@ export const ownerOf = (who) => (who && who.username ? `user:${String(who.userna
 const HISTORY_KEEP = 10;             // earlier runs kept per person
 
 export const practiceSession = (owner) =>
-  db.prepare("SELECT * FROM sessions WHERE practice = 1 AND practice_owner = ? AND status = 'open' ORDER BY id DESC LIMIT 1").get(owner) || null;
+  db.prepare("SELECT * FROM sessions WHERE practice = 1 AND practice_owner = ? AND status = 'open' AND COALESCE(mode, 'full') = 'full' ORDER BY id DESC LIMIT 1").get(owner) || null;
+/* The cycle count beside the run, when the person has asked to practise one. */
+const cycleSession = (owner) =>
+  db.prepare("SELECT * FROM sessions WHERE practice = 1 AND practice_owner = ? AND status = 'open' AND mode = 'cycle' ORDER BY id DESC LIMIT 1").get(owner) || null;
 
 /** Build a practice count from nothing: bins, report, and the team's two aisles. */
 /* A practice count starts with the comments step held for five seconds, so a
@@ -250,7 +256,10 @@ export function practiceFromFile(owner, text, label = 'your file') {
 function closeRuns(owner) {
   db.prepare("UPDATE sessions SET status = 'closed', closed_at = ? WHERE practice = 1 AND practice_owner = ? AND status = 'open'")
     .run(new Date().toISOString(), owner);
-  const old = db.prepare("SELECT id FROM sessions WHERE practice = 1 AND practice_owner = ? AND status = 'closed' ORDER BY id DESC")
+  // the practice cycle count goes with its run, and so does the planted Not in Location list
+  for (const c of db.prepare("SELECT id FROM sessions WHERE practice = 1 AND practice_owner = ? AND mode = 'cycle'").all(owner)) db.prepare('DELETE FROM sessions WHERE id = ?').run(c.id);
+  clearPracticeMissing(owner);
+  const old = db.prepare("SELECT id FROM sessions WHERE practice = 1 AND practice_owner = ? AND status = 'closed' AND COALESCE(mode, 'full') = 'full' ORDER BY id DESC")
     .all(owner).slice(HISTORY_KEEP);
   for (const s of old) db.prepare('DELETE FROM sessions WHERE id = ?').run(s.id);
 }
@@ -270,7 +279,7 @@ export function resetPractice(owner, { builtIn = false } = {}) {
 
 /** This person's earlier runs, newest first, with how far each one got. */
 export function practiceHistory(owner) {
-  return db.prepare("SELECT * FROM sessions WHERE practice = 1 AND practice_owner = ? AND status = 'closed' ORDER BY id DESC")
+  return db.prepare("SELECT * FROM sessions WHERE practice = 1 AND practice_owner = ? AND status = 'closed' AND COALESCE(mode, 'full') = 'full' ORDER BY id DESC")
     .all(owner).map((s) => {
       const sheet = practiceSheet(s.id);
       return {
@@ -289,7 +298,7 @@ export function practiceHistory(owner) {
 export function practiceExport(owner) {
   const cur = practiceSession(owner);
   const runs = [...(cur ? [cur] : []),
-    ...db.prepare("SELECT * FROM sessions WHERE practice = 1 AND practice_owner = ? AND status = 'closed' ORDER BY id DESC").all(owner)];
+    ...db.prepare("SELECT * FROM sessions WHERE practice = 1 AND practice_owner = ? AND status = 'closed' AND COALESCE(mode, 'full') = 'full' ORDER BY id DESC").all(owner)];
   const runRows = [];
   const tryRows = [];
   const sheets = [];
@@ -351,16 +360,20 @@ export function practiceSheet(sessionId) {
   const reportAt = new Map(db.prepare('SELECT pallet_id, expected_qty, expected_location FROM pallets WHERE session_id = ?')
     .all(id).map((p) => [p.pallet_id, p]));
   if (s && s.practice_source === 'upload') return uploadedSheet(s, lines, byPallet, emptyBins, countedBins);
+  // a pallet put back in Move pallets is on a different shelf now
+  const movedTo = new Map(db.prepare("SELECT pallet_id, actual_bin FROM moves WHERE session_id = ? AND status = 'done'").all(id).map((m) => [m.pallet_id, m.actual_bin]));
 
   const bins = BINS.map((b) => {
     const shelf = b.shelf.map((p) => {
       const [sku, desc, uom] = ITEMS[p.item];
       const rep = reportAt.get(p.id) || null;
       const got = byPallet.get(p.id) || null;
+      const nowIn = movedTo.get(p.id) || '';
       return {
         id: p.id, qty: p.qty, sku, desc, uom, lot: p.lot, bestBefore: usDate(day(p.days)), expired: p.days < 0,
         report: rep ? { qty: rep.expected_qty, bin: rep.expected_location } : null,
-        counted: got ? { qty: got.qty, bin: got.location_code, right: got.location_code === b.bin && Number(got.qty) === p.qty } : null,
+        movedTo: nowIn,
+        counted: got ? { qty: got.qty, bin: got.location_code, right: got.location_code === (nowIn || b.bin) && Number(got.qty) === p.qty } : null,
       };
     });
     /* on the report here and not on this shelf: gone, or sitting in another bay */
@@ -400,7 +413,7 @@ export function practiceSheet(sessionId) {
     crew: PRACTICE_CREW,
     bins,
     assignment,
-    checklist: [...CHECKS.map(([key, label]) => ({ key, label, done: done.has(key) })), ...feat.checks],
+    checklist: [...CHECKS.map(([key, label]) => ({ key, label, done: done.has(key) })), ...feat.checks, ...(s ? modeChecks(s) : [])],
     totals: { bins: bins.length, binsCounted: bins.filter((b) => b.counted).length, pallets, lines: lines.length },
   };
 }
@@ -608,4 +621,150 @@ export function setPracticeSandbox(owner, body = {}) {
 function resetSandbox(id) {
   db.prepare('UPDATE sessions SET sandbox = ?, master_version = master_version + 1 WHERE id = ?').run(SANDBOX_START, id);
   return getSession(id);
+}
+
+
+/* ------------------------------------------------- the other jobs a gun does
+   A count is not the only thing a scanner is used for: there is the cycle
+   count a person does alone off a list, the pallets to move back out of front
+   positions, and the Not in Location list it watches for as it goes. Each can
+   be practised here on the same two aisles, and each is set up only when asked
+   for - and only for a login that may do that job for real. */
+export const MODE_ACCESS = { cycle: 'cycle', moves: 'front', missing: 'missing' };
+const PRACTICE_CYCLE_NAME = 'Practice cycle count';
+/* the bins a practice cycle list puts in front of you: a plain one, two
+   pallets, an empty bin, a short pallet, and one whose pallet has gone */
+const CYCLE_BINS = ['F01A001', 'F01A002', 'F01A003', 'F01A004', 'F01B006'];
+/* pallet, the front bin it is in, the empty bin to put it in, and what the one
+   to try is - the third has a pallet sitting in the "empty" bin already */
+const PRACTICE_MOVES = [
+  ['F12311-111', 'F01A001', 'F01A003', 'A plain move: scan the pallet, put it in F01A003, scan that bin.'],
+  ['F23415-111', 'F02A005', 'F02B005', 'Another plain one, in aisle F02.'],
+  ['F12319-111', 'F01B005', 'F01A005', 'F01A005 is not empty — F12314-111 is sitting in it. Tap “Cannot move it” and say why.'],
+];
+/* pallet, where the system last saw it, what it is, and where it really is (blank: nowhere) */
+const PRACTICE_MISSING = [
+  ['F12317-111', 'F01B002', 'Blackberry whole IQF', 'F01B003'],
+  ['F23419-111', 'F02B001', 'Blackberry whole IQF', 'F02B003'],
+  ['F18888-888', 'F01B006', 'Peach slices IQF', ''],
+];
+
+function buildCyclePractice(owner) {
+  const s = createSession({ name: PRACTICE_CYCLE_NAME, mode: 'cycle', palletMode: 'warn', askComments: 1 });
+  db.prepare('UPDATE sessions SET practice = 1, practice_owner = ?, sandbox = ?, auto_recount = 0 WHERE id = ?').run(owner, SANDBOX_START, s.id);
+  importMaster(s.id, 'bins', binCsv());
+  importMaster(s.id, 'pallets', reportCsv());
+  // today's list, the way the office's "generate a batch" writes one
+  const info = db.prepare(`INSERT INTO cycle_batches (session_id, name, due_date, target, strategy, scope, auto, created_at) VALUES (?, ?, ?, ?, 'oldest', ?, 0, ?)`)
+    .run(s.id, 'Practice list', now().slice(0, 10), CYCLE_BINS.length, JSON.stringify({ aisle: 'F01' }), now());
+  const ins = db.prepare(`INSERT INTO recounts (session_id, bin, reason, detail, source, team, batch_id, status, created_at) VALUES (?, ?, 'CYCLE', 'never counted', 'cycle', NULL, ?, 'open', ?)`);
+  for (const b of CYCLE_BINS) ins.run(s.id, b, info.lastInsertRowid, now());
+  return getSession(s.id);
+}
+
+/** Set a job up on this person's practice. Asking twice changes nothing. */
+export function startPracticeMode(owner, mode) {
+  const s = practiceSession(owner);
+  if (!s) throw Object.assign(new Error('open the Testing Suite first - there is no practice count yet'), { status: 404 });
+  if (s.practice_source === 'upload') throw Object.assign(new Error('the other jobs are practised on the built-in test data - press "Back to the built-in test data" first'), { status: 400 });
+  if (mode === 'cycle') {
+    if (cycleSession(owner)) return { note: 'already set up' };
+    const c = buildCyclePractice(owner);
+    return { note: `#${c.id}, ${CYCLE_BINS.length} bins` };
+  }
+  if (mode === 'moves') {
+    if (db.prepare('SELECT 1 FROM moves WHERE session_id = ?').get(s.id)) return { note: 'already set up' };
+    importMoves(s.id, 'Pallet,From bin,To bin\n' + PRACTICE_MOVES.map(([p, f, t]) => `${p},${f},${t}`).join('\n') + '\n');
+    db.prepare('UPDATE sessions SET master_version = master_version + 1 WHERE id = ?').run(s.id);   // the gun re-reads the count: it has moves now
+    return { note: `${PRACTICE_MOVES.length} pallets to move` };
+  }
+  if (mode === 'missing') {
+    if (practiceMissingRows(owner).length) return { note: 'already set up' };
+    importMissing('Pallet,Description,Last known location\n' + PRACTICE_MISSING.map(([p, last, desc]) => `${p},"${desc}",${last}`).join('\n') + '\n', { label: 'practice', owner });
+    return { note: `${PRACTICE_MISSING.length} pallets on the list` };
+  }
+  throw Object.assign(new Error('that is not a practice mode'), { status: 400 });
+}
+
+/** The state of each job, for the suite's "What to practise" card. */
+export function practiceModes(who, owner, s) {
+  const shelfOf = (bin) => (BINS.find((b) => b.bin === bin) || { shelf: [] }).shelf.map((p) => {
+    const [sku, desc, uom] = ITEMS[p.item];
+    return { id: p.id, qty: p.qty, sku, desc, uom, lot: p.lot, bestBefore: usDate(day(p.days)) };
+  });
+  const out = {
+    available: !!s && s.practice_source !== 'upload',
+    cycle: { allowed: allowed(who, 'cycle'), on: false, session: null, bins: [], done: 0, signedOn: false },
+    moves: { allowed: allowed(who, 'front'), on: false, list: [], done: 0, skipped: 0 },
+    missing: { allowed: allowed(who, 'missing'), on: false, rows: [], found: 0 },
+  };
+  const c = cycleSession(owner);
+  if (c) {
+    const counted = new Map();
+    for (const l of db.prepare('SELECT pallet_id, qty, location_code, empty_bin FROM counts WHERE session_id = ? AND voided = 0').all(c.id)) {
+      if (!counted.has(l.location_code)) counted.set(l.location_code, []);
+      counted.get(l.location_code).push(l);
+    }
+    const tasks = db.prepare("SELECT id, bin, status, done_by_team, team FROM recounts WHERE session_id = ? AND source = 'cycle' ORDER BY id").all(c.id);
+    out.cycle = {
+      ...out.cycle, on: true, session: { id: c.id, name: c.name },
+      signedOn: !!db.prepare('SELECT 1 FROM signons WHERE session_id = ?').get(c.id),
+      bins: tasks.map((t) => ({
+        id: t.id, bin: t.bin, status: t.status, by: t.done_by_team || t.team || '',
+        shelf: shelfOf(t.bin).map((p) => ({ ...p, counted: (counted.get(t.bin) || []).some((l) => l.pallet_id === p.id) })),
+        recordedEmpty: (counted.get(t.bin) || []).some((l) => l.empty_bin),
+      })),
+      done: tasks.filter((t) => t.status === 'done').length,
+    };
+  }
+  if (s) {
+    const mv = db.prepare('SELECT * FROM moves WHERE session_id = ? ORDER BY id').all(s.id);
+    if (mv.length) {
+      out.moves = {
+        ...out.moves, on: true,
+        list: mv.map((m) => ({
+          id: m.id, pallet: m.pallet_id, from: m.from_bin, to: m.to_bin, status: m.status, actual: m.actual_bin || '', reason: m.reason || '',
+          try: (PRACTICE_MOVES.find(([p]) => p === m.pallet_id) || [])[3] || '',
+          occupied: (BINS.find((b) => b.bin === m.to_bin) || { shelf: [] }).shelf.map((p) => p.id),
+        })),
+        done: mv.filter((m) => m.status === 'done').length,
+        skipped: mv.filter((m) => m.status === 'skipped').length,
+      };
+    }
+  }
+  const rows = practiceMissingRows(owner);
+  if (rows.length) {
+    out.missing = {
+      ...out.missing, on: true,
+      rows: rows.map((r) => ({
+        id: r.id, pallet: r.pallet_id, last: r.last_location || '', desc: r.description || '', status: r.status,
+        foundBin: r.found_bin || '', foundHow: r.found_how || '',
+        where: (PRACTICE_MISSING.find(([p]) => p === r.pallet_id) || [])[3] || '',
+      })),
+      found: rows.filter((r) => r.status !== 'missing').length,
+    };
+  }
+  return out;
+}
+
+/* Each job that is set up adds its thing to try to the checklist. */
+function modeChecks(s) {
+  const owner = s.practice_owner;
+  const checks = [];
+  const c = owner ? cycleSession(owner) : null;
+  if (c) {
+    checks.push({ key: 'cycle', label: 'Count a bin off a cycle-count list — Cycle count on the gun',
+      done: db.prepare("SELECT 1 FROM recounts WHERE session_id = ? AND source = 'cycle' AND status = 'done'").get(c.id) != null });
+  }
+  if (db.prepare('SELECT 1 FROM moves WHERE session_id = ?').get(s.id)) {
+    checks.push({ key: 'move', label: 'Move a pallet back — Move pallets on the gun',
+      done: db.prepare("SELECT 1 FROM moves WHERE session_id = ? AND status = 'done'").get(s.id) != null });
+    checks.push({ key: 'moveSkip', label: 'Skip a move whose bin behind is not empty',
+      done: db.prepare("SELECT 1 FROM moves WHERE session_id = ? AND status = 'skipped'").get(s.id) != null });
+  }
+  if (owner && practiceMissingRows(owner).length) {
+    checks.push({ key: 'found', label: 'Find a pallet from the Not in Location list by counting it',
+      done: practiceMissingRows(owner).some((r) => r.status !== 'missing') });
+  }
+  return checks;
 }
