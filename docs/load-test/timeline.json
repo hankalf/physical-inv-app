@@ -1675,5 +1675,263 @@
    "other": "frames/039-second.jpg",
    "otherLabel": "Second counts"
   }
+ },
+ {
+  "n": 40,
+  "at": "2026-10-04T15:19:49.368Z",
+  "wall": 360,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "14:30",
+  "label": "The count is in: the last hand-backs are done",
+  "event": "end",
+  "lines": 22655,
+  "bins": 20000,
+  "binsTotal": 20000,
+  "pallets": 18591,
+  "exceptions": 197,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 25,
+  "pending": 0,
+  "approved": 296,
+  "rejected": 62,
+  "secondOpen": 0,
+  "secondDone": 657,
+  "lat": {
+   "count": {
+    "n": 20255,
+    "p50": 9,
+    "p95": 747,
+    "max": 3476
+   },
+   "dashboard": {
+    "n": 4524,
+    "p50": 279,
+    "p95": 1595,
+    "max": 5160
+   }
+  },
+  "frames": {
+   "progress": "frames/040-progress.jpg",
+   "board": "frames/040-board.jpg",
+   "other": "frames/040-reports.jpg",
+   "otherLabel": "Reports"
+  }
+ },
+ {
+  "n": 41,
+  "at": "2026-10-04T15:20:01.587Z",
+  "wall": 360,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "14:30",
+  "label": "Final: map",
+  "event": "final",
+  "lines": 22655,
+  "bins": 20000,
+  "binsTotal": 20000,
+  "pallets": 18591,
+  "exceptions": 197,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 25,
+  "pending": 0,
+  "approved": 296,
+  "rejected": 62,
+  "secondOpen": 0,
+  "secondDone": 657,
+  "lat": {
+   "count": {
+    "n": 20255,
+    "p50": 9,
+    "p95": 747,
+    "max": 3476
+   },
+   "dashboard": {
+    "n": 4524,
+    "p50": 279,
+    "p95": 1595,
+    "max": 5160
+   }
+  },
+  "frames": {
+   "progress": "frames/041-progress.jpg",
+   "board": "frames/041-board.jpg",
+   "other": "frames/041-map.jpg",
+   "otherLabel": "Map"
+  }
+ },
+ {
+  "n": 42,
+  "at": "2026-10-04T15:20:12.106Z",
+  "wall": 361,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "14:30",
+  "label": "Final: adjust",
+  "event": "final",
+  "lines": 22655,
+  "bins": 20000,
+  "binsTotal": 20000,
+  "pallets": 18591,
+  "exceptions": 197,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 25,
+  "pending": 0,
+  "approved": 296,
+  "rejected": 62,
+  "secondOpen": 0,
+  "secondDone": 657,
+  "lat": {
+   "count": {
+    "n": 20255,
+    "p50": 9,
+    "p95": 747,
+    "max": 3476
+   },
+   "dashboard": {
+    "n": 4524,
+    "p50": 279,
+    "p95": 1595,
+    "max": 5160
+   }
+  },
+  "frames": {
+   "progress": "frames/042-progress.jpg",
+   "board": "frames/042-board.jpg",
+   "other": "frames/042-adjust.jpg",
+   "otherLabel": "Adjustments"
+  }
+ },
+ {
+  "n": 43,
+  "at": "2026-10-04T15:20:22.870Z",
+  "wall": 361,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "14:30",
+  "label": "Final: second",
+  "event": "final",
+  "lines": 22655,
+  "bins": 20000,
+  "binsTotal": 20000,
+  "pallets": 18591,
+  "exceptions": 197,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 25,
+  "pending": 0,
+  "approved": 296,
+  "rejected": 62,
+  "secondOpen": 0,
+  "secondDone": 657,
+  "lat": {
+   "count": {
+    "n": 20255,
+    "p50": 9,
+    "p95": 747,
+    "max": 3476
+   },
+   "dashboard": {
+    "n": 4524,
+    "p50": 279,
+    "p95": 1595,
+    "max": 5160
+   }
+  },
+  "frames": {
+   "progress": "frames/043-progress.jpg",
+   "board": "frames/043-board.jpg",
+   "other": "frames/043-second.jpg",
+   "otherLabel": "Second counts"
+  }
+ },
+ {
+  "n": 44,
+  "at": "2026-10-04T15:20:33.547Z",
+  "wall": 361,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "14:30",
+  "label": "Final: alerts",
+  "event": "final",
+  "lines": 22655,
+  "bins": 20000,
+  "binsTotal": 20000,
+  "pallets": 18591,
+  "exceptions": 197,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 25,
+  "pending": 0,
+  "approved": 296,
+  "rejected": 62,
+  "secondOpen": 0,
+  "secondDone": 657,
+  "lat": {
+   "count": {
+    "n": 20255,
+    "p50": 9,
+    "p95": 747,
+    "max": 3476
+   },
+   "dashboard": {
+    "n": 4524,
+    "p50": 279,
+    "p95": 1595,
+    "max": 5160
+   }
+  },
+  "frames": {
+   "progress": "frames/044-progress.jpg",
+   "board": "frames/044-board.jpg",
+   "other": "frames/044-alerts.jpg",
+   "otherLabel": "Alerts"
+  }
+ },
+ {
+  "n": 45,
+  "at": "2026-10-04T15:20:44.227Z",
+  "wall": 361,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "14:30",
+  "label": "Final: teams",
+  "event": "final",
+  "lines": 22655,
+  "bins": 20000,
+  "binsTotal": 20000,
+  "pallets": 18591,
+  "exceptions": 197,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 25,
+  "pending": 0,
+  "approved": 296,
+  "rejected": 62,
+  "secondOpen": 0,
+  "secondDone": 657,
+  "lat": {
+   "count": {
+    "n": 20255,
+    "p50": 9,
+    "p95": 747,
+    "max": 3476
+   },
+   "dashboard": {
+    "n": 4524,
+    "p50": 279,
+    "p95": 1595,
+    "max": 5160
+   }
+  },
+  "frames": {
+   "progress": "frames/045-progress.jpg",
+   "board": "frames/045-board.jpg",
+   "other": "frames/045-teams.jpg",
+   "otherLabel": "Teams & crew"
+  }
  }
 ]

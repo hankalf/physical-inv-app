@@ -1336,26 +1336,40 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 
 ## Part 8 — Capacity: what the system will take
 
-Measured against the real Front Royal bin list (13,673 bins), with fifteen teams and
-thirty scanners counting simultaneously while the office board and two dashboards
-refreshed over the top of them:
+Two measurements, both against a count bigger than the warehouse.
+
+**A whole count, played end to end.** Twenty teams with two scanners each counted 20,000
+bins over three shifts, with the three shifts compressed into 6.0 hours of real time (`node
+tools/sim-floor.mjs`): the sign-on rush at six, the breaks, a lunch that trips the stopped-scanning
+alert, SOS calls, second counts raised behind the variances, and a supervisor approving adjustments
+over the top of it all. Every ten minutes the dashboard and the office board were photographed;
+`docs/load-test/index.html` is the result, to scrub through.
 
 | | |
 |---|---|
-| Scanners posting at once | 30, no errors, nothing lost, nothing double-counted |
-| Throughput | ~1,200–1,600 count lines per second |
-| A scan, under that full load | 75 ms median, 205 ms at the 95th percentile |
-| Office board / dashboard refresh | ~140 ms median while all thirty guns were writing |
-| Whole master list to a handheld | ~0.4 s each, thirty pulling simultaneously |
+| Bins counted | 20,000 of 20,000, 22,655 count lines, 0 failed requests out of 27,059 |
+| Nothing lost, nothing doubled | 0 pallets counted twice; every aisle job handed back (71) |
+| A scan, with the whole floor working | 9 ms typical, 747 ms at the 95th percentile |
+| A dashboard refresh over the top of it | 279 ms typical, 1595 ms at the 95th percentile |
+| The office board | 350 ms typical, 1468 ms at the 95th percentile |
+| Forty scanners pulling the whole list at once | 11 ms typical, 2574 ms worst |
+| The office: approvals, SOS, messages | 296 approved, 62 rejected, 25 SOS raised and 25 closed, 657 second counts walked |
 
-Thirty scanners is comfortably inside what the server will take — real counters scan a
-pallet every ten to twenty seconds, which is a small fraction of the load above. The
-constraints that matter in practice are warehouse Wi-Fi coverage and battery life, not
-the server.
+**The same floor at full tilt.** The rehearsal of that run plays the three shifts in eighteen
+minutes — twenty-eight times real speed, every scanner posting a line every second or two — and
+the server still answered: 20,000 bins in, a count line at 8 ms typical and 536 ms at the
+95th percentile, dashboards at 150 ms typical. (`node tests/run-all.mjs load-15-teams` keeps the
+older fifteen-team burst test in the suite: thirty scanners posting flat out, nothing lost, nothing
+doubled, the racking-block rule honoured.)
 
-This is checked automatically: `node tests/run-all.mjs load-15-teams` runs the whole
-scenario and fails if anything is lost, doubled, mis-attributed, or if two teams ever end
-up in one racking block.
+**What the simulation found and fixed.** On a count this size the pallet report took six seconds
+to build, and the adjustments list, its summary and *Export everything* twelve to eighteen; the
+server answers one request at a time, so while it built them nothing else moved. It is now five
+indexed passes joined in memory: the report in about a tenth of a second, the export in under one.
+
+The constraints that matter in practice are warehouse Wi-Fi coverage and battery life, not the
+server. Real counters scan a pallet every ten to twenty seconds; the whole floor at that pace is a
+small fraction of what the rehearsal threw at it.
 
 ---
 

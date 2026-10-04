@@ -1,0 +1,203 @@
+{
+  "bins": 20000,
+  "binsTotal": 20000,
+  "lines": 22655,
+  "pallets": 18591,
+  "exceptions": 197,
+  "match": 17876,
+  "variance": 715,
+  "missing": 205,
+  "unlisted": 152,
+  "twice": 0,
+  "statuses": {
+    "NOT IN MASTER": 152,
+    "MATCH": 17876,
+    "QTY VARIANCE": 631,
+    "MISSING": 205,
+    "WRONG BIN": 84
+  },
+  "approved": 296,
+  "rejected": 62,
+  "pending": 0,
+  "secondDone": 657,
+  "secondOpen": 0,
+  "sos": 25,
+  "sosClosed": 25,
+  "handbacks": 71,
+  "aisles": 36,
+  "failures": 0,
+  "failed": [],
+  "requests": 27059,
+  "latency": {
+    "count": {
+      "n": 20255,
+      "p50": 9,
+      "p95": 747,
+      "max": 3476
+    },
+    "signon": {
+      "n": 120,
+      "p50": 15,
+      "p95": 867,
+      "max": 2793
+    },
+    "master": {
+      "n": 120,
+      "p50": 11,
+      "p95": 132,
+      "max": 2574
+    },
+    "dashboard": {
+      "n": 4524,
+      "p50": 279,
+      "p95": 1595,
+      "max": 5160
+    },
+    "board": {
+      "n": 1398,
+      "p50": 350,
+      "p95": 1468,
+      "max": 5011
+    },
+    "office": {
+      "n": 642,
+      "p50": 164,
+      "p95": 1007,
+      "max": 3346
+    }
+  },
+  "planted": {
+    "short": 445,
+    "over": 186,
+    "missing": 205,
+    "unlisted": 151,
+    "moved": 84,
+    "label": 43,
+    "expired": 306
+  },
+  "teams": [
+    {
+      "team": "1",
+      "aisles": 1085,
+      "binsCounted": 1085,
+      "lines": 1180
+    },
+    {
+      "team": "2",
+      "aisles": 1088,
+      "binsCounted": 1088,
+      "lines": 1176
+    },
+    {
+      "team": "3",
+      "aisles": 1091,
+      "binsCounted": 1091,
+      "lines": 1167
+    },
+    {
+      "team": "4",
+      "aisles": 1100,
+      "binsCounted": 1100,
+      "lines": 1208
+    },
+    {
+      "team": "5",
+      "aisles": 1096,
+      "binsCounted": 1096,
+      "lines": 1172
+    },
+    {
+      "team": "6",
+      "aisles": 1096,
+      "binsCounted": 1096,
+      "lines": 1194
+    },
+    {
+      "team": "7",
+      "aisles": 1101,
+      "binsCounted": 1101,
+      "lines": 1212
+    },
+    {
+      "team": "8",
+      "aisles": 903,
+      "binsCounted": 903,
+      "lines": 977
+    },
+    {
+      "team": "9",
+      "aisles": 1062,
+      "binsCounted": 1062,
+      "lines": 1159
+    },
+    {
+      "team": "10",
+      "aisles": 1061,
+      "binsCounted": 1061,
+      "lines": 1146
+    },
+    {
+      "team": "11",
+      "aisles": 1053,
+      "binsCounted": 1053,
+      "lines": 1160
+    },
+    {
+      "team": "12",
+      "aisles": 900,
+      "binsCounted": 900,
+      "lines": 989
+    },
+    {
+      "team": "13",
+      "aisles": 900,
+      "binsCounted": 900,
+      "lines": 981
+    },
+    {
+      "team": "14",
+      "aisles": 900,
+      "binsCounted": 900,
+      "lines": 971
+    },
+    {
+      "team": "15",
+      "aisles": 900,
+      "binsCounted": 900,
+      "lines": 975
+    },
+    {
+      "team": "16",
+      "aisles": 900,
+      "binsCounted": 900,
+      "lines": 980
+    },
+    {
+      "team": "17",
+      "aisles": 900,
+      "binsCounted": 900,
+      "lines": 986
+    },
+    {
+      "team": "18",
+      "aisles": 900,
+      "binsCounted": 900,
+      "lines": 992
+    },
+    {
+      "team": "19",
+      "aisles": 900,
+      "binsCounted": 900,
+      "lines": 980
+    },
+    {
+      "team": "20",
+      "aisles": 1064,
+      "binsCounted": 1064,
+      "lines": 1183
+    }
+  ],
+  "startedAt": "2026-10-04T09:19:31.694Z",
+  "finishedAt": "2026-10-04T15:19:39.000Z",
+  "wallMinutes": 360
+}

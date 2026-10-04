@@ -1,0 +1,146 @@
+[09:19:28] server up on http://127.0.0.1:3950; 20 teams, 20,000 bins, 3 shifts in 6 h (x4.3 time)
+[09:19:28] 20,000 bins in 36 aisles (F01–F36)
+[09:19:29] report: 18,796 pallets; planted {"short":445,"over":186,"missing":205,"unlisted":151,"moved":84,"label":43,"expired":306}
+[09:19:29] bin list loaded in 0.3 s (20000 bins); report in 0.3 s (18796 rows)
+[09:19:30] plan: 1:F01hi+F19hi+F21hi+F35hi(1085) 2:F02hi+F08hi+F17hi+F20hi(1088) 3:F03hi+F06hi+F16hi+F23lo(1091) 4:F01lo+F04hi+F12lo+F36(1100) 5:F05hi+F12hi+F13lo+F16lo(1096) 6:F07hi+F13hi+F17lo+F22lo(1096) 7:F09hi+F14hi+F18hi+F19lo(1101) 8:F10hi+F15lo+F18lo(903) 9:F11hi+F14lo+F20lo+F24hi(1062) 10:F02lo+F15hi+F22hi+F26lo(1061) 11:F03lo+F23hi+F25hi+F27lo(1053) 12:F04lo+F26hi+F28lo(900) 13:F05lo+F27hi+F29lo(900) 14:F06lo+F28hi+F30lo(900) 15:F07lo+F29hi+F31lo(900) 16:F08lo+F30hi+F32lo(900) 17:F09lo+F31hi+F33lo(900) 18:F10lo+F32hi+F34lo(900) 19:F11lo+F33hi+F35lo(900) 20:F21lo+F24lo+F25lo+F34hi(1064)
+[09:22:06] snapshot #1 Monday 06:10: 27 lines, 26 bins, 0 SOS open, 0 adjustments waiting, 0 second counts open
+[09:32:16] snapshot #2 Monday 06:53: 712 lines, 647 bins, 0 SOS open, 0 adjustments waiting, 22 second counts open
+[09:39:54] SOS from team 17 (MC93-33): Someone is stuck or shut in
+[09:40:03] snapshot #3 Monday 07:26: 1,234 lines, 1,129 bins, 1 SOS open, 3 adjustments waiting, 37 second counts open
+[09:42:20] snapshot #4 Monday 07:36: 1,384 lines, 1,262 bins, 1 SOS open, 1 adjustments waiting, 42 second counts open
+[09:52:24] snapshot #5 Monday 08:19: 2,084 lines, 1,894 bins, 0 SOS open, 0 adjustments waiting, 62 second counts open
+[10:02:28] snapshot #6 Monday 09:01: 2,520 lines, 2,304 bins, 0 SOS open, 1 adjustments waiting, 73 second counts open
+[10:06:24] SOS from team 6 (MC93-11): Injury — someone needs help now
+[10:10:29] SOS from team 4 (MC93-08): Cannot reach the bins — blocked
+[10:12:33] snapshot #7 Monday 09:44: 3,192 lines, 2,911 bins, 1 SOS open, 0 adjustments waiting, 88 second counts open
+[10:16:08] SOS from team 13 (MC93-26): Racking or a pallet looks unsafe
+[10:21:17] SOS from team 17 (MC93-33): Injury — someone needs help now
+[10:22:39] snapshot #8 Monday 10:27: 3,852 lines, 3,512 bins, 1 SOS open, 0 adjustments waiting, 109 second counts open
+[10:22:48] team 20 handed back F21
+[10:23:43] team 11 handed back F03
+[10:29:36] team 4 handed back F01
+[10:31:45] team 13 handed back F05
+[10:31:54] team 7 handed back F09
+[10:32:09] team 6 handed back F07
+[10:32:12] team 5 handed back F05
+[10:32:16] team 15 handed back F07
+[10:32:36] team 1 handed back F01
+[10:32:38] snapshot #9 Monday 11:10: 4,621 lines, 4,187 bins, 0 SOS open, 1 adjustments waiting, 142 second counts open
+[10:33:17] team 19 handed back F11
+[10:33:20] team 3 handed back F03
+[10:33:58] team 9 handed back F11
+[10:35:00] team 17 handed back F09
+[10:42:43] snapshot #10 Monday 11:52: 5,166 lines, 4,664 bins, 0 SOS open, 0 adjustments waiting, 155 second counts open
+[10:52:47] snapshot #11 Monday 12:35: 6,167 lines, 5,600 bins, 0 SOS open, 2 adjustments waiting, 186 second counts open
+[10:59:28] team 11 handed back F23
+[11:01:12] team 20 handed back F24
+[11:02:51] snapshot #12 Monday 13:18: 7,297 lines, 6,631 bins, 0 SOS open, 0 adjustments waiting, 231 second counts open
+[11:07:20] SOS from team 2 (MC93-04): Need a supervisor
+[11:07:58] SOS from team 19 (MC93-38): Need a supervisor
+[11:12:56] snapshot #13 Monday 14:01: 8,201 lines, 7,464 bins, 0 SOS open, 0 adjustments waiting, 251 second counts open
+[11:14:42] SOS from team 13 (MC93-26): Someone is stuck or shut in
+[11:19:45] snapshot #14 Tuesday 06:00: 8,601 lines, 7,832 bins, 0 SOS open, 0 adjustments waiting, 258 second counts open
+[11:23:01] snapshot #15 Tuesday 06:14: 8,741 lines, 7,956 bins, 0 SOS open, 0 adjustments waiting, 259 second counts open
+[11:26:39] team 1 handed back F19
+[11:26:48] SOS from team 5 (MC93-09): Cannot reach the bins — blocked
+[11:28:08] team 7 handed back F14
+[11:30:33] SOS from team 10 (MC93-19): Someone is stuck or shut in
+[11:31:45] team 5 handed back F12
+[11:32:10] team 10 handed back F02
+[11:33:01] snapshot #16 Tuesday 06:56: 10,022 lines, 9,125 bins, 1 SOS open, 1 adjustments waiting, 290 second counts open
+[11:34:11] team 12 handed back F04
+[11:34:38] team 9 handed back F14
+[11:36:14] SOS from team 10 (MC93-20): Scanner or app problem
+[11:37:04] SOS from team 13 (MC93-25): Someone is stuck or shut in
+[11:37:14] SOS from team 19 (MC93-38): Racking or a pallet looks unsafe
+[11:39:22] team 3 handed back F06
+[11:40:44] team 14 handed back F06
+[11:40:47] team 16 handed back F08
+[11:40:59] team 2 handed back F02
+[11:41:54] team 4 handed back F04
+[11:43:05] snapshot #17 Tuesday 07:39: 11,336 lines, 10,286 bins, 0 SOS open, 1 adjustments waiting, 316 second counts open
+[11:43:40] team 18 handed back F10
+[11:46:52] team 8 handed back F10
+[11:48:25] team 13 handed back F27
+[11:48:28] team 15 handed back F29
+[11:49:51] team 17 handed back F31
+[11:50:58] team 19 handed back F33
+[11:51:59] team 20 handed back F25
+[11:53:10] snapshot #18 Tuesday 08:22: 12,637 lines, 11,459 bins, 0 SOS open, 2 adjustments waiting, 355 second counts open
+[11:53:19] team 1 handed back F21
+[11:56:42] SOS from team 20 (MC93-40): Someone is stuck or shut in
+[11:57:48] team 11 handed back F25
+[12:02:00] team 7 handed back F18
+[12:03:14] snapshot #19 Tuesday 09:05: 13,630 lines, 12,365 bins, 0 SOS open, 1 adjustments waiting, 372 second counts open
+[12:03:17] SOS from team 19 (MC93-38): Cannot reach the bins — blocked
+[12:06:28] team 6 handed back F13
+[12:06:35] team 5 handed back F13
+[12:12:54] team 4 handed back F12
+[12:13:20] snapshot #20 Tuesday 09:47: 15,133 lines, 13,724 bins, 0 SOS open, 1 adjustments waiting, 401 second counts open
+[12:15:23] SOS from team 10 (MC93-20): Scanner or app problem
+[12:15:32] team 9 handed back F20
+[12:19:01] team 10 handed back F15
+[12:21:51] SOS from team 9 (MC93-17): Cannot reach the bins — blocked
+[12:23:23] snapshot #21 Tuesday 10:30: 16,639 lines, 15,103 bins, 1 SOS open, 2 adjustments waiting, 400 second counts open
+[12:24:54] team 2 handed back F08
+[12:24:59] SOS from team 16 (MC93-32): Equipment broke down — lift truck, reach truck, jack
+[12:25:18] SOS from team 6 (MC93-12): Cannot reach the bins — blocked
+[12:27:32] SOS from team 9 (MC93-18): Scanner or app problem
+[12:28:53] team 8 handed back F15
+[12:31:00] team 13 handed back F29
+[12:31:10] team 17 handed back F33
+[12:31:23] team 15 handed back F31
+[12:31:55] SOS from team 9 (MC93-17): Equipment broke down — lift truck, reach truck, jack
+[12:33:04] team 19 handed back F35
+[12:33:30] snapshot #22 Tuesday 11:13: 18,223 lines, 16,521 bins, 1 SOS open, 0 adjustments waiting, 401 second counts open
+[12:33:51] team 11 handed back F27
+[12:34:17] team 1 handed back F35
+[12:35:10] team 20 handed back F34
+[12:37:07] team 16 handed back F30
+[12:43:25] snapshot #23 Tuesday 11:55: 18,727 lines, 16,956 bins, 0 SOS open, 0 adjustments waiting, 397 second counts open
+[12:44:26] team 9 handed back F24
+[12:44:37] team 14 handed back F28
+[12:44:42] team 10 handed back F22
+[12:45:29] team 18 handed back F32
+[12:46:34] team 6 handed back F17
+[12:50:03] team 3 handed back F16
+[12:50:19] team 12 handed back F26
+[12:53:17] SOS from team 6 (MC93-12): Scanner or app problem
+[12:53:17] team 7 handed back F19
+[12:53:31] snapshot #24 Tuesday 12:38: 19,919 lines, 18,015 bins, 0 SOS open, 1 adjustments waiting, 399 second counts open
+[12:54:49] team 2 handed back F17
+[13:00:01] SOS from team 5 (MC93-10): Injury — someone needs help now
+[13:03:26] snapshot #25 Tuesday 13:20: 20,962 lines, 18,966 bins, 0 SOS open, 0 adjustments waiting, 400 second counts open
+[13:05:45] SOS from team 4 (MC93-08): Scanner or app problem
+[13:05:51] SOS from team 12 (MC93-24): Injury — someone needs help now
+[13:08:00] team 4 handed back F36
+[13:08:10] team 5 handed back F16
+[13:10:27] team 6 handed back F22
+[13:12:13] team 3 handed back F23
+[13:13:34] snapshot #26 Tuesday 14:03: 21,759 lines, 19,692 bins, 0 SOS open, 0 adjustments waiting, 404 second counts open
+[13:14:14] team 10 handed back F26
+[13:15:30] team 2 handed back F20
+[13:19:45] snapshot #27 Wednesday 06:00: 21,957 lines, 19,852 bins, 0 SOS open, 0 adjustments waiting, 400 second counts open
+[13:22:30] team 16 handed back F32
+[13:23:24] team 14 handed back F30
+[13:23:36] snapshot #28 Wednesday 06:16: 22,038 lines, 19,919 bins, 0 SOS open, 0 adjustments waiting, 406 second counts open
+[13:24:09] team 18 handed back F34
+[13:26:12] team 8 handed back F18
+[13:28:21] team 12 handed back F28
+[13:33:45] snapshot #29 Wednesday 06:59: 22,133 lines, 20,000 bins, 0 SOS open, 0 adjustments waiting, 402 second counts open
+[13:43:40] snapshot #30 Wednesday 07:41: 22,133 lines, 20,000 bins, 0 SOS open, 0 adjustments waiting, 402 second counts open
+[13:53:47] snapshot #31 Wednesday 08:24: 22,133 lines, 20,000 bins, 0 SOS open, 0 adjustments waiting, 402 second counts open
+[14:03:42] snapshot #32 Wednesday 09:07: 22,133 lines, 20,000 bins, 0 SOS open, 0 adjustments waiting, 402 second counts open
+[14:13:50] snapshot #33 Wednesday 09:49: 22,221 lines, 20,000 bins, 0 SOS open, 0 adjustments waiting, 333 second counts open
+[14:23:54] snapshot #34 Wednesday 10:32: 22,333 lines, 20,000 bins, 0 SOS open, 0 adjustments waiting, 250 second counts open
+[14:33:58] snapshot #35 Wednesday 11:15: 22,447 lines, 20,000 bins, 0 SOS open, 0 adjustments waiting, 161 second counts open
+[14:44:07] snapshot #36 Wednesday 11:58: 22,558 lines, 20,000 bins, 0 SOS open, 0 adjustments waiting, 75 second counts open
+[14:54:02] snapshot #37 Wednesday 12:40: 22,655 lines, 20,000 bins, 0 SOS open, 0 adjustments waiting, 0 second counts open
+[15:04:10] snapshot #38 Wednesday 13:23: 22,655 lines, 20,000 bins, 0 SOS open, 0 adjustments waiting, 0 second counts open
+[15:14:06] snapshot #39 Wednesday 14:06: 22,655 lines, 20,000 bins, 0 SOS open, 0 adjustments waiting, 0 second counts open
+[15:19:49] snapshot #40 Wednesday 14:30: 22,655 lines, 20,000 bins, 0 SOS open, 0 adjustments waiting, 0 second counts open
+[15:20:01] snapshot #41 Wednesday 14:30: 22,655 lines, 20,000 bins, 0 SOS open, 0 adjustments waiting, 0 second counts open
+[15:20:12] snapshot #42 Wednesday 14:30: 22,655 lines, 20,000 bins, 0 SOS open, 0 adjustments waiting, 0 second counts open
+[15:20:22] snapshot #43 Wednesday 14:30: 22,655 lines, 20,000 bins, 0 SOS open, 0 adjustments waiting, 0 second counts open
+[15:20:33] snapshot #44 Wednesday 14:30: 22,655 lines, 20,000 bins, 0 SOS open, 0 adjustments waiting, 0 second counts open
+[15:20:44] snapshot #45 Wednesday 14:30: 22,655 lines, 20,000 bins, 0 SOS open, 0 adjustments waiting, 0 second counts open

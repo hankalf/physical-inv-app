@@ -1,0 +1,783 @@
+pallet_id,sku,location,kind,expected_qty,counted_qty,variance_qty,status,reason,note,decided_by,decided_at
+F21148-589,,F28F024,NOT IN MASTER,,49,49,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T12:25:40.419Z
+F63739-543,,F18E039,NOT IN MASTER,,49,49,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T11:49:59.764Z
+F86636-872,,F27C091,NOT IN MASTER,,49,49,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:32:25.725Z
+F13172-333,,F10A011,NOT IN MASTER,,48,48,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T10:37:48.934Z
+F35958-124,,F05A103,NOT IN MASTER,,48,48,approved,System / interface error,,Marcus Obi,2026-10-04T09:41:15.923Z
+F38947-394,,F03A072,NOT IN MASTER,,48,48,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T09:35:40.417Z
+F67963-968,,F07B001,NOT IN MASTER,,48,48,approved,System / interface error,,Marcus Obi,2026-10-04T09:44:03.384Z
+F71696-892,,F17A001,NOT IN MASTER,,48,48,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:07:31.720Z
+F78927-986,,F06C094,NOT IN MASTER,,48,48,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T11:39:25.663Z
+F92127-873,,F07C031,NOT IN MASTER,,48,48,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T10:15:34.914Z
+F93269-264,,F36A067,NOT IN MASTER,,48,48,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:46:38.790Z
+F93388-631,,F09F043,NOT IN MASTER,,48,48,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T10:18:48.295Z
+F19113-524,,F32E110,NOT IN MASTER,,47,47,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:24:16.888Z
+F31933-676,,F11C007,NOT IN MASTER,,47,47,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T10:11:48.147Z
+F39249-482,,F10F031,NOT IN MASTER,,47,47,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T11:32:39.591Z
+F41269-393,,F21C071,NOT IN MASTER,,47,47,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T10:14:23.448Z
+F45494-179,,F01C011,NOT IN MASTER,,47,47,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T10:08:43.470Z
+F75618-119,,F32C081,NOT IN MASTER,,47,47,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T13:14:27.079Z
+F79913-767,,F08E003,NOT IN MASTER,,47,47,approved,Unknown — investigate,,Marcus Obi,2026-10-04T11:55:34.008Z
+F84377-445,,F21D068,NOT IN MASTER,,47,47,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T11:33:50.190Z
+F96739-827,,F11D082,NOT IN MASTER,,47,47,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T09:38:45.454Z
+F96881-818,,F35D110,NOT IN MASTER,,47,47,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:10:03.737Z
+F98728-937,,F09C045,NOT IN MASTER,,47,47,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T10:21:48.912Z
+F13916-629,,F31D043,NOT IN MASTER,,46,46,approved,Unknown — investigate,,Marcus Obi,2026-10-04T10:49:51.859Z
+F56998-913,,F16E087,NOT IN MASTER,,46,46,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T12:47:59.169Z
+F63223-223,,F29E051,NOT IN MASTER,,46,46,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T11:11:35.778Z
+F86245-256,,F18A019,NOT IN MASTER,,46,46,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T12:47:59.169Z
+F88553-975,,F08E091,NOT IN MASTER,,46,46,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:10:03.744Z
+F88598-636,,F02E022,NOT IN MASTER,,46,46,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T10:59:53.906Z
+F19523-389,,F18B006,NOT IN MASTER,,45,45,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T12:56:53.456Z
+F42361-481,,F16C042,NOT IN MASTER,,45,45,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T12:58:02.878Z
+F42577-524,,F10D082,NOT IN MASTER,,44,44,approved,System / interface error,,Marcus Obi,2026-10-04T10:53:21.752Z
+F51547-124,,F35D066,NOT IN MASTER,,44,44,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T12:05:19.927Z
+F53887-588,,F03B107,NOT IN MASTER,,44,44,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T10:03:46.264Z
+F57928-511,,F15D109,NOT IN MASTER,,44,44,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T11:47:37.310Z
+F73989-929,,F33F044,NOT IN MASTER,,44,44,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T11:36:02.577Z
+F91715-277,,F11D089,NOT IN MASTER,,44,44,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T09:40:15.385Z
+F91218-724,,F20C096,NOT IN MASTER,,43,43,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T12:14:14.314Z
+F98715-363,,F31B020,NOT IN MASTER,,43,43,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:07:31.725Z
+F11469-172,,F08D043,NOT IN MASTER,,42,42,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T11:47:37.310Z
+F21952-366,,F08E050,NOT IN MASTER,,42,42,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:04:04.805Z
+F25624-143,,F04D091,NOT IN MASTER,,42,42,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T10:54:11.590Z
+F52924-942,,F36B052,NOT IN MASTER,,42,42,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:55:32.754Z
+F54784-153,,F09F048,NOT IN MASTER,,42,42,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T10:19:56.688Z
+F73987-876,,F27D084,NOT IN MASTER,,42,42,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T10:54:11.590Z
+F81713-945,,F13E001,NOT IN MASTER,,42,42,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T11:44:13.577Z
+F15274-655,,F04F021,NOT IN MASTER,,41,41,approved,System / interface error,,Marcus Obi,2026-10-04T11:27:47.120Z
+F15295-189,,F15F102,NOT IN MASTER,,41,41,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:18:48.246Z
+F59958-673,,F04D078,NOT IN MASTER,,41,41,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T10:52:08.824Z
+F28631-639,,F28C034,NOT IN MASTER,,40,40,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T13:16:29.103Z
+F55123-227,,F11B035,NOT IN MASTER,,40,40,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T09:50:50.460Z
+F88677-197,,F35F034,NOT IN MASTER,,40,40,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T12:25:40.419Z
+F99852-729,,F16B044,NOT IN MASTER,,40,40,approved,System / interface error,,Marcus Obi,2026-10-04T12:48:59.972Z
+F41239-867,,F25E112,NOT IN MASTER,,39,39,approved,Unknown — investigate,,Marcus Obi,2026-10-04T11:41:55.874Z
+F51985-266,,F25B003,NOT IN MASTER,,39,39,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T11:24:44.163Z
+F84973-176,,F26E017,NOT IN MASTER,,39,39,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:17:36.054Z
+F97747-978,,F22D027,NOT IN MASTER,,39,39,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:21:20.138Z
+F41177-436,,F12E005,NOT IN MASTER,,38,38,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T10:59:53.903Z
+F58732-293,,F17C082,NOT IN MASTER,,38,38,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:36:17.675Z
+F61456-872,,F05C030,NOT IN MASTER,,38,38,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T10:14:23.448Z
+F99596-318,,F04A075,NOT IN MASTER,,38,38,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T10:36:20.425Z
+F31269-643,,F15D049,NOT IN MASTER,,37,37,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T11:39:25.666Z
+F41264-195,,F18A006,NOT IN MASTER,,37,37,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T12:47:59.169Z
+F42148-391,,F19B037,NOT IN MASTER,,37,37,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:28:50.395Z
+F56625-974,,F07D090,NOT IN MASTER,,37,37,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T09:40:15.394Z
+F58319-449,,F10D010,NOT IN MASTER,,37,37,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T10:33:57.259Z
+F62447-678,,F08B019,NOT IN MASTER,,37,37,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T10:59:53.906Z
+F62545-444,,F09B002,NOT IN MASTER,,36,36,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T09:46:32.983Z
+F65796-744,,F12F098,NOT IN MASTER,,36,36,approved,Unknown — investigate,,Marcus Obi,2026-10-04T11:29:22.089Z
+F93554-277,,F02F075,NOT IN MASTER,,36,36,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T11:36:02.577Z
+F11113-672,,F06E010,NOT IN MASTER,,35,35,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T10:58:38.017Z
+F23264-767,,F32E044,NOT IN MASTER,,35,35,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:15:31.763Z
+F27675-528,,F09A049,NOT IN MASTER,,35,35,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T09:34:26.231Z
+F41736-318,,F21C043,NOT IN MASTER,,35,35,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T10:08:43.470Z
+F43999-415,,F18E032,NOT IN MASTER,,35,35,approved,System / interface error,,Marcus Obi,2026-10-04T11:48:45.549Z
+F45728-485,,F12C051,NOT IN MASTER,,35,35,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T12:05:19.927Z
+F65938-442,,F31C086,NOT IN MASTER,,35,35,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:28:50.395Z
+F71623-889,,F32B074,NOT IN MASTER,,35,35,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T13:00:55.772Z
+F88654-939,,F20C033,NOT IN MASTER,,35,35,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:05:19.931Z
+F19612-847,,F30B112,NOT IN MASTER,,34,34,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T13:07:14.207Z
+F47262-566,,F33C067,NOT IN MASTER,,34,34,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:26:56.868Z
+F71132-494,,F34F112,NOT IN MASTER,,34,34,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:34:34.796Z
+F71647-352,,F22C052,NOT IN MASTER,,34,34,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T13:06:22.770Z
+F85532-825,,F34D044,NOT IN MASTER,,34,34,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T11:57:45.042Z
+F18127-689,,F24A088,NOT IN MASTER,,33,33,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T10:26:53.228Z
+F18523-473,,F03E074,NOT IN MASTER,,33,33,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T10:02:38.486Z
+F26875-962,,F16C066,NOT IN MASTER,,33,33,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T12:59:29.129Z
+F29791-471,,F07F035,NOT IN MASTER,,33,33,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T10:16:35.752Z
+F42587-171,,F35E062,NOT IN MASTER,,33,33,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:16:18.650Z
+F54358-619,,F35A079,NOT IN MASTER,,33,33,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:04:04.805Z
+F67485-889,,F18E108,NOT IN MASTER,,33,33,approved,System / interface error,,Marcus Obi,2026-10-04T11:58:36.626Z
+F91173-612,,F31B039,NOT IN MASTER,,33,33,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:10:03.737Z
+F97343-929,,F29C007,NOT IN MASTER,,33,33,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:18:48.246Z
+F31391-191,,F03B034,NOT IN MASTER,,32,32,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T09:47:41.132Z
+F75129-261,,F04F054,NOT IN MASTER,,32,32,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T11:33:50.190Z
+F28372-976,,F15B093,NOT IN MASTER,,31,31,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T12:14:14.314Z
+F75635-727,,F16A072,NOT IN MASTER,,31,31,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:35:32.111Z
+F89425-754,,F13C106,NOT IN MASTER,,31,31,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T12:06:29.354Z
+F22317-363,,F09E041,NOT IN MASTER,,30,30,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T09:50:50.453Z
+F22794-548,,F22C042,NOT IN MASTER,,30,30,approved,Unknown — investigate,,Marcus Obi,2026-10-04T13:02:53.997Z
+F49541-662,,F12B001,NOT IN MASTER,,30,30,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T11:44:13.574Z
+F53316-638,,F05E077,NOT IN MASTER,,30,30,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T10:02:38.486Z
+F73847-337,,F02D018,NOT IN MASTER,,30,30,approved,System / interface error,,Marcus Obi,2026-10-04T10:35:26.672Z
+F79745-118,,F31A044,NOT IN MASTER,,30,30,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T11:54:11.964Z
+F12195-681,,F31E107,NOT IN MASTER,,29,29,approved,Unknown — investigate,,Marcus Obi,2026-10-04T11:29:22.089Z
+F25857-197,,F33F092,NOT IN MASTER,,29,29,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T11:46:10.806Z
+F63896-945,,F20E059,NOT IN MASTER,,29,29,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T13:11:03.638Z
+F92551-337,,F08A022,NOT IN MASTER,,29,29,approved,System / interface error,,Marcus Obi,2026-10-04T10:35:26.672Z
+F29933-829,,F02E087,NOT IN MASTER,,28,28,approved,Unknown — investigate,,Marcus Obi,2026-10-04T11:14:15.331Z
+F43423-444,,F33F337,NOT IN MASTER,,28,28,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T11:51:09.892Z
+F57939-885,,F13C070,NOT IN MASTER,,28,28,approved,System / interface error,,Marcus Obi,2026-10-04T11:58:36.626Z
+F61317-732,,F04E057,NOT IN MASTER,,28,28,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T11:11:35.778Z
+F74314-827,,F21C076,NOT IN MASTER,,28,28,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T10:15:34.914Z
+F98866-222,,F20C050,NOT IN MASTER,,28,28,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:07:31.720Z
+F14429-617,,F29B104,NOT IN MASTER,,27,27,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:17:36.054Z
+F19477-482,,F36B095,NOT IN MASTER,,27,27,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:59:29.661Z
+F36412-466,,F35C037,NOT IN MASTER,,26,26,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T12:25:40.419Z
+F56191-937,,F24B061,NOT IN MASTER,,26,26,approved,System / interface error,,Marcus Obi,2026-10-04T10:35:26.672Z
+F73138-936,,F14A022,NOT IN MASTER,,26,26,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T10:36:20.425Z
+F84981-592,,F14B042,NOT IN MASTER,,26,26,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T11:01:53.896Z
+F29353-171,,F15D053,NOT IN MASTER,,25,25,approved,System / interface error,,Marcus Obi,2026-10-04T11:40:39.434Z
+F66139-251,,F28B077,NOT IN MASTER,,25,25,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T13:11:03.638Z
+F72125-486,,F17C091,NOT IN MASTER,,25,25,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:37:45.232Z
+F72519-388,,F08E051,NOT IN MASTER,,25,25,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:04:04.805Z
+F92516-846,,F09B012,NOT IN MASTER,,25,25,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T09:49:34.251Z
+F36931-375,,F07A038,NOT IN MASTER,,24,24,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T09:29:51.090Z
+F54834-219,,F25A034,NOT IN MASTER,,24,24,approved,Unknown — investigate,,Marcus Obi,2026-10-04T11:09:17.131Z
+F65475-884,,F25E025,NOT IN MASTER,,24,24,approved,System / interface error,,Marcus Obi,2026-10-04T11:28:32.828Z
+F85937-545,,F28E023,NOT IN MASTER,,24,24,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:10:03.737Z
+F91766-236,,F21A005,NOT IN MASTER,,24,24,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T09:22:44.807Z
+F94911-186,,F33D099,NOT IN MASTER,,24,24,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T10:58:38.017Z
+F12165-933,,F31A045,NOT IN MASTER,,23,23,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T11:54:11.964Z
+F27397-275,,F35F036,NOT IN MASTER,,23,23,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:25:40.431Z
+F39825-664,,F12B037,NOT IN MASTER,,23,23,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T11:47:37.314Z
+F56486-611,,F26C020,NOT IN MASTER,,23,23,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T13:07:14.218Z
+F95419-365,,F10F066,NOT IN MASTER,,23,23,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T11:39:25.663Z
+F11845-195,,F07D045,NOT IN MASTER,,22,22,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T09:31:19.821Z
+F56248-571,,F25C095,NOT IN MASTER,,22,22,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T11:49:59.764Z
+F94686-545,,F19E049,NOT IN MASTER,,22,22,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T11:10:07.692Z
+F98643-268,,F24C102,NOT IN MASTER,,22,22,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T11:00:47.035Z
+F13493-297,,F19A109,NOT IN MASTER,,21,21,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T12:25:40.419Z
+F23971-195,,F17B067,NOT IN MASTER,,21,21,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T12:22:08.386Z
+F23993-412,,F27B043,NOT IN MASTER,,21,21,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:16:18.650Z
+F73441-789,,F03B048,NOT IN MASTER,,21,21,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T09:50:50.453Z
+F79599-235,,F11A063,NOT IN MASTER,,21,21,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T09:34:26.231Z
+F98639-768,,F22E082,NOT IN MASTER,,21,21,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:36:17.671Z
+F52992-269,,F09A021,NOT IN MASTER,,20,20,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T09:25:45.689Z
+F67669-865,,F21C068,NOT IN MASTER,,20,20,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T10:13:29.021Z
+F91368-196,,F09B026,NOT IN MASTER,,20,20,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T09:50:50.453Z
+F96494-721,,F30C036,NOT IN MASTER,,20,20,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T13:11:03.638Z
+F99126-966,,F36B061,NOT IN MASTER,,20,20,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:55:32.757Z
+F12183-192,SKU-8870,F18C109,QTY VARIANCE,43,37,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T13:26:00.222Z
+F12438-776,SKU-8810,F06C078,QTY VARIANCE,38,32,-6,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T11:36:02.577Z
+F13318-935,SKU-8840,F11F052,QTY VARIANCE,39,33,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T10:21:48.921Z
+F14172-162,SKU-8870,F25D043,QTY VARIANCE,37,31,-6,approved,Unknown — investigate,,Marcus Obi,2026-10-04T11:09:17.131Z
+F14372-147,SKU-8730,F16B026,QTY VARIANCE,48,42,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T12:47:59.169Z
+F14425-585,SKU-8870,F14D060,QTY VARIANCE,46,40,-6,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T10:49:00.536Z
+F14517-555,SKU-8880,F01D087,QTY VARIANCE,26,20,-6,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T09:40:15.385Z
+F14692-776,SKU-8840,F03B033,QTY VARIANCE,46,40,-6,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T09:47:41.129Z
+F15443-127,SKU-8710,F34B070,QTY VARIANCE,50,44,-6,approved,Unknown — investigate,,Marcus Obi,2026-10-04T13:01:53.425Z
+F15814-598,SKU-8730,F33D089,QTY VARIANCE,42,36,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T10:56:07.027Z
+F16221-757,SKU-8880,F25F042,QTY VARIANCE,33,27,-6,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T11:46:10.806Z
+F17217-293,SKU-8840,F34E092,QTY VARIANCE,49,43,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T12:20:13.672Z
+F17234-181,SKU-8850,F20B110,QTY VARIANCE,58,52,-6,approved,System / interface error,,Marcus Obi,2026-10-04T11:58:36.626Z
+F19254-781,SKU-8890,F19A093,QTY VARIANCE,41,35,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:24:16.892Z
+F21125-344,SKU-8750,F15B103,QTY VARIANCE,45,39,-6,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T12:15:31.760Z
+F21144-552,SKU-8730,F09F111,QTY VARIANCE,46,40,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T10:31:45.829Z
+F21334-632,SKU-8880,F03C001,QTY VARIANCE,27,21,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T10:04:33.504Z
+F23547-488,SKU-8890,F34A053,QTY VARIANCE,40,34,-6,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T12:51:22.829Z
+F24812-844,SKU-8740,F17A002,QTY VARIANCE,26,20,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:07:31.725Z
+F25373-745,SKU-8870,F07F064,QTY VARIANCE,44,38,-6,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T10:22:42.433Z
+F26273-226,SKU-8880,F11D044,QTY VARIANCE,28,22,-6,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T09:31:19.821Z
+F27879-739,SKU-8730,F13B074,QTY VARIANCE,46,40,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T11:46:10.809Z
+F28114-313,SKU-8860,F04B003,QTY VARIANCE,32,26,-6,approved,Unknown — investigate,,Marcus Obi,2026-10-04T10:49:51.859Z
+F29912-148,SKU-8740,F09E023,QTY VARIANCE,36,30,-6,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T09:47:41.129Z
+F31745-711,SKU-8860,F27A036,QTY VARIANCE,36,30,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T12:05:19.927Z
+F32436-729,SKU-8860,F04D019,QTY VARIANCE,34,28,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T10:36:20.425Z
+F32527-127,SKU-8740,F14C067,QTY VARIANCE,35,29,-6,approved,System / interface error,,Marcus Obi,2026-10-04T11:28:32.828Z
+F32794-565,SKU-8720,F15F083,QTY VARIANCE,46,40,-6,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T12:15:31.760Z
+F37234-299,SKU-8740,F24B045,QTY VARIANCE,28,22,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T10:31:45.829Z
+F37317-823,SKU-8860,F08F064,QTY VARIANCE,41,35,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T12:20:13.672Z
+F38579-629,SKU-8870,F19B067,QTY VARIANCE,46,40,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T12:31:23.476Z
+F39655-838,SKU-8720,F28B089,QTY VARIANCE,37,31,-6,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T13:12:32.435Z
+F41348-531,SKU-8870,F22E048,QTY VARIANCE,34,28,-6,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T12:32:25.719Z
+F44359-661,SKU-8730,F18E044,QTY VARIANCE,51,45,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T11:49:59.764Z
+F45917-194,SKU-8860,F35F088,QTY VARIANCE,40,34,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:31:23.480Z
+F49144-113,SKU-8730,F02C082,QTY VARIANCE,47,41,-6,approved,System / interface error,,Marcus Obi,2026-10-04T11:27:47.120Z
+F51782-639,SKU-8710,F15F052,QTY VARIANCE,43,37,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T12:11:26.421Z
+F51974-458,SKU-8870,F35A019,QTY VARIANCE,36,30,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T11:53:09.277Z
+F54248-677,SKU-8810,F07E002,QTY VARIANCE,42,36,-6,approved,System / interface error,,Marcus Obi,2026-10-04T09:44:03.384Z
+F54717-319,SKU-8890,F06D030,QTY VARIANCE,43,37,-6,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T10:44:45.053Z
+F56243-685,SKU-8750,F36A004,QTY VARIANCE,50,44,-6,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:35:32.111Z
+F57452-354,SKU-8740,F12D014,QTY VARIANCE,38,32,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T10:36:20.431Z
+F62297-187,SKU-8750,F07F088,QTY VARIANCE,51,45,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T10:28:02.883Z
+F62528-941,SKU-8890,F17A034,QTY VARIANCE,40,34,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:10:03.744Z
+F63773-649,SKU-8870,F28C029,QTY VARIANCE,40,34,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T13:15:31.781Z
+F64579-763,SKU-8870,F12D072,QTY VARIANCE,40,34,-6,approved,System / interface error,,Marcus Obi,2026-10-04T10:53:21.752Z
+F65932-969,SKU-8720,F26C049,QTY VARIANCE,44,38,-6,approved,Unknown — investigate,,Marcus Obi,2026-10-04T13:09:40.025Z
+F66463-166,SKU-8890,F27C069,QTY VARIANCE,36,30,-6,approved,System / interface error,,Marcus Obi,2026-10-04T12:30:09.259Z
+F67789-639,SKU-8730,F04D096,QTY VARIANCE,53,47,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T10:56:07.027Z
+F68385-816,SKU-8860,F22A071,QTY VARIANCE,42,36,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T12:47:59.169Z
+F68643-933,SKU-8810,F18A082,QTY VARIANCE,38,32,-6,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T12:53:39.592Z
+F69128-762,SKU-8870,F27D019,QTY VARIANCE,45,39,-6,approved,System / interface error,,Marcus Obi,2026-10-04T10:35:26.672Z
+F69441-377,SKU-8860,F34E086,QTY VARIANCE,41,35,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:18:48.249Z
+F71146-825,SKU-8890,F16C004,QTY VARIANCE,35,29,-6,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:54:33.003Z
+F71396-362,SKU-8710,F08F096,QTY VARIANCE,46,40,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:23:23.517Z
+F71461-313,SKU-8710,F06B032,QTY VARIANCE,48,42,-6,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T11:01:53.896Z
+F72254-778,SKU-8750,F21C104,QTY VARIANCE,47,41,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T10:21:48.912Z
+F73686-459,SKU-8850,F35A088,QTY VARIANCE,63,57,-6,auto,,,,
+F74975-741,SKU-8880,F20D052,QTY VARIANCE,34,28,-6,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T12:59:29.129Z
+F75399-476,SKU-8720,F20D041,QTY VARIANCE,39,33,-6,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T12:58:02.878Z
+F75716-298,SKU-8710,F03C079,QTY VARIANCE,42,36,-6,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T10:18:48.292Z
+F75761-532,SKU-8860,F23B070,QTY VARIANCE,35,29,-6,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T12:59:29.129Z
+F75774-434,SKU-8840,F34F052,QTY VARIANCE,48,42,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:26:56.868Z
+F75864-592,SKU-8840,F16D019,QTY VARIANCE,43,37,-6,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:21:20.138Z
+F76115-467,SKU-8890,F25C093,QTY VARIANCE,41,35,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T11:49:59.767Z
+F76757-639,SKU-8750,F05F105,QTY VARIANCE,51,45,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T10:31:45.829Z
+F77255-663,SKU-8880,F05E083,QTY VARIANCE,25,19,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T10:03:46.264Z
+F78831-893,SKU-8810,F12D102,QTY VARIANCE,41,35,-6,approved,Unknown — investigate,,Marcus Obi,2026-10-04T10:57:22.431Z
+F83587-254,SKU-8750,F34B078,QTY VARIANCE,54,48,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T13:06:22.770Z
+F83695-518,SKU-8720,F31A111,QTY VARIANCE,37,31,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T12:05:19.927Z
+F84263-928,SKU-8720,F28B035,QTY VARIANCE,44,38,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T13:06:22.775Z
+F84978-261,SKU-8850,F28E072,QTY VARIANCE,56,50,-6,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:17:36.054Z
+F85814-973,SKU-8860,F25E032,QTY VARIANCE,32,26,-6,approved,Unknown — investigate,,Marcus Obi,2026-10-04T11:29:22.089Z
+F85922-445,SKU-8880,F05F067,QTY VARIANCE,32,26,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T10:23:40.700Z
+F87769-458,SKU-8870,F31B105,QTY VARIANCE,41,35,-6,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:17:36.054Z
+F89161-618,SKU-8880,F33B028,QTY VARIANCE,31,25,-6,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:10:03.737Z
+F92572-692,SKU-8890,F07E072,QTY VARIANCE,45,39,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T09:58:04.752Z
+F92754-216,SKU-8730,F03A084,QTY VARIANCE,51,45,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T09:37:31.848Z
+F92912-699,SKU-8810,F09C077,QTY VARIANCE,37,31,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T10:28:02.879Z
+F92924-861,SKU-8720,F10D111,QTY VARIANCE,45,39,-6,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T10:58:38.017Z
+F94757-184,SKU-8750,F32C092,QTY VARIANCE,54,48,-6,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T13:15:31.777Z
+F96683-877,SKU-8740,F07C054,QTY VARIANCE,34,28,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T10:21:48.912Z
+F97616-371,SKU-8750,F28C038,QTY VARIANCE,46,40,-6,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T13:22:29.022Z
+F97724-593,SKU-8720,F02D034,QTY VARIANCE,39,33,-6,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T10:44:45.053Z
+F99848-883,SKU-8890,F02D030,QTY VARIANCE,44,38,-6,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T10:44:45.053Z
+F13238-894,SKU-8730,F23C027,QTY VARIANCE,51,46,-5,auto,,,,
+F13639-496,SKU-8740,F21D084,QTY VARIANCE,29,24,-5,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T11:36:02.577Z
+F13889-499,SKU-8860,F35D036,QTY VARIANCE,40,35,-5,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T11:57:45.042Z
+F14362-859,SKU-8850,F12D111,QTY VARIANCE,56,51,-5,auto,,,,
+F15464-555,SKU-8870,F36A025,QTY VARIANCE,40,35,-5,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:36:17.675Z
+F17715-832,SKU-8810,F29A007,QTY VARIANCE,36,31,-5,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T11:49:59.764Z
+F19446-419,SKU-8810,F30C089,QTY VARIANCE,39,34,-5,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T13:15:31.777Z
+F19626-693,SKU-8850,F35F062,QTY VARIANCE,54,49,-5,auto,,,,
+F22924-992,SKU-8810,F23D078,QTY VARIANCE,43,38,-5,approved,System / interface error,,Marcus Obi,2026-10-04T10:35:26.672Z
+F23327-493,SKU-8890,F26E061,QTY VARIANCE,40,35,-5,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:23:23.226Z
+F24598-798,SKU-8890,F19D045,QTY VARIANCE,46,41,-5,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T10:46:56.007Z
+F25799-552,SKU-8850,F06A053,QTY VARIANCE,61,56,-5,auto,,,,
+F26448-396,SKU-8870,F12E080,QTY VARIANCE,38,33,-5,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T11:16:22.158Z
+F28318-494,SKU-8870,F05D044,QTY VARIANCE,45,40,-5,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T09:29:51.090Z
+F28757-581,SKU-8880,F28B088,QTY VARIANCE,24,19,-5,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T13:12:32.435Z
+F29725-578,SKU-8870,F32F053,QTY VARIANCE,39,34,-5,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T12:31:23.476Z
+F33638-597,SKU-8750,F09F110,QTY VARIANCE,53,48,-5,auto,,,,
+F33825-522,SKU-8740,F06A094,QTY VARIANCE,29,24,-5,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T10:55:11.819Z
+F35455-663,SKU-8890,F26E109,QTY VARIANCE,36,31,-5,approved,System / interface error,,Marcus Obi,2026-10-04T12:30:09.259Z
+F35833-128,SKU-8840,F12D095,QTY VARIANCE,48,43,-5,approved,Unknown — investigate,,Marcus Obi,2026-10-04T10:57:22.431Z
+F35982-567,SKU-8730,F15F046,QTY VARIANCE,45,40,-5,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:10:03.737Z
+F37418-999,SKU-8810,F18E109,QTY VARIANCE,45,40,-5,approved,System / interface error,,Marcus Obi,2026-10-04T11:58:36.626Z
+F38527-275,SKU-8750,F06E103,QTY VARIANCE,56,51,-5,auto,,,,
+F38992-265,SKU-8840,F28F112,QTY VARIANCE,38,33,-5,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:36:17.671Z
+F39644-527,SKU-8860,F35D072,QTY VARIANCE,41,36,-5,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T12:05:19.927Z
+F39864-637,SKU-8720,F02B066,QTY VARIANCE,40,35,-5,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T11:00:47.035Z
+F41616-143,SKU-8870,F27E003,QTY VARIANCE,35,30,-5,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T10:59:53.903Z
+F47176-881,SKU-8860,F17E109,QTY VARIANCE,38,33,-5,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:54:33.007Z
+F48985-761,SKU-8750,F09C068,QTY VARIANCE,54,49,-5,auto,,,,
+F53611-663,SKU-8810,F27C083,QTY VARIANCE,43,38,-5,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T12:31:23.476Z
+F54766-998,SKU-8870,F02D002,QTY VARIANCE,35,30,-5,approved,Unknown — investigate,,Marcus Obi,2026-10-04T10:33:11.671Z
+F54834-389,SKU-8890,F04A084,QTY VARIANCE,39,34,-5,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T10:44:45.053Z
+F56894-964,SKU-8740,F28B071,QTY VARIANCE,36,31,-5,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T13:11:03.642Z
+F57534-181,SKU-8710,F29D020,QTY VARIANCE,46,41,-5,approved,System / interface error,,Marcus Obi,2026-10-04T10:35:26.672Z
+F58585-885,SKU-8880,F02C079,QTY VARIANCE,24,19,-5,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T11:27:47.124Z
+F58777-187,SKU-8740,F32D075,QTY VARIANCE,26,21,-5,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:04:04.805Z
+F61771-619,SKU-8890,F25F075,QTY VARIANCE,43,38,-5,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T11:51:09.892Z
+F62152-799,SKU-8710,F04E011,QTY VARIANCE,42,37,-5,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T10:59:53.903Z
+F62621-583,SKU-8710,F06D099,QTY VARIANCE,45,40,-5,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T10:55:11.819Z
+F62816-696,SKU-8890,F28F081,QTY VARIANCE,39,34,-5,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T12:32:25.719Z
+F63151-891,SKU-8740,F22E038,QTY VARIANCE,31,26,-5,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T12:31:23.476Z
+F63494-494,SKU-8720,F23E076,QTY VARIANCE,41,36,-5,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T10:56:07.030Z
+F65986-713,SKU-8750,F11D106,QTY VARIANCE,45,40,-5,approved,System / interface error,,Marcus Obi,2026-10-04T09:44:03.384Z
+F66296-968,SKU-8710,F02A096,QTY VARIANCE,42,37,-5,approved,Unknown — investigate,,Marcus Obi,2026-10-04T10:49:51.859Z
+F66521-373,SKU-8740,F33E101,QTY VARIANCE,28,23,-5,approved,System / interface error,,Marcus Obi,2026-10-04T11:28:32.828Z
+F67691-313,SKU-8710,F02E083,QTY VARIANCE,46,41,-5,approved,Unknown — investigate,,Marcus Obi,2026-10-04T11:14:15.331Z
+F71374-425,SKU-8740,F04F104,QTY VARIANCE,37,32,-5,approved,System / interface error,,Marcus Obi,2026-10-04T11:40:39.434Z
+F71837-422,SKU-8810,F07E005,QTY VARIANCE,46,41,-5,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T09:45:12.675Z
+F71838-594,SKU-8730,F34F003,QTY VARIANCE,47,42,-5,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T12:22:08.389Z
+F72435-369,SKU-8810,F04E004,QTY VARIANCE,43,38,-5,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T10:58:38.017Z
+F75485-225,SKU-8810,F34F345,QTY VARIANCE,43,38,-5,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:34:34.796Z
+F77925-661,SKU-8710,F28E022,QTY VARIANCE,44,39,-5,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:10:03.737Z
+F81698-962,SKU-8890,F22A082,QTY VARIANCE,34,29,-5,approved,System / interface error,,Marcus Obi,2026-10-04T12:48:59.972Z
+F86417-199,SKU-8710,F02C001,QTY VARIANCE,42,37,-5,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T11:11:35.778Z
+F86544-948,SKU-8850,F12D099,QTY VARIANCE,60,55,-5,auto,,,,
+F86823-811,SKU-8810,F17E098,QTY VARIANCE,36,31,-5,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T12:53:39.592Z
+F87981-427,SKU-8870,F17D087,QTY VARIANCE,37,32,-5,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:34:34.796Z
+F89984-536,SKU-8710,F34A092,QTY VARIANCE,53,48,-5,auto,,,,
+F92696-571,SKU-8880,F29D110,QTY VARIANCE,33,28,-5,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T10:58:38.017Z
+F92796-841,SKU-8740,F13E078,QTY VARIANCE,28,23,-5,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T11:54:11.964Z
+F93486-851,SKU-8880,F07B033,QTY VARIANCE,29,24,-5,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T09:50:50.453Z
+F93765-447,SKU-8850,F05A065,QTY VARIANCE,64,59,-5,auto,,,,
+F94429-298,SKU-8890,F03C094,QTY VARIANCE,38,33,-5,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T10:20:51.063Z
+F94449-988,SKU-8740,F08A062,QTY VARIANCE,30,25,-5,approved,Unknown — investigate,,Marcus Obi,2026-10-04T10:49:51.859Z
+F95128-983,SKU-8740,F12A003,QTY VARIANCE,36,31,-5,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T11:43:20.351Z
+F95278-381,SKU-8810,F01F102,QTY VARIANCE,39,34,-5,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T10:30:21.712Z
+F95297-268,SKU-8720,F07D032,QTY VARIANCE,41,36,-5,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T09:28:22.512Z
+F95619-651,SKU-8850,F02D089,QTY VARIANCE,62,57,-5,auto,,,,
+F96732-862,SKU-8720,F11D069,QTY VARIANCE,39,34,-5,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T09:35:40.417Z
+F96819-757,SKU-8720,F33A039,QTY VARIANCE,46,41,-5,approved,Unknown — investigate,,Marcus Obi,2026-10-04T11:55:34.008Z
+F98111-273,SKU-8880,F05F079,QTY VARIANCE,36,31,-5,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T10:25:47.261Z
+F98858-392,SKU-8860,F02E003,QTY VARIANCE,42,37,-5,approved,Unknown — investigate,,Marcus Obi,2026-10-04T10:57:22.431Z
+F11918-445,SKU-8840,F17B073,QTY VARIANCE,49,45,-4,auto,,,,
+F12952-453,SKU-8870,F34B027,QTY VARIANCE,35,39,4,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T12:58:02.878Z
+F13297-162,SKU-8720,F11E101,QTY VARIANCE,47,43,-4,auto,,,,
+F13851-377,SKU-8710,F30E037,QTY VARIANCE,54,58,4,auto,,,,
+F14971-393,SKU-8860,F01F017,QTY VARIANCE,41,37,-4,auto,,,,
+F15251-312,SKU-8750,F14C074,QTY VARIANCE,55,51,-4,auto,,,,
+F15374-515,SKU-8750,F01F105,QTY VARIANCE,56,60,4,auto,,,,
+F16136-253,SKU-8720,F27A054,QTY VARIANCE,42,38,-4,auto,,,,
+F16332-489,SKU-8810,F19B019,QTY VARIANCE,46,42,-4,auto,,,,
+F16528-484,SKU-8740,F32E071,QTY VARIANCE,28,24,-4,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:18:48.246Z
+F16813-356,SKU-8720,F05D100,QTY VARIANCE,40,44,4,approved,System / interface error,,Marcus Obi,2026-10-04T09:41:15.923Z
+F17199-792,SKU-8720,F31C031,QTY VARIANCE,36,32,-4,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T12:22:08.386Z
+F18472-216,SKU-8880,F24C071,QTY VARIANCE,36,32,-4,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T10:55:11.819Z
+F19499-332,SKU-8720,F13D088,QTY VARIANCE,40,36,-4,approved,System / interface error,,Marcus Obi,2026-10-04T11:40:39.434Z
+F19959-213,SKU-8840,F34F016,QTY VARIANCE,50,46,-4,auto,,,,
+F21866-732,SKU-8730,F14B095,QTY VARIANCE,52,48,-4,auto,,,,
+F22226-178,SKU-8810,F33F053,QTY VARIANCE,34,38,4,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T11:38:09.754Z
+F22642-773,SKU-8810,F03E058,QTY VARIANCE,36,40,4,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T09:56:51.752Z
+F23493-675,SKU-8710,F33E004,QTY VARIANCE,50,54,4,auto,,,,
+F23687-252,SKU-8860,F31B068,QTY VARIANCE,41,37,-4,auto,,,,
+F24198-612,SKU-8880,F28E043,QTY VARIANCE,35,31,-4,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T12:12:46.901Z
+F24943-621,SKU-8750,F12E029,QTY VARIANCE,47,51,4,auto,,,,
+F25441-327,SKU-8860,F35A048,QTY VARIANCE,32,36,4,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-04T11:57:45.042Z
+F26414-983,SKU-8840,F02B093,QTY VARIANCE,38,34,-4,approved,Unknown — investigate,,Marcus Obi,2026-10-04T11:08:11.273Z
+F28133-381,SKU-8880,F03C031,QTY VARIANCE,25,29,4,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T10:09:41.185Z
+F28286-262,SKU-8810,F02A104,QTY VARIANCE,39,43,4,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T10:51:00.441Z
+F29324-353,SKU-8810,F04D020,QTY VARIANCE,36,32,-4,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T10:37:48.934Z
+F29428-235,SKU-8840,F14D104,QTY VARIANCE,42,46,4,auto,,,,
+F29925-663,SKU-8810,F04F036,QTY VARIANCE,42,38,-4,auto,,,,
+F31874-981,SKU-8720,F18A054,QTY VARIANCE,45,49,4,auto,,,,
+F33167-448,SKU-8720,F02A022,QTY VARIANCE,48,44,-4,auto,,,,
+F33371-195,SKU-8710,F20E098,QTY VARIANCE,50,54,4,auto,,,,
+F33489-552,SKU-8860,F33D003,QTY VARIANCE,30,26,-4,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T10:33:57.259Z
+F33689-835,SKU-8750,F26F014,QTY VARIANCE,54,58,4,auto,,,,
+F34675-163,SKU-8890,F10B109,QTY VARIANCE,44,40,-4,auto,,,,
+F35192-444,SKU-8710,F07F065,QTY VARIANCE,49,53,4,auto,,,,
+F35235-387,SKU-8730,F15E050,QTY VARIANCE,50,46,-4,auto,,,,
+F35327-459,SKU-8870,F17A072,QTY VARIANCE,35,31,-4,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T12:12:46.901Z
+F35694-393,SKU-8720,F24B051,QTY VARIANCE,38,42,4,approved,Unknown — investigate,,Marcus Obi,2026-10-04T10:33:11.671Z
+F36537-351,SKU-8840,F01A073,QTY VARIANCE,50,54,4,auto,,,,
+F36665-784,SKU-8890,F02E110,QTY VARIANCE,37,33,-4,approved,System / interface error,,Marcus Obi,2026-10-04T11:23:49.005Z
+F38862-381,SKU-8880,F22B078,QTY VARIANCE,31,35,4,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T12:58:02.878Z
+F39846-597,SKU-8880,F30A074,QTY VARIANCE,26,22,-4,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T12:51:22.829Z
+F41129-439,SKU-8720,F31E011,QTY VARIANCE,36,40,4,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T11:05:56.720Z
+F41495-366,SKU-8880,F35E001,QTY VARIANCE,35,31,-4,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:10:03.737Z
+F41732-768,SKU-8740,F30D087,QTY VARIANCE,27,31,4,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:04:04.805Z
+F42814-926,SKU-8880,F25E046,QTY VARIANCE,29,25,-4,approved,Unknown — investigate,,Marcus Obi,2026-10-04T11:31:47.980Z
+F42944-861,SKU-8740,F18D059,QTY VARIANCE,26,22,-4,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T11:37:08.119Z
+F43622-389,SKU-8840,F26D099,QTY VARIANCE,45,41,-4,auto,,,,
+F45696-547,SKU-8860,F28D030,QTY VARIANCE,37,33,-4,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T11:53:09.277Z
+F46331-184,SKU-8710,F32D110,QTY VARIANCE,51,55,4,auto,,,,
+F46616-994,SKU-8850,F21D025,QTY VARIANCE,66,62,-4,auto,,,,
+F46617-154,SKU-8750,F28B090,QTY VARIANCE,54,50,-4,auto,,,,
+F47339-929,SKU-8810,F15B112,QTY VARIANCE,40,36,-4,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:16:18.650Z
+F47486-879,SKU-8710,F19E086,QTY VARIANCE,51,55,4,auto,,,,
+F47776-388,SKU-8880,F25D038,QTY VARIANCE,32,28,-4,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T11:08:11.278Z
+F48465-746,SKU-8850,F03C111,QTY VARIANCE,59,55,-4,auto,,,,
+F48495-552,SKU-8750,F09E090,QTY VARIANCE,50,46,-4,auto,,,,
+F48571-462,SKU-8850,F14E058,QTY VARIANCE,58,54,-4,auto,,,,
+F48667-781,SKU-8720,F27D051,QTY VARIANCE,37,41,4,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T10:47:53.201Z
+F49741-755,SKU-8730,F18B036,QTY VARIANCE,50,54,4,auto,,,,
+F49919-356,SKU-8860,F30B062,QTY VARIANCE,41,45,4,auto,,,,
+F52575-235,SKU-8740,F19D079,QTY VARIANCE,28,24,-4,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T10:53:21.755Z
+F52599-586,SKU-8840,F04C071,QTY VARIANCE,39,35,-4,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T11:27:47.124Z
+F53739-677,SKU-8890,F33B049,QTY VARIANCE,36,40,4,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T12:12:46.901Z
+F54117-622,SKU-8810,F32C035,QTY VARIANCE,34,38,4,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T13:11:03.638Z
+F54166-687,SKU-8740,F32C031,QTY VARIANCE,35,39,4,approved,"Received, not entered in the system",,Marcus Obi,2026-10-04T13:11:03.638Z
+F55632-813,SKU-8880,F31D098,QTY VARIANCE,32,28,-4,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T10:58:38.020Z
+F57585-368,SKU-8840,F26D024,QTY VARIANCE,49,45,-4,auto,,,,
+F58342-735,SKU-8750,F02A005,QTY VARIANCE,49,45,-4,auto,,,,
+F58897-211,SKU-8840,F10A033,QTY VARIANCE,46,50,4,auto,,,,
+F59649-857,SKU-8860,F29D048,QTY VARIANCE,38,34,-4,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T10:47:53.201Z
+F59893-821,SKU-8710,F22E085,QTY VARIANCE,47,43,-4,auto,,,,
+F61166-279,SKU-8740,F29C007,QTY VARIANCE,34,30,-4,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T12:18:48.246Z
+F62261-531,SKU-8890,F29C111,QTY VARIANCE,34,30,-4,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T12:31:23.476Z
+F62695-171,SKU-8850,F11F080,QTY VARIANCE,61,57,-4,auto,,,,
+F62848-931,SKU-8850,F23B080,QTY VARIANCE,66,70,4,auto,,,,
+F63382-496,SKU-8720,F32D045,QTY VARIANCE,47,43,-4,auto,,,,
+F64535-696,SKU-8840,F03C077,QTY VARIANCE,44,48,4,auto,,,,
+F64855-657,SKU-8890,F24F100,QTY VARIANCE,44,48,4,auto,,,,
+F65286-224,SKU-8860,F04A043,QTY VARIANCE,31,35,4,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T10:31:45.829Z
+F67196-398,SKU-8810,F24A081,QTY VARIANCE,37,41,4,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T10:25:47.261Z
+F67443-381,SKU-8730,F17B084,QTY VARIANCE,45,41,-4,auto,,,,
+F69156-151,SKU-8880,F26B088,QTY VARIANCE,30,26,-4,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T13:00:55.772Z
+F69734-688,SKU-8810,F05B052,QTY VARIANCE,35,39,4,approved,Unknown — investigate,,Marcus Obi,2026-10-04T09:53:41.273Z
+F71852-865,SKU-8870,F30F302,QTY VARIANCE,46,50,4,auto,,,,
+F72388-863,SKU-8840,F33C034,QTY VARIANCE,41,37,-4,auto,,,,
+F72753-328,SKU-8810,F07D105,QTY VARIANCE,40,36,-4,approved,Unknown — investigate,,Marcus Obi,2026-10-04T09:42:35.698Z
+F74573-443,SKU-8880,F05E047,QTY VARIANCE,28,24,-4,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T09:52:51.134Z
+F75753-966,SKU-8720,F14D029,QTY VARIANCE,40,36,-4,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T10:37:48.938Z
+F76112-879,SKU-8880,F23D067,QTY VARIANCE,34,30,-4,approved,Unknown — investigate,,Marcus Obi,2026-10-04T10:33:11.671Z
+F76116-624,SKU-8850,F06E061,QTY VARIANCE,64,60,-4,auto,,,,
+F76138-617,SKU-8880,F06A108,QTY VARIANCE,31,35,4,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T10:56:07.027Z
+F76148-639,SKU-8870,F22C041,QTY VARIANCE,34,30,-4,approved,Unknown — investigate,,Marcus Obi,2026-10-04T13:01:53.425Z
+F77856-965,SKU-8710,F17E045,QTY VARIANCE,48,52,4,auto,,,,
+F78147-326,SKU-8840,F05D043,QTY VARIANCE,49,53,4,auto,,,,
+F79119-383,SKU-8720,F33D015,QTY VARIANCE,38,34,-4,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T10:36:20.425Z
+F79697-676,SKU-8840,F18E105,QTY VARIANCE,50,54,4,auto,,,,
+F81417-129,SKU-8720,F33E071,QTY VARIANCE,38,34,-4,approved,System / interface error,,Marcus Obi,2026-10-04T11:23:49.005Z
+F81762-385,SKU-8870,F10F059,QTY VARIANCE,38,34,-4,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T11:38:09.748Z
+F82418-946,SKU-8740,F29C025,QTY VARIANCE,31,35,4,approved,Unknown — investigate,,Marcus Obi,2026-10-04T12:21:20.138Z
+F82914-998,SKU-8730,F03D006,QTY VARIANCE,54,50,-4,auto,,,,
+F83351-914,SKU-8810,F15E010,QTY VARIANCE,37,33,-4,approved,System / interface error,,Marcus Obi,2026-10-04T11:48:45.549Z
+F83858-223,SKU-8850,F33A046,QTY VARIANCE,55,59,4,auto,,,,
+F84982-482,SKU-8740,F11A027,QTY VARIANCE,37,41,4,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-04T09:26:55.658Z
+F86285-482,SKU-8880,F12F107,QTY VARIANCE,29,33,4,approved,Unknown — investigate,,Marcus Obi,2026-10-04T11:30:49.771Z
+F86631-314,SKU-8860,F30F070,QTY VARIANCE,42,38,-4,auto,,,,
+F87789-984,SKU-8870,F13C036,QTY VARIANCE,46,42,-4,auto,,,,
+F89595-373,SKU-8850,F05A089,QTY VARIANCE,62,58,-4,auto,,,,
+F91196-165,SKU-8890,F32B085,QTY VARIANCE,42,46,4,auto,,,,
+F92539-632,SKU-8710,F29C078,QTY VARIANCE,43,39,-4,auto,,,,
+F92975-657,SKU-8850,F32E084,QTY VARIANCE,56,52,-4,auto,,,,
+F93239-729,SKU-8890,F21E090,QTY VARIANCE,45,41,-4,auto,,,,
+F93388-767,SKU-8880,F07F071,QTY VARIANCE,29,33,4,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T10:24:53.520Z
+F93455-883,SKU-8720,F07F084,QTY VARIANCE,45,41,-4,auto,,,,
+F93668-584,SKU-8880,F17A067,QTY VARIANCE,32,36,4,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T12:12:46.901Z
+F93688-189,SKU-8720,F02E018,QTY VARIANCE,42,46,4,auto,,,,
+F94667-463,SKU-8850,F02E037,QTY VARIANCE,60,56,-4,auto,,,,
+F95633-761,SKU-8720,F07E112,QTY VARIANCE,43,39,-4,auto,,,,
+F96374-314,SKU-8870,F14C047,QTY VARIANCE,35,39,4,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T11:26:29.265Z
+F97223-817,SKU-8720,F34E077,QTY VARIANCE,41,37,-4,auto,,,,
+F97445-619,SKU-8810,F06E088,QTY VARIANCE,43,39,-4,auto,,,,
+F98616-931,SKU-8730,F09A035,QTY VARIANCE,49,45,-4,auto,,,,
+F99341-936,SKU-8840,F11E044,QTY VARIANCE,46,50,4,auto,,,,
+F11527-594,SKU-8750,F22E021,QTY VARIANCE,48,45,-3,auto,,,,
+F12329-463,SKU-8850,F29B048,QTY VARIANCE,59,56,-3,auto,,,,
+F12892-672,SKU-8730,F27A029,QTY VARIANCE,46,43,-3,auto,,,,
+F15469-885,SKU-8740,F30C076,QTY VARIANCE,37,40,3,auto,,,,
+F15568-331,SKU-8870,F01B076,QTY VARIANCE,40,43,3,auto,,,,
+F15695-974,SKU-8850,F22E039,QTY VARIANCE,56,53,-3,auto,,,,
+F15697-237,SKU-8720,F09E029,QTY VARIANCE,37,40,3,auto,,,,
+F15717-745,SKU-8750,F11C080,QTY VARIANCE,54,57,3,auto,,,,
+F15877-861,SKU-8720,F15B054,QTY VARIANCE,46,43,-3,auto,,,,
+F16642-934,SKU-8720,F26B065,QTY VARIANCE,37,40,3,auto,,,,
+F16758-619,SKU-8720,F14D017,QTY VARIANCE,48,45,-3,auto,,,,
+F17853-734,SKU-8750,F20A042,QTY VARIANCE,55,52,-3,auto,,,,
+F17884-279,SKU-8870,F16C012,QTY VARIANCE,42,45,3,auto,,,,
+F19114-947,SKU-8850,F10E021,QTY VARIANCE,65,62,-3,auto,,,,
+F21138-911,SKU-8740,F03C050,QTY VARIANCE,27,30,3,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T10:14:23.448Z
+F21456-441,SKU-8890,F35F051,QTY VARIANCE,37,34,-3,auto,,,,
+F22463-794,SKU-8710,F06E011,QTY VARIANCE,42,39,-3,auto,,,,
+F22472-847,SKU-8880,F06D033,QTY VARIANCE,26,23,-3,approved,Put away to the wrong bin,,Marcus Obi,2026-10-04T10:45:30.745Z
+F22627-865,SKU-8720,F09F052,QTY VARIANCE,38,35,-3,auto,,,,
+F23457-221,SKU-8730,F10C045,QTY VARIANCE,46,49,3,auto,,,,
+F24827-374,SKU-8720,F19E105,QTY VARIANCE,42,39,-3,auto,,,,
+F25591-174,SKU-8840,F26F100,QTY VARIANCE,49,46,-3,auto,,,,
+F25751-983,SKU-8740,F08B034,QTY VARIANCE,32,29,-3,auto,,,,
+F25858-523,SKU-8890,F29C051,QTY VARIANCE,40,43,3,auto,,,,
+F26197-861,SKU-8850,F31C092,QTY VARIANCE,60,57,-3,auto,,,,
+F26291-419,SKU-8880,F01D111,QTY VARIANCE,32,35,3,auto,,,,
+F27131-871,SKU-8720,F26D060,QTY VARIANCE,40,37,-3,auto,,,,
+F28627-648,SKU-8750,F15F057,QTY VARIANCE,56,53,-3,auto,,,,
+F28857-935,SKU-8730,F28E079,QTY VARIANCE,51,48,-3,auto,,,,
+F31161-982,SKU-8720,F06A076,QTY VARIANCE,42,45,3,auto,,,,
+F31239-867,SKU-8880,F21A068,QTY VARIANCE,27,24,-3,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T09:32:57.927Z
+F32428-478,SKU-8750,F10E096,QTY VARIANCE,48,45,-3,auto,,,,
+F32813-627,SKU-8810,F34F071,QTY VARIANCE,43,46,3,auto,,,,
+F33445-482,SKU-8840,F25F252,QTY VARIANCE,47,44,-3,auto,,,,
+F33569-743,SKU-8730,F31D032,QTY VARIANCE,49,46,-3,auto,,,,
+F37877-712,SKU-8710,F28A092,QTY VARIANCE,45,42,-3,auto,,,,
+F39913-575,SKU-8720,F22C073,QTY VARIANCE,40,43,3,auto,,,,
+F42348-923,SKU-8710,F18B027,QTY VARIANCE,45,42,-3,auto,,,,
+F42439-895,SKU-8810,F19C111,QTY VARIANCE,42,39,-3,auto,,,,
+F42461-812,SKU-8750,F24F093,QTY VARIANCE,49,46,-3,auto,,,,
+F42797-158,SKU-8870,F21B003,QTY VARIANCE,45,42,-3,auto,,,,
+F43216-245,SKU-8720,F28A033,QTY VARIANCE,45,42,-3,auto,,,,
+F44197-376,SKU-8750,F27F274,QTY VARIANCE,47,50,3,auto,,,,
+F44348-462,SKU-8730,F32E055,QTY VARIANCE,50,53,3,auto,,,,
+F45562-192,SKU-8870,F35A043,QTY VARIANCE,45,42,-3,auto,,,,
+F46374-432,SKU-8860,F14C052,QTY VARIANCE,35,38,3,auto,,,,
+F47126-929,SKU-8890,F04D006,QTY VARIANCE,35,32,-3,auto,,,,
+F51346-211,SKU-8730,F19C103,QTY VARIANCE,54,51,-3,auto,,,,
+F52587-519,SKU-8840,F12C003,QTY VARIANCE,41,38,-3,auto,,,,
+F52729-932,SKU-8720,F17B070,QTY VARIANCE,41,38,-3,auto,,,,
+F53113-333,SKU-8880,F30A044,QTY VARIANCE,35,32,-3,auto,,,,
+F53335-494,SKU-8890,F11A032,QTY VARIANCE,36,33,-3,auto,,,,
+F53349-747,SKU-8750,F06B025,QTY VARIANCE,55,58,3,auto,,,,
+F53851-177,SKU-8850,F04A029,QTY VARIANCE,54,51,-3,auto,,,,
+F54688-164,SKU-8870,F06A038,QTY VARIANCE,41,38,-3,auto,,,,
+F54694-154,SKU-8710,F11E106,QTY VARIANCE,43,40,-3,auto,,,,
+F56156-762,SKU-8720,F36B038,QTY VARIANCE,39,36,-3,auto,,,,
+F56533-348,SKU-8890,F28E001,QTY VARIANCE,35,38,3,auto,,,,
+F56825-322,SKU-8870,F33B045,QTY VARIANCE,36,39,3,auto,,,,
+F56836-125,SKU-8860,F21E031,QTY VARIANCE,31,28,-3,auto,,,,
+F57536-221,SKU-8840,F32F040,QTY VARIANCE,50,47,-3,auto,,,,
+F57725-552,SKU-8870,F26E045,QTY VARIANCE,46,43,-3,auto,,,,
+F59476-555,SKU-8750,F03E001,QTY VARIANCE,50,47,-3,auto,,,,
+F59645-826,SKU-8880,F28E064,QTY VARIANCE,35,32,-3,auto,,,,
+F59911-349,SKU-8810,F26D103,QTY VARIANCE,42,39,-3,auto,,,,
+F59968-759,SKU-8710,F35E112,QTY VARIANCE,48,45,-3,auto,,,,
+F61114-946,SKU-8880,F04A003,QTY VARIANCE,24,21,-3,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T10:24:53.525Z
+F61635-717,SKU-8850,F26F056,QTY VARIANCE,63,66,3,auto,,,,
+F61783-971,SKU-8740,F32A009,QTY VARIANCE,35,38,3,auto,,,,
+F62565-615,SKU-8890,F02E038,QTY VARIANCE,35,32,-3,auto,,,,
+F63238-149,SKU-8870,F19E001,QTY VARIANCE,44,47,3,auto,,,,
+F64759-172,SKU-8810,F29D025,QTY VARIANCE,41,38,-3,auto,,,,
+F64883-878,SKU-8860,F01C089,QTY VARIANCE,30,27,-3,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-04T10:24:53.525Z
+F65199-494,SKU-8840,F33D042,QTY VARIANCE,44,41,-3,auto,,,,
+F65467-319,SKU-8890,F24A088,QTY VARIANCE,36,33,-3,auto,,,,
+F65927-299,SKU-8880,F05A081,QTY VARIANCE,34,31,-3,auto,,,,
+F66996-111,SKU-8730,F31C105,QTY VARIANCE,45,48,3,auto,,,,
+F67197-299,SKU-8720,F26A087,QTY VARIANCE,46,49,3,auto,,,,
+F67499-618,SKU-8870,F27A106,QTY VARIANCE,45,48,3,auto,,,,
+F67654-728,SKU-8730,F35D005,QTY VARIANCE,53,50,-3,auto,,,,
+F67811-284,SKU-8750,F28B078,QTY VARIANCE,47,50,3,auto,,,,
+F69177-128,SKU-8890,F28A020,QTY VARIANCE,39,36,-3,auto,,,,
+F69234-554,SKU-8870,F34E084,QTY VARIANCE,34,31,-3,auto,,,,
+F72236-847,SKU-8710,F30C096,QTY VARIANCE,45,42,-3,auto,,,,
+F72463-863,SKU-8740,F25F037,QTY VARIANCE,35,32,-3,auto,,,,
+F72742-438,SKU-8850,F11C020,QTY VARIANCE,59,56,-3,auto,,,,
+F73295-163,SKU-8740,F01E042,QTY VARIANCE,31,28,-3,auto,,,,
+F73571-686,SKU-8880,F32B088,QTY VARIANCE,29,32,3,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T13:06:22.770Z
+F73597-888,SKU-8850,F07F079,QTY VARIANCE,64,61,-3,auto,,,,
+F73897-276,SKU-8850,F31B078,QTY VARIANCE,60,57,-3,auto,,,,
+F74294-453,SKU-8870,F10A043,QTY VARIANCE,35,38,3,auto,,,,
+F74825-995,SKU-8850,F30F080,QTY VARIANCE,54,57,3,auto,,,,
+F76624-791,SKU-8870,F32D001,QTY VARIANCE,41,38,-3,auto,,,,
+F76817-369,SKU-8840,F02D013,QTY VARIANCE,44,41,-3,auto,,,,
+F77516-795,SKU-8810,F16A074,QTY VARIANCE,36,33,-3,auto,,,,
+F77627-294,SKU-8860,F30F304,QTY VARIANCE,34,31,-3,auto,,,,
+F78781-596,SKU-8730,F27E001,QTY VARIANCE,50,53,3,auto,,,,
+F82432-475,SKU-8880,F06F073,QTY VARIANCE,30,33,3,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-04T11:33:50.190Z
+F82541-274,SKU-8840,F11E068,QTY VARIANCE,40,43,3,auto,,,,
+F83226-629,SKU-8720,F10C076,QTY VARIANCE,39,42,3,auto,,,,
+F83239-831,SKU-8860,F15D049,QTY VARIANCE,34,31,-3,auto,,,,
+F83884-292,SKU-8890,F18B042,QTY VARIANCE,46,49,3,auto,,,,
+F84261-165,SKU-8720,F13A008,QTY VARIANCE,45,48,3,auto,,,,
+F85464-819,SKU-8880,F03E095,QTY VARIANCE,28,25,-3,approved,Unknown — investigate,,Marcus Obi,2026-10-04T10:07:58.147Z
+F87434-561,SKU-8840,F18E078,QTY VARIANCE,44,47,3,auto,,,,
+F87482-541,SKU-8810,F02C024,QTY VARIANCE,37,40,3,auto,,,,
+F87979-839,SKU-8730,F33C075,QTY VARIANCE,46,43,-3,auto,,,,
+F88157-515,SKU-8810,F33F101,QTY VARIANCE,40,43,3,auto,,,,
+F88855-515,SKU-8740,F15E042,QTY VARIANCE,35,32,-3,auto,,,,
+F88941-751,SKU-8890,F23D088,QTY VARIANCE,46,49,3,auto,,,,
+F91367-376,SKU-8880,F26A062,QTY VARIANCE,32,35,3,auto,,,,
+F91579-118,SKU-8720,F10A039,QTY VARIANCE,43,40,-3,auto,,,,
+F92841-176,SKU-8850,F34E060,QTY VARIANCE,55,52,-3,auto,,,,
+F92977-626,SKU-8710,F18C098,QTY VARIANCE,47,50,3,auto,,,,
+F93993-479,SKU-8840,F33B032,QTY VARIANCE,44,41,-3,auto,,,,
+F96113-571,SKU-8890,F31D023,QTY VARIANCE,45,48,3,auto,,,,
+F96377-865,SKU-8870,F16E028,QTY VARIANCE,36,39,3,auto,,,,
+F96491-433,SKU-8840,F02D109,QTY VARIANCE,41,38,-3,auto,,,,
+F96995-492,SKU-8740,F20B006,QTY VARIANCE,27,24,-3,approved,Pallet ID or label error,,Marcus Obi,2026-10-04T11:47:37.310Z
+F98519-919,SKU-8810,F09F059,QTY VARIANCE,46,43,-3,auto,,,,
+F99184-334,SKU-8710,F15F073,QTY VARIANCE,42,39,-3,auto,,,,
+F11387-891,SKU-8890,F09B061,QTY VARIANCE,40,38,-2,auto,,,,
+F12114-236,SKU-8840,F32F028,QTY VARIANCE,50,52,2,auto,,,,
+F12524-583,SKU-8850,F05E067,QTY VARIANCE,55,57,2,auto,,,,
+F13241-952,SKU-8880,F36B046,QTY VARIANCE,27,25,-2,auto,,,,
+F14118-993,SKU-8740,F03A106,QTY VARIANCE,29,31,2,auto,,,,
+F14841-148,SKU-8870,F26E105,QTY VARIANCE,35,33,-2,auto,,,,
+F15586-842,SKU-8740,F08A086,QTY VARIANCE,32,30,-2,auto,,,,
+F15746-485,SKU-8870,F34B093,QTY VARIANCE,36,38,2,auto,,,,
+F15829-849,SKU-8870,F08E098,QTY VARIANCE,46,48,2,auto,,,,
+F15919-984,SKU-8840,F08E049,QTY VARIANCE,44,42,-2,auto,,,,
+F16234-247,SKU-8810,F25C095,QTY VARIANCE,42,40,-2,auto,,,,
+F16771-729,SKU-8730,F05D006,QTY VARIANCE,48,46,-2,auto,,,,
+F17712-256,SKU-8710,F27B034,QTY VARIANCE,44,42,-2,auto,,,,
+F18388-724,SKU-8890,F23E048,QTY VARIANCE,46,44,-2,auto,,,,
+F19295-346,SKU-8750,F33D100,QTY VARIANCE,45,43,-2,auto,,,,
+F19464-537,SKU-8890,F03E104,QTY VARIANCE,41,43,2,auto,,,,
+F21759-318,SKU-8810,F33C083,QTY VARIANCE,39,41,2,auto,,,,
+F22885-582,SKU-8720,F32E089,QTY VARIANCE,44,46,2,auto,,,,
+F23344-667,SKU-8730,F01D009,QTY VARIANCE,49,47,-2,auto,,,,
+F23622-875,SKU-8730,F07C026,QTY VARIANCE,45,43,-2,auto,,,,
+F24214-329,SKU-8750,F33A070,QTY VARIANCE,48,50,2,auto,,,,
+F25341-451,SKU-8880,F09A020,QTY VARIANCE,28,26,-2,auto,,,,
+F25891-826,SKU-8850,F31A079,QTY VARIANCE,66,68,2,auto,,,,
+F26979-433,SKU-8860,F17D005,QTY VARIANCE,31,33,2,auto,,,,
+F27712-398,SKU-8730,F23B075,QTY VARIANCE,42,40,-2,auto,,,,
+F28484-561,SKU-8850,F12E095,QTY VARIANCE,65,67,2,auto,,,,
+F29874-134,SKU-8850,F01C075,QTY VARIANCE,64,62,-2,auto,,,,
+F31243-146,SKU-8740,F21A063,QTY VARIANCE,38,40,2,auto,,,,
+F31612-437,SKU-8730,F01E074,QTY VARIANCE,45,43,-2,auto,,,,
+F31827-532,SKU-8870,F06A080,QTY VARIANCE,41,43,2,auto,,,,
+F34624-119,SKU-8710,F15E041,QTY VARIANCE,45,47,2,auto,,,,
+F34947-994,SKU-8810,F09B045,QTY VARIANCE,41,39,-2,auto,,,,
+F36425-416,SKU-8740,F09D015,QTY VARIANCE,27,25,-2,auto,,,,
+F37192-845,SKU-8860,F27C094,QTY VARIANCE,42,40,-2,auto,,,,
+F38723-444,SKU-8850,F14C050,QTY VARIANCE,58,56,-2,auto,,,,
+F41358-845,SKU-8840,F33A012,QTY VARIANCE,49,51,2,auto,,,,
+F43721-189,SKU-8840,F15D091,QTY VARIANCE,47,45,-2,auto,,,,
+F44417-886,SKU-8740,F11D051,QTY VARIANCE,38,36,-2,auto,,,,
+F44772-394,SKU-8890,F25A023,QTY VARIANCE,38,36,-2,auto,,,,
+F45267-422,SKU-8870,F33B105,QTY VARIANCE,45,47,2,auto,,,,
+F45274-329,SKU-8850,F07A093,QTY VARIANCE,58,60,2,auto,,,,
+F46146-753,SKU-8860,F28B044,QTY VARIANCE,40,42,2,auto,,,,
+F47173-668,SKU-8850,F16E010,QTY VARIANCE,63,65,2,auto,,,,
+F47255-763,SKU-8750,F27B030,QTY VARIANCE,52,50,-2,auto,,,,
+F48544-698,SKU-8710,F28F021,QTY VARIANCE,47,45,-2,auto,,,,
+F49276-337,SKU-8890,F29D011,QTY VARIANCE,35,37,2,auto,,,,
+F52178-636,SKU-8730,F26B025,QTY VARIANCE,52,54,2,auto,,,,
+F52467-353,SKU-8850,F04E049,QTY VARIANCE,60,62,2,auto,,,,
+F52579-663,SKU-8870,F03E079,QTY VARIANCE,41,43,2,auto,,,,
+F52687-159,SKU-8870,F03C108,QTY VARIANCE,40,38,-2,auto,,,,
+F52896-994,SKU-8850,F14C008,QTY VARIANCE,64,62,-2,auto,,,,
+F53373-588,SKU-8710,F04D027,QTY VARIANCE,49,47,-2,auto,,,,
+F53647-896,SKU-8750,F27C086,QTY VARIANCE,52,50,-2,auto,,,,
+F53672-887,SKU-8860,F10A090,QTY VARIANCE,30,28,-2,auto,,,,
+F53743-374,SKU-8840,F17D023,QTY VARIANCE,47,45,-2,auto,,,,
+F55383-276,SKU-8710,F05F073,QTY VARIANCE,44,42,-2,auto,,,,
+F55778-768,SKU-8750,F21B091,QTY VARIANCE,48,50,2,auto,,,,
+F56375-246,SKU-8810,F12D090,QTY VARIANCE,46,44,-2,auto,,,,
+F57124-153,SKU-8740,F33E053,QTY VARIANCE,27,29,2,auto,,,,
+F58785-839,SKU-8850,F33D070,QTY VARIANCE,59,57,-2,auto,,,,
+F58969-843,SKU-8880,F04C091,QTY VARIANCE,27,29,2,auto,,,,
+F59167-313,SKU-8740,F26A111,QTY VARIANCE,31,33,2,auto,,,,
+F59178-198,SKU-8890,F11B061,QTY VARIANCE,41,39,-2,auto,,,,
+F59979-619,SKU-8810,F02D068,QTY VARIANCE,45,47,2,auto,,,,
+F61337-427,SKU-8740,F28C019,QTY VARIANCE,26,28,2,auto,,,,
+F62335-169,SKU-8730,F09D083,QTY VARIANCE,53,51,-2,auto,,,,
+F62537-474,SKU-8860,F25D108,QTY VARIANCE,35,37,2,auto,,,,
+F62836-483,SKU-8840,F09F043,QTY VARIANCE,43,45,2,auto,,,,
+F62877-766,SKU-8880,F26B076,QTY VARIANCE,33,35,2,auto,,,,
+F63547-528,SKU-8860,F03D049,QTY VARIANCE,35,33,-2,auto,,,,
+F64191-744,SKU-8850,F10D082,QTY VARIANCE,64,62,-2,auto,,,,
+F64717-918,SKU-8720,F14F013,QTY VARIANCE,36,34,-2,auto,,,,
+F65296-422,SKU-8720,F29F007,QTY VARIANCE,47,49,2,auto,,,,
+F65491-659,SKU-8880,F35D062,QTY VARIANCE,26,28,2,auto,,,,
+F66116-612,SKU-8750,F11D010,QTY VARIANCE,52,50,-2,auto,,,,
+F66257-835,SKU-8710,F30E094,QTY VARIANCE,43,41,-2,auto,,,,
+F66443-478,SKU-8880,F07D043,QTY VARIANCE,29,27,-2,auto,,,,
+F66659-298,SKU-8880,F33D002,QTY VARIANCE,26,24,-2,auto,,,,
+F67511-239,SKU-8740,F02D088,QTY VARIANCE,33,35,2,auto,,,,
+F67834-414,SKU-8810,F03B052,QTY VARIANCE,44,42,-2,auto,,,,
+F67947-211,SKU-8870,F12C028,QTY VARIANCE,36,38,2,auto,,,,
+F69234-465,SKU-8840,F23D035,QTY VARIANCE,42,44,2,auto,,,,
+F69752-658,SKU-8880,F28F012,QTY VARIANCE,35,33,-2,auto,,,,
+F72822-256,SKU-8850,F01F015,QTY VARIANCE,54,52,-2,auto,,,,
+F73719-224,SKU-8810,F30F047,QTY VARIANCE,36,38,2,auto,,,,
+F75298-619,SKU-8730,F02E068,QTY VARIANCE,48,46,-2,auto,,,,
+F76132-694,SKU-8840,F18D032,QTY VARIANCE,47,49,2,auto,,,,
+F77192-691,SKU-8720,F03F080,QTY VARIANCE,41,39,-2,auto,,,,
+F77663-591,SKU-8720,F03D064,QTY VARIANCE,44,46,2,auto,,,,
+F77962-826,SKU-8810,F07D090,QTY VARIANCE,40,38,-2,auto,,,,
+F78354-778,SKU-8850,F32F044,QTY VARIANCE,54,56,2,auto,,,,
+F79347-886,SKU-8880,F03D006,QTY VARIANCE,35,37,2,auto,,,,
+F79889-797,SKU-8720,F16B006,QTY VARIANCE,37,35,-2,auto,,,,
+F83491-849,SKU-8840,F04B096,QTY VARIANCE,39,37,-2,auto,,,,
+F83751-141,SKU-8720,F10F055,QTY VARIANCE,43,45,2,auto,,,,
+F85528-518,SKU-8720,F31E083,QTY VARIANCE,44,46,2,auto,,,,
+F85716-586,SKU-8890,F31F015,QTY VARIANCE,39,41,2,auto,,,,
+F85959-423,SKU-8850,F04E097,QTY VARIANCE,55,53,-2,auto,,,,
+F86199-479,SKU-8890,F09A071,QTY VARIANCE,43,45,2,auto,,,,
+F86811-655,SKU-8840,F04D013,QTY VARIANCE,39,41,2,auto,,,,
+F87291-691,SKU-8870,F28C053,QTY VARIANCE,45,43,-2,auto,,,,
+F87477-373,SKU-8890,F20E101,QTY VARIANCE,35,33,-2,auto,,,,
+F87685-873,SKU-8710,F07D037,QTY VARIANCE,52,50,-2,auto,,,,
+F89339-568,SKU-8890,F30B001,QTY VARIANCE,34,32,-2,auto,,,,
+F89385-682,SKU-8880,F28D092,QTY VARIANCE,28,26,-2,auto,,,,
+F94115-456,SKU-8890,F07B054,QTY VARIANCE,43,41,-2,auto,,,,
+F94829-431,SKU-8720,F08D110,QTY VARIANCE,43,41,-2,auto,,,,
+F95272-273,SKU-8860,F16E081,QTY VARIANCE,39,37,-2,auto,,,,
+F96368-512,SKU-8810,F10E009,QTY VARIANCE,38,36,-2,auto,,,,
+F97834-252,SKU-8810,F06C048,QTY VARIANCE,45,43,-2,auto,,,,
+F98878-419,SKU-8720,F28D021,QTY VARIANCE,47,49,2,auto,,,,
+F98969-463,SKU-8730,F24B053,QTY VARIANCE,44,42,-2,auto,,,,
+F99952-479,SKU-8850,F07A009,QTY VARIANCE,59,61,2,auto,,,,
+F11636-297,SKU-8730,F17E018,QTY VARIANCE,48,49,1,auto,,,,
+F11866-611,SKU-8810,F01D062,QTY VARIANCE,40,39,-1,auto,,,,
+F11992-968,SKU-8840,F33C004,QTY VARIANCE,39,38,-1,auto,,,,
+F12682-943,SKU-8850,F33B048,QTY VARIANCE,55,54,-1,auto,,,,
+F13849-613,SKU-8880,F33E097,QTY VARIANCE,24,23,-1,auto,,,,
+F14361-844,SKU-8860,F34B074,QTY VARIANCE,30,31,1,auto,,,,
+F17227-688,SKU-8720,F08C072,QTY VARIANCE,44,43,-1,auto,,,,
+F17714-296,SKU-8870,F04B040,QTY VARIANCE,36,35,-1,auto,,,,
+F18513-774,SKU-8750,F06A089,QTY VARIANCE,56,55,-1,auto,,,,
+F18782-964,SKU-8810,F09C035,QTY VARIANCE,35,36,1,auto,,,,
+F19459-234,SKU-8810,F11F011,QTY VARIANCE,46,45,-1,auto,,,,
+F21672-214,SKU-8750,F15D029,QTY VARIANCE,46,47,1,auto,,,,
+F23255-351,SKU-8870,F09F017,QTY VARIANCE,45,46,1,auto,,,,
+F23338-378,SKU-8720,F25A039,QTY VARIANCE,39,38,-1,auto,,,,
+F24836-187,SKU-8870,F15A064,QTY VARIANCE,45,44,-1,auto,,,,
+F25114-758,SKU-8870,F34C095,QTY VARIANCE,46,45,-1,auto,,,,
+F25514-566,SKU-8710,F23E081,QTY VARIANCE,52,51,-1,auto,,,,
+F27259-233,SKU-8810,F29E105,QTY VARIANCE,40,41,1,auto,,,,
+F27471-296,SKU-8870,F14A051,QTY VARIANCE,45,46,1,auto,,,,
+F27654-331,SKU-8750,F29B084,QTY VARIANCE,54,55,1,auto,,,,
+F29459-317,SKU-8850,F09D028,QTY VARIANCE,55,54,-1,auto,,,,
+F31531-445,SKU-8710,F07A091,QTY VARIANCE,43,42,-1,auto,,,,
+F32531-124,SKU-8810,F21C077,QTY VARIANCE,39,38,-1,auto,,,,
+F32762-663,SKU-8890,F18C017,QTY VARIANCE,38,39,1,auto,,,,
+F33547-432,SKU-8710,F06C103,QTY VARIANCE,45,46,1,auto,,,,
+F34677-798,SKU-8870,F21C095,QTY VARIANCE,38,37,-1,auto,,,,
+F35653-992,SKU-8860,F08D011,QTY VARIANCE,33,34,1,auto,,,,
+F36237-514,SKU-8750,F24B088,QTY VARIANCE,47,46,-1,auto,,,,
+F36445-969,SKU-8810,F30A001,QTY VARIANCE,43,42,-1,auto,,,,
+F38273-996,SKU-8720,F09B065,QTY VARIANCE,38,39,1,auto,,,,
+F38687-175,SKU-8720,F25D027,QTY VARIANCE,39,40,1,auto,,,,
+F39412-941,SKU-8710,F01D045,QTY VARIANCE,50,49,-1,auto,,,,
+F41236-661,SKU-8810,F35A091,QTY VARIANCE,42,41,-1,auto,,,,
+F41415-597,SKU-8880,F22A061,QTY VARIANCE,30,29,-1,auto,,,,
+F41818-783,SKU-8740,F15C110,QTY VARIANCE,27,26,-1,auto,,,,
+F42463-625,SKU-8870,F19A023,QTY VARIANCE,43,44,1,auto,,,,
+F42712-824,SKU-8870,F23E056,QTY VARIANCE,37,36,-1,auto,,,,
+F43884-848,SKU-8850,F31D046,QTY VARIANCE,57,56,-1,auto,,,,
+F44952-749,SKU-8860,F04C047,QTY VARIANCE,34,33,-1,auto,,,,
+F45361-119,SKU-8720,F03C062,QTY VARIANCE,45,44,-1,auto,,,,
+F46763-544,SKU-8710,F10F063,QTY VARIANCE,49,48,-1,auto,,,,
+F46826-597,SKU-8890,F21C099,QTY VARIANCE,34,33,-1,auto,,,,
+F46837-368,SKU-8810,F08E059,QTY VARIANCE,44,43,-1,auto,,,,
+F46854-247,SKU-8850,F02F093,QTY VARIANCE,56,55,-1,auto,,,,
+F47492-639,SKU-8730,F27E085,QTY VARIANCE,54,55,1,auto,,,,
+F47765-142,SKU-8890,F04A030,QTY VARIANCE,40,41,1,auto,,,,
+F47791-822,SKU-8890,F34C045,QTY VARIANCE,37,36,-1,auto,,,,
+F48951-354,SKU-8880,F06C067,QTY VARIANCE,31,30,-1,auto,,,,
+F49267-149,SKU-8840,F34D027,QTY VARIANCE,48,47,-1,auto,,,,
+F49329-615,SKU-8870,F30A067,QTY VARIANCE,37,38,1,auto,,,,
+F49844-935,SKU-8710,F06B071,QTY VARIANCE,50,51,1,auto,,,,
+F51432-732,SKU-8740,F36C031,QTY VARIANCE,28,27,-1,auto,,,,
+F51888-639,SKU-8860,F06E099,QTY VARIANCE,40,39,-1,auto,,,,
+F53452-695,SKU-8710,F11F054,QTY VARIANCE,50,49,-1,auto,,,,
+F54918-792,SKU-8740,F33C109,QTY VARIANCE,29,28,-1,auto,,,,
+F56991-438,SKU-8880,F19A012,QTY VARIANCE,27,26,-1,auto,,,,
+F57883-374,SKU-8750,F26E054,QTY VARIANCE,47,46,-1,auto,,,,
+F57918-186,SKU-8880,F19A054,QTY VARIANCE,35,36,1,auto,,,,
+F58629-518,SKU-8890,F11A053,QTY VARIANCE,44,45,1,auto,,,,
+F59253-583,SKU-8740,F32C073,QTY VARIANCE,34,33,-1,auto,,,,
+F59819-895,SKU-8870,F14E019,QTY VARIANCE,39,38,-1,auto,,,,
+F59884-278,SKU-8720,F26E101,QTY VARIANCE,41,40,-1,auto,,,,
+F61696-692,SKU-8880,F03A009,QTY VARIANCE,26,25,-1,auto,,,,
+F61823-533,SKU-8730,F28B109,QTY VARIANCE,49,50,1,auto,,,,
+F61835-955,SKU-8730,F27B019,QTY VARIANCE,53,54,1,auto,,,,
+F62452-333,SKU-8880,F09B034,QTY VARIANCE,29,28,-1,auto,,,,
+F62594-475,SKU-8850,F08A003,QTY VARIANCE,66,67,1,auto,,,,
+F62987-257,SKU-8860,F01B033,QTY VARIANCE,31,32,1,auto,,,,
+F63272-946,SKU-8840,F08E037,QTY VARIANCE,46,45,-1,auto,,,,
+F66514-413,SKU-8840,F06F005,QTY VARIANCE,40,41,1,auto,,,,
+F67184-548,SKU-8870,F28A025,QTY VARIANCE,37,38,1,auto,,,,
+F67971-379,SKU-8890,F17E051,QTY VARIANCE,46,45,-1,auto,,,,
+F68846-244,SKU-8810,F32C065,QTY VARIANCE,40,41,1,auto,,,,
+F69538-635,SKU-8730,F34E055,QTY VARIANCE,43,44,1,auto,,,,
+F72358-837,SKU-8860,F30E050,QTY VARIANCE,39,38,-1,auto,,,,
+F72686-956,SKU-8850,F14C110,QTY VARIANCE,60,59,-1,auto,,,,
+F72746-622,SKU-8890,F25C081,QTY VARIANCE,37,38,1,auto,,,,
+F73462-362,SKU-8840,F04F065,QTY VARIANCE,42,41,-1,auto,,,,
+F73844-661,SKU-8740,F11D087,QTY VARIANCE,36,37,1,auto,,,,
+F74689-741,SKU-8890,F25E067,QTY VARIANCE,36,37,1,auto,,,,
+F75289-273,SKU-8740,F20B109,QTY VARIANCE,38,37,-1,auto,,,,
+F76393-849,SKU-8880,F06B023,QTY VARIANCE,33,32,-1,auto,,,,
+F76764-672,SKU-8710,F26D026,QTY VARIANCE,42,43,1,auto,,,,
+F76985-532,SKU-8880,F25F054,QTY VARIANCE,34,33,-1,auto,,,,
+F79519-789,SKU-8870,F24B067,QTY VARIANCE,36,35,-1,auto,,,,
+F81613-132,SKU-8890,F31B025,QTY VARIANCE,36,35,-1,auto,,,,
+F81769-898,SKU-8730,F32C093,QTY VARIANCE,53,52,-1,auto,,,,
+F81856-284,SKU-8840,F35F058,QTY VARIANCE,46,47,1,auto,,,,
+F84478-111,SKU-8850,F31F002,QTY VARIANCE,64,63,-1,auto,,,,
+F85476-636,SKU-8880,F20D112,QTY VARIANCE,28,29,1,auto,,,,
+F87837-842,SKU-8860,F32A072,QTY VARIANCE,30,29,-1,auto,,,,
+F87913-342,SKU-8860,F04B105,QTY VARIANCE,35,36,1,auto,,,,
+F88188-246,SKU-8890,F17C068,QTY VARIANCE,39,38,-1,auto,,,,
+F88218-484,SKU-8840,F09D084,QTY VARIANCE,44,43,-1,auto,,,,
+F88592-245,SKU-8840,F35E110,QTY VARIANCE,38,37,-1,auto,,,,
+F88717-336,SKU-8720,F16B090,QTY VARIANCE,37,36,-1,auto,,,,
+F89414-493,SKU-8720,F21D090,QTY VARIANCE,43,42,-1,auto,,,,
+F91294-236,SKU-8740,F19A067,QTY VARIANCE,37,36,-1,auto,,,,
+F91458-468,SKU-8870,F32F029,QTY VARIANCE,35,34,-1,auto,,,,
+F91547-354,SKU-8890,F16B044,QTY VARIANCE,40,39,-1,auto,,,,
+F93482-983,SKU-8880,F01B071,QTY VARIANCE,36,35,-1,auto,,,,
+F93724-946,SKU-8880,F20A025,QTY VARIANCE,36,37,1,auto,,,,
+F94352-498,SKU-8890,F27D107,QTY VARIANCE,40,41,1,auto,,,,
+F94874-127,SKU-8730,F17A010,QTY VARIANCE,50,51,1,auto,,,,
+F94996-349,SKU-8890,F28C075,QTY VARIANCE,44,45,1,auto,,,,
+F96347-156,SKU-8810,F10A007,QTY VARIANCE,43,44,1,auto,,,,
+F96388-427,SKU-8710,F18C062,QTY VARIANCE,52,51,-1,auto,,,,
+F96586-177,SKU-8860,F03D037,QTY VARIANCE,31,30,-1,auto,,,,
+F96594-582,SKU-8810,F10C053,QTY VARIANCE,42,41,-1,auto,,,,
+F96711-832,SKU-8860,F15F005,QTY VARIANCE,36,35,-1,auto,,,,
+F96743-948,SKU-8880,F33F078,QTY VARIANCE,28,29,1,auto,,,,
+F97153-159,SKU-8840,F15B045,QTY VARIANCE,49,48,-1,auto,,,,
+F98115-195,SKU-8750,F03B031,QTY VARIANCE,53,52,-1,auto,,,,
+F98376-725,SKU-8740,F10C094,QTY VARIANCE,34,35,1,auto,,,,
+F98457-382,SKU-8850,F08D081,QTY VARIANCE,58,57,-1,auto,,,,
+F99743-389,SKU-8850,F25B108,QTY VARIANCE,56,55,-1,auto,,,,
