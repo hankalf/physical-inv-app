@@ -95,7 +95,7 @@
     commentTimeout: 5,
   };
   const prompts = () => state.session?.prompts || FALLBACK_PROMPTS;
-  const LAYOUT_FALLBACK = { showContents: true, showNextBin: true, confirmOver: 1000, vibrate: true, portrait: true, autoUpdate: true };
+  const LAYOUT_FALLBACK = { showNextBin: true, confirmOver: 1000, vibrate: true, portrait: true, autoUpdate: true };
   const layoutCfg = () => state.session?.layout_cfg || LAYOUT_FALLBACK;
 
   /* Which questions this count asks, in the order the site configured.
@@ -138,6 +138,8 @@
   };
 
   const $ = (id) => document.getElementById(id);
+  // a dialog is not part of the page, so it is translated on the way out
+  const tr = (s) => (window.i18n ? window.i18n.t(s) : s);
   const norm = (v) => String(v == null ? '' : v).trim().toUpperCase();
   const titleCase = (z) => String(z || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
   const aisleLabel = (aisle, zone) => (zone ? `${titleCase(zone)} – Aisle ${aisle}` : `Aisle ${aisle}`);
@@ -174,7 +176,7 @@
         const r = (Math.random() * 16) | 0; return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
       }));
 
-  const SCREENS = ['scrDevice', 'scrSignon', 'scrAssign', 'scrScan', 'scrOverride', 'scrHistory', 'scrSos'];
+  const SCREENS = ['scrDevice', 'scrSignon', 'scrAssign', 'scrScan', 'scrOverride', 'scrHistory', 'scrSos', 'scrEmptyRun'];
   function showScreen(name) {
     for (const s of SCREENS) $(s).classList.toggle('active', s === name);
     if (name === 'scrScan') focusScan();
@@ -821,7 +823,7 @@
     await syncQueue();
     const counted = new Set([...(a.progress?.countedBins || []), ...(await localCountedBins(a.active.aisle))]);
     const left = a.bins.filter((b) => !counted.has(b)).length;
-    if (left > 0 && !confirm(`${left} bin(s) in ${a.active.aisle} have no count. Empty bins are fine — complete the aisle anyway?`)) return;
+    if (left > 0 && !confirm(tr(`${left} bin(s) in ${a.active.aisle} have no count. Empty bins are fine — complete the aisle anyway?`))) return;
     if (!online()) { feedback($('assignMsg'), 'err', 'Need Wi-Fi to complete an aisle', 'The next aisle is released by the server.'); return; }
     try {
       state.assignment = await api(`/api/sessions/${state.session.id}/assignments/${a.active.id}/complete`, {
@@ -1154,6 +1156,7 @@
     // lot and expiry can be missing on a real pallet, so they are skippable
     $('btnSkip').hidden = !['comments', 'lot', 'expiry'].includes(step);
     $('btnEmpty').hidden = step !== 'pallet';
+    $('btnEmptyRun').hidden = step !== 'pallet' || !!state.recount;
     // a second label belongs to the pallet just counted, so it is offered at the
     // start of the next line rather than in the middle of this one
     $('btnSameLabel').hidden = step !== 'pallet' || !state.lastPallet || !!state.recount;
@@ -1386,7 +1389,6 @@
     const rows = [];
     if (state.session?.guided && state.assignment?.active) rows.push(['Your aisle', `${aisleLabel(state.assignment.active.aisle, state.assignment.active.zone)} · ${levelsLabel(state.assignment.active.levels)}`]);
     if (d.palletId) rows.push(['Pallet', d.palletId]);
-    if ((d.description || d.sku) && layoutCfg().showContents !== false) rows.push(['Contents', [d.sku, d.description].filter(Boolean).join(' — ')]);
     if (d.qty != null) rows.push(['Qty', String(d.qty)]);
     if (d.location) rows.push(['Bin', `${d.location}${describeBin(d.location) ? ' — ' + describeBin(d.location) : ''}`]);
     kv($('ctx'), rows);
@@ -1422,8 +1424,6 @@
 
       const applyPallet = () => {
         state.draft.palletId = value;
-        state.draft.sku = pal ? pal.sku : '';
-        state.draft.description = pal ? pal.desc : '';
         state.draft.expectedLocation = pal ? pal.expLoc : '';
         state.draft.expectedLot = pal ? (pal.lot || '') : '';
         if (!pal) state.draft.unknownPallet = 1;
@@ -1443,14 +1443,19 @@
         return;
       }
       if (!pal && mode === 'warn') {
+        /* Yes or no, nothing to pick: a pallet the report does not know is still
+           a pallet on the shelf. Yes counts it, flagged, and it lands with the
+           supervisor as a pallet to add - a positive adjustment. */
         return askOverride({
           title: 'Pallet not on the list',
           why: `${value} is not in the uploaded pallet file.`,
           rows: [['Scanned', value]],
           scanned: value,
           offerSecondLabel: true,
+          yesNo: true,
+          yesReason: 'Not on the list - counted anyway',
           apply: (reason) => { applyPallet(); addReason(reason); },
-          feedbackText: 'Unknown pallet accepted',
+          feedbackText: 'Counted - a supervisor will add it to the system',
         });
       }
       applyPallet();
@@ -1458,9 +1463,9 @@
          because the expected location is only known once the pallet is known. */
       const early = state.draft.location && state.draft.expectedLocation && state.draft.expectedLocation !== state.draft.location;
       await advance(early ? 'warn' : 'ok',
-        pal ? (pal.desc || pal.sku || value) : `Pallet ${value}`,
+        `Pallet ${value}`,
         early ? `System expected this pallet in ${state.draft.expectedLocation}, not ${state.draft.location}`
-          : (pal ? `Pallet ${value}${pal.sku ? ' · ' + pal.sku : ''}` : 'Not in the pallet list'));
+          : (pal ? 'Now enter what you count' : 'Not in the pallet list'));
       return;
     }
 
@@ -1637,11 +1642,13 @@
     sel.appendChild(first);
     for (const r of list) {
       const o = document.createElement('option');
+      o.value = r;              // the value stays English whatever the screen says
       o.textContent = r;
       sel.appendChild(o);
     }
     // always available: no list of reasons covers everything a warehouse does
     const other = document.createElement('option');
+    other.value = 'Other';
     other.textContent = 'Other';
     sel.appendChild(other);
   }
@@ -1662,6 +1669,9 @@
     }
     $('ovTitle').textContent = spec.title;
     $('ovWhy').textContent = spec.why;
+    $('ovYesNo').hidden = !spec.yesNo;
+    $('ovReasonBlock').hidden = !!spec.yesNo;
+    $('btnOverrideCancel').hidden = !!spec.yesNo;     // NO is the cancel
     kv($('ovCtx'), spec.rows);
     $('fReason').value = '';
     $('fReasonNote').value = '';
@@ -1669,9 +1679,10 @@
   }
 
   async function acceptOverride() {
-    const reason = $('fReason').value;
+    const yes = state.override && state.override.yesNo;
+    const reason = yes ? state.override.yesReason : $('fReason').value;
     if (!reason) { beep('err'); $('fReason').focus(); return; }
-    const note = $('fReasonNote').value.trim();
+    const note = yes ? '' : $('fReasonNote').value.trim();
     const full = note ? `${reason}: ${note}` : reason;
     const spec = state.override;
     state.override = null;
@@ -1841,7 +1852,7 @@
       recountId: state.recount ? state.recount.id : null,
       location: d.location,
       comments: d.comments || null,
-      sku: d.sku || null,
+      sku: null,        // a blind count: the server fills it in from the report
       team: state.team,
       employees: state.employees,
       deviceId: state.deviceId,
@@ -1880,10 +1891,142 @@
     if (state.recount && line.emptyBin) { await finishRecount(true); return; }
     if (line.emptyBin) feedback($('scanMsg'), 'ok', `Bin ${line.location} recorded as EMPTY`, [describeBin(line.location), line.overrideReason ? 'flagged' : ''].filter(Boolean).join(' — '));
     else feedback($('scanMsg'), 'ok', `Counted ${line.palletId}`,
-      `${line.qty}${d.description ? ' × ' + d.description : ''} @ ${line.location}${line.overrideReason ? ' · flagged' : ''}`);
+      `${line.qty} @ ${line.location}${line.overrideReason ? ' · flagged' : ''}`);
     /* A line is finished and the queue may have just drained: the one moment in
        a counter's day when reloading costs them nothing. */
     if (updateReady) setTimeout(() => applyUpdate(), 1500);
+  }
+
+  /*
+   * A run of empty bins.
+   *
+   * A stretch of an aisle with nothing in it is common - the end of a season,
+   * a bay waiting for a delivery - and recording it bin by bin is a dozen trips
+   * through the same two screens. So: scan the first empty bin and the last,
+   * the gun lists every bin between them in walking order, the counter unticks
+   * any that are not empty, and one tap records the rest. Each is its own EMPTY
+   * line, exactly as if it had been done one at a time.
+   */
+  const emptyRun = { first: null, bins: [] };
+
+  function openEmptyRun() {
+    emptyRun.first = null;
+    emptyRun.bins = [];
+    clearFeedback($('erMsg'));
+    renderEmptyRun();
+    showScreen('scrEmptyRun');
+    setTimeout(() => { try { $('fEmptyScan').focus({ preventScroll: true }); } catch { $('fEmptyScan').focus(); } }, 30);
+  }
+
+  /** Every bin between two codes in one aisle, in the order a team walks them. */
+  async function binsBetween(a, b) {
+    const [lo, hi] = [a.c, b.c].sort((x, y) => x.localeCompare(y, undefined, { numeric: true }));
+    const rows = await wrap(tx('loc', 'readonly').getAll(IDBKeyRange.bound(lo, hi)));
+    const mine = state.session?.guided && state.assignment?.active && Array.isArray(state.assignment.bins)
+      ? new Set(state.assignment.bins) : null;
+    return rows
+      .filter((r) => r.aisle === a.aisle && (!mine || mine.has(r.c)))
+      .map((r) => r.c)
+      .sort((x, y) => x.localeCompare(y, undefined, { numeric: true }));
+  }
+
+  async function emptyRunScan(raw) {
+    const code = norm(raw);
+    if (!code) return;
+    const loc = await wrap(tx('loc', 'readonly').get(code));
+    if (!loc) { beep('err'); feedback($('erMsg'), 'err', `${code} is not on the bin list`, 'Scan the rack label of a bin in this count.'); return; }
+    if (!emptyRun.first) {
+      emptyRun.first = loc;
+      beep('ok');
+      clearFeedback($('erMsg'));
+      renderEmptyRun();
+      return;
+    }
+    if (loc.aisle !== emptyRun.first.aisle) {
+      beep('err');
+      feedback($('erMsg'), 'err', 'Both bins have to be in the same aisle', `${emptyRun.first.c} is in ${emptyRun.first.aisle}, ${code} is in ${loc.aisle}.`);
+      return;
+    }
+    const codes = await binsBetween(emptyRun.first, loc);
+    /* what this scanner has already counted on this count, guided or not */
+    const mine = new Set((await wrap(tx('lines', 'readonly').getAll()))
+      .filter((l) => l.sessionId === state.session.id && !l.voidedLocal).map((l) => l.location));
+    const done = (c) => mine.has(c) || countedInAisle.has(c) || closedBins.has(c);
+    emptyRun.bins = codes.map((c) => ({ c, done: done(c), on: !done(c) }));
+    beep('ok');
+    if (emptyRun.bins.length > 60) feedback($('erMsg'), 'warn', `${emptyRun.bins.length} bins`, 'That is a long run — check the first and last bin are right.');
+    else clearFeedback($('erMsg'));
+    renderEmptyRun();
+  }
+
+  function renderEmptyRun() {
+    const first = emptyRun.first;
+    const listed = emptyRun.bins.length > 0;
+    $('erPrompt').textContent = !first ? 'Scan the FIRST empty bin' : !listed ? 'Scan the LAST empty bin' : 'Untick any that are NOT empty';
+    $('fEmptyScan').hidden = listed;
+    const box = $('erList');
+    box.innerHTML = '';
+    if (first && !listed) {
+      const d = document.createElement('div');
+      d.className = 'context';
+      d.textContent = `From ${first.c} — ${describeBin(first.c)}`;
+      box.appendChild(d);
+    }
+    for (const b of emptyRun.bins) {
+      const row = document.createElement('label');
+      row.className = 'errow' + (b.done ? ' done' : '');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = b.on;
+      cb.disabled = b.done;
+      cb.onchange = () => { b.on = cb.checked; renderEmptyRunButton(); };
+      const code = document.createElement('b');
+      code.textContent = b.c;
+      const what = document.createElement('span');
+      what.textContent = b.done ? 'already counted' : describeBin(b.c);
+      row.append(cb, code, what);
+      box.appendChild(row);
+    }
+    renderEmptyRunButton();
+  }
+
+  function renderEmptyRunButton() {
+    const n = emptyRun.bins.filter((b) => b.on && !b.done).length;
+    $('btnEmptyRunSave').hidden = !emptyRun.bins.length;
+    $('btnEmptyRunSave').disabled = !n;
+    $('btnEmptyRunSave').textContent = n === 1 ? 'Mark 1 bin EMPTY' : `Mark ${n} bins EMPTY`;
+  }
+
+  async function saveEmptyRun() {
+    const pick = emptyRun.bins.filter((b) => b.on && !b.done).map((b) => b.c);
+    if (!pick.length) return;
+    $('btnEmptyRunSave').disabled = true;
+    const aisle = emptyRun.first.aisle;
+    for (const code of pick) {
+      const line = {
+        clientId: uuid(), sessionId: state.session.id, palletId: 'EMPTY', qty: 0, emptyBin: 1,
+        pass: 1, recountId: null, location: code, comments: 'marked empty as part of a run',
+        sku: null, team: state.team, employees: state.employees, deviceId: state.deviceId, aisle,
+        unknownPallet: 0, unknownLocation: 0, offAssignment: 0, duplicatePallet: 0, overrideReason: null,
+        lot: null, expiry: null, aliasOf: null, labelIssue: '', binLabelIssue: '',
+        ts: new Date().toISOString(), synced: 0, voidedLocal: false,
+      };
+      await wrap(lineTx().put(line));
+      countedInAisle.add(code);
+      tagsInBin.set(code, (tagsInBin.get(code) || 0) + 1);
+      closedBins.add(code);
+      state.lastBin = code;
+    }
+    updateChips();
+    renderNextBin();
+    syncQueue();
+    state.draft = {};
+    state.stepIndex = 0;
+    showScreen('scrScan');
+    renderStep();
+    beep('ok');
+    feedback($('scanMsg'), 'ok', `${pick.length} bin${pick.length === 1 ? '' : 's'} recorded as EMPTY`,
+      pick.length > 1 ? `${pick[0]} to ${pick[pick.length - 1]}` : pick[0]);
   }
 
   function stepBack() {
@@ -1959,8 +2102,8 @@
    * is no signal it says so plainly - nothing is worse than a counter believing
    * help is coming when nothing was sent - and keeps trying.
    */
-  const SOS_FALLBACK = ['Injury — someone needs help now', 'Racking or a pallet looks unsafe',
-    'Cannot reach the bins — blocked', 'Scanner or app problem', 'Need a supervisor'];
+  const SOS_FALLBACK = ['Injury — someone needs help now', 'Equipment broke down — lift truck, reach truck, jack',
+    'Need a supervisor', 'Racking or a pallet looks unsafe', 'Cannot reach the bins — blocked', 'Scanner or app problem'];
   let sosReasonList = SOS_FALLBACK;
   let sosSending = false;
 
@@ -2180,7 +2323,7 @@
   $('btnSignoff').onclick = async () => {
     await syncQueue();
     const queued = await wrap(tx('lines', 'readonly').index('synced').count(0));
-    if (queued > 0 && !confirm(`${queued} line(s) have not reached the server yet. Sign off anyway?`)) return;
+    if (queued > 0 && !confirm(tr(`${queued} line(s) have not reached the server yet. Sign off anyway?`))) return;
     // tell the server, so this crew's clock stops and nobody is told it went quiet
     if (state.session && online()) {
       api(`/api/sessions/${state.session.id}/signoff`, { method: 'POST', body: JSON.stringify({ deviceId: state.deviceId, team: state.team }) })
@@ -2221,6 +2364,22 @@
     if (state.steps[state.stepIndex] === 'bin') noScanBin().catch(() => {});
     else noScanNone();
   };
+  /* English or Spanish, for whoever is holding the gun; it stays that way */
+  $('btnLang').onclick = () => {
+    window.i18n.set(window.i18n.lang === 'es' ? 'en' : 'es');
+    beep('ok');
+  };
+  $('btnEmptyRun').onclick = openEmptyRun;
+  $('btnEmptyRunSave').onclick = () => { saveEmptyRun().catch((err) => feedback($('erMsg'), 'err', 'Could not save', err.message)); };
+  $('btnEmptyRunBack').onclick = () => { showScreen('scrScan'); renderStep(); };
+  $('fEmptyScan').addEventListener('keydown', (e) => {
+    if (SCAN_ENTER.has(e.key)) {
+      e.preventDefault();
+      const v = $('fEmptyScan').value;
+      $('fEmptyScan').value = '';
+      emptyRunScan(v);
+    }
+  });
   $('btnEmpty').onclick = () => {
     // jump straight to the bin scan; the line is saved with no pallet and qty 0
     state.draft = { emptyBin: 1 };
@@ -2237,6 +2396,8 @@
     else { showScreen('scrScan'); renderStep(); }
   };
   $('btnOverrideAccept').onclick = acceptOverride;
+  $('btnOvYes').onclick = acceptOverride;
+  $('btnOvNo').onclick = () => { $('btnOverrideCancel').click(); };
   $('btnOverrideCancel').onclick = () => { state.override = null; showScreen('scrScan'); renderStep(); };
   /* A tag the report has never heard of is often the second label on the pallet
      just counted, so the dialog offers that answer rather than making somebody

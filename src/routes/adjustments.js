@@ -201,6 +201,46 @@ export function listAdjustments(sessionId, { status = '', limit = 500 } = {}) {
   };
 }
 
+/* What each kind of difference means, in the words a supervisor would use. */
+const WHY = {
+  'NOT IN MASTER': 'Not on the report — found on the floor',
+  'MISSING': 'Not found',
+  'COUNTED TWICE': 'Counted twice',
+};
+const whyOf = (r) => WHY[r.kind] || (r.variance_qty > 0 ? 'More than the report' : 'Less than the report');
+
+/**
+ * Adjustments split the way they are talked about: stock to add, stock to take
+ * off. Worked out from the count every time, so it is there whether or not the
+ * count needs approvals - and where it does, each line says where it stands.
+ */
+export function adjustmentView(sessionId) {
+  const id = Number(sessionId);
+  const session = getSession(id);
+  if (!session) throw Object.assign(new Error('session not found'), { status: 404 });
+  if (session.require_approval) refreshAdjustments(id);
+  const signed = new Map(db.prepare('SELECT pallet_id, status, reason, decided_by FROM adjustments WHERE session_id = ?')
+    .all(id).map((r) => [r.pallet_id, r]));
+  const rows = adjustmentRows(id, session).map((r) => {
+    const s = signed.get(r.pallet_id);
+    return { ...r, why: whyOf(r), status: s ? s.status : '', reason: s ? s.reason || '' : '', decided_by: s ? s.decided_by || '' : '' };
+  });
+  const side = (list) => ({
+    rows: list,
+    pallets: list.length,
+    units: Math.round(list.reduce((n, r) => n + Number(r.variance_qty || 0), 0) * 100) / 100,
+  });
+  const positive = side(rows.filter((r) => r.variance_qty > 0).sort((a, b) => b.variance_qty - a.variance_qty));
+  const negative = side(rows.filter((r) => r.variance_qty < 0).sort((a, b) => a.variance_qty - b.variance_qty));
+  return {
+    approvals: !!session.require_approval,
+    closed: session.status === 'closed',
+    positive,
+    negative,
+    net: Math.round((positive.units + negative.units) * 100) / 100,
+  };
+}
+
 /** The one line a supervisor reads: how much of this count is still unsigned. */
 export function summary(sessionId) {
   const id = Number(sessionId);

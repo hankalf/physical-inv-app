@@ -935,7 +935,68 @@
   let adjustState = { on: false, reasons: [], adjustments: [] };
   const picked = new Set();
 
+  /* Positive and negative: what the count adds and what it takes off, with or
+     without approvals. One click on a tile shows that side. */
+  let pnData = null;
+  let pnSide = (() => { try { return sessionStorage.getItem('pnSide') || 'positive'; } catch { return 'positive'; } })();
+  const signed = (n) => (n > 0 ? '+' : '') + Number(n || 0).toLocaleString();
+
+  async function refreshPositiveNegative() {
+    pnData = await apiJson(`/api/admin/sessions/${sessionId}/adjustments/view`);
+    renderPositiveNegative();
+  }
+
+  function pnRows() {
+    if (!pnData) return [];
+    if (pnSide === 'positive') return pnData.positive.rows;
+    if (pnSide === 'negative') return pnData.negative.rows;
+    return [...pnData.positive.rows, ...pnData.negative.rows];
+  }
+
+  function renderPositiveNegative() {
+    const d = pnData;
+    $('pnPlusUnits').textContent = signed(d.positive.units);
+    $('pnPlusSub').textContent = `${d.positive.pallets.toLocaleString()} pallet${d.positive.pallets === 1 ? '' : 's'}`;
+    $('pnMinusUnits').textContent = signed(d.negative.units);
+    $('pnMinusSub').textContent = `${d.negative.pallets.toLocaleString()} pallet${d.negative.pallets === 1 ? '' : 's'}`;
+    $('pnNet').textContent = signed(d.net);
+    for (const b of document.querySelectorAll('#pnSide button, #pnTiles button')) b.classList.toggle('selected', b.dataset.side === pnSide);
+    const cols = [{ label: 'Pallet' }, { label: 'Item' }, { label: 'Bin' }, { label: 'Why' },
+      { label: 'System', num: true }, { label: 'Counted', num: true }, { label: 'Adjustment', num: true }];
+    if (d.approvals) cols.push({ label: 'Approval' });
+    table($('pnTable'), cols, pnRows(), (r) => {
+      const tr = document.createElement('tr');
+      const adj = cell(signed(r.variance_qty), 'num ' + (r.variance_qty > 0 ? 'pos' : 'neg'));
+      tr.append(cell(r.pallet_id), cell(r.sku || '—'), cell(r.location || '—'), cell(r.why, 'wrap'),
+        cell(r.expected_qty == null ? '—' : r.expected_qty, 'num'), cell(r.counted_qty, 'num'), adj);
+      if (d.approvals) tr.appendChild(cell(r.status ? r.status + (r.decided_by ? ` · ${r.decided_by}` : '') : '—'));
+      return tr;
+    }, pnSide === 'negative' ? 'Nothing to take off.' : pnSide === 'positive' ? 'Nothing to add.' : 'The count matches the report so far.');
+    $('pnNote').textContent = d.closed ? ''
+      : 'The count is still open: a pallet nobody has reached yet is not counted as missing. Once the count is closed, pallets never found are added to Negative.';
+  }
+
+  for (const b of document.querySelectorAll('#pnSide button, #pnTiles button')) {
+    b.onclick = () => {
+      pnSide = b.dataset.side;
+      try { sessionStorage.setItem('pnSide', pnSide); } catch { /* private window */ }
+      if (pnData) renderPositiveNegative();
+    };
+  }
+  $('btnPnCsv').onclick = () => {
+    const rows = pnRows();
+    const head = ['Pallet', 'Item', 'Bin', 'Why', 'System qty', 'Counted qty', 'Adjustment', 'Approval'];
+    const q = (v) => (/[",\n]/.test(String(v ?? '')) ? `"${String(v).replace(/"/g, '""')}"` : String(v ?? ''));
+    const lines = [head, ...rows.map((r) => [r.pallet_id, r.sku, r.location, r.why, r.expected_qty ?? '', r.counted_qty, r.variance_qty, r.status])]
+      .map((l) => l.map(q).join(',')).join('\r\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['\ufeff' + lines], { type: 'text/csv' }));
+    a.download = `adjustments-${pnSide}-session-${sessionId}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+
   async function refreshAdjustments() {
+    refreshPositiveNegative().catch(() => {});
     const s = sessions.find((x) => x.id === sessionId);
     const on = !!(s && s.require_approval);
     $('adjustOff').hidden = on;

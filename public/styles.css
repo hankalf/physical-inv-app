@@ -41,6 +41,9 @@ header .chip {
 header .chip.online { color: var(--ok); border-color: #1d572a; }
 header .chip.offline { color: var(--warn); border-color: #5c4813; }
 header .chip.queued { color: var(--accent); border-color: #1f4d8f; }
+/* English / Español: always in reach, never mistaken for a counting button */
+header button.chip.lang { width: auto; margin: 0; padding: 4px 10px; font-size: 12.5px; font-weight: 800;
+  color: var(--text); border-color: var(--accent); background: transparent; flex: 0 0 auto; }
 /* the Testing tab's gun: never mistaken for one counting the real thing */
 header .chip.practice { color: #1a1300; background: #f0b429; border-color: #f0b429; font-weight: 800; letter-spacing: .04em; }
 
@@ -56,6 +59,9 @@ input, select, textarea {
 }
 input:focus, select:focus { border-color: var(--accent); }
 input.big { font-size: 26px; letter-spacing: .02em; }
+/* a yes-or-no question on the gun: two buttons a gloved thumb cannot miss */
+#ovYesNo .ask { margin: 14px 0 8px; font-size: 22px; }
+#ovYesNo button.big { font-size: 26px; font-weight: 800; padding: 18px 0; }
 
 button {
   width: 100%; padding: 14px; margin-top: 10px; font-size: 17px; font-weight: 700;
@@ -337,3 +343,11 @@ body.big-text button { font-size: 19px; padding: 16px; }
 body.big-text .chip-btn { font-size: 15px; padding: 10px 14px; }
 body.big-text .feedback { font-size: 16px; }
 body.big-text .nextbin .nb-code { font-size: 30px; }
+
+/* a run of empty bins: one row per bin, the whole row is the tap target */
+.erlist { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.errow { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); font-size: 17px; }
+.errow input { width: 26px; height: 26px; flex: 0 0 auto; }
+.errow b { font-size: 19px; letter-spacing: .02em; }
+.errow span { color: var(--muted); font-size: 14px; margin-left: auto; text-align: right; }
+.errow.done { opacity: .55; }

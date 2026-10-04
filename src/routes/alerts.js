@@ -26,13 +26,13 @@ const now = () => new Date().toISOString();
    would use. A site edits these; they are only a starting point. */
 export const DEFAULT_REASONS = [
   'Injury — someone needs help now',
+  'Equipment broke down — lift truck, reach truck, jack',
+  'Need a supervisor',
   'Someone is stuck or shut in',
   'Racking or a pallet looks unsafe',
-  'Forklift or lift truck problem',
   'Spill, leak or damaged stock',
   'Cannot reach the bins — blocked',
   'Scanner or app problem',
-  'Need a supervisor',
 ];
 
 export function sosReasons() {

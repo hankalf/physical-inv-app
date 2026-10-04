@@ -298,8 +298,9 @@ whatever you want to practise on.*
 
 Every gun has an SOS button. What it offers when pressed is this list — write it in the words your
 floor uses, because the person pressing it is in a hurry. It ships with what usually goes wrong in a
-cold store: an injury, somebody shut in, racking that looks unsafe, a lift-truck problem, a spill,
-blocked bins, a scanner problem, needing a supervisor.
+cold store, most urgent first: an injury, **equipment broken down**, **needing a supervisor**,
+somebody shut in, racking that looks unsafe, a spill, blocked bins, a scanner problem. Each SOS shows
+on the dashboard (a red bar above every tab, with a chime) and, if the channel is set up, in Teams.
 
 **To send alerts to a Teams channel as well:**
 
@@ -746,17 +747,20 @@ still live underneath it.*
 
 *History: the last 50 lines this scanner counted. **Void** takes a wrong one out of the totals.*
 
-**When the gun asks for a reason**
+**When the gun stops and asks**
 
-An unknown pallet, an unknown bin, a pallet already counted, a bin outside the team's
-aisle or level — the gun stops and asks why before it will take the line. Pick a reason
-from the list (or **Other**), add a note if it helps, and press **Accept and continue**.
-The line is saved and flagged for a supervisor. **Cancel — rescan** if it was simply the
-wrong barcode.
+**A pallet that is not on the list** is one question: **Count it anyway?** **YES** counts it —
+flagged, and it shows up for a supervisor under **Adjustments** as a pallet to add (a positive
+adjustment). **NO** if it was simply the wrong barcode.
+
+An unknown bin, a pallet already counted, a bin outside the team's aisle or level — the gun
+asks why before it will take the line. Pick a reason from the list (or **Other**), add a note
+if it helps, and press **Accept and continue**. The line is saved and flagged for a supervisor.
+**Cancel — rescan** if it was simply the wrong barcode.
 
 | | |
 |:--:|:--:|
-| ![](images/gun-override.png)<br>A pallet that is not on the inventory report: the gun will not take the line until somebody says why | ![](images/gun-override-reason.png)<br>The reasons in that list are the ones set in Settings, so they are your site's words. **Other** is always offered |
+| ![](images/gun-override.png)<br>A pallet that is not on the inventory report: **YES** to count it, **NO** to rescan | ![](images/gun-override-reason.png)<br>Everything else asks why. The reasons are the ones set in Settings — your site's words. **Other** is always offered |
 
 ### Step 16 — The supervisor's procedure (on the dashboard)
 

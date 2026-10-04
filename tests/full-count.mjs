@@ -244,7 +244,9 @@ check('Handheld T1: step 1 is PALLET ID', (await t1.T('#prompt')) === 'Scan PALL
 
 // good line: pallet -> qty -> bin -> comment chip
 await t1.scan('plt01001a');
-check('Handheld T1: pallet recognised, contents shown', /Chicken breast/.test(await t1.T('#scanMsg')) && (await t1.T('#prompt')) === 'Enter QUANTITY', await t1.T('#scanMsg'));
+check('Handheld T1: pallet recognised — a blind count, so nothing says what is on it',
+  /PLT01001A/.test(await t1.T('#scanMsg')) && !/Chicken|SKU/i.test(await t1.T('#scanMsg') + await t1.T('#ctx'))
+    && (await t1.T('#prompt')) === 'Enter QUANTITY', await t1.T('#scanMsg'));
 await shot(t1.p, 'hh-pallet-recognised');
 await t1.scan('40');
 check('Handheld T1: qty accepted → BIN prompt', (await t1.T('#prompt')) === 'Scan BIN LOCATION');
@@ -272,8 +274,9 @@ await t1.scan('40'); await t1.scan('F01A009'); await t1.p.click('#btnSkip'); awa
 check('Handheld T1: duplicate accepted with reason → flagged line', /Counted PLT01001A.*flagged/.test(await t1.T('#scanMsg')), await t1.T('#scanMsg'));
 // unknown pallet with override
 await t1.scan('NOLABEL-77'); await t1.p.waitForSelector('#scrOverride.active');
-check('Handheld T1: unknown pallet needs reason', (await t1.T('#ovTitle')) === 'Pallet not on the list');
-await t1.p.selectOption('#fReason', 'New receipt, not on the report'); await t1.p.fill('#fReasonNote', 'handwritten tag'); await t1.p.click('#btnOverrideAccept'); await t1.p.waitForTimeout(200);
+check('Handheld T1: unknown pallet asks yes or no — no reason to pick', (await t1.T('#ovTitle')) === 'Pallet not on the list'
+  && await t1.p.isVisible('#btnOvYes') && await t1.p.isVisible('#btnOvNo') && await t1.p.isHidden('#fReason'));
+await t1.p.click('#btnOvYes'); await t1.p.waitForTimeout(200);
 // bad qty then large qty
 await t1.scan('abc');
 check('Handheld T1: junk quantity refused', /is not a quantity/.test(await t1.T('#scanMsg')), await t1.T('#scanMsg'));

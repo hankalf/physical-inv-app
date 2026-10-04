@@ -15,7 +15,7 @@ import {
 import { importMaster, pruneAreaAisles } from './routes/master.js';
 import { boardData } from './routes/board.js';
 import { sendMessage, listMessages, messagesFor, ackMessage, clearMessage } from './routes/messages.js';
-import { listAdjustments, decideAdjustments, adjustmentReasons, saveAdjustmentReasons } from './routes/adjustments.js';
+import { listAdjustments, adjustmentView, decideAdjustments, adjustmentReasons, saveAdjustmentReasons } from './routes/adjustments.js';
 import { accuracy, accuracyCsv, deriveAbc, accuracyTargets, saveAccuracyTargets } from './routes/accuracy.js';
 import { setupState } from './routes/setup.js';
 import { searchAll } from './routes/search.js';
@@ -85,7 +85,7 @@ const MAX_BODY = Number(process.env.MAX_UPLOAD_MB || 64) * 1024 * 1024;
  * when its counter is between pallets. Hashed from the files themselves rather
  * than a version number somebody has to remember to bump.
  */
-const SHELL_FILES = ['index.html', 'app.js', 'styles.css', 'manifest.webmanifest', 'sw.js'];
+const SHELL_FILES = ['index.html', 'i18n.js', 'app.js', 'styles.css', 'manifest.webmanifest', 'sw.js'];
 const appBuild = { version: 'dev', files: {} };
 try {
   const parts = [];
@@ -934,7 +934,7 @@ async function handleAdmin(req, res, url, m) {
     const body = await readJson(req);
     const saved = saveScannerLayout(body);
     audit(actor, 'changed the scanner screen layout',
-      `${saved.order.join(' → ')}${saved.textSize === 'large' ? ', large text' : ''}${saved.showContents ? '' : ', contents hidden'}${saved.showNextBin ? '' : ', bin guide off'}`);
+      `${saved.order.join(' → ')}${saved.textSize === 'large' ? ', large text' : ''}${saved.showNextBin ? '' : ', bin guide off'}`);
     return sendJson(req, res, 200, saved);
   }
 
@@ -1191,6 +1191,9 @@ async function handleAdmin(req, res, url, m) {
     const saved = saveAdjustmentReasons(body.reasons);
     audit(actor, 'changed the adjustment reasons', saved.reasons.join(' | '));
     return sendJson(req, res, 200, saved);
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/adjustments\/view$/)) && method === 'GET') {
+    return sendJson(req, res, 200, adjustmentView(m[1]));
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/adjustments$/)) && method === 'GET') {
     return sendJson(req, res, 200, listAdjustments(m[1], { status: url.searchParams.get('status') || '' }));

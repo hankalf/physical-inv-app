@@ -106,8 +106,7 @@ check('Gun: a bin with one pallet on the report is finished by counting it', /Ne
 await scan('NEW-ARRIVAL-1');
 await gun.waitForTimeout(600);
 if (await gun.$('#scrOverride.active')) {
-  await gun.selectOption('#fReason', { index: 1 });
-  await gun.click('#btnOverrideAccept');
+  await gun.click('#btnOvYes');
   await gun.waitForTimeout(400);
   await scan('9'); await scan('A01A007');
   await gun.waitForTimeout(600);
@@ -136,7 +135,7 @@ await gun.waitForTimeout(900);
 check('Gun: it says the tag is the same pallet, counted once',
   /same pallet as P-6/i.test(clean(await gun.textContent('#scanMsg'))), clean(await gun.textContent('#scanMsg')).slice(0, 110));
 
-await gun.waitForTimeout(1500);
+await gun.waitForTimeout(3000);       // the line has to reach the server first
 const rows = (await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/pallets?limit=200`, { headers: A }))).rows;
 const by = Object.fromEntries(rows.map((r) => [r.pallet_id, r]));
 check('The second label lands as its own line with no quantity',

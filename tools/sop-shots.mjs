@@ -473,16 +473,24 @@ try {
   await save(gun, 'gun-step-comments');
   await gun.click('#btnSkip'); await wait(900);
 
-  // the override screen: a pallet that is not on the report
+  // a pallet that is not on the report: a plain yes or no
   await scan('NO-LABEL-4471'); await wait(900);
   if (await gun.$('#scrOverride.active')) {
     await save(gun, 'gun-override');
-    await gun.selectOption('#fReason', 'Hand-written ID').catch(() => {});
-    await gun.fill('#fReasonNote', 'Tag written by receiving');
-    await wait(300);
-    await save(gun, 'gun-override-reason');
+    await gun.click('#btnOvNo'); await wait(600);
   }
-  await gun.click('#btnOverrideCancel'); await wait(600);
+  // everything else that stops the gun asks why: here, a pallet already counted
+  const again = (palletAt.get(firstOpen) || [])[0];
+  if (again) {
+    await scan(again); await wait(900);
+    if (await gun.$('#scrOverride.active')) {
+      await gun.selectOption('#fReason', 'Relabelled').catch(() => {});
+      await gun.fill('#fReasonNote', 'old label left on');
+      await wait(300);
+      await save(gun, 'gun-override-reason');
+      await gun.click('#btnOverrideCancel'); await wait(600);
+    }
+  }
 
   // a word from the office, waiting on the counting screen
   await post(`/api/admin/sessions/${sess.id}/messages`, { team: '1', urgent: true,

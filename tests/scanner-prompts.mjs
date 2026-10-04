@@ -108,13 +108,13 @@ await gun.press('#fScan', 'Enter'); await gun.waitForTimeout(2500);
   await gun.reload(); await gun.waitForTimeout(2000);
   await intoCounting(gun);
   await atPallet();
-  await scan('NOT-ON-THE-LIST');       // an unknown pallet is what asks for a reason
+  await scan('NOT-ON-THE-LIST');       // the reason list is built whenever the gun stops, even for a yes-or-no
   await gun.waitForTimeout(700);
   const opts = await gun.$$eval('#fReason option', (o) => o.map((x) => x.textContent));
   check('Gun: the override reasons are the site\'s, not the ones built into the page',
     want.every((w) => opts.includes(w)) && !opts.includes('New pallet not in master file'), opts.join(' | '));
   check('Gun: "Other" is always offered, whatever the site configured', opts.includes('Other'), opts.join(' | '));
-  await gun.click('#btnOverrideCancel'); await gun.waitForTimeout(500);
+  await gun.click('#btnOvNo'); await gun.waitForTimeout(500);
 }
 
 /* ---- an edit mid-shift reaches a gun that is already signed on ---- */
@@ -134,7 +134,7 @@ await gun.press('#fScan', 'Enter'); await gun.waitForTimeout(2500);
   await gun.waitForTimeout(700);
   const opts = await gun.$$eval('#fReason option', (o) => o.map((x) => x.textContent));
   check('Gun: so does a new override reason', opts.includes('Supervisor on the radio'), opts.join(' | '));
-  await gun.click('#btnOverrideCancel'); await gun.waitForTimeout(500);
+  await gun.click('#btnOvNo'); await gun.waitForTimeout(500);
   await fetch(`${BASE}/api/admin/scanner-prompts`, { method: 'POST', headers: A,
     body: JSON.stringify({ comments: ['Frozen to the rack', 'Shrink wrap torn'],
       overrides: ['Label unreadable', 'New receipt, not on the report', 'Relabelled', 'Hand-written ID'] }) });

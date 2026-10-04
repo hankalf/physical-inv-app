@@ -17,6 +17,8 @@
   <span class="chip" id="chipDevice" hidden></span>
   <span class="chip" id="chipNet">…</span>
   <span class="chip queued" id="chipQueue" hidden>0</span>
+  <!-- the other language, named in that language; translated text is never re-translated -->
+  <button class="chip lang" id="btnLang" type="button" data-no-i18n>Español</button>
 </header>
 
 <main>
@@ -150,6 +152,7 @@
       <button id="btnSkip" class="primary" hidden>Skip</button>
     </div>
     <button id="btnEmpty" class="ghost" hidden>Bin is EMPTY — scan the bin</button>
+    <button id="btnEmptyRun" class="ghost" hidden>Several empty bins in a row</button>
     <button id="btnSameLabel" class="ghost" hidden>Second label on the same pallet</button>
     <button id="btnNoScan" class="ghost" hidden>Label will not scan</button>
     <div class="row" id="noScanRow" hidden>
@@ -170,6 +173,17 @@
     <button id="btnSos" class="sos">SOS — I need help</button>
   </section>
 
+  <!-- ---------------- a run of empty bins ---------------- -->
+  <section class="screen" id="scrEmptyRun">
+    <h2 class="prompt" id="erPrompt">Scan the FIRST empty bin</h2>
+    <input id="fEmptyScan" class="big" autocomplete="off" autocorrect="off" autocapitalize="characters"
+           spellcheck="false" inputmode="none" enterkeyhint="done">
+    <div class="feedback" id="erMsg"></div>
+    <div class="erlist" id="erList"></div>
+    <button class="primary" id="btnEmptyRunSave" hidden>Mark bins EMPTY</button>
+    <button class="ghost" id="btnEmptyRunBack">Cancel — back to counting</button>
+  </section>
+
   <!-- ---------------- SOS ---------------- -->
   <section class="screen" id="scrSos">
     <h2 class="prompt">What is wrong?</h2>
@@ -187,15 +201,25 @@
     <h2 class="prompt" id="ovTitle">Check this</h2>
     <div class="feedback show warn" id="ovWhy"></div>
     <div class="context" id="ovCtx"></div>
-    <label for="fReason">Reason (required to continue)</label>
-    <select id="fReason">
-      <option value="">Choose a reason…</option>
-      <!-- replaced at run time by the reasons the site configured in Settings -->
-      <option>Other</option>
-    </select>
-    <label for="fReasonNote">Note (optional)</label>
-    <input id="fReasonNote" autocomplete="off" placeholder="Free text">
-    <button class="primary" id="btnOverrideAccept">Accept and continue</button>
+    <!-- a pallet not on the list is a plain question: count it, or not -->
+    <div id="ovYesNo" hidden>
+      <h3 class="ask" id="ovAsk">Count it anyway?</h3>
+      <div class="row">
+        <button class="primary big" id="btnOvYes">YES</button>
+        <button class="ghost big" id="btnOvNo">NO</button>
+      </div>
+    </div>
+    <div id="ovReasonBlock">
+      <label for="fReason">Reason (required to continue)</label>
+      <select id="fReason">
+        <option value="">Choose a reason…</option>
+        <!-- replaced at run time by the reasons the site configured in Settings -->
+        <option>Other</option>
+      </select>
+      <label for="fReasonNote">Note (optional)</label>
+      <input id="fReasonNote" autocomplete="off" placeholder="Free text">
+      <button class="primary" id="btnOverrideAccept">Accept and continue</button>
+    </div>
     <button class="ghost" id="btnOverrideSame" hidden>It is a second label on the last pallet</button>
     <button class="ghost" id="btnOverrideCancel">Cancel — rescan</button>
   </section>
@@ -210,6 +234,7 @@
 
 </main>
 
+<script src="/i18n.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

@@ -334,7 +334,6 @@
     for (const k of gunCfg.order.slice(0, idx)) {
       if (k === 'pallet') {
         ctx.push(['Pallet', known.pallet]);
-        if (gunCfg.showContents) ctx.push(['Contents', 'SKU-2044 — Peas 12x2lb']);
       }
       if (k === 'qty') ctx.push(['Qty', known.qty]);
       if (k === 'bin') ctx.push(['Bin', 'F01A001 — Level A · Position 001 · FRONT']);
@@ -368,7 +367,6 @@
 
   function renderGun() {
     $('fTextSize').value = gunCfg.textSize;
-    $('fShowContents').checked = gunCfg.showContents;
     $('fShowNextBin').checked = gunCfg.showNextBin;
     $('fVibrate').checked = gunCfg.vibrate;
     $('fFullScreen').checked = gunCfg.fullScreen !== false;
@@ -403,10 +401,9 @@
   $('btnCommentLess').onclick = () => nudgeTimeout(-1);
   $('btnCommentMore').onclick = () => nudgeTimeout(1);
 
-  for (const id of ['fTextSize', 'fShowContents', 'fShowNextBin', 'fVibrate', 'fFullScreen', 'fKeepAwake', 'fPortrait', 'fAutoUpdate', 'fConfirmOver', 'fCommentTimeout', 'fDevice']) {
+  for (const id of ['fTextSize', 'fShowNextBin', 'fVibrate', 'fFullScreen', 'fKeepAwake', 'fPortrait', 'fAutoUpdate', 'fConfirmOver', 'fCommentTimeout', 'fDevice']) {
     $(id).addEventListener('change', () => {
       gunCfg.textSize = $('fTextSize').value;
-      gunCfg.showContents = $('fShowContents').checked;
       gunCfg.showNextBin = $('fShowNextBin').checked;
       gunCfg.vibrate = $('fVibrate').checked;
       gunCfg.fullScreen = $('fFullScreen').checked;
@@ -430,7 +427,7 @@
          them: both are saved by this button. */
       const [layout, prompts] = await Promise.all([
         api.post('/api/admin/scanner-layout', {
-          order: gunCfg.order, textSize: gunCfg.textSize, showContents: gunCfg.showContents,
+          order: gunCfg.order, textSize: gunCfg.textSize,
           showNextBin: gunCfg.showNextBin, confirmOver: gunCfg.confirmOver, vibrate: gunCfg.vibrate,
           fullScreen: gunCfg.fullScreen, keepAwake: gunCfg.keepAwake, portrait: gunCfg.portrait,
           autoUpdate: gunCfg.autoUpdate, device: gunCfg.device,

@@ -201,9 +201,9 @@ check('A pallet found in the wrong bin', await waitCheck('moved'));
 /* F01-099 is not on the report at all: the gun wants a reason. */
 await atPalletStep();
 await click(chipFor('F01-099'));
-check('A pallet that is not on the report stops the gun and asks why', (await screenOf()) === 'scrOverride', await gunText());
-await gun.selectOption('#fReason', { index: 2 });
-await gun.click('#btnOverrideAccept');
+check('A pallet that is not on the report stops the gun and asks: count it anyway?', (await screenOf()) === 'scrOverride'
+  && await gun.isVisible('#btnOvYes'), await gunText());
+await gun.click('#btnOvYes');
 await wait(300);
 await click(qtyChip('F01-099'));
 await click(binChip('F01A006'));

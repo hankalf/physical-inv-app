@@ -111,7 +111,6 @@ const STEPS = ['pallet', 'qty', 'bin', 'lot', 'expiry'];
 const LAYOUT_DEFAULTS = {
   order: ['pallet', 'qty', 'lot', 'expiry', 'bin'],
   textSize: 'normal',      // normal | large
-  showContents: true,      // the SKU and description after a pallet scan
   showNextBin: true,       // the next bin in the aisle
   confirmOver: 1000,       // re-key a quantity at least this big
   vibrate: true,
@@ -143,7 +142,6 @@ export function scannerLayout() {
   return {
     order: saved.order ? cleanOrder(saved.order) : LAYOUT_DEFAULTS.order,
     textSize: saved.textSize === 'large' ? 'large' : 'normal',
-    showContents: saved.showContents === undefined ? true : !!saved.showContents,
     showNextBin: saved.showNextBin === undefined ? true : !!saved.showNextBin,
     confirmOver: saved.confirmOver === undefined ? LAYOUT_DEFAULTS.confirmOver
       : Math.max(0, Math.min(1e7, Number(saved.confirmOver) || 0)),
@@ -162,7 +160,6 @@ export function saveScannerLayout(body = {}) {
   const next = {
     order: body.order === undefined ? now.order : cleanOrder(body.order),
     textSize: body.textSize === undefined ? now.textSize : (body.textSize === 'large' ? 'large' : 'normal'),
-    showContents: body.showContents === undefined ? now.showContents : !!body.showContents,
     showNextBin: body.showNextBin === undefined ? now.showNextBin : !!body.showNextBin,
     confirmOver: body.confirmOver === undefined ? now.confirmOver : Math.max(0, Math.min(1e7, Number(body.confirmOver) || 0)),
     vibrate: body.vibrate === undefined ? now.vibrate : !!body.vibrate,

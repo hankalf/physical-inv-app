@@ -1,7 +1,7 @@
 /* App-shell cache so the handheld still starts with no Wi-Fi.
    API traffic is never cached - counts and master data go through IndexedDB. */
-const CACHE = 'invcount-shell-v3';
-const SHELL = ['/', '/index.html', '/app.js', '/styles.css', '/manifest.webmanifest',
+const CACHE = 'invcount-shell-v4';
+const SHELL = ['/', '/index.html', '/i18n.js', '/app.js', '/styles.css', '/manifest.webmanifest',
   '/icon.svg', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (e) => {

@@ -637,8 +637,10 @@ export function masterPayload(sessionId) {
     sessionId: id,
     // Compact tuples: these lists can run to six figures of rows.
     locations: locations.map((l) => [l.code, l.zone || '', l.aisle || '', l.level || '']),
-    // the gun checks a scanned lot against the one the report expects
-    pallets: pallets.map((p) => [p.pallet_id, p.sku || '', p.description || '', p.expected_location || '', p.lot || '', p.expiry || '']),
+    /* A blind count: the gun is never sent what is on a pallet, only where it
+       is meant to be and the lot it should carry. The SKU and description slots
+       stay, empty, so a gun still running the old app reads the list the same. */
+    pallets: pallets.map((p) => [p.pallet_id, '', '', p.expected_location || '', p.lot || '', p.expiry || '']),
   };
   // one session's lists at a time: a second count is a new upload, not a reason to hold both
   masterCache.clear();
@@ -670,6 +672,10 @@ ON CONFLICT(client_id) DO NOTHING
 
 // Idempotent on client_id: a device that re-sends after a dropped connection
 // cannot create a second count line.
+/* The gun counts blind - it is never told what is on a pallet - so the line's
+   SKU comes from the report, here. */
+const skuOf = db.prepare('SELECT sku FROM pallets WHERE session_id = ? AND pallet_id = ?');
+
 export function saveCounts(sessionId, rows) {
   const id = Number(sessionId);
   const now = new Date().toISOString();
@@ -690,7 +696,7 @@ export function saveCounts(sessionId, rows) {
       insertCount.run(
         String(r.clientId), id, empty ? 'EMPTY' : norm(r.palletId), qty, norm(r.location),
         r.comments ? String(r.comments).slice(0, 500) : null,
-        r.sku ? norm(r.sku) : null,
+        r.sku ? norm(r.sku) : (empty ? null : skuOf.get(id, norm(r.palletId))?.sku || null),
         norm(r.team) || 'UNKNOWN',
         JSON.stringify(r.employees || []),
         norm(r.deviceId) || 'UNKNOWN',

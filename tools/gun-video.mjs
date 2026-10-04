@@ -344,16 +344,12 @@ try {
 
   /* ------------------------------------------- 7. a pallet not on the report */
   await atStep(/PALLET/);
-  say('A pallet nobody expected', 'Not on the inventory report. The gun stops and asks <b>why</b> before it will take the '
-    + 'line — the reasons are the site’s own words, set in Settings — and the line is flagged for a supervisor.',
-    { text: 'Every exception has a name against it', kind: 'warn' });
+  say('A pallet nobody expected', 'Not on the inventory report. The gun asks one thing: <b>count it anyway?</b> '
+    + 'YES counts it, flagged, and it lands with a supervisor as a pallet to add to the system.',
+    { text: 'Found stock is never lost', kind: 'warn' });
   await scan('HANDWRITTEN-91');
   await beat(2800);
-  await gun().selectOption('#fReason', { index: 1 }).catch(() => {});
-  await beat(900);
-  await gun().fill('#fReasonNote', 'Hand-written tag from receiving');
-  await beat(1600);
-  await tap('#btnOverrideAccept');
+  await tap('#btnOvYes');
   await beat(1200);
   await atStep(/QUANTITY/); await scan('30');
   if (await stepIs(/LOT/)) await maybeTap('#btnSkip');      // a hand-written tag carries no lot

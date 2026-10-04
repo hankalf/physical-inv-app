@@ -64,7 +64,7 @@ const BINS = [
   { bin: 'F01A005', shelf: [P('F01-005', 30, 'fries', 'L2026166', 260)], report: [],
     try: 'The report has this pallet in F01A006. It is here — the gun will say so; accept it.', check: 'moved' },
   { bin: 'F01A006', shelf: [P('F01-099', 20, 'blue', 'L2026179', 300)], report: [P('F01-005', 30, 'fries', 'L2026166', 260)],
-    try: 'F01-099 is not on the report. The gun will ask why — pick a reason.', check: 'unlisted' },
+    try: 'F01-099 is not on the report. The gun asks “Count it anyway?” — tap YES.', check: 'unlisted' },
   { bin: 'F01B001', shelf: [P('F01-006', 44, 'thigh', 'L2026192', 180)], noScan: 'pallet',
     try: 'The pallet label is torn. Tap “Label will not scan”, then type the ID.', check: 'label' },
   { bin: 'F01B002', shelf: [P('F01-007', 36, 'cod', 'L2026205', -20)],

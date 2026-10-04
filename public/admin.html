@@ -356,6 +356,25 @@
       </div>
 
       <div data-sub="adjust" data-sub-label="Adjustments">
+    <div class="card" id="pnCard">
+      <h2>Positive and negative <span class="muted">stock to add, stock to take off</span></h2>
+      <div class="pn" id="pnTiles">
+        <button type="button" class="pntile plus" data-side="positive"><span class="l">Positive — found more</span><span class="n" id="pnPlusUnits">0</span><span class="s" id="pnPlusSub">0 pallets</span></button>
+        <button type="button" class="pntile minus" data-side="negative"><span class="l">Negative — found less</span><span class="n" id="pnMinusUnits">0</span><span class="s" id="pnMinusSub">0 pallets</span></button>
+        <div class="pntile net"><span class="l">Net</span><span class="n" id="pnNet">0</span><span class="s">units, positive less negative</span></div>
+      </div>
+      <div class="tablehead">
+        <div class="seg" id="pnSide">
+          <button type="button" data-side="positive">Positive</button>
+          <button type="button" data-side="negative">Negative</button>
+          <button type="button" data-side="all">All</button>
+        </div>
+        <button class="fit sm" id="btnPnCsv">Download this list (CSV)</button>
+      </div>
+      <div class="scroll"><table id="pnTable"></table></div>
+      <div class="muted" id="pnNote" style="margin-top:8px"></div>
+    </div>
+
     <div class="card" id="adjustCard">
       <h2>Adjustments <span class="muted" id="adjustSub">what this count would do to the ERP</span></h2>
       <div class="hint" style="margin-top:0">

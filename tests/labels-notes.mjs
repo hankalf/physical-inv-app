@@ -95,8 +95,7 @@ await gun.click('#btnNoScanNone'); await gun.waitForTimeout(2200);
 /* ---- a rack label with nothing on it, and nothing for the app to suggest ---- */
 await scan('NEWTAG-77');                       // not on the report, so no expected bin
 if (await gun.$('#scrOverride.active')) {
-  await gun.selectOption('#fReason', { index: 1 }).catch(() => {});
-  await gun.click('#btnOverrideAccept');
+  await gun.click('#btnOvYes');
   await gun.waitForTimeout(800);
 }
 await scan('12');
