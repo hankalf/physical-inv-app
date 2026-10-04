@@ -152,8 +152,9 @@
 
   async function refreshUsers() {
     const { users } = await api.json('/api/admin/users');
+    const keys = (api.me && api.me.accessKeys) || [];
     table($('userTable'),
-      [{ label: 'Username' }, { label: 'Name' }, { label: 'Role' }, { label: 'Status' }, { label: 'Last signed in' }, { label: 'Added' }, { label: '' }],
+      [{ label: 'Username' }, { label: 'Name' }, { label: 'Role' }, { label: 'May use' }, { label: 'Status' }, { label: 'Last signed in' }, { label: 'Added' }, { label: '' }],
       users,
       (u) => {
         const tr = document.createElement('tr');
@@ -161,6 +162,45 @@
         const tdRole = document.createElement('td');
         tdRole.appendChild(tag(u.role));
         tr.appendChild(tdRole);
+        /* what this login may use: every box for a supervisor, one word for an admin */
+        const tdAcc = document.createElement('td');
+        tdAcc.className = 'wrap access';
+        if (u.role === 'admin') {
+          tdAcc.textContent = 'everything';
+          tdAcc.title = 'An admin may use every page and every function, Settings included.';
+        } else {
+          const list = Array.isArray(u.access) ? u.access : keys.map(([k]) => k);
+          const save = async () => {
+            const picked = [...tdAcc.querySelectorAll('input[data-access]:checked')].map((i) => i.dataset.access);
+            try { await api.post(`/api/admin/users/${u.username}`, { access: picked }); clearMsg($('userMsg')); }
+            catch (err) { msg($('userMsg'), 'err', err.message); }
+          };
+          for (const group of ['page', 'function']) {
+            const row = document.createElement('div');
+            row.className = 'accrow';
+            const lbl = document.createElement('b');
+            lbl.textContent = group === 'page' ? 'Pages' : 'Can also';
+            row.appendChild(lbl);
+            for (const [k, label, kind] of keys) {
+              if (kind !== group) continue;
+              const l = document.createElement('label');
+              l.className = 'cb';
+              l.title = label;
+              const i = document.createElement('input');
+              i.type = 'checkbox'; i.dataset.access = k; i.checked = list.includes(k);
+              i.onchange = save;
+              l.append(i, ' ', label);
+              row.appendChild(l);
+            }
+            tdAcc.appendChild(row);
+          }
+          const note = document.createElement('div');
+          note.className = 'muted';
+          note.style.fontSize = '11.5px';
+          note.textContent = 'Settings is for admins only.';
+          tdAcc.appendChild(note);
+        }
+        tr.appendChild(tdAcc);
         const tdSt = document.createElement('td');
         tdSt.appendChild(u.active ? tag('active') : tag('off'));
         if (u.active && u.mustChange) {

@@ -161,7 +161,7 @@
               tdP.appendChild(extra);
             }
             tdP.appendChild(el('div', 'item' + (p.expired ? ' expired' : ''),
-              `${p.desc}${opt.askLot ? '' : ' · lot ' + p.lot} · best before ${p.bestBefore}${p.expired ? ' (expired)' : ''}`));
+              `${p.desc}${p.uom ? ' · ' + p.uom : ''}${opt.askLot ? '' : ' · lot ' + p.lot} · best before ${p.bestBefore}${p.expired ? ' (expired)' : ''}`));
             const rep = [];
             if (!p.report) rep.push('not on the report');
             else {
@@ -451,10 +451,10 @@
     $('dashCard').scrollIntoView({ block: 'start', behavior: 'smooth' });
     dashSeen = true;
   }
-  function setDash(hidden) {
+  function setDash(hidden, { tell = true } = {}) {
     $('dashCard').classList.toggle('collapsed', hidden);
     $('btnDashHide').textContent = hidden ? 'Show the dashboard' : 'Hide';
-    try { localStorage.setItem(DASH_KEY(), hidden ? '1' : '0'); } catch { /* private window */ }
+    if (tell) { try { localStorage.setItem(DASH_KEY(), hidden ? '1' : '0'); } catch { /* private window */ } }
   }
   $('btnDashHide').onclick = () => setDash(!$('dashCard').classList.contains('collapsed'));
   $('btnDashTall').onclick = () => {
@@ -470,10 +470,14 @@
   };
   // clicking into the dashboard counts as having seen it
   window.addEventListener('blur', () => { setTimeout(() => { if (document.activeElement === dashFrame()) dashSeen = true; }, 0); });
+  /* A first-timer starts with the dashboard folded away: the gun and the sheet
+     are the lesson, and the office side comes at the last step - the guide
+     opens it then. Anyone who has chosen since gets what they chose. */
   function dashFirstTime() {
+    if (data && data.firstTime) { setDash(true, { tell: false }); return; }
     let saved = null;
     try { saved = localStorage.getItem(DASH_KEY()); } catch { saved = null; }
-    setDash(saved === '1');
+    setDash(saved === null ? true : saved === '1', { tell: false });
   }
 
   /* -------------------------------------------------- the guide, step by step
@@ -505,12 +509,22 @@
   let stepManual = null;             // where Back / Next left it, if anywhere
   let stepAuto = -1;                 // the first step not yet done
   let stepDrawn = '';
+  const stepDone = new Set();        // a step done stays done for the run - the guide never walks backwards
   function renderStepper() {
     if (!data) return;
-    const dones = STEPS.map((st) => { try { return !!st.done(); } catch { return false; } });
+    const dones = STEPS.map((st, i) => {
+      if (stepDone.has(i)) return true;
+      let ok = false;
+      try { ok = !!st.done(); } catch { ok = false; }
+      if (ok) stepDone.add(i);
+      return ok;
+    });
     const first = dones.indexOf(false);
     const auto = first === -1 ? STEPS.length - 1 : first;
-    if (auto !== stepAuto) { stepAuto = auto; stepManual = null; }   // something got done: back on track
+    if (auto !== stepAuto) {                                         // something got done: back on track
+      stepAuto = auto; stepManual = null;
+      if (auto === STEPS.length - 1 && !dones[auto]) setDash(false, { tell: false });   // the office side: open it up
+    }
     const at = stepManual == null ? auto : stepManual;
     const all = first === -1;
     const sig = JSON.stringify([dones, at]);
@@ -612,7 +626,7 @@
           || (x.pendingApprovals > 0 && feat('approve', { target: $('dashCard'), step: 'Approvals are on',
             text: 'A difference is waiting to be signed for. In the dashboard at the top, open <b>Adjustments</b>: approve it with a reason, or reject it.' }))
           || (o.palletMode === 'strict' && feat('strict', { target: $('fWedge'), step: 'No overrides is on',
-            text: 'Type a pallet that is not on the report — <b>FOUND-99</b> — and press <b>SCAN</b>. With no overrides, the gun refuses it instead of asking.' }))
+            text: 'Type a pallet that is not on the report — <b>F99999-999</b> — and press <b>SCAN</b>. With no overrides, the gun refuses it instead of asking.' }))
           || (o.askComments === false && !shownFeat.has('nocomments') && feat('nocomments', { target: $('gunFrame').closest('.gun'), step: 'Comments step is off', pos: 'left',
             text: 'With the comments step off, the gun goes straight to the next pallet after the bin. Count one and watch.' }));
         if (f) return f;
@@ -629,14 +643,39 @@
      concerned, straight away - the server and the sheet catch up a moment
      later. The memory is short, so a cancelled scan cannot hide a row for long. */
   const walked = new Map();        // pallet -> when to forget it
+  const awaiting = new Map();      // pallet -> when its bin was scanned, until the server shows it counted
+  function renderSync() {
+    const note = $('syncNote');
+    if (!note) return;
+    for (const [pal] of awaiting) {
+      const row = $('shelves').querySelector(`tr[data-pallet="${pal}"]`);
+      if (!row || row.dataset.done === '1') awaiting.delete(pal);
+    }
+    if (!awaiting.size) { note.className = 'sync ok'; note.textContent = 'Sheet up to date with the server'; return; }
+    const [pal, since] = [...awaiting.entries()][0];
+    const secs = Math.round((Date.now() - since) / 1000);
+    note.className = 'sync wait';
+    note.textContent = `Waiting for ${pal} to reach the server${awaiting.size > 1 ? ` (+${awaiting.size - 1} more)` : ''}… ${secs} s — the gun sends it in the background; carry on scanning.`;
+    if (secs > 20 && secs % 10 === 0) scheduleRefresh();
+  }
   const justCounted = (pallet) => { const t = walked.get(pallet); if (t && t > Date.now()) return true; walked.delete(pallet); return false; };
   function leftTip(key) {
     if (key.startsWith('feat:')) shownFeat.add(key.slice(5));
-    if (key.startsWith('bin:')) { walked.set(key.slice(4), Date.now() + 12000); scheduleRefresh(); }
+    if (key.startsWith('bin:')) { walked.set(key.slice(4), Date.now() + 30000); awaiting.set(key.slice(4), Date.now()); scheduleRefresh(); }
   }
+  /* A tip only changes once the gun has settled on it: the screens flick past
+     between scans, and a bubble that chased every one of them would jump all
+     over the page. The same step has to be up for a moment before it shows. */
+  let proposed = { key: '', since: 0 };
+  const SETTLE_MS = 350;
   function placeCoach(t) {
     const box = $('coach');
-    if (!t || !t.target) { box.hidden = true; if (lastTarget) lastTarget.classList.remove('spot'); if (lastKey) leftTip(lastKey); lastTarget = null; lastKey = ''; return; }
+    // switching off, or nothing to point at: at once - the wait is only between two live tips
+    if (!t || !t.target) { box.hidden = true; if (lastTarget) lastTarget.classList.remove('spot'); if (lastKey) leftTip(lastKey); lastTarget = null; lastKey = ''; proposed = { key: '', since: 0 }; return; }
+    if (t.key !== lastKey && lastKey) {
+      if (proposed.key !== t.key) proposed = { key: t.key, since: Date.now() };
+      if (Date.now() - proposed.since < SETTLE_MS) { if (lastTarget && !lastTarget.isConnected) box.hidden = true; return; }
+    }
     if (t.key !== lastKey) {
       leftTip(lastKey);
       // a new step: light the target, bring it on screen, and say so
@@ -646,8 +685,9 @@
       lastKey = t.key;
       $('coachStep').textContent = t.step;
       $('coachText').innerHTML = t.text;
+      // bring it on screen only when it is off the screen altogether; a nudge, not a leap
       const r = t.target.getBoundingClientRect();
-      if (r.top < 90 || r.bottom > window.innerHeight - 160) t.target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      if (r.bottom < 70 || r.top > window.innerHeight - 40) t.target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
     box.hidden = false;
     const r = t.target.getBoundingClientRect();
@@ -672,6 +712,7 @@
 
   function coach() {
     renderStepper();
+    renderSync();
     if (tipsOff || !data || $('scrMain').classList.contains('active') === false) { placeCoach(null); return; }
     placeCoach(nextTip());
   }
@@ -748,7 +789,7 @@
       const next = await api.post('/api/admin/practice/reset', {});
       await wipeGunStorage();
       drawn = '';
-      dashSeen = false; stepManual = null; walked.clear();
+      dashSeen = false; stepManual = null; walked.clear(); awaiting.clear(); stepDone.clear(); stepAuto = -1;
       render(next);
       loadGun({ force: true });
       msg($('rigMsg'), 'ok', 'Started over.', 'A fresh practice run, and a gun that has never seen it. Sign on again — your last run is kept below.');
@@ -766,7 +807,7 @@
     const next = await make();
     await wipeGunStorage();
     drawn = '';
-    dashSeen = false; stepManual = null; walked.clear();
+    dashSeen = false; stepManual = null; walked.clear(); awaiting.clear(); stepDone.clear(); stepAuto = -1;
     render(next);
     loadGun({ force: true });
     msg($('uploadMsg'), 'ok', okText(next), 'Sign on again on the gun — your last run is kept under “Your earlier runs”.');

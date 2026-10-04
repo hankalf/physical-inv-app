@@ -658,3 +658,10 @@ td.neg { color: var(--err); font-weight: 700; }
 .themepick .accents button[data-accent="teal"]  { background: #15a39a; }
 .themepick .accents button[data-accent="amber"] { background: #e0a020; }
 .themepick .accents button[data-accent="berry"] { background: #c2459a; }
+
+/* Settings → Advanced: what each login may use */
+td.access { min-width: 320px; }
+td.access .accrow { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; margin: 2px 0; }
+td.access .accrow b { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); min-width: 56px; }
+td.access label.cb { font-size: 12.5px; white-space: nowrap; }
+td.access input { width: 14px; height: 14px; }

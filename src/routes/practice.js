@@ -36,16 +36,16 @@ export const PRACTICE_TEAM = '99';
 export const PRACTICE_CREW = ['T1001', 'T1002'];
 
 const ITEMS = {
-  chicken: ['SKU-4120', 'Chicken breast IQF 40lb'],
-  thigh: ['SKU-4180', 'Chicken thigh boneless 30lb'],
-  peas: ['SKU-2210', 'Peas petite 12x2lb'],
-  corn: ['SKU-2240', 'Sweetcorn supersweet 20lb'],
-  salmon: ['SKU-6610', 'Salmon fillet skin-on 10lb'],
-  cod: ['SKU-6640', 'Cod loin 8lb'],
-  fries: ['SKU-3310', 'Fries shoestring 6x5lb'],
-  hash: ['SKU-3350', 'Hash brown patty 240ct'],
-  blue: ['SKU-8810', 'Blueberry wild 30lb'],
-  straw: ['SKU-8840', 'Strawberry sliced 20lb'],
+  straw: ['SKU-8840', 'Strawberry sliced IQF', 'C30LB'],
+  blue: ['SKU-8810', 'Blueberry wild IQF', 'C30LB'],
+  mango: ['SKU-8710', 'Mango chunks IQF', 'C20LB'],
+  peach: ['SKU-8720', 'Peach slices IQF', 'C25LB'],
+  rasp: ['SKU-8850', 'Raspberry whole IQF', 'C10LB'],
+  pine: ['SKU-8730', 'Pineapple tidbits IQF', 'C20LB'],
+  cherry: ['SKU-8860', 'Dark sweet cherries pitted IQF', 'C30LB'],
+  black: ['SKU-8870', 'Blackberry whole IQF', 'C30LB'],
+  mixed: ['SKU-8880', 'Mixed berries IQF', 'C40LB'],
+  banana: ['SKU-8740', 'Banana slices IQF', 'C40LB'],
 };
 
 /*
@@ -58,46 +58,46 @@ const ITEMS = {
  */
 const P = (id, qty, item, lot, days) => ({ id, qty, item, lot, days });
 const BINS = [
-  { bin: 'F01A001', shelf: [P('F01-001', 40, 'chicken', 'L2026114', 140)],
+  { bin: 'F01A001', shelf: [P('F12311-111', 40, 'straw', 'F12311', 140)],
     try: 'A plain one: pallet, quantity, bin.', check: 'first' },
-  { bin: 'F01A002', shelf: [P('F01-002', 32, 'peas', 'L2026127', 210), P('F01-003', 28, 'peas', 'L2026127', 210)],
+  { bin: 'F01A002', shelf: [P('F12312-111', 32, 'blue', 'F12312', 210), P('F12312-112', 28, 'blue', 'F12312', 210)],
     try: 'Two pallets in one bin — count both, then scan the bin for each.', check: 'two' },
   { bin: 'F01A003', shelf: [],
     try: 'Nothing here. On the pallet step tap “Bin is EMPTY — scan the bin”, then scan the bin.', check: 'empty' },
-  { bin: 'F01A004', shelf: [P('F01-004', 32, 'salmon', 'L2026153', 95)], report: [P('F01-004', 36, 'salmon', 'L2026153', 95)],
+  { bin: 'F01A004', shelf: [P('F12313-111', 32, 'mango', 'F12313', 95)], report: [P('F12313-111', 36, 'mango', 'F12313', 95)],
     try: 'The report says 36. There are 32 — type what you see.', check: 'short' },
-  { bin: 'F01A005', shelf: [P('F01-005', 30, 'fries', 'L2026166', 260)], report: [],
+  { bin: 'F01A005', shelf: [P('F12314-111', 30, 'peach', 'F12314', 260)], report: [],
     try: 'The report has this pallet in F01A006. It is here — the gun will say so; accept it.', check: 'moved' },
-  { bin: 'F01A006', shelf: [P('F01-099', 20, 'blue', 'L2026179', 300)], report: [P('F01-005', 30, 'fries', 'L2026166', 260)],
-    try: 'F01-099 is not on the report. The gun asks “Count it anyway?” — tap YES.', check: 'unlisted' },
-  { bin: 'F01B001', shelf: [P('F01-006', 44, 'thigh', 'L2026192', 180)], noScan: 'pallet',
+  { bin: 'F01A006', shelf: [P('F19999-999', 20, 'rasp', 'F19999', 300)], report: [P('F12314-111', 30, 'peach', 'F12314', 260)],
+    try: 'F19999-999 is not on the report. The gun asks “Count it anyway?” — tap YES.', check: 'unlisted' },
+  { bin: 'F01B001', shelf: [P('F12315-111', 44, 'pine', 'F12315', 180)], noScan: 'pallet',
     try: 'The pallet label is torn. Tap “Label will not scan”, then type the ID.', check: 'label' },
-  { bin: 'F01B002', shelf: [P('F01-007', 36, 'cod', 'L2026205', -20)],
+  { bin: 'F01B002', shelf: [P('F12316-111', 36, 'cherry', 'F12316', -20)],
     try: 'Best before has passed. Count it as normal — it shows as expired on the dashboard.' },
-  { bin: 'F01B003', shelf: [P('F01-008', 40, 'hash', 'L2026218', 150)], noScan: 'bin',
+  { bin: 'F01B003', shelf: [P('F12317-111', 40, 'black', 'F12317', 150)], noScan: 'bin',
     try: 'The rack label is missing. At the bin step tap “Bin label will not scan”. If the gun offers “It is F01B003”, take it; if it guesses another bin, tap “I can read it — let me type it” and click F01B003 here.',
     check: 'binLabel' },
-  { bin: 'F01B004', shelf: [P('F01-009', 24, 'straw', 'L2026231', 120), P('F01-010', 24, 'straw', 'L2026231', 120), P('F01-011', 26, 'straw', 'L2026231', 120)],
+  { bin: 'F01B004', shelf: [P('F12318-111', 24, 'mixed', 'F12318', 120), P('F12318-112', 24, 'mixed', 'F12318', 120), P('F12318-113', 26, 'mixed', 'F12318', 120)],
     try: 'Three pallets in one bin.' },
-  { bin: 'F01B005', shelf: [P('F01-012', 36, 'corn', 'L2026244', 330)] },
-  { bin: 'F01B006', shelf: [], report: [P('F01-013', 40, 'chicken', 'L2026257', 160)],
-    try: 'The report says F01-013 is here. It is not — record the bin empty. It shows as missing.', check: 'missing' },
+  { bin: 'F01B005', shelf: [P('F12319-111', 36, 'banana', 'F12319', 330)] },
+  { bin: 'F01B006', shelf: [], report: [P('F12321-111', 40, 'straw', 'F12321', 160)],
+    try: 'The report says F12321-111 is here. It is not — record the bin empty. It shows as missing.', check: 'missing' },
 
-  { bin: 'F02A001', shelf: [P('F02-001', 40, 'chicken', 'L2026270', 130)],
+  { bin: 'F02A001', shelf: [P('F23411-111', 40, 'straw', 'F23411', 130)],
     try: 'A new aisle: finish F01 first with “Aisle complete — next aisle”.', check: 'nextAisle' },
-  { bin: 'F02A002', shelf: [P('F02-002', 30, 'fries', 'L2026283', 240)] },
-  { bin: 'F02A003', shelf: [P('F02-003', 32, 'peas', 'L2026296', 200)],
-    try: 'Once counted, scan F02-003 again — the gun warns it is already counted.' },
-  { bin: 'F02A004', shelf: [P('F02-004', 28, 'salmon', 'L2026309', 70), P('F02-005', 28, 'salmon', 'L2026309', 70)] },
-  { bin: 'F02A005', shelf: [P('F02-006', 44, 'thigh', 'L2026322', 190)] },
-  { bin: 'F02A006', shelf: [P('F02-007', 36, 'cod', 'L2026335', 110)] },
-  { bin: 'F02B001', shelf: [P('F02-008', 1200, 'blue', 'L2026348', 280)],
+  { bin: 'F02A002', shelf: [P('F23412-111', 30, 'peach', 'F23412', 240)] },
+  { bin: 'F02A003', shelf: [P('F23413-111', 32, 'blue', 'F23413', 200)],
+    try: 'Once counted, scan F23413-111 again — the gun warns it is already counted.' },
+  { bin: 'F02A004', shelf: [P('F23414-111', 28, 'mango', 'F23414', 70), P('F23414-112', 28, 'mango', 'F23414', 70)] },
+  { bin: 'F02A005', shelf: [P('F23415-111', 44, 'pine', 'F23415', 190)] },
+  { bin: 'F02A006', shelf: [P('F23416-111', 36, 'cherry', 'F23416', 110)] },
+  { bin: 'F02B001', shelf: [P('F23417-111', 1200, 'rasp', 'F23417', 280)],
     try: 'A big quantity: over the site’s limit, the gun asks you to key 1200 a second time.' },
-  { bin: 'F02B002', shelf: [P('F02-009', 24, 'straw', 'L2026361', 125)] },
-  { bin: 'F02B003', shelf: [P('F02-010', 40, 'hash', 'L2026374', 155)] },
-  { bin: 'F02B004', shelf: [P('F02-011', 32, 'corn', 'L2026387', 320)] },
+  { bin: 'F02B002', shelf: [P('F23418-111', 24, 'mixed', 'F23418', 125)] },
+  { bin: 'F02B003', shelf: [P('F23419-111', 40, 'black', 'F23419', 155)] },
+  { bin: 'F02B004', shelf: [P('F23421-111', 32, 'banana', 'F23421', 320)] },
   { bin: 'F02B005', shelf: [] },
-  { bin: 'F02B006', shelf: [P('F02-012', 40, 'chicken', 'L2026400', 145)],
+  { bin: 'F02B006', shelf: [P('F23422-111', 40, 'straw', 'F23422', 145)],
     try: 'Last bin — then “Aisle complete”, and look at the dashboard.' },
 ];
 
@@ -118,6 +118,8 @@ const CHECKS = [
 ];
 
 const day = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+/* Dates the way the site's systems write them: MM/DD/YYYY. */
+export const usDate = (iso) => (iso && /^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(5, 7)}/${iso.slice(8, 10)}/${iso.slice(0, 4)}` : (iso || ''));
 const now = () => new Date().toISOString();
 
 const TEMPLATE = fileURLToPath(new URL('../../public/templates/front-royal-bins.csv', import.meta.url));
@@ -136,11 +138,11 @@ function binCsv(codes = BINS.map((b) => b.bin)) {
 }
 
 function reportCsv() {
-  let csv = 'Pallet ID,SKU,Description,Qty,Location,Lot Code,Best Before\n';
+  let csv = 'Pallet ID,SKU,Description,UOM,Qty,Location,Lot Code,Best Before\n';
   for (const b of BINS) {
     for (const p of b.report || b.shelf) {
-      const [sku, desc] = ITEMS[p.item];
-      csv += `${p.id},${sku},"${desc}",${p.qty},${b.bin},${p.lot},${day(p.days)}\n`;
+      const [sku, desc, uom] = ITEMS[p.item];
+      csv += `${p.id},${sku},"${desc}",${uom},${p.qty},${b.bin},${p.lot},${usDate(day(p.days))}\n`;
     }
   }
   return csv;
@@ -191,6 +193,7 @@ const COL = {
   bestBefore: ['best before', 'expiry', 'expiration', 'expiry date', 'bbd'],
   item: ['item', 'sku', 'item number', 'product'],
   note: ['note', 'description', 'desc'],
+  uom: ['uom', 'unit', 'unit of measure', 'case'],
 };
 const csvCell = (v) => (/[",\r\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
 
@@ -213,7 +216,7 @@ export function readPracticeFile(text) {
       if (rawQty === '' || !Number.isFinite(qty) || qty < 0) throw Object.assign(new Error(`row ${line}: "${rawQty}" is not a quantity for pallet ${pallet}`), { status: 400 });
       if (seen.has(pallet)) throw Object.assign(new Error(`row ${line}: pallet ${pallet} is already on row ${seen.get(pallet)}`), { status: 400 });
       seen.set(pallet, line);
-      rows.push({ bin, pallet, qty, lot: pick(r, COL.lot), bestBefore: pick(r, COL.bestBefore), item: pick(r, COL.item), note: pick(r, COL.note) });
+      rows.push({ bin, pallet, qty, lot: pick(r, COL.lot), bestBefore: pick(r, COL.bestBefore), item: pick(r, COL.item), note: pick(r, COL.note), uom: pick(r, COL.uom) });
     } else {
       rows.push({ bin, pallet: '', qty: 0 });
     }
@@ -227,9 +230,9 @@ function buildFromRows(owner, rows, label) {
   db.prepare("UPDATE sessions SET practice = 1, practice_owner = ?, practice_source = 'upload', practice_rows = ?, sandbox = ?, auto_recount = 0 WHERE id = ?")
     .run(owner, JSON.stringify({ label, rows }), SANDBOX_START, s.id);
   importMaster(s.id, 'bins', binCsv([...new Set(rows.map((r) => r.bin))]));
-  let report = 'Pallet ID,SKU,Description,Qty,Location,Lot Code,Best Before\n';
+  let report = 'Pallet ID,SKU,Description,UOM,Qty,Location,Lot Code,Best Before\n';
   for (const r of rows.filter((x) => x.pallet)) {
-    report += [r.pallet, r.item || '', r.note || '', r.qty, r.bin, r.lot || '', r.bestBefore || ''].map(csvCell).join(',') + '\n';
+    report += [r.pallet, r.item || '', r.note || '', r.uom || '', r.qty, r.bin, r.lot || '', r.bestBefore || ''].map(csvCell).join(',') + '\n';
   }
   importMaster(s.id, 'pallets', report);
   const aisles = db.prepare('SELECT aisle FROM aisles WHERE session_id = ? ORDER BY aisle').all(s.id).map((a) => a.aisle);
@@ -351,11 +354,11 @@ export function practiceSheet(sessionId) {
 
   const bins = BINS.map((b) => {
     const shelf = b.shelf.map((p) => {
-      const [sku, desc] = ITEMS[p.item];
+      const [sku, desc, uom] = ITEMS[p.item];
       const rep = reportAt.get(p.id) || null;
       const got = byPallet.get(p.id) || null;
       return {
-        id: p.id, qty: p.qty, sku, desc, lot: p.lot, bestBefore: day(p.days), expired: p.days < 0,
+        id: p.id, qty: p.qty, sku, desc, uom, lot: p.lot, bestBefore: usDate(day(p.days)), expired: p.days < 0,
         report: rep ? { qty: rep.expected_qty, bin: rep.expected_location } : null,
         counted: got ? { qty: got.qty, bin: got.location_code, right: got.location_code === b.bin && Number(got.qty) === p.qty } : null,
       };
@@ -374,12 +377,12 @@ export function practiceSheet(sessionId) {
   if (signedOn) done.add('signon');
   const counted = (pid, bin) => { const l = byPallet.get(pid); return !!l && (!bin || l.location_code === bin); };
   if (lines.some((l) => !l.empty_bin)) done.add('first');
-  if (counted('F01-002', 'F01A002') && counted('F01-003', 'F01A002')) done.add('two');
+  if (counted('F12312-111', 'F01A002') && counted('F12312-112', 'F01A002')) done.add('two');
   if (emptyBins.has('F01A003')) done.add('empty');
-  if (byPallet.get('F01-004') && Number(byPallet.get('F01-004').qty) < 36) done.add('short');
-  if (counted('F01-005', 'F01A005')) done.add('moved');
-  if (counted('F01-099')) done.add('unlisted');
-  if (byPallet.get('F01-006')?.label_issue) done.add('label');
+  if (byPallet.get('F12313-111') && Number(byPallet.get('F12313-111').qty) < 36) done.add('short');
+  if (counted('F12314-111', 'F01A005')) done.add('moved');
+  if (counted('F19999-999')) done.add('unlisted');
+  if (byPallet.get('F12315-111')?.label_issue) done.add('label');
   if (lines.some((l) => l.location_code === 'F01B003' && l.bin_label_issue)) done.add('binLabel');
   if (emptyBins.has('F01B006')) done.add('missing');
   if (db.prepare("SELECT 1 FROM assignments WHERE session_id = ? AND aisle = 'F01' AND status = 'done'").get(id)) done.add('nextAisle');
@@ -443,7 +446,7 @@ function uploadedSheet(s, lines, byPallet, emptyBins, countedBins) {
     const shelf = (at.get(l.code) || []).map((p) => {
       const got = byPallet.get(p.pallet_id) || null;
       return {
-        id: p.pallet_id, qty: p.expected_qty, sku: p.sku || '', desc: p.description || '', lot: p.lot || '', bestBefore: p.expiry || '',
+        id: p.pallet_id, qty: p.expected_qty, sku: p.sku || '', desc: p.description || '', uom: p.uom || '', lot: p.lot || '', bestBefore: usDate(p.expiry || ''),
         expired: !!p.expiry && p.expiry < new Date().toISOString().slice(0, 10),
         report: { qty: p.expected_qty, bin: p.expected_location },
         counted: got ? { qty: got.qty, bin: got.location_code, right: got.location_code === l.code && Number(got.qty) === Number(p.expected_qty) } : null,

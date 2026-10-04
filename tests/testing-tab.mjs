@@ -49,10 +49,10 @@ check('Opening it again is the same practice count, not a second one', again.ses
 
 const bin = (code) => made.bins.find((b) => b.bin === code);
 const shelf = (id) => made.bins.flatMap((b) => b.shelf).find((p) => p.id === id);
-check('The report is wrong on purpose: F01-004 says 36, the shelf holds 32', shelf('F01-004').report.qty === 36 && shelf('F01-004').qty === 32);
-check('…F01-005 is on the report in F01A006, and sitting in F01A005', shelf('F01-005').report.bin === 'F01A006' && bin('F01A005').shelf[0].id === 'F01-005');
-check('…F01-099 is on the shelf and not on the report', shelf('F01-099').report === null);
-check('…and F01-013 is on the report and not on the shelf', bin('F01B006').missing.some((m) => m.id === 'F01-013' && !m.foundIn));
+check('The report is wrong on purpose: F12313-111 says 36, the shelf holds 32', shelf('F12313-111').report.qty === 36 && shelf('F12313-111').qty === 32);
+check('…F12314-111 is on the report in F01A006, and sitting in F01A005', shelf('F12314-111').report.bin === 'F01A006' && bin('F01A005').shelf[0].id === 'F12314-111');
+check('…F19999-999 is on the shelf and not on the report', shelf('F19999-999').report === null);
+check('…and F12321-111 is on the report and not on the shelf', bin('F01B006').missing.some((m) => m.id === 'F12321-111' && !m.foundIn));
 
 const otherTok = await login('Marcus Obi');
 const O = { ...hdr, authorization: 'Bearer ' + otherTok };
@@ -102,7 +102,8 @@ await page.waitForSelector('#shelves table.shelf');
 check('A first-time visitor sees how the page works, open at the top', await page.isVisible('#guideBody') && /Before you start/.test(await page.textContent('#guideBody')));
 check('…one step at a time, starting on step 1', /Step 1 of 6/.test(await page.textContent('#stepN')) && /Before you start/.test(await page.textContent('#stepTitle')),
   clean(await page.textContent('#stepN')) + ' ' + clean(await page.textContent('#stepTitle')));
-check('…with the dashboard on this count at the top of the page', await page.isVisible('#dashFrame') && /\/admin\?embed=\d+/.test(await page.getAttribute('#dashFrame', 'src')), await page.getAttribute('#dashFrame', 'src'));
+check('…with the dashboard on this count at the top of the page, folded away for a first-timer', await page.isHidden('#dashFrame') && /Show the dashboard/.test(await page.textContent('#btnDashHide'))
+  && /\/admin\?embed=\d+/.test(await page.getAttribute('#dashFrame', 'src')), await page.getAttribute('#dashFrame', 'src'));
 await page.click('#stepNext');
 check('Next reads ahead to step 2, and says so', /Step 2 of 6/.test(await page.textContent('#stepN')) && /look ahead/.test(await page.textContent('#stepState')), clean(await page.textContent('#stepState')));
 await page.click('#stepBack');
@@ -193,11 +194,11 @@ await atPalletStep();
 await wait(900);
 check('Signing on moves the guide on by itself, to counting the first pallet', /Step 3 of 6/.test(await page.textContent('#stepN')) && /pallet → quantity → bin/.test(await page.textContent('#stepText')),
   clean(await page.textContent('#stepN')) + ' ' + clean(await page.textContent('#stepTitle')));
-check('At the pallet prompt the tip points at the first pallet on the shelf', /Click F01-001/.test(await page.textContent('#coachText')) && await chipFor('F01-001').evaluate((b) => b.classList.contains('spot')), clean(await page.textContent('#coachText')));
-await click(chipFor('F01-001'));
+check('At the pallet prompt the tip points at the first pallet on the shelf', /Click F12311-111/.test(await page.textContent('#coachText')) && await chipFor('F12311-111').evaluate((b) => b.classList.contains('spot')), clean(await page.textContent('#coachText')));
+await click(chipFor('F12311-111'));
 await wait(900);
-check('…then the quantity', /quantity/.test(await page.textContent('#coachText')) && await qtyChip('F01-001').evaluate((b) => b.classList.contains('spot')), clean(await page.textContent('#coachText')));
-await click(qtyChip('F01-001'));
+check('…then the quantity', /quantity/.test(await page.textContent('#coachText')) && await qtyChip('F12311-111').evaluate((b) => b.classList.contains('spot')), clean(await page.textContent('#coachText')));
+await click(qtyChip('F12311-111'));
 await wait(900);
 check('…then the bin', /click F01A001/i.test(await page.textContent('#coachText')), clean(await page.textContent('#coachText')));
 await click(binChip('F01A001'));
@@ -207,18 +208,18 @@ await wait(400);
 check('"I\'ve got it" hides the tips, and the button brings them back', await page.isHidden('#coach') && /Show tips/.test(await page.textContent('#btnTips')));
 await page.click('#btnTips');
 await wait(900);
-check('…pointing at the next pallet, not the first again', /F01-002/.test(await page.textContent('#coachText')), clean(await page.textContent('#coachText')));
+check('…pointing at the next pallet, not the first again', /F12312-111/.test(await page.textContent('#coachText')), clean(await page.textContent('#coachText')));
 await page.click('#btnTips');
 await wait(300);
 
 await atPalletStep();
-await count('F01-002', 'F01A002');
+await count('F12312-111', 'F01A002');
 await atPalletStep();
-await count('F01-003', 'F01A002');
+await count('F12312-112', 'F01A002');
 check('Two pallets in one bin', await waitCheck('two'));
 if (false) {
 check('A pallet, quantity and bin clicked on the sheet become a counted line', await waitCheck('first'));
-const f1 = clean(await rowOf('F01-001').locator('.state').textContent());
+const f1 = clean(await rowOf('F12311-111').locator('.state').textContent());
 check('…and the sheet shows it counted, right', f1 === '✓ 40', f1);
 
 }
@@ -231,15 +232,15 @@ await skipComments();
 check('An empty bin, recorded with the gun\'s own button', await waitCheck('empty'));
 
 await atPalletStep();
-await count('F01-004', 'F01A004');
+await count('F12313-111', 'F01A004');
 check('A pallet short of the report', await waitCheck('short'));
-const f4 = clean(await rowOf('F01-004').locator('.rep').first().textContent());
+const f4 = clean(await rowOf('F12313-111').locator('.rep').first().textContent());
 check('…the sheet said what the report claims', /report says 36/.test(f4), f4);
 
-/* The report has F01-005 one bay along: the gun says so and asks. */
+/* The report has F12314-111 one bay along: the gun says so and asks. */
 await atPalletStep();
-await click(chipFor('F01-005'));
-await click(qtyChip('F01-005'));
+await click(chipFor('F12314-111'));
+await click(qtyChip('F12314-111'));
 await click(binChip('F01A005'));
 if ((await screenOf()) === 'scrOverride') {
   await gun.selectOption('#fReason', { index: 1 });
@@ -249,34 +250,34 @@ if ((await screenOf()) === 'scrOverride') {
 await skipComments();
 check('A pallet found in the wrong bin', await waitCheck('moved'));
 
-/* F01-099 is not on the report at all: the gun wants a reason. */
+/* F19999-999 is not on the report at all: the gun wants a reason. */
 await atPalletStep();
-await click(chipFor('F01-099'));
+await click(chipFor('F19999-999'));
 check('A pallet that is not on the report stops the gun and asks: count it anyway?', (await screenOf()) === 'scrOverride'
   && await gun.isVisible('#btnOvYes'), await gunText());
 await gun.click('#btnOvYes');
 await wait(300);
-await click(qtyChip('F01-099'));
+await click(qtyChip('F19999-999'));
 await click(binChip('F01A006'));
 await skipComments();
 check('…and with a reason it is counted', await waitCheck('unlisted'));
 
 /* The torn label: the gun's own "will not scan" path, then the ID typed. */
 await atPalletStep();
-check('The torn label is marked on the sheet', await chipFor('F01-006').evaluate((b) => b.classList.contains('torn')));
+check('The torn label is marked on the sheet', await chipFor('F12315-111').evaluate((b) => b.classList.contains('torn')));
 await gun.click('#btnNoScan');
 await gun.click('#btnNoScanType');
 await wait(250);
-await count('F01-006', 'F01B001');
+await count('F12315-111', 'F01B001');
 check('A pallet whose label will not scan', await waitCheck('label'));
 
 await atPalletStep();
-await count('F01-007', 'F01B002');
+await count('F12316-111', 'F01B002');
 
 /* The rack label nobody can read: the gun offers the bin it expects. */
 await atPalletStep();
-await click(chipFor('F01-008'));
-await click(qtyChip('F01-008'));
+await click(chipFor('F12317-111'));
+await click(qtyChip('F12317-111'));
 await gun.click('#btnNoScan');
 await wait(200);
 const offer = clean(await gun.textContent('#btnNoScanNone'));
@@ -290,7 +291,7 @@ if ((await screenOf()) === 'scrOverride') { await gun.selectOption('#fReason', {
 await skipComments();
 check('A bin whose rack label will not scan', await waitCheck('binLabel'), offer);
 
-for (const [p, b] of [['F01-009', 'F01B004'], ['F01-010', 'F01B004'], ['F01-011', 'F01B004'], ['F01-012', 'F01B005']]) {
+for (const [p, b] of [['F12318-111', 'F01B004'], ['F12318-112', 'F01B004'], ['F12318-113', 'F01B004'], ['F12319-111', 'F01B005']]) {
   await atPalletStep();
   await count(p, b);
 }
@@ -329,6 +330,7 @@ check('Every thing to try is ticked off', sheet.checklist.every((c) => c.done), 
 check('The meter reads twelve of twelve', clean(await page.textContent('#checkCount')) === '12 of 12 done');
 check('…and the guide is on its last step: the office side', /Step 6 of 6/.test(await page.textContent('#stepN')) && (await page.$$('#stepDots button.done')).length === 5,
   clean(await page.textContent('#stepN')) + ' ' + (await page.$$('#stepDots button.done')).length + ' done');
+check('…which opens the dashboard up by itself', await page.isVisible('#dashFrame'));
 await page.click('#stepGo');
 await wait(600);
 check('"Show me the dashboard" ticks the last step off', /You have seen the lot/.test(await page.textContent('#stepTitle')), clean(await page.textContent('#stepTitle')));
@@ -429,7 +431,7 @@ await page.setInputFiles('#fPracticeFile', { name: 'dock-test.csv', mimeType: 't
 await page.click('#btnPracticeUpload');
 for (let t = 0; t < 10000; t += 300) { if (/Loaded/.test(await page.textContent('#uploadMsg'))) break; await wait(300); }
 check('Uploading your own Bin / Pallet / Qty file starts a run on it', /Loaded 3 pallets in 3 bins from dock-test.csv/.test(clean(await page.textContent('#uploadMsg'))), clean(await page.textContent('#uploadMsg')));
-check('…the sheet shows your pallets, not the built-in ones', await chipFor('ZP-1').isVisible() && await page.locator('#shelves .scan', { hasText: /^F01-001$/ }).count() === 0);
+check('…the sheet shows your pallets, not the built-in ones', await chipFor('ZP-1').isVisible() && await page.locator('#shelves .scan', { hasText: /^F12311-111$/ }).count() === 0);
 check('…and says it is testing on your file', /dock-test/.test(await page.textContent('#dataSource')));
 const ownSheet = await get('/api/admin/practice');
 check('…with a checklist for a plain count: every pallet, the empty bins, an aisle, an SOS', ownSheet.source === 'upload'
@@ -531,7 +533,7 @@ for (let t = 0; t < 8000; t += 400) { if ((await page.$$('#shelves .scan.lot')).
 check('With lot codes on, the sheet grows lot chips to scan', (await page.$$('#shelves .scan.lot')).length >= 20);
 /* a short pallet, counted with the gun's own token, is an adjustment waiting */
 await gunFetch(`/api/sessions/${(await get('/api/admin/practice')).session.id}/counts`,
-  [{ clientId: 'feat-short-1', palletId: 'F01-004', qty: 30, location: 'F01A004', team: '99', deviceId: 'TEST', lot: 'L1' }]);
+  [{ clientId: 'feat-short-1', palletId: 'F12313-111', qty: 30, location: 'F01A004', team: '99', deviceId: 'TEST', lot: 'F12313' }]);
 const grown = await get('/api/admin/practice');
 check('…and the things to try grow with the features that are on', ['lot', 'approve', 'second'].every((k) => grown.checklist.some((c) => c.key === k)), grown.checklist.map((c) => c.key).join(','));
 check('…with the counts the tips speak up on: an adjustment waiting, from the short pallet', grown.extras.pendingApprovals >= 1, JSON.stringify(grown.extras));

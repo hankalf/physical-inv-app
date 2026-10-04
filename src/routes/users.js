@@ -1,4 +1,5 @@
 import { db, norm } from '../db.js';
+import { parseAccess, cleanAccess } from './access.js';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 
 /*
@@ -31,6 +32,7 @@ export const countAdmins = () => db.prepare("SELECT COUNT(*) n FROM users WHERE 
 
 const shape = (u) => ({
   username: u.username, name: u.name, role: u.role, active: !!u.active,
+  access: u.role === 'admin' ? null : parseAccess(u.access),
   created_at: u.created_at, last_login: u.last_login, created_by: u.created_by,
   mustChange: !!u.must_change,
 });
@@ -50,7 +52,7 @@ export const getUser = (username) => db.prepare('SELECT * FROM users WHERE usern
  * invent, somebody else's real password. The starter is returned once, here,
  * and is not recoverable afterwards.
  */
-export function createUser({ username, name, password, role = 'supervisor', mustChange }, createdBy = '') {
+export function createUser({ username, name, password, role = 'supervisor', mustChange, access }, createdBy = '') {
   const u = norm(username).replace(/\s+/g, '');
   if (!u) throw Object.assign(new Error('a username is required'), { status: 400 });
   if (!/^[A-Z0-9._-]{2,32}$/.test(u)) throw Object.assign(new Error('usernames are 2-32 characters: letters, digits, . _ -'), { status: 400 });
@@ -59,13 +61,14 @@ export function createUser({ username, name, password, role = 'supervisor', must
   if (pw.length < 8) throw Object.assign(new Error('the password must be at least 8 characters'), { status: 400 });
   if (getUser(u)) throw Object.assign(new Error(`${u} already has an account`), { status: 409 });
   const force = mustChange === undefined ? !!starter : !!mustChange;
-  db.prepare('INSERT INTO users (username, name, password_hash, role, active, created_at, created_by, must_change) VALUES (?, ?, ?, ?, 1, ?, ?, ?)')
+  const list = cleanAccess(access);
+  db.prepare('INSERT INTO users (username, name, password_hash, role, active, created_at, created_by, must_change, access) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)')
     .run(u, String(name || u).trim(), hash(pw), role === 'admin' ? 'admin' : 'supervisor',
-         new Date().toISOString(), String(createdBy || ''), force ? 1 : 0);
+         new Date().toISOString(), String(createdBy || ''), force ? 1 : 0, list ? JSON.stringify(list) : null);
   return { ...shape(getUser(u)), starterPassword: starter || undefined };
 }
 
-export function updateUser(username, { name, role, active, password, mustChange }) {
+export function updateUser(username, { name, role, active, password, mustChange, access }) {
   const existing = getUser(username);
   if (!existing) throw Object.assign(new Error('no such account'), { status: 404 });
   // never leave the place with no way in
@@ -77,12 +80,14 @@ export function updateUser(username, { name, role, active, password, mustChange 
   const starter = password === '' ? starterPassword() : '';
   const pw = starter || password;
   if (pw && String(pw).length < 8) throw Object.assign(new Error('the password must be at least 8 characters'), { status: 400 });
-  db.prepare('UPDATE users SET name = ?, role = ?, active = ?, password_hash = ?, must_change = ? WHERE username = ?').run(
+  const list = cleanAccess(access);
+  db.prepare('UPDATE users SET name = ?, role = ?, active = ?, password_hash = ?, must_change = ?, access = ? WHERE username = ?').run(
     name == null ? existing.name : String(name).trim(),
     role == null ? existing.role : (role === 'admin' ? 'admin' : 'supervisor'),
     active == null ? existing.active : (active ? 1 : 0),
     pw ? hash(pw) : existing.password_hash,
     mustChange == null ? (pw ? 1 : existing.must_change) : (mustChange ? 1 : 0),
+    list === undefined ? existing.access : (list ? JSON.stringify(list) : null),
     existing.username
   );
   return { ...shape(getUser(existing.username)), starterPassword: starter || undefined };

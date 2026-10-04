@@ -1532,9 +1532,28 @@
 
   /* ------------------------------------------------------------ boot */
   async function loadLayouts() { layouts = await apiJson('/api/admin/layouts'); }
+  /* The buttons a login may not press are switched off and say why; the
+     server refuses the rest. */
+  function applyAccess() {
+    const off = (id, key, what) => {
+      const b = $(id);
+      if (!b) return;
+      const ok = api.can(key);
+      b.disabled = !ok;
+      b.title = ok ? '' : `Not able to: this login may not ${what}. An admin can allow it under Settings → Advanced → Supervisor logins.`;
+    };
+    off('btnSendMsg', 'messages', 'message the floor');
+    off('btnAssign', 'assign', 'queue aisles');
+    off('btnAutoPlan', 'assign', 'queue aisles');
+    off('btnApprove', 'approve', 'approve adjustments');
+    off('btnReject', 'approve', 'approve adjustments');
+    off('btnSaveNote', 'assign', 'change the board note');
+    off('btnExportAll', 'export', 'download exports');
+  }
   document.addEventListener('auth', (e) => {
     if (!e.detail) return show('login');
     show('main');
+    applyAccess();
     (async () => { await loadLayouts(); await loadSessions(); })().catch(() => show('login'));
   });
   document.addEventListener('DOMContentLoaded', () => { api.start().catch(() => show('login')); });

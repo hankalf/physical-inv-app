@@ -54,6 +54,7 @@ import { countSheet, scannerCards, barcodeBook } from './routes/printing.js';
 import {
   countUsers, countAdmins, listUsers, createUser, updateUser, deleteUser, authenticate, changeOwnPassword, getUser, ensureSuperadmin,
 } from './routes/users.js';
+import { routeNeed, allowed, parseAccess, ACCESS } from './routes/access.js';
 import { listFormats, saveFormat, buildExport, availableFields } from './routes/erp.js';
 
 // people.js parses uploaded rosters with the shared CSV helpers
@@ -233,7 +234,17 @@ function currentUser(req, url) {
   let token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
   // a count sheet is opened in a new tab, which cannot carry a header
   if (!token && url && /\/print\//.test(url.pathname)) token = url.searchParams.get('t') || '';
-  return adminTokens.get(token) || null;
+  const t = adminTokens.get(token);
+  if (!t) return null;
+  /* The role and the access list come from the account every time, not from
+     the sign-in: a change an admin makes applies to the next request, and a
+     deactivated account is out at once. */
+  if (t.username) {
+    const acct = getUser(t.username);
+    if (!acct || !acct.active) return null;
+    return { ...t, role: acct.role, access: acct.role === 'admin' ? null : parseAccess(acct.access) };
+  }
+  return { ...t, access: null };
 }
 
 function requireAdmin(req, url) {
@@ -589,6 +600,18 @@ async function handleAdmin(req, res, url, m) {
   // the address supervisors reach this on, for the link in a Teams card the timer sends
   lastOrigin = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host || 'localhost'}`;
 
+  /* Who may do what, read fresh from the account every time so a change an
+     admin makes applies to the next request, not the next sign-in. */
+  const whoNow = currentUser(req, url);
+  const requireAccess = (key) => {
+    if (allowed(whoNow, key)) return;
+    throw httpError(403, key === 'admin' ? 'only an admin can change the site\'s settings' : `this login is not able to do that (${key}) - an admin can give it under Settings → Advanced → Supervisor logins`);
+  };
+  {
+    const need = routeNeed(p, method);
+    if (need) requireAccess(need);
+  }
+
   // --- team clocks and stopped-scanning alerts
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/clocks$/)) && method === 'GET') {
     const s = getSession(m[1]);
@@ -782,6 +805,7 @@ async function handleAdmin(req, res, url, m) {
 
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/settings$/)) && method === 'POST') {
     const body = await readJson(req);
+    requireAccess(Object.keys(body).every((k) => k === 'layout') ? 'assign' : 'admin');
     const s = getSession(m[1]);
     if (!s) throw httpError(404, 'session not found');
     const mode = ['off', 'warn', 'strict'].includes(body.palletMode) ? body.palletMode : s.pallet_mode;
@@ -889,7 +913,7 @@ async function handleAdmin(req, res, url, m) {
     if (!who) throw httpError(401, 'unauthorized');
     const account = who.username ? getUser(who.username) : null;
     return sendJson(req, res, 200, {
-      ...who, mustChange: !!(account && account.must_change),
+      ...who, role: whoNow.role, access: whoNow.access, accessKeys: ACCESS, mustChange: !!(account && account.must_change),
       accounts: countUsers(), admins: countAdmins(),
       sharedLogin: sharedLoginOn(), sharedLoginHeldOpen: sharedLoginHeldOpen(),
     });

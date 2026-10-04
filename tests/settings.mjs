@@ -74,8 +74,10 @@ const nope = await fetch(`${BASE}/api/admin/users`, { headers: SAM });
 check('A supervisor cannot even list the accounts', nope.status === 403 && /only an admin/.test((await j(nope)).error), String(nope.status));
 const nope2 = await fetch(`${BASE}/api/admin/users/DANA`, { method: 'DELETE', headers: SAM });
 check('A supervisor cannot delete an account', nope2.status === 403, String(nope2.status));
-const yes = await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: SAM, body: JSON.stringify({ name: 'supervisor session' }) });
-check('A supervisor CAN do the actual work — create a count session', yes.ok, String(yes.status));
+const yes = await fetch(`${BASE}/api/admin/sessions`, { headers: SAM });
+check('A supervisor CAN do the actual work — see the counts, work the dashboard', yes.ok, String(yes.status));
+const notSettings = await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: SAM, body: JSON.stringify({ name: 'supervisor session' }) });
+check('…but making a count is Settings, which is for admins only', notSettings.status === 403 && /admin/.test((await j(notSettings)).error), String(notSettings.status));
 
 /* ---------------- your own password ---------------- */
 const badCurrent = await fetch(`${BASE}/api/admin/me/password`, { method: 'POST', headers: SAM, body: JSON.stringify({ current: 'nope', next: 'new-password-1' }) });
@@ -91,7 +93,10 @@ check('The last admin cannot demote themselves out of existence', lastAdmin.stat
 await fetch(`${BASE}/api/admin/users/SAM`, { method: 'POST', headers: bearer(DA.token), body: JSON.stringify({ role: 'admin' }) });
 const nowFine = await fetch(`${BASE}/api/admin/users/DANA`, { method: 'POST', headers: bearer(DA.token), body: JSON.stringify({ role: 'supervisor' }) });
 check('With a second admin in place, the first can step down', nowFine.ok, String(nowFine.status));
-await fetch(`${BASE}/api/admin/users/DANA`, { method: 'POST', headers: bearer(DA.token), body: JSON.stringify({ role: 'admin' }) });
+// roles are read live, so the demoted Dana cannot promote herself back: Sam, now an admin, does it
+const back = await fetch(`${BASE}/api/admin/users/DANA`, { method: 'POST', headers: SAM, body: JSON.stringify({ role: 'admin' }) });
+check('A change of role bites at once — the demoted admin cannot promote herself back', (await fetch(`${BASE}/api/admin/users/DANA`, { method: 'POST', headers: bearer(DA.token), body: JSON.stringify({ role: 'admin' }) })).status === 403 || back.ok);
+check('…but the other admin can', back.ok, String(back.status));
 
 const off = await fetch(`${BASE}/api/admin/users/SAM`, { method: 'POST', headers: A, body: JSON.stringify({ active: false }) });
 check('An account can be deactivated', off.ok && (await j(off)).active === false, '');

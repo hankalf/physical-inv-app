@@ -229,6 +229,18 @@
      click takes you to a different tab. */
   const isOpen = (href) => href === here;
 
+  /* What this login may open. Nothing is known before sign-in, so every tab
+     shows; once /me has answered, the ones not on the list go. */
+  const PAGE_KEY = { '/admin': 'dashboard', '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/teams': 'teams', '/settings': 'admin', '/testing': 'testing' };
+  api.can = (key) => {
+    const me = api.me;
+    if (!me) return true;
+    if (me.role === 'admin') return true;
+    if (key === 'admin') return false;
+    return !Array.isArray(me.access) || me.access.includes(key);
+  };
+  const mayOpen = (href) => api.can(PAGE_KEY[href] || '');
+
   function renderTabs() {
     const bar = document.getElementById('navTabs');
     if (!bar) return;
@@ -236,6 +248,7 @@
     const currentSub = (location.hash || '').replace('#', '') || (() => { try { return sessionStorage.getItem('sub:' + here + (EMBED ? ':embed' : '')); } catch { return ''; } })();
     let lastSection = '';
     for (const [href, label, ico, section] of TABS) {
+      if (!mayOpen(href)) continue;
       if (section !== lastSection) {
         const h = document.createElement('div');
         h.className = 'navsection';
@@ -326,9 +339,11 @@
     api.me = me;
     sessionStorage.setItem('admToken', me.token);
     if (me.mustChange) justTyped = password;      // so the next step need not ask again
+    // the full picture - what this login may use - comes from /me
+    try { api.me = { ...me, ...(await api.json('/api/admin/me')) }; } catch { /* the sign-in answer will do */ }
     renderTabs();
     announce();
-    return me;
+    return api.me;
   }
   api.signIn = signIn;
 
@@ -337,8 +352,32 @@
      real one. The panel is built here so every page has it without markup. */
   let justTyped = '';
 
+  /* A page this login may not open: over to the first one it may, or a plain
+     word when there is none. The server refuses the data either way. */
+  function keepOut() {
+    if (!api.me || mayOpen(here)) return false;
+    const next = TABS.map(([h]) => h).find((h) => mayOpen(h));
+    if (next) { location.replace(next); return true; }
+    const main = document.querySelector('main');
+    if (main) {
+      for (const sec of main.querySelectorAll('.screen')) sec.classList.remove('active');
+      let box = document.getElementById('noAccess');
+      if (!box) {
+        box = document.createElement('section');
+        box.id = 'noAccess';
+        box.className = 'screen active';
+        box.innerHTML = '<div class="card"><h2>Nothing here for this login</h2><div class="hint">This login has not been given any page to use. An admin can give it some under Settings → Advanced → Supervisor logins.</div></div>';
+        main.appendChild(box);
+      }
+      box.classList.add('active');
+    }
+    return true;
+  }
+
   function announce() {
+    renderTabs();
     if (api.me && api.me.mustChange) return setPassword();
+    if (keepOut()) return;
     const box = setPasswordPanel();
     box.hidden = true;
     box.classList.remove('active');     // so the DOM does not claim a screen that is not showing
@@ -756,6 +795,7 @@
   function placeHits(q) {
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
     return PLACES
+      .filter((pl) => mayOpen(pl.page))
       .map((pl) => {
         const hay = (pl.title + ' ' + pl.words).toLowerCase();
         const score = words.reduce((n, w) => n + (hay.includes(w) ? (pl.title.toLowerCase().includes(w) ? 2 : 1) : 0), 0);
@@ -828,6 +868,7 @@
    * On this page it is a sub-tab away; on another it is a page load, so what to
    * do on arrival is left in the tab's own storage and picked up on the way in.
    */
+  const mayGo = (row) => !row.goto || !row.goto.page || mayOpen(row.goto.page);
   function goSearch(row) {
     if (!row || !row.goto) return;
     const g = row.goto;

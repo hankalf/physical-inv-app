@@ -44,6 +44,10 @@
   .gun .said { min-height: 20px; margin-top: 9px; font-size: 12.5px; color: #aeb7c4; text-align: center; }
   .gun .said b { color: #fff; font-family: ui-monospace, Menlo, Consolas, monospace; }
   .rig .tools { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+  /* what the sheet is still waiting to hear back about */
+  .sync { margin-top: 10px; font-size: 12.5px; text-align: center; padding: 6px 10px; border-radius: 8px; line-height: 1.4; }
+  .sync.ok { color: var(--muted); }
+  .sync.wait { color: var(--warn-text, var(--warn)); background: var(--warn-ink, rgba(240,180,41,.12)); border: 1px solid rgba(240,180,41,.35); }
 
   /* the sheet */
   .scan {
@@ -241,6 +245,7 @@
             <button class="sm" id="btnExportMine" title="One Excel workbook of this run and every earlier run of yours">Export my runs</button>
             <button class="sm" id="btnTips">Hide tips</button>
           </div>
+          <div class="sync ok" id="syncNote">Sheet up to date with the server</div>
           <div class="feedback" id="rigMsg"></div>
         </div>
 
