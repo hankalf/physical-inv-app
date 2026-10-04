@@ -492,19 +492,15 @@ check('Back to the site\'s settings does that, keeping the 5-second comments ste
 
 /* ---------------- the features that ship turned off ---------------- */
 const optRow = (k) => page.locator(`#optList .opt[data-key="${k}"]`);
-check('The Testing tab lists the features that ship turned off', await optRow('askLot').isVisible() && await optRow('requireApproval').isVisible() && await optRow('trackAbc').isVisible());
-check('…each off to start with', !(await optRow('askLot').locator('input').isChecked()) && !(await optRow('trackAbc').locator('input').isChecked()));
+check('The Testing tab lists the features that ship turned off', await optRow('askLot').isVisible() && await optRow('requireApproval').isVisible() && await optRow('palletMode').isVisible() && (await optRow('trackAbc').count()) === 0);
+check('…each off to start with', !(await optRow('askLot').locator('input').isChecked()) && !(await optRow('requireApproval').locator('input').isChecked()));
 check('…saying whether the practice data has what it needs', /✓ 25 of 25 pallets have a lot code/.test(await optRow('askLot').textContent()), clean(await optRow('askLot').textContent()));
-check('…and how to get it when it does not', /No ABC classes yet/.test(await optRow('trackAbc').textContent()) && await optRow('trackAbc').locator('button').isVisible());
 await optRow('askLot').locator('input').check();
 await wait(800);
 let opts = (await get('/api/admin/practice')).options;
 check('Switching one on changes your practice count', opts.values.askLot === true);
 check('…and nothing else: the live count is untouched', !(await get('/api/admin/sessions')).find((x) => x.id === live.id).ask_lot);
 check('…nor anybody else\'s practice count', !(await get('/api/admin/practice', O)).options.values.askLot);
-await optRow('trackAbc').locator('button').click();
-await wait(800);
-check('"Work out ABC classes" fills them in', /✓ 25 of 25 pallets have an ABC class/.test(await optRow('trackAbc').textContent()), clean(await optRow('trackAbc').textContent()));
 await optRow('requireApproval').locator('input').check();
 await wait(800);
 check('Approvals show their thresholds once switched on', await optRow('requireApproval').locator('input[type=number]').count() === 2);
@@ -513,7 +509,7 @@ await wait(800);
 await optRow('autoRecount').locator('input').check();
 await wait(800);
 opts = (await get('/api/admin/practice')).options;
-check('The pallet check can be tried strict, and second counts switched on', opts.values.palletMode === 'strict' && opts.values.requireApproval && opts.values.trackAbc && opts.values.autoRecount, JSON.stringify(opts.values));
+check('The pallet check can be tried strict, and second counts switched on', opts.values.palletMode === 'strict' && opts.values.requireApproval && opts.values.autoRecount, JSON.stringify(opts.values));
 // the gun takes the lot question between pallets
 gun = await gunFrame();
 let lotAsked = false;

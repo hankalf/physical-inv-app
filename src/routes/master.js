@@ -3,7 +3,6 @@ import { parseBinCode, normLevels } from '../util/bincode.js';
 import { autoActivate } from './assignments.js';
 import { loadLayout, classifyByRules } from '../util/layouts.js';
 import { parseRecords, pick } from '../util/csv.js';
-import { normClass } from './accuracy.js';
 
 const LOCATION_ALIASES = ['location', 'loc', 'bin', 'binlocation', 'locationcode', 'slot', 'code', 'warehouselocation', 'binlocationcode'];
 const AISLE_ALIASES = ['aisle', 'row', 'aisleno', 'aislenumber'];
@@ -19,6 +18,8 @@ const LOT_ALIASES = ['lot', 'lotcode', 'lotno', 'lotnumber', 'batch', 'batchcode
 const EXPIRY_ALIASES = ['expiry', 'expirydate', 'expiration', 'expirationdate', 'expires', 'bestbefore', 'bestbeforedate', 'useby', 'usebydate', 'shelflifedate'];
 /* The class an ERP calls A/B/C, and the dozen things it calls the column. */
 const ABC_ALIASES = ['abc', 'abcclass', 'abccode', 'class', 'itemclass', 'velocity', 'velocitycode', 'movement', 'movementclass', 'category'];
+// a class column on a report is still read into its column, though nothing reports on it any more
+const normClass = (v) => { const c = String(v == null ? '' : v).trim().toUpperCase(); return ['A', 'B', 'C'].includes(c[0]) ? c[0] : ''; };
 const LASTCOUNT_ALIASES = ['lastphysinvtdate', 'lastphysicalinventorydate', 'lastcounted', 'lastcountdate', 'lastinventorydate', 'lastcount'];
 
 /**

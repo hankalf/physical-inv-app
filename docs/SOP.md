@@ -197,7 +197,7 @@ reliable than counting aisles off by hand.
 
 ### Step 8 — Register the scanners
 
-**Settings → Scanners → Scanner setup.**
+**Settings → Scanner screen → Scanner setup.**
 
 Each handheld gets its own link. Opening that link once is what signs the scanner in;
 after that the server accepts counts from it and stamps its name on every line.
@@ -210,7 +210,7 @@ after that the server accepts counts from it and stamps its name on every line.
 
 ![](images/settings-scanners.png)
 
-*Settings &rarr; Scanners. One row per handheld: its link, when it was last seen, Reset link and Remove.*
+*Settings &rarr; Scanner screen. One row per handheld: its link, when it was last seen, Reset link and Remove.*
 
 **On each handheld, once:**
 
@@ -256,7 +256,7 @@ scanner is wiped and worth asking about otherwise.
 
 ### Step 8a — A barcode test book, to practise on
 
-**Settings → Scanners → Barcode test book.** A page of real **Code 128** labels to print, cut up
+**Settings → Getting started → Barcode test book.** A page of real **Code 128** labels to print, cut up
 and scan — the same symbology the racking uses, so a gun that reads the book reads the rack.
 Use it to train a crew at a desk, to check a new scanner reads properly, or to dry-run a count
 before the real one.
@@ -294,7 +294,7 @@ whatever you want to practise on.*
 
 ### Step 8b — The SOS list, and the Teams channel
 
-**Settings → Scanners → SOS from a scanner.**
+**Settings → Scanner screen → SOS from a scanner.**
 
 Every gun has an SOS button. What it offers when pressed is this list — write it in the words your
 floor uses, because the person pressing it is in a hurry. It ships with what usually goes wrong in a
@@ -386,18 +386,17 @@ loaded, the test scanner registered and signed in, team 99 with aisles, the gun 
 what to do if not. It reads **ready to test** when there is nothing to do.
 
 **Your own test pallets.** Upload a sheet with **Bin**, **Pallet** and **Qty** (and, if you have them,
-**Note**, **Lot**, **Best Before**, **ABC**) and the practice run is built from it instead. It is the
+**Note**, **Lot**, **Best Before**) and the practice run is built from it instead. It is the
 same sheet as the barcode test book (step 8a): print the book, upload the same file here, and scan
 the paper. A row with a bin and no pallet is an empty bin. The file is checked row by row and told
 back plainly (*row 7: "ten" is not a quantity*). **Back to the built-in test data** returns to the
 shipped aisles.
 
 **Try the features that ship turned off.** Lot codes, best-before dates, adjustments needing
-approval (with its thresholds), ABC classes and accuracy, the pallet check (allow override / no
+approval (with its thresholds), the pallet check (allow override / no
 overrides / accept any), automatic second counts, the comments step — each can be switched on for
 **your practice count only**; nothing else changes. Each one says whether the practice data has what
-it needs (*✓ 25 of 25 pallets have a lot code*) and, when it does not, what to add to your file — or,
-for ABC, a button to work the classes out from the quantities. Settings that apply to every scanner
+it needs (*✓ 25 of 25 pallets have a lot code*) and, when it does not, what to add to your file. Settings that apply to every scanner
 (the Teams channel, the stopped-scanning limit, the scanner screen) are not changed from here.
 
 **Start over** begins a new practice run. The one you were on is kept under **Your earlier runs**
@@ -475,7 +474,7 @@ Press **Save**. Scanners pick the change up within about half a minute, between 
 
 ### Step 10 — Set the one-tap reasons
 
-**Settings → Scanners → What the scanners offer.**
+**Settings → Scanner screen → What the scanners offer.**
 
 Counters wearing gloves in a freezer will not type. These are the buttons they tap
 instead, and the reasons a site needs are its own — "Blocked by a trailer" means
@@ -492,7 +491,7 @@ Press **Save**; again, scanners pick it up within about half a minute.
 
 ![](images/settings-reason-codes.png)
 
-*Settings &rarr; Scanners &rarr; What the scanners offer. These are the buttons a counter taps instead of typing.*
+*Settings &rarr; Scanner screen &rarr; What the scanners offer. These are the buttons a counter taps instead of typing.*
 
 ---
 
@@ -502,7 +501,7 @@ Press **Save**; again, scanners pick it up within about half a minute.
 
 ### Step 11 — Create the count
 
-**Dashboard → Progress → Count session → Start a new count.**
+**Settings → Getting started → Count session → Start a new count.**
 
 1. **Name** it something you will recognise later: `Q3 2026 wall-to-wall`.
 2. **Type**:
@@ -539,7 +538,7 @@ scanners, the scanner screen, racking blocks, a crew roster and a team plan.
 
 ### Step 13 — Set the count's options
 
-**Dashboard → Progress → Count session.** These apply to the count picked in the header,
+**Settings → Getting started → Count session.** These apply to the count picked at the top of the page,
 and a scanner that is already counting picks up a change within about half a minute. The
 questions it asks change between pallets, never mid-line.
 
@@ -559,7 +558,6 @@ questions it asks change between pallets, never mid-line.
 | **Adjustments need approval** | Every difference from the report has to be approved, with a reason code, before it reaches the ERP file. Off by default. | On for a wall-to-wall that is audited |
 | **Approve over N units** | A difference smaller than this goes through without a signature. | 5–10 units |
 | **or over N %** | ...or at least this share of what the report expected. Either threshold is enough. | 5–10 % |
-| **ABC classes & accuracy** | Reports accuracy by ABC class against a target for each. Off by default. | On when somebody reports on accuracy |
 | **Map drawing** | Which rack drawing the map uses. *Schematic* builds one from the bin codes. | Your drawing |
 
 > **Why the thresholds matter.** With both at 0 the app sends somebody back for a
@@ -568,11 +566,11 @@ questions it asks change between pallets, never mid-line.
 
 ![](images/dashboard-count-options.png)
 
-*Dashboard &rarr; Progress &rarr; Count session: every option above, on one card, for the count picked in the header.*
+*Settings &rarr; Getting started &rarr; Count session: every option above, on one card, for the count picked at the top of the page.*
 
 ### Step 13a — A trial run, before the real count
 
-**Dashboard → Progress → Count session → Trial run.**
+**Settings → Getting started → Count session → Trial run.**
 
 The way to find out that a crew does not know the empty-bin button, or that an aisle has no
 rack labels, is to run the count for real a shift or a day before it matters. **Make this a
@@ -897,7 +895,7 @@ seconds.
   count, and when it last scanned. *All shifts / 1st shift / 2nd shift* above the table narrows it.
   A team's clock stops when it signs off on the gun or finishes its last aisle.
 - **Stopped scanning** — a team that is signed on and still has an aisle, but has not scanned for
-  the site's limit (Settings → Scanners, 10 minutes to start), gets an **amber bar above every
+  the site's limit (Settings → Scanner screen, 10 minutes to start), gets an **amber bar above every
   tab**, and its last scan turns amber in the table. **On break** (30 minutes) and **Lunch**
   (45) quiet it for that long; **Seen — I am on it** quiets it until the team scans again. If the
   site turned it on, the same alert goes to the Teams channel.
@@ -922,7 +920,7 @@ seconds.
 
 ![](images/dashboard-message-floor.png)
 
-*Message the floor, under Team plan. "1 of 1" with the scanner named is a message that
+*Message the floor, under Alerts. "1 of 1" with the scanner named is a message that
 landed; "0 of 3" is one nobody has looked at yet.*
 - **Second counts** — see step 18.
 - **Adjustments** — **Positive and negative** at the top, on every count: stock to add (found
@@ -949,7 +947,7 @@ and the last bin they counted, and whoever is on that gun.
 - **Close** — ends it, and asks what happened. That goes in the log, and to Teams if the channel is
   set up, so nobody drives over for something sorted twenty minutes ago.
 
-Every alert, open or closed, stays in **Team plan → SOS from the floor**, with who raised it, when,
+Every alert, open or closed, stays in **Alerts → SOS from the floor**, with who raised it, when,
 what happened and whether the Teams channel took it.
 
 ![](images/dashboard-sos.png)
@@ -1002,7 +1000,7 @@ room: *"Lunch 11:30–12:00 · Team 4 breaks first"*, *"Dock 4 blocked until 2pm
 to the count, it says who wrote it and when, and clearing the box takes it off the board.
 
 Use the note for anything the floor reads walking past. To reach the **scanners** instead —
-one team, or all of them, with a read receipt — use **Message the floor** under Team plan
+one team, or all of them, with a read receipt — use **Message the floor** under Alerts
 (step 16).
 
 ![](images/office-board.png)
@@ -1073,20 +1071,6 @@ machines — the ERP, a reconciliation sheet.)
 
 *A recall: five cases of the lot found on the floor, and a sixth the report still expects in an aisle nobody has reached.*
 
-- **Count accuracy** — on counts with **ABC classes & accuracy** turned on: one row per
-  class, and the whole count underneath. **Pallet accuracy** is how many pallets were
-  exactly what the report said — the number an auditor asks for. **Quantity accuracy** is
-  how many of the expected units were not in dispute. Each class is marked **MEETS** or
-  **UNDER** against its target (Settings → Scanners → Accuracy targets; 99 / 97 / 95 % as
-  shipped). Classes come from an **ABC** column on the inventory report; a report that has
-  none can have them worked out from it with one button — Pareto on the expected
-  quantities, the first 80 % of the stock A, the next 15 % B, the tail C. Anything the
-  report classified itself is left alone.
-
-> **Why by class.** A warehouse can be 98 % accurate overall and still be losing money,
-> because the misses are all on the fast movers. One number for the building hides that;
-> a line for class A does not.
-
 ![](images/dashboard-accuracy.png)
 
 *Count accuracy by class, with the whole count on the bottom row. Each class is held to its
@@ -1120,7 +1104,7 @@ A variance is not an adjustment until somebody owns it. This is where that happe
    says, what was counted, and what the ERP would move.
 2. Tick the ones you have satisfied yourself about. **Select all shown** takes the
    screenful.
-3. Pick a **reason** — your site's list, set in Settings → Scanners → Adjustment reasons —
+3. Pick a **reason** — your site's list, set in Settings → ERP & backups → Adjustment reasons —
    and add a note if it helps.
 4. **Approve selected**, or **Reject selected** if the count is wrong and the system should
    keep its number.
@@ -1166,7 +1150,7 @@ the file the ERP gets is the same story the log tells.
 
 ### Step 22 — Close the count
 
-**Dashboard → Progress → Count session → Close session.** A closed count is read-only:
+**Settings → Getting started → Count session → Close session.** A closed count is read-only:
 scanners can no longer post lines to it, and its reports stay available for ever.
 
 **Delete…** is separate and deliberately harder: the count must be closed first, you have
@@ -1238,19 +1222,18 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 
 | What you see | What it means | What to do |
 |---|---|---|
-| Gun: *"this scanner is no longer authorised"* | Its link was reset or the scanner was removed | Settings → Scanners → **Reset link**, open the new link on the device |
+| Gun: *"this scanner is no longer authorised"* | Its link was reset or the scanner was removed | Settings → Scanner screen → **Reset link**, open the new link on the device |
 | Gun: *"Offline and no list cached for this session"* | The handheld has never downloaded this count | Carry it into Wi-Fi once and sign on again |
 | Gun says `OFFLINE` with lines queued | Normal in a dead spot | Nothing. They upload when it gets a signal. Do not wipe the device |
 | A scan does nothing | DataWedge is not sending a suffix | DataWedge → Basic data formatting → send **ENTER** (or TAB) |
 | A keypad covers the screen | Somebody left the **Keyboard** button on | Tap **Keyboard** again. It is off by default and never comes up by itself |
 | The Adjustments tab is empty | Approvals are off for this count, or nothing differs from the report yet | Turn on **Adjustments need approval** under Count session. A pallet nobody has counted yet is not an adjustment until the count is closed |
 | The ERP file is shorter than the variance list | Adjustments are waiting for approval and are held back deliberately | Work the Adjustments tab, then export again. The preview says how many were left out |
-| Count accuracy says "no pallet has a class" | The inventory report has no ABC column | Add one (**ABC**, **Class**, **Velocity** — any of them is read), or press **Work out classes from the report** |
 | A pallet is on the report as `NOT IN MASTER` with a name like `NO-LABEL-F01A001-1` | Its label would not scan and nothing on it was readable, so it was counted under the bin's name | Send somebody to relabel it — **Reports → Labels to replace** has the list |
 | A line is in a bin called `NO-LABEL-BIN-F01-1` | The rack label would not scan, and the app had nothing to suggest — an unguided count, with the pallet not on the report either | The quantity is safe. Relabel the bay, then correct the bin on the line if it matters; the relabel list says which aisle it was in |
 | The note is not on the board | The board polls every 15 seconds by default, or the note is on a different count | Wait a few seconds; check the board is pinned to the same count (`/board?session=12`) |
 | A change you made does not appear on the scanners | The gun is still running the app it loaded before the change | Site settings (questions, reasons, text size) reach a running gun within about half a minute and need nothing. A new **version of the app** needs the page to reload: with **Update itself after a deploy** on it does that by itself between pallets, within a couple of minutes of somebody picking the gun up. To force it: tap the green **Update ready** bar, or close the app fully (not just the home button) and reopen it. Reinstalling is never necessary |
-| An SOS did not reach Teams | The channel address is wrong, expired, or Teams was down | The alert is still on the dashboard — the row says what Teams answered. Settings → Scanners → **Send a test card** to check the address. Microsoft is retiring the old *Incoming Webhook* connectors; if yours was one, make a **Workflows** one instead |
+| An SOS did not reach Teams | The channel address is wrong, expired, or Teams was down | The alert is still on the dashboard — the row says what Teams answered. Settings → Advanced → **Send a test card** to check the address. Microsoft is retiring the old *Incoming Webhook* connectors; if yours was one, make a **Workflows** one instead |
 | A counter says they pressed SOS and nothing happened | The gun had no signal | The gun tells them: *"No signal — this has NOT been sent."* It sends itself the moment there is signal. In a dead zone, walking ten metres usually fixes it |
 | The printed barcodes will not scan | The page was printed “fit to page”, or on glossy paper | Print again at **100%** on plain white paper. If a gun still refuses them, print with **Per row: 1** — the bars are wider on a bigger label |
 | A code in the spreadsheet will not print | Code 128 carries plain ASCII only — an accented letter or a smart quote cannot be drawn | The book says which character it was; retype that code with plain letters and numbers |
@@ -1266,7 +1249,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | The browser's address bar is in the way | Same thing — the app is not installed | As above. For a device that should run nothing else, use Zebra's Enterprise Home Screen |
 | Gun: *"Team N is counting aisle X"* | Another team holds that racking block | Wait, or hand the other aisle back first |
 | Second-count list is enormous | Thresholds are at 0 | Set **Recount over** and **or over %**, and a **cap** (Part 3, step 13) |
-| The map is a schematic, not your drawing | No rack drawing on this count | Dashboard → Progress → Count session → **Map drawing** |
+| The map is a schematic, not your drawing | No rack drawing on this count | Settings → Getting started → Count session → **Map drawing** |
 | A reason code edit "did not reach" a gun | It takes up to about half a minute, and only lands between pallets | Wait for the counter to finish the pallet they are on |
 | Can nobody sign in? | All logins lost | The shared password turns itself back on when there are no admin accounts; the superadmin login is recreated at start-up |
 | Numbers look wrong after an ERP import | The inventory report moved on | Re-upload it with **Replace what is there**, then re-read the pallet report |
@@ -1327,7 +1310,6 @@ upload card shows exactly which columns it recognised.
 | Location | *same names as the bin list* |
 | Lot | lot, lot code, lot no, lot number, batch, batch code, batch number |
 | Expiry | expiry, expiry date, expiration, expires, best before, use by, shelf life date |
-| ABC class | abc, abc class, abc code, class, item class, velocity, velocity code, movement class, category — `A`, `B` or `C`, upper or lower case |
 
 **Barcode test book** — one row per practice line.
 

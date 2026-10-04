@@ -244,6 +244,9 @@ await page.waitForTimeout(1500);
 
 check('Dashboard: an open SOS is above the page, not filed in a tab',
   await page.$eval('#sosAlert', (el) => !el.hidden), await page.$eval('#sosAlert', (el) => el.hidden ? 'hidden' : 'shown'));
+check('Dashboard: the Alerts tab carries a badge with the open count', !(await page.$eval('#subCount-alerts', (el) => el.hidden)) && /^[1-9]\d*$/.test(clean(await page.textContent('#subCount-alerts'))),
+  clean(await page.textContent('#subCount-alerts')));
+check('Dashboard: SOS from the floor and Message the floor share the Alerts tab', await page.$eval('[data-sub="alerts"]', (el) => !!el.querySelector('#sosTable') && !!el.querySelector('#btnSendMsg')));
 const banner = clean(await page.textContent('#sosAlert'));
 check('Dashboard: reading team, what is wrong and where', /SOS · team/.test(banner) && /aisle|last bin|SOS-01/.test(banner), banner.slice(0, 140));
 await page.click('#sosAlert button:has-text("I am on it")');
@@ -252,6 +255,7 @@ check('Dashboard: "I am on it" marks it and says who', /is on it/.test(clean(awa
 await page.click('#sosAlert button:has-text("Close")');
 await page.waitForTimeout(1500);
 check('Dashboard: closing it clears the bar', await page.$eval('#sosAlert', (el) => el.hidden || !el.textContent.trim()));
+check('Dashboard: …and the badge on the Alerts tab goes with it', await page.$eval('#subCount-alerts', (el) => el.hidden));
 check('Dashboard: and the list keeps every one of them, with what happened',
   /CLOSED/.test(clean(await page.textContent('#sosTable'))), clean(await page.textContent('#sosTable')).slice(0, 140));
 

@@ -98,20 +98,18 @@ const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || 
 const errors = [];
 const page = await browser.newPage({ viewport: { width: 1560, height: 1000 } });
 page.on('pageerror', (e) => errors.push(e.message));
-await page.goto(BASE + '/admin');
+await page.goto(BASE + '/settings#start');
 await page.fill('#fPassword', 'changeme'); await page.click('#btnLogin');
 await page.waitForSelector('#scrMain.active'); await expandSubTabs(page); await page.waitForTimeout(2200);
-check('Dashboard: delete is offered but disabled while the count is open',
+check('Settings: delete is offered but disabled while the count is open',
   await page.$eval('#btnDeleteSession', (b) => b.disabled) && /Close the count first/.test(await page.$eval('#btnDeleteSession', (b) => b.title)),
   await page.$eval('#btnDeleteSession', (b) => b.title));
 
 const ui = await make('delete me from the page', { withCounts: true });
 await close(ui.id);
 await page.reload(); await page.waitForSelector('#scrMain.active'); await expandSubTabs(page); await page.waitForTimeout(2200);
-await page.evaluate((id) => window.appApi && document.querySelector(`#sessionPick .sess-row[data-id="${id}"]`)?.click(), ui.id).catch(() => {});
-await page.click('#sessionPick .sess-btn'); await page.waitForTimeout(400);
-await page.click(`#sessionPick .sess-row[data-id="${ui.id}"]`); await page.waitForTimeout(2000);
-check('Dashboard: once closed, delete is live', !(await page.$eval('#btnDeleteSession', (b) => b.disabled)));
+await page.selectOption('#fSessionPick', String(ui.id)); await page.waitForTimeout(2000);
+check('Settings: once closed, delete is live', !(await page.$eval('#btnDeleteSession', (b) => b.disabled)));
 
 // it warns, asks for the name, and a cancelled prompt leaves it alone
 let asked = '';
@@ -122,19 +120,19 @@ page.on('dialog', async (d) => {
   else await d.accept('delete me from the page');
 });
 await page.click('#btnDeleteSession'); await page.waitForTimeout(1500);
-check('Dashboard: cancelling the name prompt leaves the count alone', await exists(ui.id));
-check('Dashboard: it says exactly what will go before it asks',
+check('Settings: cancelling the name prompt leaves the count alone', await exists(ui.id));
+check('Settings: it says exactly what will go before it asks',
   /counted lines/.test(asked) && /cannot be undone/.test(asked), clean(asked).slice(0, 120));
 
 cancelTheName = false;
 await page.click('#btnDeleteSession');
 await page.waitForFunction(() => /Deleted|Not deleted/.test(document.getElementById('sessionMsg').textContent), null, { timeout: 20000 });
 await page.waitForTimeout(1500);
-check('Dashboard: the count is deleted and the page says where the backup went',
+check('Settings: the count is deleted and the page says where the backup went',
   !(await exists(ui.id)) && /Deleted/.test(await page.textContent('#sessionMsg')) && /backup|copy of the database/i.test(await page.textContent('#sessionMsg')),
   clean(await page.textContent('#sessionMsg')).slice(0, 130));
-check('Dashboard: the header picker no longer offers it',
-  !(await page.$(`#sessionPick .sess-row[data-id="${ui.id}"]`)));
+check('Settings: the count picker no longer offers it',
+  !(await page.$(`#fSessionPick option[value="${ui.id}"]`)));
 await page.close();
 
 console.log('\nerrors:', errors.length ? errors : 'none');

@@ -45,6 +45,16 @@ check('Roster: "forklift" maps to the high reach truck', byBadge.E1005.equipment
 check('Roster: everyone reaches level A on foot, a scissor lift alone adds nothing', byBadge.E1004.reach === 'A' && byBadge.E1002.reach === 'A', `E1004=${byBadge.E1004.reach} E1002(scissor)=${byBadge.E1002.reach}`);
 check('Roster: scissor + high reach reaches A and C-F', byBadge.E1001.reach === 'ACDEF', byBadge.E1001.reach);
 
+// the department filter: only that department's people in the pool
+await p.selectOption('#fDeptView', 'Freezer'); await p.waitForTimeout(400);
+check('Teams page: the crew can be filtered by department', (await p.$$('#pool .person')).length === 4 && /4 in Freezer/.test(clean(await p.textContent('#deptNote'))),
+  `${(await p.$$('#pool .person')).length} shown · ${clean(await p.textContent('#deptNote'))}`);
+check('…with the departments offered coming from the crew list itself', (await p.$$eval('#fDeptView option', (os) => os.map((o) => o.value))).join(',') === ',Dry Dock,Freezer,Shipping',
+  (await p.$$eval('#fDeptView option', (os) => os.map((o) => o.value))).join(','));
+await p.selectOption('#fDeptView', ''); await p.waitForTimeout(400);
+check('…and back to everyone', (await p.$$('#pool .person')).length === 6);
+check('Teams page: the counting plan upload lives here now, with a count picker', !!(await p.$('#btnUpload-plan')) && !!(await p.$('#fPlanSession')));
+
 // teams and drag/drop
 for (const t of ['1', '2']) { await p.fill('#fTeamName', t); await p.click('#btnAddTeam'); await p.waitForTimeout(400); }
 check('Teams page: teams created', (await p.$$('#teams .bucket')).length === 2);

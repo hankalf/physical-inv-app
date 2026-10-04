@@ -16,7 +16,6 @@ import { importMaster, pruneAreaAisles } from './routes/master.js';
 import { boardData } from './routes/board.js';
 import { sendMessage, listMessages, messagesFor, ackMessage, clearMessage } from './routes/messages.js';
 import { listAdjustments, adjustmentView, decideAdjustments, adjustmentReasons, saveAdjustmentReasons } from './routes/adjustments.js';
-import { accuracy, accuracyCsv, deriveAbc, accuracyTargets, saveAccuracyTargets } from './routes/accuracy.js';
 import { setupState } from './routes/setup.js';
 import { searchAll } from './routes/search.js';
 import { importMissing, addMissing, listMissing, missingForGun, markFound, foundByHand, closeMissing, deleteMissing } from './routes/missing.js';
@@ -686,8 +685,7 @@ async function handleAdmin(req, res, url, m) {
     const owner = ownerOf(who);
     const body = await readJson(req);
     // working the classes out is asking to try the feature, so it goes on too
-    const s = setPracticeOptions(owner, body.deriveAbc ? { ...body, trackAbc: true } : body);
-    if (body.deriveAbc) deriveAbc(s.id, { force: true });
+    const s = setPracticeOptions(owner, body);
     audit(actor, 'changed the options on their practice count', JSON.stringify(body), s.id);
     return sendJson(req, res, 200, practicePayload(who, owner, getSession(s.id), practiceDevice(who)));
   }
@@ -797,7 +795,7 @@ async function handleAdmin(req, res, url, m) {
     const apprQty = num(body.approvalMinQty, s.approval_min_qty, 1e6);
     const apprPct = num(body.approvalMinPct, s.approval_min_pct, 100);
     audit(actor, 'changed session settings', JSON.stringify({ palletMode: mode, guided: body.guided, askComments: body.askComments, layout, autoRecount: body.autoRecount, recount: { minQty, minPct, cap },
-      approvals: { on: body.requireApproval, minQty: apprQty, minPct: apprPct }, trackAbc: body.trackAbc, showOnGuns: body.showOnGuns }), m[1]);
+      approvals: { on: body.requireApproval, minQty: apprQty, minPct: apprPct }, showOnGuns: body.showOnGuns }), m[1]);
     if (body.showOnGuns != null) db.prepare('UPDATE sessions SET show_on_guns = ? WHERE id = ?').run(body.showOnGuns ? 1 : 0, s.id);
     db.prepare(`UPDATE sessions SET pallet_mode = ?, guided = ?, ask_comments = ?, layout = ?, auto_recount = ?,
                   recount_min_qty = ?, recount_min_pct = ?, recount_cap = ?,
@@ -1459,31 +1457,6 @@ async function handleAdmin(req, res, url, m) {
     ]));
   }
 
-  // --- ABC classes and the accuracy scorecard
-  if (p === '/api/admin/accuracy-targets' && method === 'GET') {
-    return sendJson(req, res, 200, accuracyTargets());
-  }
-  if (p === '/api/admin/accuracy-targets' && method === 'POST') {
-    const body = await readJson(req);
-    const saved = saveAccuracyTargets(body.targets || body);
-    audit(actor, 'changed the accuracy targets', JSON.stringify(saved.targets));
-    return sendJson(req, res, 200, saved);
-  }
-  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/accuracy$/)) && method === 'GET') {
-    return sendJson(req, res, 200, accuracy(m[1]));
-  }
-  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/abc\/derive$/)) && method === 'POST') {
-    const body = await readJson(req);
-    const out = deriveAbc(m[1], { force: !!body.force });
-    audit(actor, 'worked out ABC classes from the report',
-      `${out.classified} pallets classified (A ${out.byClass.A}, B ${out.byClass.B}, C ${out.byClass.C})`, m[1]);
-    return sendJson(req, res, 200, out);
-  }
-  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/accuracy\.csv$/))) {
-    return sendCsv(req, res, `accuracy-session-${m[1]}.csv`, accuracyCsv(m[1]));
-  }
-
-  // --- labels that would not scan
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/fixlist$/)) && method === 'GET') {
     return sendJson(req, res, 200, fixList(m[1], { status: url.searchParams.get('status') || '' }));
   }

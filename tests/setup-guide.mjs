@@ -72,12 +72,14 @@ check('Picker: open and closed counts are grouped',
   (await page.$$eval('#sessionPick .sess-head', (h) => h.map((x) => x.textContent))).some((t) => /Open/.test(t)));
 await page.click(`#sessionPick .sess-row[data-id="${empty.id}"]`); await page.waitForTimeout(1800);
 check('Picker: choosing one switches the whole page to it',
-  /bare count/.test(await page.textContent('#sessionPick .sess-btn'))
-    && new RegExp(`#${empty.id} `).test(clean(await page.textContent('#sessionCardSub'))),
-  clean(await page.textContent('#sessionCardSub')));
+  /bare count/.test(await page.textContent('#sessionPick .sess-btn')) && (await page.evaluate(() => window.appApi.currentSession())) === empty.id,
+  clean(await page.textContent('#sessionPick .sess-btn')));
 await page.screenshot({ path: `${S}screenshots/session-picker.png`, clip: { x: 0, y: 0, width: 1000, height: 560 } });
 
-/* ---- creating a count with its lists ---- */
+/* ---- creating a count with its lists: Settings → Getting started ---- */
+await page.goto(BASE + '/settings#start');
+await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(1500);
+check('Settings: the Count session card sits under Getting started', await page.$eval('[data-sub="start"]', (el) => el.classList.contains('active') && !!el.querySelector('#sessionCard')));
 await page.fill('#fNewName', 'count with its lists');
 await page.setInputFiles('#fNewBins', { name: 'bins.csv', mimeType: 'text/csv', buffer: Buffer.from(BINS) });
 await page.setInputFiles('#fNewPallets', { name: 'report.csv', mimeType: 'text/csv', buffer: Buffer.from(PALLETS) });

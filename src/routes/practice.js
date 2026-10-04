@@ -191,7 +191,6 @@ const COL = {
   bestBefore: ['best before', 'expiry', 'expiration', 'expiry date', 'bbd'],
   item: ['item', 'sku', 'item number', 'product'],
   note: ['note', 'description', 'desc'],
-  abc: ['abc', 'abc class', 'class', 'velocity'],
 };
 const csvCell = (v) => (/[",\r\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
 
@@ -214,8 +213,7 @@ export function readPracticeFile(text) {
       if (rawQty === '' || !Number.isFinite(qty) || qty < 0) throw Object.assign(new Error(`row ${line}: "${rawQty}" is not a quantity for pallet ${pallet}`), { status: 400 });
       if (seen.has(pallet)) throw Object.assign(new Error(`row ${line}: pallet ${pallet} is already on row ${seen.get(pallet)}`), { status: 400 });
       seen.set(pallet, line);
-      rows.push({ bin, pallet, qty, lot: pick(r, COL.lot), bestBefore: pick(r, COL.bestBefore), item: pick(r, COL.item), note: pick(r, COL.note),
-        abc: norm(pick(r, COL.abc)).slice(0, 1) });
+      rows.push({ bin, pallet, qty, lot: pick(r, COL.lot), bestBefore: pick(r, COL.bestBefore), item: pick(r, COL.item), note: pick(r, COL.note) });
     } else {
       rows.push({ bin, pallet: '', qty: 0 });
     }
@@ -229,9 +227,9 @@ function buildFromRows(owner, rows, label) {
   db.prepare("UPDATE sessions SET practice = 1, practice_owner = ?, practice_source = 'upload', practice_rows = ?, sandbox = ?, auto_recount = 0 WHERE id = ?")
     .run(owner, JSON.stringify({ label, rows }), SANDBOX_START, s.id);
   importMaster(s.id, 'bins', binCsv([...new Set(rows.map((r) => r.bin))]));
-  let report = 'Pallet ID,SKU,Description,Qty,Location,Lot Code,Best Before,ABC\n';
+  let report = 'Pallet ID,SKU,Description,Qty,Location,Lot Code,Best Before\n';
   for (const r of rows.filter((x) => x.pallet)) {
-    report += [r.pallet, r.item || '', r.note || '', r.qty, r.bin, r.lot || '', r.bestBefore || '', r.abc || ''].map(csvCell).join(',') + '\n';
+    report += [r.pallet, r.item || '', r.note || '', r.qty, r.bin, r.lot || '', r.bestBefore || ''].map(csvCell).join(',') + '\n';
   }
   importMaster(s.id, 'pallets', report);
   const aisles = db.prepare('SELECT aisle FROM aisles WHERE session_id = ? ORDER BY aisle').all(s.id).map((a) => a.aisle);
@@ -520,7 +518,6 @@ export function practiceOptions(sessionId) {
   const pallets = n('SELECT COUNT(*) n FROM pallets WHERE session_id = ?');
   const lots = n("SELECT COUNT(*) n FROM pallets WHERE session_id = ? AND COALESCE(lot, '') != ''");
   const dates = n("SELECT COUNT(*) n FROM pallets WHERE session_id = ? AND COALESCE(expiry, '') != ''");
-  const abc = n("SELECT COUNT(*) n FROM pallets WHERE session_id = ? AND COALESCE(abc, '') != ''");
   const own = s.practice_source === 'upload';
   const need = (have, what, column) => (have
     ? { ok: true, text: `${have} of ${pallets} pallets have ${what}.` }
@@ -531,15 +528,11 @@ export function practiceOptions(sessionId) {
     values: {
       askLot: !!s.ask_lot, askExpiry: !!s.ask_expiry, requireApproval: !!s.require_approval,
       approvalMinQty: s.approval_min_qty || 0, approvalMinPct: s.approval_min_pct || 0,
-      trackAbc: !!s.track_abc, autoRecount: !!s.auto_recount, askComments: !!s.ask_comments, palletMode: s.pallet_mode || 'warn',
+      autoRecount: !!s.auto_recount, askComments: !!s.ask_comments, palletMode: s.pallet_mode || 'warn',
     },
     needs: {
       askLot: need(lots, 'a lot code', 'Lot'),
       askExpiry: need(dates, 'a best-before date', 'Best Before'),
-      trackAbc: abc ? { ok: true, text: `${abc} of ${pallets} pallets have an ABC class.` }
-        : { ok: false, canDerive: pallets > 0,
-          text: own ? 'No ABC classes yet. Add an “ABC” column (A, B or C) to your file and upload it again, or work them out from the quantities here.'
-            : 'No ABC classes yet. Work them out from the quantities here — the biggest 80% of stock is A, the next 15% B, the rest C.' },
       requireApproval: { ok: true, text: 'Count a pallet short or over, then approve or reject it under Dashboard → Adjustments.' },
     },
   };
@@ -554,11 +547,11 @@ export function setPracticeOptions(owner, body = {}) {
   const flag = (k, col) => (body[k] === undefined ? s[col] : (body[k] ? 1 : 0));
   const mode = ['off', 'warn', 'strict'].includes(body.palletMode) ? body.palletMode : s.pallet_mode;
   db.prepare(`UPDATE sessions SET ask_lot = ?, ask_expiry = ?, require_approval = ?, approval_min_qty = ?, approval_min_pct = ?,
-                track_abc = ?, auto_recount = ?, ask_comments = ?, pallet_mode = ? WHERE id = ? AND practice = 1 AND practice_owner = ?`)
+                auto_recount = ?, ask_comments = ?, pallet_mode = ? WHERE id = ? AND practice = 1 AND practice_owner = ?`)
     .run(flag('askLot', 'ask_lot'), flag('askExpiry', 'ask_expiry'), flag('requireApproval', 'require_approval'),
       body.approvalMinQty === undefined ? s.approval_min_qty : NUM(body.approvalMinQty, 1e6),
       body.approvalMinPct === undefined ? s.approval_min_pct : NUM(body.approvalMinPct, 100),
-      flag('trackAbc', 'track_abc'), flag('autoRecount', 'auto_recount'), flag('askComments', 'ask_comments'), mode, s.id, owner);
+      flag('autoRecount', 'auto_recount'), flag('askComments', 'ask_comments'), mode, s.id, owner);
   return getSession(s.id);
 }
 

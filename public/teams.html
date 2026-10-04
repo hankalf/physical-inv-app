@@ -123,6 +123,8 @@
           <button type="button" data-shift="1">1st shift</button>
           <button type="button" data-shift="2">2nd shift</button>
         </div></div>
+        <div class="auto"><label for="fDeptView">Department</label><select id="fDeptView" class="sm"><option value="">Every department</option></select></div>
+        <div class="auto"><span class="muted" id="deptNote" style="font-size:13px"></span></div>
       </div>
 
       <div class="board" style="margin-top:14px">
@@ -133,6 +135,19 @@
         </div>
         <div class="teams" id="teams"></div>
       </div>
+    </div>
+
+    <div class="card" data-kind="plan">
+      <h2>Counting plan <span class="muted">which team takes which aisle, for a count</span></h2>
+      <div class="hint" style="margin-top:0">One row per aisle, in the order each team should count it, with the levels their equipment reaches. Optional — aisles can be queued by hand under Dashboard → Team plan, or spread out with Auto-assign.</div>
+      <div class="inline" style="margin-top:12px">
+        <div class="auto"><label for="fPlanSession">For the count</label><select id="fPlanSession"></select></div>
+        <div><label for="fFile-plan">CSV or Excel file</label><input type="file" id="fFile-plan" accept=".csv,.tsv,.txt,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fReplace-plan"> Replace what is there</label></div>
+        <div class="auto"><button class="primary fit" id="btnUpload-plan">Upload</button></div>
+      </div>
+      <div class="colguide" id="colGuide-plan"></div>
+      <div class="feedback" id="uploadMsg-plan"></div>
     </div>
       </div>
 

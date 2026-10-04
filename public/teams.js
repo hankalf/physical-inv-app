@@ -11,6 +11,7 @@
 
   let state = { employees: [], teams: [], config: { equipment: {}, levelRules: [] } };
   let shiftView = '';
+  let deptView = '';
 
   function show(which) {
     $('scrLogin').classList.toggle('active', which === 'login');
@@ -98,13 +99,24 @@
   /* ------------------------------------------------------------ render */
   function render() {
     const assigned = new Set(state.teams.flatMap((t) => t.members.map((m) => m.badge)));
-    const pool = state.employees.filter((e) => !assigned.has(e.badge));
+    /* the department filter: the list of departments comes from the crew itself */
+    const depts = [...new Set(state.employees.map((e) => (e.dept || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const dsel = $('fDeptView');
+    if (dsel.dataset.have !== depts.join('|')) {
+      dsel.dataset.have = depts.join('|');
+      dsel.innerHTML = '<option value="">Every department</option>' + depts.map((d) => `<option>${d.replace(/[<&]/g, '')}</option>`).join('');
+      if (!depts.includes(deptView)) deptView = '';
+      dsel.value = deptView;
+    }
+    const inDept = (e) => !deptView || (e.dept || '').trim() === deptView;
+    const pool = state.employees.filter((e) => !assigned.has(e.badge) && inDept(e));
+    $('deptNote').textContent = deptView ? `${state.employees.filter(inDept).length} in ${deptView}` : '';
 
     $('countChip').textContent = `${state.employees.length} people · ${state.teams.length} teams`;
     $('poolCount').textContent = String(pool.length);
     const poolBox = $('pool');
     poolBox.innerHTML = '';
-    if (!pool.length) poolBox.innerHTML = '<div class="empty">Everyone is on a team.</div>';
+    if (!pool.length) poolBox.innerHTML = `<div class="empty">${deptView ? `Everyone in ${deptView} is on a team.` : 'Everyone is on a team.'}</div>`;
     for (const e of pool) poolBox.appendChild(personCard(e));
     dropTarget($('poolBucket'), '');
 
@@ -288,6 +300,48 @@
   };
   $('fTeamName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnAddTeam').click(); });
   for (const b of document.querySelectorAll('#shiftView button')) b.onclick = () => { shiftView = b.dataset.shift; render(); };
+  $('fDeptView').onchange = () => { deptView = $('fDeptView').value; render(); };
+
+  /* ------------------------------------------------- the counting plan
+     Which team takes which aisle, uploaded against a count: teams are the
+     site's, the plan is the count's, so the card carries its own picker. */
+  let planSessions = [];
+  async function loadPlanSessions() {
+    planSessions = (await apiJson('/api/admin/sessions')).filter((x) => x.mode !== 'cycle' && !x.practice);
+    const sel = $('fPlanSession');
+    const prior = sel.value;
+    sel.innerHTML = '';
+    for (const x of planSessions) {
+      const o = document.createElement('option');
+      o.value = x.id; o.textContent = `#${x.id} — ${x.name} (${x.status})`;
+      sel.appendChild(o);
+    }
+    if (!planSessions.length) sel.innerHTML = '<option value="">No full counts yet — make one under Settings</option>';
+    else if ([...sel.options].some((o) => o.value === prior)) sel.value = prior;
+  }
+  (() => {
+    const box = $('colGuide-plan');
+    box.innerHTML = '<div><b>Columns</b> — matched by name, any order, extra columns ignored. &nbsp; <a href="/templates/plan-template.csv" download="plan-template.csv">⬇ Download a sample plan-template.csv</a></div>'
+      + '<div class="cols"><code class="req" title="team number">Team (required)</code><code class="req" title="the full aisle code from the bin list">Aisle (required)</code><code class="req" title="A-C, D-F, or A-F">Levels (required)</code></div>'
+      + '<div class="note"><b>Team</b>: team number · <b>Aisle</b>: the full aisle code from the bin list, e.g. F01 — a bare number is refused when it could mean two aisles (A01 / F01) · <b>Levels</b>: which levels the team counts, by equipment: A-C, D-F, or A-F for every level. Upload the count\'s bin list first (Settings → Lists & racking).</div>';
+  })();
+  $('btnUpload-plan').onclick = async () => {
+    const out = $('uploadMsg-plan');
+    const sid = Number($('fPlanSession').value) || 0;
+    const file = $('fFile-plan').files[0];
+    if (!sid) return msg(out, 'err', 'Pick the count the plan is for', 'A full count — make one under Settings → Getting started.');
+    if (!file) return msg(out, 'err', 'Choose a file first');
+    msg(out, 'warn', `Reading ${file.name}…`);
+    try {
+      const stats = await apiJson(`/api/admin/sessions/${sid}/master?kind=plan&replace=${$('fReplace-plan').checked ? 1 : 0}`,
+        { method: 'POST', headers: { 'content-type': 'text/csv' }, body: await fileToCsv(file) });
+      const t = stats.totals;
+      msg(out, 'ok', `Imported ${stats.rows.toLocaleString()} rows from ${file.name}`,
+        `Count #${sid} now has ${t.assignments} planned aisle assignments across ${t.aisles} aisles` +
+        (stats.skipped ? ` · ${stats.skipped} row(s) skipped (${stats.skippedNoLevels ? stats.skippedNoLevels + ' with no levels; ' : ''}missing required column, or unknown aisle)` : ''));
+      $('fFile-plan').value = '';
+    } catch (err) { msg(out, 'err', 'Upload failed', err.message); }
+  };
 
   $('btnAddRule').onclick = () => { state.config.levelRules.push({ levels: '', requires: [] }); renderRules(); };
   $('btnSaveRules').onclick = async () => {
@@ -315,6 +369,7 @@
     if (!e.detail) return show('login');
     show('main');
     refresh().catch(() => show('login'));
+    loadPlanSessions().catch(() => {});
   });
   document.addEventListener('DOMContentLoaded', () => { api.start().catch(() => show('login')); });
 })();

@@ -127,7 +127,13 @@ await page.goto(BASE + '/admin');
 await signIn(page);
 await pickSession(page, sess.id);
 check('The dashboard shows TRIAL RUN above every tab', await page.isVisible('#trialBanner'));
-check('…and offers to end it', await page.isVisible('#btnTrialEnd') && await page.isHidden('#btnTrialOn'));
+{
+  const sp = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+  await sp.goto(BASE + '/settings#start'); await signIn(sp);
+  await sp.selectOption('#fSessionPick', String(sess.id)); await sp.waitForTimeout(800);
+  check('…and Settings → Getting started offers to end it', await sp.isVisible('#btnTrialEnd') && await sp.isHidden('#btnTrialOn'));
+  await sp.close();
+}
 
 /* positive and negative, while we are here: Q-1 is 2 short */
 await page.waitForTimeout(800);
@@ -157,12 +163,16 @@ const file = await download.path();
 const bytes = readFileSync(file);
 check('The button downloads an Excel workbook', /\.xlsx$/.test(download.suggestedFilename()) && bytes.slice(0, 2).toString() === 'PK', download.suggestedFilename());
 
-/* ---- ending the trial ---- */
-await page.evaluate(() => window.appApi.showSub('progress'));
-await page.waitForTimeout(400);
-await page.click('#btnTrialEnd');
-await page.waitForTimeout(1500);
-check('Ending the trial asks for CLEAR, then clears it', /Trial run cleared: 2 lines/.test(clean(await page.textContent('#trialMsg'))), clean(await page.textContent('#trialMsg')));
+/* ---- ending the trial: under Settings → Getting started ---- */
+const sp2 = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+sp2.on('dialog', (d) => (d.type() === 'prompt' ? d.accept('CLEAR') : d.accept()).catch(() => {}));
+await sp2.goto(BASE + '/settings#start'); await signIn(sp2);
+await sp2.selectOption('#fSessionPick', String(sess.id)); await sp2.waitForTimeout(800);
+await sp2.click('#btnTrialEnd');
+await sp2.waitForTimeout(1500);
+check('Ending the trial asks for CLEAR, then clears it', /Trial run cleared: 2 lines/.test(clean(await sp2.textContent('#trialMsg'))), clean(await sp2.textContent('#trialMsg')));
+await sp2.close();
+await page.reload(); await page.waitForSelector('#scrMain.active'); await pickSession(page, sess.id); await page.waitForTimeout(1200);
 prog = await get(`/api/admin/sessions/${sess.id}/progress`);
 check('Every line is gone', prog.lines === 0);
 const asg = await get(`/api/admin/sessions/${sess.id}/assignments`);

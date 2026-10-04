@@ -132,15 +132,19 @@ check('Shell: the sidebar links every page, Testing last, with this one marked',
   (await page.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/cycle,/front,/missing,/teams,/settings,/testing'
     && (await page.$eval('#navTabs .tab.current', (a) => a.getAttribute('href'))) === '/settings');
 check('Shell: Settings is split into sub-tabs',
-  (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.replace(/\d+$/, '').trim()))).join(' | ') === 'Getting started | Scanner screen | Scanners | Lists & racking | ERP & backups | Advanced',
+  (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.replace(/\d+$/, '').trim()))).join(' | ') === 'Getting started | Scanner screen | Lists & racking | ERP & backups | Advanced',
   (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.trim()))).join(' | '));
 check('Shell: exactly one pane is on screen at a time',
   (await page.$$eval('[data-sub]', (p) => p.filter((x) => x.classList.contains('active')).length)) === 1);
-await page.click('#subTabs button:text-is("Scanners")'); await page.waitForTimeout(500);
+await page.click('#subTabs button:text-is("Scanner screen")'); await page.waitForTimeout(500);
 check('Shell: clicking a sub-tab swaps the pane and marks the tab',
-  await page.$eval('[data-sub="scanners"]', (el) => el.classList.contains('active'))
+  await page.$eval('[data-sub="gun"]', (el) => el.classList.contains('active'))
     && !(await page.$eval('[data-sub="advanced"]', (el) => el.classList.contains('active')))
-    && await page.$eval('#subTabs button:text-is("Scanners")', (b) => b.classList.contains('current')));
+    && await page.$eval('#subTabs button:text-is("Scanner screen")', (b) => b.classList.contains('current')));
+check('Shell: the scanner cards all live under Scanner screen now',
+  await page.$eval('[data-sub="gun"]', (el) => !!el.querySelector('#btnAddDevice') && !!el.querySelector('#fNewSos') && !!el.querySelector('#promptChip')));
+check('Shell: the barcode book is under Getting started, the adjustment reasons under ERP & backups',
+  !!(await page.$('[data-sub="start"] #btnBookPrint')) && !!(await page.$('[data-sub="erp"] #reasonChip')) && !!(await page.$('[data-sub="start"] #sessionCard')));
 check('Shell: the session bar hides on a pane that has no session to act on',
   await page.$eval('#scopeBar', (el) => el.hidden));
 await page.click('#subTabs button:has-text("Lists")'); await page.waitForTimeout(500);
@@ -157,7 +161,7 @@ await page.click('#subTabs button:text-is("Advanced")'); await page.waitForTimeo
 
 const headings = await page.$$eval('#scrMain .card > h2', (h) => h.map((x) => x.firstChild.textContent.trim()));
 check('Settings: every setup card is on this page, each list its own',
-  ['Supervisor logins', 'Scanner setup', 'Bin list', 'Inventory report', 'Counting plan',
+  ['Supervisor logins', 'Scanner setup', 'Count session', 'Bin list', 'Inventory report',
    'Aisles & racking blocks', 'Send to the ERP', 'Backups & log']
     .every((t) => headings.some((h) => h.startsWith(t))), headings.join(' | '));
 
@@ -289,7 +293,7 @@ await sup.close();
     await adv.$eval('[data-sub="advanced"]', (el) => el.classList.contains('active') && !!el.querySelector('#fNewUser') && !!el.querySelector('#fTeamsUrl')
       && !!el.querySelector('#lookPick .themepick select') && !!el.querySelector('#fLogo')));
   check('Advanced: the theme picker has left the sidebar', (await adv.$$('.side .themepick')).length === 0);
-  check('Advanced: the SOS card no longer carries the Teams address', (await adv.$$('[data-sub="scanners"] #fTeamsUrl')).length === 0 && !!(await adv.$('[data-sub="scanners"] #fIdleTeams')));
+  check('Advanced: the SOS card no longer carries the Teams address', (await adv.$$('[data-sub="gun"] #fTeamsUrl')).length === 0 && !!(await adv.$('[data-sub="gun"] #fIdleTeams')));
   await adv.selectOption('#lookPick .themepick select', 'daylight');
   check('Advanced: picking a theme applies it at once', (await adv.evaluate(() => document.documentElement.dataset.theme)) === 'daylight');
   await adv.selectOption('#lookPick .themepick select', 'midnight');

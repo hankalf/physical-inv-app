@@ -231,7 +231,6 @@
     { key: 'askLot', label: 'Ask for the lot code', what: 'The gun adds a LOT CODE question after the quantity, and calls out a lot that does not match the report.' },
     { key: 'askExpiry', label: 'Ask for the best-before date', what: 'The gun adds an EXPIRY question, and flags a date that has already passed.' },
     { key: 'requireApproval', label: 'Adjustments need approval', what: 'Every difference from the report has to be approved, with a reason, before it can go to the ERP. See Dashboard → Adjustments.', more: 'approval' },
-    { key: 'trackAbc', label: 'ABC classes & accuracy', what: 'Dashboard → Reports shows count accuracy by A, B and C, against a target for each.' },
     { key: 'palletMode', label: 'Pallet ID check', what: 'Allow override (the default) asks YES / NO for a pallet not on the list. No overrides refuses it. Accept any ID does not check at all.', select: [['warn', 'Allow override'], ['strict', 'No overrides'], ['off', 'Accept any ID']] },
     { key: 'autoRecount', label: 'Raise second counts automatically', what: 'Off here until you switch it on (real counts have it on): a pallet that disagrees with the report puts its bin on the second-count list, to try under My aisle → Start second counts.' },
     { key: 'askComments', label: 'Comments step', what: 'On by default: the optional comments question at the end of each pallet.' },
@@ -266,14 +265,6 @@
       const need = o.needs[def.key];
       if (need) {
         row.appendChild(el('span', 'need ' + (need.ok ? 'ok' : 'no'), (need.ok ? '✓ ' : '⚠ ') + need.text));
-        if (!need.ok && need.canDerive) {
-          const more = el('span', 'more');
-          const b = el('button', 'sm fit', 'Work out ABC classes from the quantities');
-          b.type = 'button';
-          b.onclick = (e) => { e.preventDefault(); saveOption({ deriveAbc: true }, 'ABC classes worked out.'); };
-          more.appendChild(b);
-          row.appendChild(more);
-        }
       }
       if (def.more === 'approval' && o.values.requireApproval) {
         const more = el('span', 'more');
@@ -622,8 +613,6 @@
             text: 'A difference is waiting to be signed for. In the dashboard at the top, open <b>Adjustments</b>: approve it with a reason, or reject it.' }))
           || (o.palletMode === 'strict' && feat('strict', { target: $('fWedge'), step: 'No overrides is on',
             text: 'Type a pallet that is not on the report — <b>FOUND-99</b> — and press <b>SCAN</b>. With no overrides, the gun refuses it instead of asking.' }))
-          || (o.trackAbc && lines >= 3 && feat('abc', { target: $('dashCard'), step: 'ABC classes are on',
-            text: 'In the dashboard at the top, <b>Reports</b> shows count accuracy by A, B and C class against the target for each.' }))
           || (o.askComments === false && !shownFeat.has('nocomments') && feat('nocomments', { target: $('gunFrame').closest('.gun'), step: 'Comments step is off', pos: 'left',
             text: 'With the comments step off, the gun goes straight to the next pallet after the bin. Count one and watch.' }));
         if (f) return f;

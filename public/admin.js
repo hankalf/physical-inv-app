@@ -1,6 +1,6 @@
-/* Supervisor dashboard: sessions, team assignments (staggered by racking block),
-   live progress, the warehouse map, second counts and the pallet report.
-   Setup — logins, scanners, uploads, blocks, ERP, backups — lives in /settings. */
+/* Supervisor dashboard: live progress, the warehouse map, team assignments
+   (staggered by racking block), alerts from the floor, second counts and the
+   pallet report. Making, setting and closing a count lives in /settings. */
 (() => {
   'use strict';
 
@@ -17,7 +17,7 @@
 
   const needSession = (el) => {
     if (sessionId) return true;
-    msg(el, 'err', 'Create a session first', 'Type a name under "New session name" and click Create session.');
+    msg(el, 'err', 'Create a count first', 'Settings → Getting started → Count session makes one.');
     return false;
   };
 
@@ -63,47 +63,15 @@
     await refreshAll();
   }
 
+  // the trial banner above every tab; switching a trial on and off lives under Settings → Getting started
   function renderTrial(s) {
-    const on = !!(s && s.trial);
-    $('trialBanner').hidden = !on;
-    $('btnTrialOn').hidden = on || !s || s.status !== 'open';
-    $('btnTrialEnd').hidden = !on;
-    $('trialState').textContent = on ? 'This count is a trial run.'
-      : s && s.cleared_at ? `A trial run was cleared ${new Date(s.cleared_at).toLocaleString()} — this is the real count.` : '';
+    $('trialBanner').hidden = !(s && s.trial);
   }
-
-  $('btnTrialOn').onclick = async () => {
-    const s = sessions.find((x) => x.id === sessionId);
-    if (!s) return;
-    const lines = s.lines || 0;
-    if (lines && !confirm(`This count already has ${lines.toLocaleString()} lines. Make it a trial run? Ending the trial later clears them.`)) return;
-    try {
-      await postJson(`/api/admin/sessions/${sessionId}/trial`, { on: true });
-      msg($('trialMsg'), 'ok', 'This count is a trial run.', 'The guns show TRIAL RUN within a minute, between pallets.');
-      await loadSessions();
-    } catch (err) { msg($('trialMsg'), 'err', err.message); }
-  };
-  $('btnTrialEnd').onclick = async () => {
-    const s = sessions.find((x) => x.id === sessionId);
-    if (!s) return;
-    const typed = prompt(`End the trial run and clear it?\n\nEvery line (${(s.lines || 0).toLocaleString()}), sign-on, SOS and second count on "${s.name}" goes. The bin list, the report, the team plan and the settings stay, and the aisles go back to the start.\n\nType CLEAR to go ahead.`);
-    if (typed === null) return;
-    if (typed.trim().toUpperCase() !== 'CLEAR') return msg($('trialMsg'), 'warn', 'Nothing cleared.', 'Type CLEAR to end the trial run.');
-    try {
-      const r = await postJson(`/api/admin/sessions/${sessionId}/trial`, { end: true });
-      msg($('trialMsg'), 'ok', `Trial run cleared: ${r.cleared.lines.toLocaleString()} lines, ${r.cleared.signons} sign-ons.`,
-        'This is the real count now. The guns forget the trial the next time they check in.');
-      await loadSessions();
-    } catch (err) { msg($('trialMsg'), 'err', err.message); }
-  };
 
   function applySessionSettings() {
     const s = sessions.find((x) => x.id === sessionId);
     renderTrial(s);
-    if (!s) {
-      $('sessionCardSub').textContent = 'no count session yet — create one below';
-      return;
-    }
+    if (!s) return;
     // a cycle session has no aisle plan, so its whole sub-tab goes
     const cycle = s.mode === 'cycle';
     $('teamPlanCard').hidden = cycle;
@@ -112,34 +80,10 @@
       tab.hidden = cycle;
       if (cycle && tab.classList.contains('current')) api.showSub('progress');
     }
-    $('sessionCardSub').textContent = `#${s.id} · ${s.mode === 'cycle' ? 'cycle count' : 'full count'} · ${s.status}`;
-    $('fPalletMode').value = s.pallet_mode;
-    $('fGuided').checked = !!s.guided;
-    $('fAskComments').checked = !!s.ask_comments;
-    $('fAutoRecount').checked = !!s.auto_recount;
-    $('fRecMinQty').value = s.recount_min_qty || 0;
-    $('fRecMinPct').value = s.recount_min_pct || 0;
-    $('fRecCap').value = s.recount_cap || 0;
-    $('fAskLot').checked = !!s.ask_lot;
-    $('fAskExpiry').checked = !!s.ask_expiry;
-    $('fRequireApproval').checked = !!s.require_approval;
-    $('fApprMinQty').value = s.approval_min_qty || 0;
-    $('fApprMinPct').value = s.approval_min_pct || 0;
-    $('fTrackAbc').checked = !!s.track_abc;
     $('fBoardNote').value = s.board_note || '';
     $('noteWho').textContent = s.board_note
       ? `On the board since ${new Date(s.board_note_at).toLocaleString()}${s.board_note_by ? ', put there by ' + s.board_note_by : ''}.`
       : 'Nothing on the board at the moment.';
-    $('fShowOnGuns').checked = s.show_on_guns !== 0;
-    $('fDefaultSession').checked = defaultSessionId === s.id;
-    $('fDefaultSession').disabled = s.status === 'closed';
-    $('fLayout').value = s.layout || '';
-    $('btnCloseSession').textContent = s.status === 'closed' ? 'Reopen session' : 'Close session';
-    // deleting is only offered once a count is closed: an open one may still have scanners on it
-    $('btnDeleteSession').disabled = s.status !== 'closed';
-    $('btnDeleteSession').title = s.status === 'closed'
-      ? 'Delete this count and everything counted against it. This cannot be undone.'
-      : 'Close the count first — an open one may still have scanners posting to it.';
   }
 
   /* ------------------------------------------------------------ progress */
@@ -987,16 +931,11 @@
     $('mapFixWhy').textContent = 'This session is on the schematic. Switch it to the rack drawing to see the real floor plan.';
   }
   $('btnUseDrawing').onclick = async () => {
-    if (!needSession($('sessionMsg')) || !layouts.length) return;
+    if (!needSession($('mapNote')) || !layouts.length) return;
     try {
-      $('fLayout').value = layouts[0].id;
-      await postJson(`/api/admin/sessions/${sessionId}/settings`, {
-        palletMode: $('fPalletMode').value, guided: $('fGuided').checked, askComments: $('fAskComments').checked,
-        autoRecount: $('fAutoRecount').checked, layout: layouts[0].id,
-        recountMinQty: $('fRecMinQty').value, recountMinPct: $('fRecMinPct').value, recountCap: $('fRecCap').value,
-      });
+      await postJson(`/api/admin/sessions/${sessionId}/settings`, { layout: layouts[0].id });
       await loadSessions();
-    } catch (err) { msg($('sessionMsg'), 'err', err.message); }
+    } catch (err) { msg($('mapNote'), 'err', err.message); }
   };
   function renderLevelChips(levels) {
     const box = $('mapLevels');
@@ -1011,7 +950,6 @@
   }
 
   let lastMap = { aisles: [], bins: [] };
-  let defaultSessionId = 0;
 
   async function refreshMap() {
     const data = await apiJson(`/api/admin/sessions/${sessionId}/map`);
@@ -1042,14 +980,10 @@
     picker.render(sessions, sessionId);
   }
 
-  async function refreshDefaultSession() {
-    defaultSessionId = (await apiJson('/api/admin/default-session')).sessionId || 0;
-  }
-
   async function refreshAll() {
     if (!sessionId) return;
     await Promise.all([refreshProgress(), refreshAssignments(), refreshPallets(), refreshMap(), refreshRecounts(),
-      refreshPicker(), refreshMessages(), refreshAdjustments(), refreshAccuracy(), refreshLabels(), refreshAlerts()]);
+      refreshPicker(), refreshMessages(), refreshAdjustments(), refreshLabels(), refreshAlerts()]);
   }
 
   /* ------------------------------------------------------- adjustments
@@ -1231,61 +1165,6 @@
   $('btnExportAdjust').onclick = () =>
     api.download(`/api/admin/sessions/${sessionId}/export/adjustments.csv`, `adjustments-session-${sessionId}.csv`);
 
-  /* ---------------------------------------------------------- accuracy
-     One row per ABC class: how much of it was exactly right, against the target
-     for that class. A warehouse can be 98% accurate overall and still be losing
-     money on the fast movers, which is the whole reason for cutting it this way. */
-  async function refreshAccuracy() {
-    const s = sessions.find((x) => x.id === sessionId);
-    const on = !!(s && s.track_abc);
-    $('accuracyOff').hidden = on;
-    $('accuracyBody').hidden = !on;
-    if (!on) return;
-    const a = await apiJson(`/api/admin/sessions/${sessionId}/accuracy`);
-    $('abcSub').textContent = a.classified
-      ? `${a.classified.toLocaleString()} of ${a.pallets_on_report.toLocaleString()} pallets have a class`
-      : 'no pallet on this count has an ABC class yet';
-    table($('accuracyTable'),
-      [{ label: 'Class' }, { label: 'Pallets', num: true }, { label: 'Exactly right', num: true },
-        { label: 'Pallet accuracy', num: true }, { label: 'Target', num: true }, { label: '' },
-        { label: 'Units expected', num: true }, { label: 'Units in dispute', num: true }, { label: 'Quantity accuracy', num: true },
-        { label: 'Missing', num: true }, { label: 'Not on report', num: true }, { label: 'Wrong bin', num: true }, { label: 'Qty variance', num: true }],
-      [...a.byClass, a.overall],
-      (r) => {
-        const tr = document.createElement('tr');
-        if (r.class === 'ALL') tr.style.fontWeight = '700';
-        tr.append(cell(r.label), cell(r.pallets.toLocaleString(), 'num'), cell(r.exact.toLocaleString(), 'num'),
-          cell(r.pallet_accuracy == null ? '—' : r.pallet_accuracy + '%', 'num'),
-          cell(r.target == null ? '—' : r.target + '%', 'num'));
-        const verdict = document.createElement('td');
-        if (r.meets != null) verdict.appendChild(tag(r.meets ? 'MEETS' : 'UNDER'));
-        tr.append(verdict,
-          cell(Math.round(r.expected_units).toLocaleString(), 'num'),
-          cell(Math.round(r.variance_units).toLocaleString(), 'num'),
-          cell(r.qty_accuracy == null ? '—' : r.qty_accuracy + '%', 'num'),
-          cell(r.missing, 'num'), cell(r.extra, 'num'), cell(r.wrong_bin, 'num'), cell(r.qty_variance, 'num'));
-        return tr;
-      },
-      'Nothing counted yet.');
-    $('accuracyNote').textContent =
-      `Bins with nothing odd in them: ${a.bins.clean.toLocaleString()} of ${a.bins.counted.toLocaleString()}`
-      + (a.bins.accuracy == null ? '' : ` (${a.bins.accuracy}%)`)
-      + (a.unclassified ? ` · ${a.unclassified.toLocaleString()} pallets have no class and are reported together` : '');
-  }
-
-  $('btnDeriveAbc').onclick = async () => {
-    if (!needSession($('accuracyMsg'))) return;
-    try {
-      const out = await postJson(`/api/admin/sessions/${sessionId}/abc/derive`, {});
-      msg($('accuracyMsg'), 'ok', `${out.classified.toLocaleString()} pallets classified`,
-        `A ${out.byClass.A.toLocaleString()} · B ${out.byClass.B.toLocaleString()} · C ${out.byClass.C.toLocaleString()}`
-        + (out.kept ? ` · ${out.kept.toLocaleString()} already had a class from the file and were left alone` : ''));
-      await refreshAccuracy();
-    } catch (err) { msg($('accuracyMsg'), 'err', err.message); }
-  };
-  $('btnExportAccuracy').onclick = () =>
-    api.download(`/api/admin/sessions/${sessionId}/export/accuracy.csv`, `accuracy-session-${sessionId}.csv`);
-
   /* ----------------------------------------------------- labels to replace
      A label that would not scan is a pallet the next person cannot scan either.
      This is the walk-round afterwards, with a printer. */
@@ -1380,7 +1259,7 @@
     box.innerHTML = '';
     box.hidden = !live.length;
     for (const a of live) box.appendChild(sosBanner(a));
-    api.subCount('teams', live.length || 0);
+    api.subCount('alerts', live.length || 0);   // the badge on the Alerts tab, until every SOS is closed
 
     table($('sosTable'),
       [{ label: 'When' }, { label: 'Team' }, { label: 'What' }, { label: 'Where' }, { label: 'Scanner' },
@@ -1558,109 +1437,6 @@
   $('fPalletLimit').onchange = () => { try { sessionStorage.setItem('palletLimit', $('fPalletLimit').value); } catch { /* private window */ } refreshPallets(); };
   try { const saved = sessionStorage.getItem('palletLimit'); if (saved) $('fPalletLimit').value = saved; } catch { /* private window */ }
 
-  /* Creating a count is also where its lists come from: a count with no
-     inventory report to compare against is a count nobody can act on. Both
-     files are optional here, and Getting started tracks whatever is left. */
-  /* Deleting a count is the only thing in the app that cannot be undone, so it
-     says what will go before it asks, and asks for the name back when there are
-     counted lines to lose. */
-  $('btnDeleteSession').onclick = async () => {
-    const s = sessions.find((x) => x.id === sessionId);
-    if (!s) return;
-    let had;
-    try { had = (await apiJson(`/api/admin/sessions/${sessionId}`)).contents; }
-    catch (err) { return msg($('sessionMsg'), 'err', err.message); }
-
-    const lines = [
-      `${had.counts.toLocaleString()} counted lines`,
-      `${had.bins.toLocaleString()} bins`,
-      `${had.pallets.toLocaleString()} pallets`,
-      `${had.recounts.toLocaleString()} second counts`,
-      `${had.assignments.toLocaleString()} aisle assignments`,
-    ].join('\n  · ');
-    if (!confirm(`Delete "${s.name}" (#${s.id}) and everything under it?\n\n  · ${lines}\n\nThis cannot be undone. The audit log keeps a record that it happened.`)) return;
-
-    let confirmName = '';
-    if (had.counts > 0) {
-      confirmName = prompt(`This count holds ${had.counts.toLocaleString()} counted lines.\n\nType its name exactly to confirm:\n\n${s.name}`, '');
-      if (confirmName === null) return;
-    }
-    try {
-      msg($('sessionMsg'), 'warn', 'Deleting…');
-      const gone = await apiJson(`/api/admin/sessions/${sessionId}`, {
-        method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirmName }),
-      });
-      sessionId = null;
-      await refreshDefaultSession();
-      await loadSessions();
-      msg($('sessionMsg'), 'ok', `Deleted "${gone.name}".`,
-        gone.backup ? `A copy of the database was taken first as ${gone.backup} — Settings → Backups & log.` : 'It held no counted lines.');
-    } catch (err) { msg($('sessionMsg'), 'err', 'Not deleted', err.message); }
-  };
-
-  $('btnCreate').onclick = async () => {
-    const files = [['bins', $('fNewBins').files[0]], ['pallets', $('fNewPallets').files[0]]].filter(([, f]) => f);
-    try {
-      msg($('sessionMsg'), 'warn', 'Creating…');
-      const s = await postJson('/api/admin/sessions', { name: $('fNewName').value, mode: $('fNewMode').value });
-      sessionId = s.id;
-      $('fNewName').value = '';
-
-      const loaded = [];
-      const failed = [];
-      for (const [kind, file] of files) {
-        msg($('sessionMsg'), 'warn', `Reading ${file.name}…`);
-        try {
-          const stats = await apiJson(`/api/admin/sessions/${s.id}/master?kind=${kind}`,
-            { method: 'POST', headers: { 'content-type': 'text/csv' }, body: await window.appUi.fileToCsv(file) });
-          loaded.push(`${stats.rows.toLocaleString()} rows from ${file.name}`);
-        } catch (err) { failed.push(`${file.name}: ${err.message}`); }
-      }
-      $('fNewBins').value = ''; $('fNewPallets').value = '';
-
-      const what = `Created ${s.mode === 'cycle' ? 'cycle count' : 'full count'} #${s.id}.`;
-      if (failed.length) {
-        msg($('sessionMsg'), 'warn', what, `${loaded.length ? 'Imported ' + loaded.join(' and ') + '. ' : ''}Could not read ${failed.join('; ')}. Upload it under Settings.`);
-      } else if (loaded.length) {
-        msg($('sessionMsg'), 'ok', what, `Imported ${loaded.join(' and ')}. Check Settings → Getting started for anything still needed.`);
-      } else {
-        msg($('sessionMsg'), 'ok', what, 'Next: upload its bin list and inventory report — Settings → Getting started walks you through it.');
-      }
-      await loadSessions();
-    } catch (err) { msg($('sessionMsg'), 'err', err.message); }
-  };
-  $('btnSaveSettings').onclick = async () => {
-    if (!needSession($('sessionMsg'))) return;
-    try {
-      await postJson(`/api/admin/sessions/${sessionId}/settings`, {
-        palletMode: $('fPalletMode').value, guided: $('fGuided').checked, askComments: $('fAskComments').checked,
-        autoRecount: $('fAutoRecount').checked, layout: $('fLayout').value,
-        recountMinQty: $('fRecMinQty').value, recountMinPct: $('fRecMinPct').value, recountCap: $('fRecCap').value,
-        askLot: $('fAskLot').checked, askExpiry: $('fAskExpiry').checked,
-        requireApproval: $('fRequireApproval').checked,
-        approvalMinQty: $('fApprMinQty').value, approvalMinPct: $('fApprMinPct').value,
-        trackAbc: $('fTrackAbc').checked,
-        showOnGuns: $('fShowOnGuns').checked,
-      });
-      const wantDefault = $('fDefaultSession').checked;
-      if (wantDefault !== (defaultSessionId === sessionId)) {
-        await postJson('/api/admin/default-session', { sessionId: wantDefault ? sessionId : 0 });
-        await refreshDefaultSession();
-      }
-      msg($('sessionMsg'), 'ok', 'Settings saved. Scanners pick them up within about half a minute.',
-        defaultSessionId === sessionId ? 'Every scanner will land on this count at sign-on.' : '');
-      await loadSessions();
-    } catch (err) { msg($('sessionMsg'), 'err', err.message); }
-  };
-  $('btnCloseSession').onclick = async () => {
-    const s = sessions.find((x) => x.id === sessionId);
-    if (!s) return;
-    const next = s.status === 'closed' ? 'open' : 'closed';
-    if (next === 'closed' && !confirm('Close this session? Scanners will no longer be able to send counts to it.')) return;
-    try { await postJson(`/api/admin/sessions/${sessionId}/status`, { status: next }); await loadSessions(); }
-    catch (err) { msg($('sessionMsg'), 'err', err.message); }
-  };
-
   async function queueAisles(force) {
     const r = await postJson(`/api/admin/sessions/${sessionId}/assignments`,
       { team: $('fAssignTeam').value, aisles: $('fAssignAisles').value, levels: $('fAssignLevels').value, force });
@@ -1755,20 +1531,11 @@
   $('btnExportUncounted').onclick = () => download(`/api/admin/sessions/${sessionId}/export/uncounted.csv`, `uncounted-bins-session-${sessionId}.csv`);
 
   /* ------------------------------------------------------------ boot */
-  async function loadLayouts() {
-    layouts = await apiJson('/api/admin/layouts');
-    const sel = $('fLayout');
-    sel.innerHTML = '<option value="">Schematic (auto from bin codes)</option>';
-    for (const l of layouts) {
-      const o = document.createElement('option');
-      o.value = l.id; o.textContent = `${l.name} (${l.aisles} aisles)`;
-      sel.appendChild(o);
-    }
-  }
+  async function loadLayouts() { layouts = await apiJson('/api/admin/layouts'); }
   document.addEventListener('auth', (e) => {
     if (!e.detail) return show('login');
     show('main');
-    (async () => { await loadLayouts(); await refreshDefaultSession(); await loadSessions(); })().catch(() => show('login'));
+    (async () => { await loadLayouts(); await loadSessions(); })().catch(() => show('login'));
   });
   document.addEventListener('DOMContentLoaded', () => { api.start().catch(() => show('login')); });
   setInterval(() => { if (api.token && sessionId) refreshAll().catch(() => {}); }, 30000);

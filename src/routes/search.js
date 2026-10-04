@@ -61,7 +61,6 @@ export function searchAll(sessionId, rawQ) {
         p.expected_qty == null ? '' : `report: ${p.expected_qty}${p.uom ? ' ' + p.uom : ''} in ${p.expected_location || 'no bin'}`,
         p.counted_qty == null ? 'not counted yet' : `counted: ${p.counted_qty} in ${p.found_in}${p.teams ? ' by team ' + p.teams : ''}`,
         p.lot ? `lot ${p.lot}` : '',
-        p.abc ? `class ${p.abc}` : '',
       ].filter(Boolean).join(' · '),
       goto: { page: '/admin', sub: 'reports' },
     })));

@@ -38,21 +38,21 @@ check('Admin: login', true);
 check('Admin: the tab bar links the supervisor pages, and the Testing tab',
   (await admin.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/cycle,/front,/missing,/teams,/settings,/testing');
 
+/* ---- making the count lives under Settings → Getting started ---- */
+const toSettings = async () => { await admin.goto(BASE + '/settings'); await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(700); };
+check('Admin: the dashboard no longer carries the Count session card', (await admin.$('#sessionCard')) === null && (await admin.$('#btnCreate')) === null);
+await toSettings();
+check('Settings: the sign-in carried over from the dashboard, no second password',
+  (await admin.$('#scrLogin.active')) === null && /Dashboard/.test(await admin.textContent('#navTabs')));
 await admin.fill('#fNewName', 'Front Royal Q3 physical'); await admin.click('#btnCreate'); await admin.waitForTimeout(600);
-check('Admin: create session, and it points at what to upload next',
+check('Settings: create session, and it points at what to upload next',
   /Created full count #\d+/.test(clean(await admin.textContent('#sessionMsg')))
     && /Getting started|bin list/.test(clean(await admin.textContent('#sessionMsg'))),
   clean(await admin.textContent('#sessionMsg')).slice(0, 90));
 await admin.selectOption('#fPalletMode', 'warn'); await admin.selectOption('#fLayout', 'front-royal');
 await admin.click('#btnSaveSettings'); await admin.waitForTimeout(500);
-check('Admin: save settings (Front Royal drawing, validate w/ override, guided, comments)', /Settings saved/.test(clean(await admin.textContent('#sessionMsg'))));
+check('Settings: save settings (Front Royal drawing, validate w/ override, guided, comments)', /Settings saved/.test(clean(await admin.textContent('#sessionMsg'))));
 await (await card('#fPalletMode')).asElement().screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-session.png` });
-
-/* ---- setup lives under Settings: scanners, list uploads, racking blocks ---- */
-const toSettings = async () => { await admin.goto(BASE + '/settings'); await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(700); };
-await toSettings();
-check('Settings: the sign-in carried over from the dashboard, no second password',
-  (await admin.$('#scrLogin.active')) === null && /Dashboard/.test(await admin.textContent('#navTabs')));
 
 // scanners: register two, check links, remove one later
 for (const [n, notes] of [['scanner-01', 'freezer unit A'], ['SCANNER-02', ''], ['SCANNER-99', 'to be removed']]) {
@@ -81,18 +81,28 @@ await admin.click('#btnLoadSiteBins'); await admin.waitForTimeout(6000);
   const m = clean(await admin.textContent('#uploadMsg-bins'));
   check('Settings: one-click Front Royal bin list: 13,673 bins in 28 aisles, 61 staging/door bins left out', /Imported 13,734 rows/.test(m) && /13,673 bins in 28 aisles/.test(m) && /61 bins left out \(counted manually: STAGING, DOORS\)/.test(m), m.slice(0, 200));
 }
-check('Settings: each list gets its own card, not a dropdown',
-  (await admin.$$('[data-kind]')).length === 3 && (await admin.$('#fKind')) === null,
+check('Settings: each list gets its own card, not a dropdown (the counting plan lives under Teams & crew now)',
+  (await admin.$$('[data-kind]')).length === 2 && (await admin.$('#fKind')) === null && (await admin.$('#fFile-plan')) === null,
   (await admin.$$eval('[data-kind]', (c) => c.map((x) => x.dataset.kind))).join(', '));
-for (const [kind, file] of [['pallets', 'pallets.csv'], ['plan', 'plan.csv']]) {
+for (const [kind, file] of [['pallets', 'pallets.csv']]) {
   await admin.setInputFiles(`#fFile-${kind}`, `${S}fixtures/${file}`);
   await admin.click(`#btnUpload-${kind}`); await admin.waitForTimeout(kind === 'bins' ? 2500 : 900);
   const m = clean(await admin.textContent(`#uploadMsg-${kind}`));
   check(`Settings: upload ${kind}`, /Imported \d/.test(m), m.slice(0, 120));
   if (kind === 'pallets') await (await card(`#fFile-${kind}`)).asElement().screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-upload.png` });
 }
+/* the counting plan is uploaded from Teams & crew, against a count */
+await admin.goto(BASE + '/teams'); await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(900);
+await admin.selectOption('#fPlanSession', '1');
+await admin.setInputFiles('#fFile-plan', `${S}fixtures/plan.csv`);
+await admin.click('#btnUpload-plan'); await admin.waitForTimeout(1200);
+{
+  const m = clean(await admin.textContent('#uploadMsg-plan'));
+  check('Teams & crew: upload the counting plan against count #1', /Imported \d/.test(m) && /planned aisle assignments/.test(m), m.slice(0, 120));
+}
 const [dl0] = await Promise.all([admin.waitForEvent('download'), admin.click('#colGuide-plan a')]);
-check('Settings: sample CSV download', dl0.suggestedFilename() === 'plan-template.csv', dl0.suggestedFilename());
+check('Teams & crew: sample plan CSV download', dl0.suggestedFilename() === 'plan-template.csv', dl0.suggestedFilename());
+await toSettings();
 
 await admin.click('#btnLayoutBlocks'); await admin.waitForTimeout(700);
 check('Settings: pair from drawing (F01-F24 + A01-A04)', /Paired 28/.test(clean(await admin.textContent('#aisleMsg'))), clean(await admin.textContent('#aisleMsg')));
@@ -475,18 +485,21 @@ for (const [btn, name] of [['#btnExportPallets', 'pallets'], ['#btnExportCounts'
   check(`Admin: export ${name}.csv`, dl.suggestedFilename().startsWith(name) && lines.length > 1, `${lines.length - 1} rows, header: ${lines[0].slice(0, 70)}`);
 }
 // Excel: the real ERP workbook, as-is, into a fresh session
-await admin.fill('#fNewName', 'xlsx check'); await admin.click('#btnCreate'); await admin.waitForTimeout(1500);
-check('Admin: a new session comes up on the site drawing, not back on the schematic',
-  await admin.$eval('#fLayout', (s) => s.value) === 'front-royal'
-    && /rack layout/.test(await admin.textContent('#mapSub')),
-  `${await admin.$eval('#fLayout', (s) => s.value)} · ${(await admin.textContent('#mapSub')).slice(0, 50)}`);
-check('Admin: a session with no bins yet says so instead of showing an empty map',
-  /No bins in this session yet/.test(await admin.textContent('#mapNote')), clean(await admin.textContent('#mapNote')).slice(0, 80));
-await admin.selectOption('#fLayout', 'front-royal'); await admin.click('#btnSaveSettings'); await admin.waitForTimeout(400);
 await toSettings();
-check('Settings: the session picker follows the dashboard to the newest session',
+await admin.fill('#fNewName', 'xlsx check'); await admin.click('#btnCreate'); await admin.waitForTimeout(1500);
+check('Settings: a new session comes up on the site drawing, not back on the schematic',
+  await admin.$eval('#fLayout', (s) => s.value) === 'front-royal', await admin.$eval('#fLayout', (s) => s.value));
+check('Settings: the session picker follows to the newest session',
   /xlsx check/.test(await admin.$eval('#fSessionPick', (s) => s.options[s.selectedIndex].textContent)),
   await admin.$eval('#fSessionPick', (s) => s.options[s.selectedIndex].textContent));
+await admin.selectOption('#fLayout', 'front-royal'); await admin.click('#btnSaveSettings'); await admin.waitForTimeout(400);
+await toDashboard();
+check('Admin: the dashboard opens on the newest count, on the rack layout',
+  /rack layout/.test(await admin.textContent('#mapSub')) && /xlsx check/.test(await admin.textContent('#sessionPick .sess-btn')),
+  `${(await admin.textContent('#mapSub')).slice(0, 50)} · ${clean(await admin.textContent('#sessionPick .sess-btn')).slice(0, 40)}`);
+check('Admin: a session with no bins yet says so instead of showing an empty map',
+  /No bins in this session yet/.test(await admin.textContent('#mapNote')), clean(await admin.textContent('#mapNote')).slice(0, 80));
+await toSettings();
 await admin.setInputFiles('#fFile-bins', `${S}fixtures/Bins.xlsx`); await admin.click('#btnUpload-bins');
 await admin.waitForFunction(() => /Imported|failed/.test(document.getElementById('uploadMsg-bins').textContent), null, { timeout: 60000 }).catch(() => {});
 {
@@ -510,18 +523,22 @@ await pickSession(admin, '1');
     await admin.$eval('#fLayout', (s) => s.value));
   await pickSession(admin, '1');
 }
-// close session -> scanner rejected -> reopen
+// close session (under Settings) -> scanner rejected -> reopen
+await toSettings(); await admin.selectOption('#fSessionPick', '1'); await admin.waitForTimeout(600);
 await admin.click('#btnCloseSession'); await admin.waitForTimeout(600);
 const closedPost = await fetch(`${BASE}/api/sessions/1/counts`, { method: 'POST', headers: api.headers, body: JSON.stringify([{ clientId: 'x1', palletId: 'P', qty: 1, location: 'F01A001', team: '1', deviceId: 'D' }]) });
-check('Admin: closed session refuses new counts (409)', closedPost.status === 409);
+check('Settings: closed session refuses new counts (409)', closedPost.status === 409);
+check('Settings: the card says it is closed and offers to reopen', /closed/.test(clean(await admin.textContent('#sessionCardSub'))) && /Reopen/.test(await admin.textContent('#btnCloseSession')));
+await toDashboard(); await pickSession(admin, '1'); await admin.waitForTimeout(800);
 check('Admin: the header picker shows a closed count as closed',
   await admin.$eval('#sessionPick .sess-btn', (b) => /closed/i.test(b.textContent)),
   clean(await admin.textContent('#sessionPick .sess-btn')));
+await toSettings(); await admin.selectOption('#fSessionPick', '1'); await admin.waitForTimeout(600);
 await admin.click('#btnCloseSession'); await admin.waitForTimeout(600);
-check('Admin: reopen session — the header picker drops the "closed" tag',
-  !(await admin.$eval('#sessionPick .sess-btn', (b) => /closed/i.test(b.textContent)))
-    && /open/.test(clean(await admin.textContent('#sessionCardSub'))),
-  clean(await admin.textContent('#sessionCardSub')));
+check('Settings: reopen session', /open/.test(clean(await admin.textContent('#sessionCardSub'))), clean(await admin.textContent('#sessionCardSub')));
+await toDashboard(); await pickSession(admin, '1'); await admin.waitForTimeout(800);
+check('Admin: the header picker drops the "closed" tag',
+  !(await admin.$eval('#sessionPick .sess-btn', (b) => /closed/i.test(b.textContent))), clean(await admin.textContent('#sessionPick .sess-btn')));
 // idempotent resend
 const dup = await (await fetch(`${BASE}/api/sessions/1/counts`, { method: 'POST', headers: api.headers, body: JSON.stringify([{ clientId: 'idem-1', palletId: 'PLT06001A', qty: 1, location: 'F06A001', team: '9', deviceId: 'X' }, { clientId: 'idem-1', palletId: 'PLT06001A', qty: 1, location: 'F06A001', team: '9', deviceId: 'X' }]) })).json();
 const cnt = (await (await fetch(`${BASE}/api/sessions/1/counted-pallets`, { headers: api.headers })).json()).pallets.filter((p) => p[0] === 'PLT06001A').length;

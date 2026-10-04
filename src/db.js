@@ -411,7 +411,7 @@ if (!hasCol('sessions', 'recount_min_qty')) {
   db.exec('ALTER TABLE sessions ADD COLUMN recount_min_pct REAL NOT NULL DEFAULT 0');
   db.exec('ALTER TABLE sessions ADD COLUMN recount_cap INTEGER NOT NULL DEFAULT 0');
 }
-/* Approvals on adjustments, and the ABC class an accuracy report is cut by.
+/* Approvals on adjustments (the track_abc column is kept for old databases; nothing reads it).
    Both off unless a count asks for them: a cycle count run by one supervisor
    needs neither, and a wall-to-wall audited by a third party needs both. */
 if (!hasCol('sessions', 'require_approval')) {

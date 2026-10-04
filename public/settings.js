@@ -13,7 +13,7 @@
 
   const needSession = (el) => {
     if (sessionId) return true;
-    msg(el, 'err', 'There is no count session yet', 'Create one on the Dashboard, then come back here to set it up.');
+    msg(el, 'err', 'There is no count session yet', 'Make one under Getting started → Count session, then come back here.');
     return false;
   };
 
@@ -528,13 +528,11 @@
     msg($('promptMsg'), 'warn', 'Defaults loaded — press Save to keep them.');
   };
 
-  /* ------------------------------------------- adjustment reasons & targets
-     The reason codes an approval carries, and what each ABC class has to hit.
-     Both are site settings rather than per-count ones: a warehouse's vocabulary
-     and its targets do not change between Tuesday's cycle count and the
-     wall-to-wall in March. */
+  /* ------------------------------------------------- adjustment reasons
+     The reason codes an approval carries. A site setting rather than a per-count
+     one: a warehouse's vocabulary does not change between Tuesday's cycle
+     count and the wall-to-wall in March. */
   let reasonState = { reasons: [], isDefault: true };
-  let targetState = { targets: {}, isDefault: true };
 
   function renderReasons() {
     const box = $('reasonList');
@@ -557,18 +555,10 @@
     chip.hidden = false;
     chip.className = 'chip' + (reasonState.isDefault ? '' : ' online');
     chip.textContent = reasonState.isDefault ? 'the defaults' : 'set for this site';
-    $('fTargetA').value = targetState.targets.A ?? '';
-    $('fTargetB').value = targetState.targets.B ?? '';
-    $('fTargetC').value = targetState.targets.C ?? '';
   }
 
   async function refreshReasons() {
-    const [r, t] = await Promise.all([
-      api.json('/api/admin/adjustment-reasons'),
-      api.json('/api/admin/accuracy-targets'),
-    ]);
-    reasonState = r;
-    targetState = t;
+    reasonState = await api.json('/api/admin/adjustment-reasons');
     renderReasons();
   }
 
@@ -589,18 +579,14 @@
   $('btnSaveReasons').onclick = async () => {
     try {
       reasonState = await api.post('/api/admin/adjustment-reasons', { reasons: reasonState.reasons });
-      targetState = await api.post('/api/admin/accuracy-targets', {
-        targets: { A: $('fTargetA').value, B: $('fTargetB').value, C: $('fTargetC').value },
-      });
       renderReasons();
       msg($('reasonMsg'), 'ok', 'Saved.', 'The dashboard picks these up on its next refresh.');
     } catch (err) { msg($('reasonMsg'), 'err', err.message); }
   };
   $('btnResetReasons').onclick = async () => {
-    if (!confirm('Put the adjustment reasons and accuracy targets back to the shipped defaults?')) return;
+    if (!confirm('Put the adjustment reasons back to the shipped defaults?')) return;
     try {
       reasonState = await api.post('/api/admin/adjustment-reasons', { reasons: [] });
-      targetState = await api.post('/api/admin/accuracy-targets', { targets: {} });
       renderReasons();
       msg($('reasonMsg'), 'warn', 'Back to the defaults.');
     } catch (err) { msg($('reasonMsg'), 'err', err.message); }
@@ -718,13 +704,6 @@
                  ['Location', 'where the system says it is - drives WRONG BIN']],
       note: 'One row per pallet. Validation list for question 1. Re-uploading the same pallet updates it rather than duplicating it.',
     },
-    plan: {
-      file: 'plan-template.csv',
-      required: [['Team', 'team number'], ['Aisle', 'the full aisle code from the bin list, e.g. F01 - a bare number is refused when it could mean two aisles (A01 / F01)'],
-                 ['Levels', 'which levels the team counts, by equipment: A-C, D-F, or A-F for every level']],
-      optional: [],
-      note: 'One row per aisle, in the order each team should count. Upload the bin list first. Aisles can also be queued by hand under Team assignments on the Dashboard.',
-    },
   };
 
   /* Each list gets its own card: they are different jobs, done at different
@@ -769,6 +748,7 @@
   }
 
   for (const kind of Object.keys(FILE_GUIDE)) {
+    if (!$('btnUpload-' + kind)) continue;
     renderGuide(kind);
     $('btnUpload-' + kind).onclick = async () => {
       const file = $('fFile-' + kind).files[0];
@@ -1235,15 +1215,198 @@
       sel.appendChild(o);
     }
     if (!sessions.length) {
-      sel.innerHTML = '<option value="">No sessions yet — create one on the Dashboard</option>';
+      sel.innerHTML = '<option value="">No counts yet — make one under Getting started</option>';
       sessionId = null;
     } else {
       sessionId = sessions.some((s) => s.id === prior) ? prior : sessions[0].id;
       sel.value = String(sessionId);
     }
     applyScope();
+    applySessionCard();
     await refreshAisles();
   }
+
+  /* ---------------------------------------------------------- the count itself
+     The Count session card: make a count, set its options, make it a trial,
+     close or delete it. It acts on the count picked at the top of the page. */
+  let layouts = [];
+  let defaultSessionId = 0;
+  async function loadLayouts() {
+    layouts = await api.json('/api/admin/layouts');
+    const sel = $('fLayout');
+    sel.innerHTML = '<option value="">Schematic (auto from bin codes)</option>';
+    for (const l of layouts) {
+      const o = document.createElement('option');
+      o.value = l.id; o.textContent = `${l.name} (${l.aisles} aisles)`;
+      sel.appendChild(o);
+    }
+  }
+  async function refreshDefaultSession() {
+    defaultSessionId = (await api.json('/api/admin/default-session')).sessionId || 0;
+  }
+  function renderTrial(s) {
+    const on = !!(s && s.trial);
+    $('btnTrialOn').hidden = on || !s || s.status !== 'open';
+    $('btnTrialEnd').hidden = !on;
+    $('trialState').textContent = on ? 'This count is a trial run.'
+      : s && s.cleared_at ? `A trial run was cleared ${new Date(s.cleared_at).toLocaleString()} — this is the real count.` : '';
+  }
+  function applySessionCard() {
+    const s = sessions.find((x) => x.id === sessionId);
+    renderTrial(s);
+    if (!s) {
+      $('sessionCardSub').textContent = 'no count session yet — create one below';
+      return;
+    }
+    $('sessionCardSub').textContent = `#${s.id} · ${s.mode === 'cycle' ? 'cycle count' : 'full count'} · ${s.status}`;
+    $('fPalletMode').value = s.pallet_mode;
+    $('fGuided').checked = !!s.guided;
+    $('fAskComments').checked = !!s.ask_comments;
+    $('fAutoRecount').checked = !!s.auto_recount;
+    $('fRecMinQty').value = s.recount_min_qty || 0;
+    $('fRecMinPct').value = s.recount_min_pct || 0;
+    $('fRecCap').value = s.recount_cap || 0;
+    $('fAskLot').checked = !!s.ask_lot;
+    $('fAskExpiry').checked = !!s.ask_expiry;
+    $('fRequireApproval').checked = !!s.require_approval;
+    $('fApprMinQty').value = s.approval_min_qty || 0;
+    $('fApprMinPct').value = s.approval_min_pct || 0;
+    $('fShowOnGuns').checked = s.show_on_guns !== 0;
+    $('fDefaultSession').checked = defaultSessionId === s.id;
+    $('fDefaultSession').disabled = s.status === 'closed';
+    $('fLayout').value = s.layout || '';
+    $('btnCloseSession').textContent = s.status === 'closed' ? 'Reopen session' : 'Close session';
+    // deleting is only offered once a count is closed: an open one may still have scanners on it
+    $('btnDeleteSession').disabled = s.status !== 'closed';
+    $('btnDeleteSession').title = s.status === 'closed'
+      ? 'Delete this count and everything counted against it. This cannot be undone.'
+      : 'Close the count first — an open one may still have scanners posting to it.';
+  }
+
+  $('btnTrialOn').onclick = async () => {
+    const s = sessions.find((x) => x.id === sessionId);
+    if (!s) return;
+    const lines = s.lines || 0;
+    if (lines && !confirm(`This count already has ${lines.toLocaleString()} lines. Make it a trial run? Ending the trial later clears them.`)) return;
+    try {
+      await api.post(`/api/admin/sessions/${sessionId}/trial`, { on: true });
+      msg($('trialMsg'), 'ok', 'This count is a trial run.', 'The guns show TRIAL RUN within a minute, between pallets.');
+      await loadSessions();
+    } catch (err) { msg($('trialMsg'), 'err', err.message); }
+  };
+  $('btnTrialEnd').onclick = async () => {
+    const s = sessions.find((x) => x.id === sessionId);
+    if (!s) return;
+    const typed = prompt(`End the trial run and clear it?\n\nEvery line (${(s.lines || 0).toLocaleString()}), sign-on, SOS and second count on "${s.name}" goes. The bin list, the report, the team plan and the settings stay, and the aisles go back to the start.\n\nType CLEAR to go ahead.`);
+    if (typed === null) return;
+    if (typed.trim().toUpperCase() !== 'CLEAR') return msg($('trialMsg'), 'warn', 'Nothing cleared.', 'Type CLEAR to end the trial run.');
+    try {
+      const r = await api.post(`/api/admin/sessions/${sessionId}/trial`, { end: true });
+      msg($('trialMsg'), 'ok', `Trial run cleared: ${r.cleared.lines.toLocaleString()} lines, ${r.cleared.signons} sign-ons.`,
+        'This is the real count now. The guns forget the trial the next time they check in.');
+      await loadSessions();
+    } catch (err) { msg($('trialMsg'), 'err', err.message); }
+  };
+
+  /* Deleting a count is the only thing in the app that cannot be undone, so it
+     says what will go before it asks, and asks for the name back when there are
+     counted lines to lose. */
+  $('btnDeleteSession').onclick = async () => {
+    const s = sessions.find((x) => x.id === sessionId);
+    if (!s) return;
+    let had;
+    try { had = (await api.json(`/api/admin/sessions/${sessionId}`)).contents; }
+    catch (err) { return msg($('sessionMsg'), 'err', err.message); }
+    const lines = [
+      `${had.counts.toLocaleString()} counted lines`,
+      `${had.bins.toLocaleString()} bins`,
+      `${had.pallets.toLocaleString()} pallets`,
+      `${had.recounts.toLocaleString()} second counts`,
+      `${had.assignments.toLocaleString()} aisle assignments`,
+    ].join('\n  · ');
+    if (!confirm(`Delete "${s.name}" (#${s.id}) and everything under it?\n\n  · ${lines}\n\nThis cannot be undone. The audit log keeps a record that it happened.`)) return;
+    let confirmName = '';
+    if (had.counts > 0) {
+      confirmName = prompt(`This count holds ${had.counts.toLocaleString()} counted lines.\n\nType its name exactly to confirm:\n\n${s.name}`, '');
+      if (confirmName === null) return;
+    }
+    try {
+      msg($('sessionMsg'), 'warn', 'Deleting…');
+      const gone = await api.json(`/api/admin/sessions/${sessionId}`, {
+        method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirmName }),
+      });
+      sessionId = null;
+      await refreshDefaultSession();
+      await loadSessions();
+      await refreshSetup().catch(() => {});
+      msg($('sessionMsg'), 'ok', `Deleted "${gone.name}".`,
+        gone.backup ? `A copy of the database was taken first as ${gone.backup} — ERP & backups → Backups & log.` : 'It held no counted lines.');
+    } catch (err) { msg($('sessionMsg'), 'err', 'Not deleted', err.message); }
+  };
+
+  /* Creating a count is also where its lists come from: a count with no
+     inventory report to compare against is a count nobody can act on. Both
+     files are optional here, and the checklist above tracks whatever is left. */
+  $('btnCreate').onclick = async () => {
+    const files = [['bins', $('fNewBins').files[0]], ['pallets', $('fNewPallets').files[0]]].filter(([, f]) => f);
+    try {
+      msg($('sessionMsg'), 'warn', 'Creating…');
+      const s = await api.post('/api/admin/sessions', { name: $('fNewName').value, mode: $('fNewMode').value });
+      sessionId = s.id;
+      $('fNewName').value = '';
+      const loaded = [];
+      const failed = [];
+      for (const [kind, file] of files) {
+        msg($('sessionMsg'), 'warn', `Reading ${file.name}…`);
+        try {
+          const stats = await api.json(`/api/admin/sessions/${s.id}/master?kind=${kind}`,
+            { method: 'POST', headers: { 'content-type': 'text/csv' }, body: await fileToCsv(file) });
+          loaded.push(`${stats.rows.toLocaleString()} rows from ${file.name}`);
+        } catch (err) { failed.push(`${file.name}: ${err.message}`); }
+      }
+      $('fNewBins').value = ''; $('fNewPallets').value = '';
+      const what = `Created ${s.mode === 'cycle' ? 'cycle count' : 'full count'} #${s.id}.`;
+      if (failed.length) {
+        msg($('sessionMsg'), 'warn', what, `${loaded.length ? 'Imported ' + loaded.join(' and ') + '. ' : ''}Could not read ${failed.join('; ')}. Upload it under Lists & racking.`);
+      } else if (loaded.length) {
+        msg($('sessionMsg'), 'ok', what, `Imported ${loaded.join(' and ')}. The Getting started checklist above shows anything still needed.`);
+      } else {
+        msg($('sessionMsg'), 'ok', what, 'Next: upload its bin list and inventory report — the Getting started checklist above walks you through it.');
+      }
+      await loadSessions();
+      await refreshSetup().catch(() => {});
+    } catch (err) { msg($('sessionMsg'), 'err', err.message); }
+  };
+  $('btnSaveSettings').onclick = async () => {
+    if (!needSession($('sessionMsg'))) return;
+    try {
+      await api.post(`/api/admin/sessions/${sessionId}/settings`, {
+        palletMode: $('fPalletMode').value, guided: $('fGuided').checked, askComments: $('fAskComments').checked,
+        autoRecount: $('fAutoRecount').checked, layout: $('fLayout').value,
+        recountMinQty: $('fRecMinQty').value, recountMinPct: $('fRecMinPct').value, recountCap: $('fRecCap').value,
+        askLot: $('fAskLot').checked, askExpiry: $('fAskExpiry').checked,
+        requireApproval: $('fRequireApproval').checked,
+        approvalMinQty: $('fApprMinQty').value, approvalMinPct: $('fApprMinPct').value,
+        showOnGuns: $('fShowOnGuns').checked,
+      });
+      const wantDefault = $('fDefaultSession').checked;
+      if (wantDefault !== (defaultSessionId === sessionId)) {
+        await api.post('/api/admin/default-session', { sessionId: wantDefault ? sessionId : 0 });
+        await refreshDefaultSession();
+      }
+      msg($('sessionMsg'), 'ok', 'Settings saved. Scanners pick them up within about half a minute.',
+        defaultSessionId === sessionId ? 'Every scanner will land on this count at sign-on.' : '');
+      await loadSessions();
+    } catch (err) { msg($('sessionMsg'), 'err', err.message); }
+  };
+  $('btnCloseSession').onclick = async () => {
+    const s = sessions.find((x) => x.id === sessionId);
+    if (!s) return;
+    const next = s.status === 'closed' ? 'open' : 'closed';
+    if (next === 'closed' && !confirm('Close this session? Scanners will no longer be able to send counts to it.')) return;
+    try { await api.post(`/api/admin/sessions/${sessionId}/status`, { status: next }); await loadSessions(); }
+    catch (err) { msg($('sessionMsg'), 'err', err.message); }
+  };
 
   function applyScope() {
     const s = sessions.find((x) => x.id === sessionId);
@@ -1259,13 +1422,14 @@
 
   // the session bar only means anything to the panes that act on a session
   document.addEventListener('subshow', (e) => {
-    $('scopeBar').hidden = !['lists', 'erp', 'start'].includes(e.detail);
+    $('scopeBar').hidden = !['lists', 'erp', 'start'].includes(e.detail);   // the panes that act on a count
     if (e.detail === 'start') refreshSetup().catch((err) => msg($('startMsg'), 'err', err.message));
   });
 
   $('fSessionPick').onchange = (e) => {
     sessionId = Number(e.target.value) || null;
     applyScope();
+    applySessionCard();
     refreshAisles().catch(() => {});
     refreshSetup().catch(() => {});
   };
@@ -1280,6 +1444,8 @@
     await refreshMe();
     await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshReasons(), refreshSosSettings(), refreshLogo()]);
     await refreshGun().catch(() => {});
+    await loadLayouts().catch(() => {});
+    await refreshDefaultSession().catch(() => {});
     await loadSessions();
     await refreshSetup().catch(() => {});
   }

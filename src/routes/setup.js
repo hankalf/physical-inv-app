@@ -63,7 +63,7 @@ export function setupState(sessionId) {
       detail: scanners
         ? `${scanners} registered · ${enrolled} signed in`
         : 'none registered yet',
-      goto: { page: '/settings', sub: 'scanners' }, label: 'Add scanners',
+      goto: { page: '/settings', sub: 'gun' }, label: 'Add scanners',
     },
   ];
 
@@ -74,7 +74,7 @@ export function setupState(sessionId) {
         title: 'Pick the rack drawing',
         why: 'Draws progress over the real floor plan instead of a schematic.',
         detail: s.layout ? `using ${s.layout}` : 'on the schematic',
-        goto: { page: '/admin', sub: 'progress' }, label: 'Choose one',
+        goto: { page: '/settings', sub: 'start' }, label: 'Choose one',
       },
       {
         key: 'blocks', need: 'wanted', done: blocked > 0,
