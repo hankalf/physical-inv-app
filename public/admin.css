@@ -482,3 +482,20 @@ tbody td.wrap { white-space: normal; }
 
 /* the Testing tab's practice count, wherever a count is named */
 .tag.practice { color: #1a1300; background: var(--warn); border-color: var(--warn); font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+
+/* a team that has stopped scanning: the SOS bar's shape, amber, and still */
+.sosalert.idle .one { border-color: var(--warn); background: linear-gradient(180deg, #2c2110, #231a0c); animation: none; }
+.sosalert.idle .what { font-size: 17px; }
+
+/* the team table's clocks */
+td.timer { font-variant-numeric: tabular-nums; font-weight: 700; }
+td.timer.stopped { color: var(--muted); font-weight: 500; }
+td.quiet.late { color: var(--warn); font-weight: 800; }
+
+/* a heading with a small segmented control beside it */
+.tablehead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 16px 0 8px; }
+.tablehead h3 { margin: 0; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; padding: 5px 12px; font-size: 12.5px; background: var(--surface-2); }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button.selected { background: var(--accent); color: #fff; }

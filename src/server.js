@@ -19,6 +19,7 @@ import { listAdjustments, decideAdjustments, adjustmentReasons, saveAdjustmentRe
 import { accuracy, accuracyCsv, deriveAbc, accuracyTargets, saveAccuracyTargets } from './routes/accuracy.js';
 import { setupState } from './routes/setup.js';
 import { searchAll } from './routes/search.js';
+import { idleConfig, saveIdleConfig, teamClocks, checkIdle, answerIdle, openIdleAlerts, recentIdleAlerts, tellTeamsIdle, idleTick, recordSignoff } from './routes/idle.js';
 import { practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet } from './routes/practice.js';
 import { raiseAlert, tellTeams, listAlerts, seeAlert, closeAlert, alertsForDevice, sosReasons, saveSosReasons, DEFAULT_REASONS } from './routes/alerts.js';
 import { teamsConfig, saveTeamsConfig, postToTeams, testCard, alertCard } from './util/teams.js';
@@ -35,7 +36,7 @@ import {
 import { generateBatch, previewBatch, listBatches, deleteBatch, coverage, runSchedules, STRATEGIES, levelsOnOpenTasks } from './routes/cycles.js';
 import {
   listEmployees, upsertEmployee, deleteEmployee, importEmployees, importHelpers,
-  listTeams, createTeam, deleteTeam, assignMember, getConfig, setConfig, getEmployee,
+  listTeams, createTeam, deleteTeam, setTeamShift, assignMember, getConfig, setConfig, getEmployee,
   crewCheck, crewShortfall,
 } from './routes/people.js';
 
@@ -350,6 +351,13 @@ async function handleHandheld(req, res, url, m) {
     return sendJson(req, res, 200, masterPayload(m[1]));
   }
 
+  /* The crew is done with this scanner: its clock stops, and nobody is told it
+     went quiet. Best effort - a gun that signs off with no signal just times out. */
+  if ((m = p.match(/^\/api\/sessions\/(\d+)\/signoff$/)) && method === 'POST') {
+    const body = await readJson(req);
+    return sendJson(req, res, 200, recordSignoff(m[1], { deviceId: device ? device.name : body.deviceId, team: body.team }));
+  }
+
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/signon$/)) && method === 'POST') {
     openSession(m[1]);
     const body = await readJson(req);
@@ -468,6 +476,8 @@ async function handleHandheld(req, res, url, m) {
   return false;
 }
 
+let lastOrigin = '';
+
 async function handleAdmin(req, res, url, m) {
   const method = req.method;
   const p = url.pathname;
@@ -506,6 +516,33 @@ async function handleAdmin(req, res, url, m) {
   }
 
   const actor = requireAdmin(req, url);
+  // the address supervisors reach this on, for the link in a Teams card the timer sends
+  lastOrigin = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host || 'localhost'}`;
+
+  // --- team clocks and stopped-scanning alerts
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/clocks$/)) && method === 'GET') {
+    const s = getSession(m[1]);
+    if (s && !s.practice && s.status === 'open') {
+      const raised = checkIdle(m[1]);
+      if (raised.length) tellTeamsIdle(m[1], raised, { dashboard: `${lastOrigin}/admin` }).catch(() => {});
+    }
+    return sendJson(req, res, 200, {
+      clocks: teamClocks(m[1]), open: openIdleAlerts(m[1]), recent: recentIdleAlerts(m[1], 30),
+      config: idleConfig(), now: new Date().toISOString(),
+    });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/clocks\/(\d+)$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const a = answerIdle(m[1], m[2], { action: body.action, by: actor });
+    audit(actor, 'answered a stopped-scanning alert', `team ${a.team}: ${a.why}`, m[1]);
+    return sendJson(req, res, 200, a);
+  }
+  if (p === '/api/admin/idle-config' && method === 'GET') return sendJson(req, res, 200, idleConfig());
+  if (p === '/api/admin/idle-config' && method === 'POST') {
+    const cfg = saveIdleConfig(await readJson(req));
+    audit(actor, 'changed the stopped-scanning alert', cfg.minutes ? `after ${cfg.minutes} min${cfg.teams ? ', also to Teams' : ''}` : 'off');
+    return sendJson(req, res, 200, cfg);
+  }
 
   // --- scanners
   if (p === '/api/admin/devices' && method === 'GET') return sendJson(req, res, 200, { devices: listDevices(), authRequired: SCANNER_AUTH });
@@ -774,6 +811,11 @@ async function handleAdmin(req, res, url, m) {
     const body = await readJson(req);
     const team = createTeam(body);
     audit(actor, 'created a team', team.name);
+    return sendJson(req, res, 200, team);
+  }
+  if ((m = p.match(/^\/api\/admin\/people\/teams\/(\d+)\/shift$/)) && method === 'POST') {
+    const team = setTeamShift(m[1], (await readJson(req)).shift);
+    audit(actor, 'set a team\'s shift', `team ${team.name}: ${team.shift ? (team.shift === '1' ? '1st' : '2nd') + ' shift' : 'no shift'}`);
     return sendJson(req, res, 200, team);
   }
   if ((m = p.match(/^\/api\/admin\/people\/teams\/(\d+)$/)) && method === 'DELETE') {
@@ -1301,6 +1343,11 @@ const server = http.createServer(async (req, res) => {
 setInterval(() => {
   try { runSchedules(); } catch (err) { console.warn('[cycle] schedule check failed:', err.message); }
 }, 15 * 60 * 1000).unref();
+
+// Teams that have stopped scanning, checked every minute
+setInterval(() => {
+  idleTick({ dashboard: lastOrigin ? `${lastOrigin}/admin` : '' }).catch((err) => console.warn('[idle] check failed:', err.message));
+}, 60 * 1000).unref();
 
 // a copy of the database, once a day, kept for BACKUP_KEEP days
 startBackupSchedule().unref();

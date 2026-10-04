@@ -2181,6 +2181,11 @@
     await syncQueue();
     const queued = await wrap(tx('lines', 'readonly').index('synced').count(0));
     if (queued > 0 && !confirm(`${queued} line(s) have not reached the server yet. Sign off anyway?`)) return;
+    // tell the server, so this crew's clock stops and nobody is told it went quiet
+    if (state.session && online()) {
+      api(`/api/sessions/${state.session.id}/signoff`, { method: 'POST', body: JSON.stringify({ deviceId: state.deviceId, team: state.team }) })
+        .catch(() => { /* the twelve-hour cut-off covers a sign-off that never arrived */ });
+    }
     // signing off ends the crew: the next team scans their own badges in
     state.team = '';
     state.session = null;

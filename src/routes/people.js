@@ -212,7 +212,7 @@ export function listTeams() {
     const equip = new Set();
     for (const m of mine) for (const e of m.equipment) equip.add(e);
     return {
-      id: t.id, name: t.name, notes: t.notes || '',
+      id: t.id, name: t.name, notes: t.notes || '', shift: t.shift || '',
       members: mine,
       equipment: [...equip],
       reach: mine.length ? reachOf([...equip]) : '',
@@ -221,12 +221,21 @@ export function listTeams() {
   });
 }
 
-export function createTeam({ name, notes }) {
+const cleanShift = (v) => (['1', '2'].includes(String(v ?? '').trim()) ? String(v).trim() : '');
+
+export function createTeam({ name, notes, shift }) {
   const n = norm(name);
   if (!n) throw Object.assign(new Error('team name required'), { status: 400 });
   if (db.prepare('SELECT 1 FROM teams WHERE name = ?').get(n)) throw Object.assign(new Error(`team ${n} already exists`), { status: 409 });
-  db.prepare('INSERT INTO teams (name, notes, created_at) VALUES (?, ?, ?)').run(n, String(notes || ''), new Date().toISOString());
+  db.prepare('INSERT INTO teams (name, notes, shift, created_at) VALUES (?, ?, ?, ?)').run(n, String(notes || ''), cleanShift(shift), new Date().toISOString());
   return listTeams().find((t) => t.name === n);
+}
+
+/** Which shift a team works: 1st, 2nd, or not set. */
+export function setTeamShift(id, shift) {
+  const changed = db.prepare('UPDATE teams SET shift = ? WHERE id = ?').run(cleanShift(shift), Number(id)).changes;
+  if (!changed) throw Object.assign(new Error('no such team'), { status: 404 });
+  return listTeams().find((t) => t.id === Number(id));
 }
 
 export function deleteTeam(id) {

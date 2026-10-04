@@ -106,6 +106,19 @@ export function alertCard(alert, { site = 'Physical inventory', dashboard = '' }
   return { type: 'message', attachments: [{ contentType: 'application/vnd.microsoft.card.adaptive', content: card }] };
 }
 
+/** A card that is not an SOS: a heading, a line under it, and a few facts. */
+export function noticeCard({ title, subtitle = '', tone = 'Default', facts = [], site = 'Physical inventory', dashboard = '' }) {
+  const body = [
+    { type: 'TextBlock', text: title, weight: 'Bolder', size: 'Large', color: tone, wrap: true },
+  ];
+  if (subtitle) body.push({ type: 'TextBlock', text: subtitle, weight: 'Bolder', size: 'Medium', wrap: true, spacing: 'None' });
+  if (facts.length) body.push({ type: 'FactSet', facts: facts.map(([t, v]) => fact(t, v)) });
+  body.push({ type: 'TextBlock', text: site, isSubtle: true, size: 'Small', spacing: 'Medium', wrap: true });
+  const card = { type: 'AdaptiveCard', $schema: 'http://adaptivecards.io/schemas/adaptive-card.json', version: '1.4', body };
+  if (dashboard) card.actions = [{ type: 'Action.OpenUrl', title: 'Open the dashboard', url: dashboard }];
+  return { type: 'message', attachments: [{ contentType: 'application/vnd.microsoft.card.adaptive', content: card }] };
+}
+
 export const testCard = (who) => alertCard({
   team: '—', device_id: 'test', reason: 'Test from the inventory app',
   detail: `Sent by ${who || 'a supervisor'} to check this channel is wired up. No action needed.`,

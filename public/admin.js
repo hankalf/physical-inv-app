@@ -104,7 +104,12 @@
 
   /* ------------------------------------------------------------ progress */
   async function refreshProgress() {
-    const p = await apiJson(`/api/admin/sessions/${sessionId}/progress`);
+    const [p, cl] = await Promise.all([
+      apiJson(`/api/admin/sessions/${sessionId}/progress`),
+      apiJson(`/api/admin/sessions/${sessionId}/clocks`),
+    ]);
+    clockData = cl;
+    renderIdle();
     const raw = p.bins_total ? (p.bins_counted / p.bins_total) * 100 : 0;
     // one decimal early on, so the first hour of a big count doesn't read "0%"
     const pct = raw >= 10 ? Math.round(raw) : Math.round(raw * 10) / 10;
@@ -140,20 +145,137 @@
     const byTeam = new Map();
     for (const s of p.signedOn) byTeam.set(s.team, { team: s.team, devices: s.devices, employees: JSON.parse(s.employees || '[]').join(', '), lines: 0, bins: 0 });
     for (const t of p.byTeam) byTeam.set(t.team, { ...(byTeam.get(t.team) || { team: t.team, employees: '' }), ...t, devices: t.devices });
-    table($('teamTable'),
-      [{ label: 'Team' }, { label: 'Scanner(s)' }, { label: 'Employees' }, { label: 'Active aisle' }, { label: 'Lines', num: true }, { label: 'Bins', num: true }, { label: 'Last scan' }],
-      [...byTeam.values()].sort((a, b) => String(a.team).localeCompare(String(b.team), undefined, { numeric: true })),
-      (t) => {
-        const tr = document.createElement('tr');
-        tr.append(cell(t.team), cell(t.devices || '—'), cell(t.employees || '—', 'wrap'), cell(t.active_aisle ? aisleLabel(t.active_aisle, zoneByAisle.get(t.active_aisle)) : '—'),
-          cell(t.lines || 0, 'num'), cell(t.bins || 0, 'num'), cell(t.last_scan ? new Date(t.last_scan).toLocaleTimeString() : '—'));
-        return tr;
-      }, 'No team has signed on yet.');
+    lastTeams = byTeam;
+    renderTeamTable();
 
     $('refreshedAt').textContent = 'updated ' + new Date().toLocaleTimeString();
   }
 
-  /* ------------------------------------------------------------ aisles */
+  /* ------------------------------------------------------- team clocks
+     Each team's time on the count, ticking, and how long since it last
+     scanned - amber once it passes the site's stopped-scanning limit. */
+  let clockData = { clocks: [], open: [], config: { minutes: 10 } };
+  let lastTeams = new Map();
+  let shiftFilter = (() => { try { return sessionStorage.getItem('shiftFilter') || ''; } catch { return ''; } })();
+  const SHIFT_NAME = { 1: '1st', 2: '2nd' };
+
+  const span = (ms) => {
+    if (!(ms >= 0)) return '—';
+    const m = Math.floor(ms / 60000);
+    return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min`;
+  };
+
+  function renderTeamTable() {
+    const clocks = new Map((clockData.clocks || []).map((c) => [c.team, c]));
+    const rows = [...lastTeams.values()]
+      .map((t) => ({ ...t, clock: clocks.get(t.team) || null }))
+      .filter((t) => !shiftFilter || (t.clock && t.clock.shift === shiftFilter))
+      .sort((a, b) => String(a.team).localeCompare(String(b.team), undefined, { numeric: true }));
+    for (const b of document.querySelectorAll('#shiftFilter button')) b.classList.toggle('selected', b.dataset.shift === shiftFilter);
+    const limit = (clockData.config && clockData.config.minutes) || 0;
+    table($('teamTable'),
+      [{ label: 'Team' }, { label: 'Shift' }, { label: 'Scanner(s)' }, { label: 'Employees' }, { label: 'Active aisle' },
+        { label: 'Started' }, { label: 'Time on count' }, { label: 'Last scan' }, { label: 'Lines', num: true }, { label: 'Bins', num: true }],
+      rows,
+      (t) => {
+        const c = t.clock;
+        const tr = document.createElement('tr');
+        tr.dataset.team = t.team;
+        const timer = cell('—', 'timer');
+        const quiet = cell(t.last_scan ? new Date(t.last_scan).toLocaleTimeString() : '—', 'quiet');
+        if (c && c.started) {
+          timer.dataset.start = c.started;
+          if (c.endedAt) timer.dataset.end = c.endedAt;
+          timer.title = c.working ? 'still counting' : `clock stopped — ${c.state}`;
+        }
+        if (c && c.working && c.lastActive) {
+          quiet.dataset.since = c.lastActive;
+          quiet.dataset.limit = limit;
+        }
+        const st = cell(c ? (c.started ? new Date(c.started).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '—') : '—');
+        if (c && !c.working && c.started) st.appendChild(Object.assign(document.createElement('div'), { className: 'muted', textContent: c.state }));
+        tr.append(cell(t.team), cell(c && c.shift ? SHIFT_NAME[c.shift] : '—'), cell(t.devices || '—'), cell(t.employees || '—', 'wrap'),
+          (() => { const a = t.active_aisle || (c && c.aisle); return cell(a ? aisleLabel(a, zoneByAisle.get(a)) : '—'); })(),
+          st, timer, quiet, cell(t.lines || 0, 'num'), cell(t.bins || 0, 'num'));
+        return tr;
+      }, shiftFilter ? `No ${SHIFT_NAME[shiftFilter]}-shift team on this count yet.` : 'No team has signed on yet.');
+    tickClocks();
+  }
+
+  /* once a second: the timers move without asking the server anything */
+  function tickClocks() {
+    const t = Date.now();
+    for (const el of document.querySelectorAll('#teamTable td.timer[data-start]')) {
+      const end = el.dataset.end ? Date.parse(el.dataset.end) : t;
+      el.textContent = span(end - Date.parse(el.dataset.start));
+      el.classList.toggle('stopped', !!el.dataset.end);
+    }
+    for (const el of document.querySelectorAll('#teamTable td.quiet[data-since]')) {
+      const mins = Math.floor((t - Date.parse(el.dataset.since)) / 60000);
+      const limit = Number(el.dataset.limit) || 0;
+      el.textContent = mins < 1 ? 'just now' : `${mins} min ago`;
+      el.classList.toggle('late', !!limit && mins >= limit);
+    }
+  }
+  setInterval(tickClocks, 1000);
+
+  for (const b of document.querySelectorAll('#shiftFilter button')) {
+    b.onclick = () => {
+      shiftFilter = b.dataset.shift;
+      try { sessionStorage.setItem('shiftFilter', shiftFilter); } catch { /* private window */ }
+      renderTeamTable();
+    };
+  }
+
+  /* A team that should be counting and is not. Above every tab, like an SOS,
+     but amber: worth a look, not a run. */
+  function renderIdle() {
+    const box = $('idleAlert');
+    const open = clockData.open || [];
+    const clocks = new Map((clockData.clocks || []).map((c) => [c.team, c]));
+    box.innerHTML = '';
+    box.hidden = !open.length;
+    for (const a of open) {
+      const c = clocks.get(a.team) || {};
+      const el = document.createElement('div');
+      el.className = 'one';
+      const grow = document.createElement('div');
+      grow.className = 'grow';
+      const mins = a.last_scan ? Math.floor((Date.now() - Date.parse(a.last_scan)) / 60000) : null;
+      grow.append(
+        Object.assign(document.createElement('div'), { className: 'what', textContent: `Team ${a.team} has stopped scanning${mins != null ? ` — ${mins} min` : ''}` }),
+        Object.assign(document.createElement('div'), { className: 'who', textContent: [
+          c.shift ? `${SHIFT_NAME[c.shift]} shift` : '',
+          c.lastBin ? `last bin ${c.lastBin}` : 'nothing scanned yet',
+          a.last_scan ? `at ${new Date(a.last_scan).toLocaleTimeString()}` : '',
+          a.sent_to === 'teams' ? 'sent to Teams' : '',
+        ].filter(Boolean).join(' · ') }));
+      const acts = document.createElement('div');
+      acts.className = 'acts';
+      acts.append(
+        button('On break', '', () => answerIdle(a.id, 'break')),
+        button('Lunch', '', () => answerIdle(a.id, 'lunch')),
+        button('Seen — I am on it', 'primary', () => answerIdle(a.id, 'seen')));
+      el.append(grow, acts);
+      box.appendChild(el);
+    }
+  }
+
+  async function answerIdle(id, action) {
+    try {
+      await postJson(`/api/admin/sessions/${sessionId}/clocks/${id}`, { action });
+      clockData = await apiJson(`/api/admin/sessions/${sessionId}/clocks`);
+      renderIdle();
+      renderTeamTable();
+    } catch (err) { msg($('sosAdminMsg'), 'err', err.message); }
+  }
+
+  async function refreshClocks() {
+    clockData = await apiJson(`/api/admin/sessions/${sessionId}/clocks`);
+    renderIdle();
+    renderTeamTable();
+  }
+
   /* ------------------------------------------------------------ assignments */
   async function refreshAssignments() {
     const [rows, aisles] = await Promise.all([
@@ -1410,4 +1532,5 @@
   /* An SOS cannot wait for the half-minute refresh: somebody is standing in an
      aisle waiting to hear that anybody at all has seen it. */
   setInterval(() => { if (api.token && sessionId) refreshAlerts().catch(() => {}); }, 8000);
+  setInterval(() => { if (api.token && sessionId) refreshClocks().catch(() => {}); }, 15000);
 })();

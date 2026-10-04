@@ -10,6 +10,7 @@
   const postJson = (p, body, method) => api.post(p, body, method);
 
   let state = { employees: [], teams: [], config: { equipment: {}, levelRules: [] } };
+  let shiftView = '';
 
   function show(which) {
     $('scrLogin').classList.toggle('active', which === 'login');
@@ -111,7 +112,10 @@
     box.innerHTML = '';
     if (!state.teams.length) box.innerHTML = '<div class="empty">No teams yet — add one above.</div>';
     const full = allLevels();
-    for (const t of state.teams) {
+    const shown = state.teams.filter((t) => !shiftView || t.shift === shiftView);
+    if (state.teams.length && !shown.length) box.innerHTML = `<div class="empty">No ${shiftView === '1' ? '1st' : '2nd'}-shift teams yet — set a team's shift on its card.</div>`;
+    for (const b of document.querySelectorAll('#shiftView button')) b.classList.toggle('selected', b.dataset.shift === shiftView);
+    for (const t of shown) {
       const card = document.createElement('div');
       card.className = 'bucket';
       const head = document.createElement('div');
@@ -121,6 +125,21 @@
       reach.className = 'reach ' + (!t.members.length ? 'none' : t.reach === full ? 'full' : t.reach.length > 1 ? 'some' : 'none');
       reach.textContent = t.members.length ? `reaches ${levelsLabel(t.reach)}` : 'nobody assigned';
       head.append(name, reach);
+      /* which shift this team works - the dashboard filters on it */
+      const shiftRow = document.createElement('div');
+      shiftRow.className = 'shiftrow';
+      const sel = document.createElement('select');
+      sel.className = 'sm';
+      sel.title = 'Which shift this team works';
+      for (const [v, l] of [['', 'Shift not set'], ['1', '1st shift'], ['2', '2nd shift']]) {
+        const o = document.createElement('option'); o.value = v; o.textContent = l; sel.appendChild(o);
+      }
+      sel.value = t.shift || '';
+      sel.onchange = async () => {
+        try { await postJson(`/api/admin/people/teams/${t.id}/shift`, { shift: sel.value }); await refresh(); }
+        catch (err) { msg($('teamMsg'), 'err', err.message); }
+      };
+      shiftRow.appendChild(sel);
       const kit = document.createElement('div');
       kit.className = 'kit';
       kit.textContent = t.members.length
@@ -137,7 +156,7 @@
         try { await apiJson(`/api/admin/people/teams/${t.id}`, { method: 'DELETE' }); await refresh(); }
         catch (err) { msg($('teamMsg'), 'err', err.message); }
       };
-      card.append(head, kit, drop, del);
+      card.append(head, shiftRow, kit, drop, del);
       dropTarget(card, String(t.id));
       box.appendChild(card);
     }
@@ -261,13 +280,14 @@
 
   $('btnAddTeam').onclick = async () => {
     try {
-      await postJson('/api/admin/people/teams', { name: $('fTeamName').value, notes: $('fTeamNotes').value });
+      await postJson('/api/admin/people/teams', { name: $('fTeamName').value, notes: $('fTeamNotes').value, shift: $('fTeamShift').value });
       clearMsg($('teamMsg'));
       $('fTeamName').value = ''; $('fTeamNotes').value = '';
       await refresh();
     } catch (err) { msg($('teamMsg'), 'err', err.message); }
   };
   $('fTeamName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnAddTeam').click(); });
+  for (const b of document.querySelectorAll('#shiftView button')) b.onclick = () => { shiftView = b.dataset.shift; render(); };
 
   $('btnAddRule').onclick = () => { state.config.levelRules.push({ levels: '', requires: [] }); renderRules(); };
   $('btnSaveRules').onclick = async () => {

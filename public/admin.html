@@ -76,6 +76,8 @@
     <!-- an SOS from the floor, above whatever tab is open: it is not a card you
          should have to go and look at -->
     <div class="sosalert" id="sosAlert" hidden></div>
+    <!-- a team that should be counting has gone quiet -->
+    <div class="sosalert idle" id="idleAlert" hidden></div>
 
     <section class="screen active" id="scrLogin">
       <div class="card signin">
@@ -103,7 +105,15 @@
         </div>
       </div>
       <div class="grid" id="stats" style="margin-top:16px"></div>
-      <div class="scroll" style="margin-top:14px"><table id="teamTable"></table></div>
+      <div class="tablehead">
+        <h3>Teams on the count</h3>
+        <div class="seg" id="shiftFilter">
+          <button type="button" data-shift="">All shifts</button>
+          <button type="button" data-shift="1">1st shift</button>
+          <button type="button" data-shift="2">2nd shift</button>
+        </div>
+      </div>
+      <div class="scroll"><table id="teamTable"></table></div>
       <hr>
       <h3 style="margin-top:0">Note on the office board</h3>
       <div class="hint" style="margin-top:0">

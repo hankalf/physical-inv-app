@@ -317,6 +317,15 @@
         <div class="auto"><label class="cb"><input type="checkbox" id="fTeamsOn"> Send alerts to Teams</label></div>
         <div class="auto"><label class="cb" title="A second card when a supervisor closes the alert, so nobody drives over for something that was sorted twenty minutes ago."><input type="checkbox" id="fTeamsClosed"> Say when it is dealt with</label></div>
       </div>
+      <h3>When a team stops scanning</h3>
+      <div class="hint" style="margin-top:0">
+        A team that is signed on and still has an aisle, but has not scanned for this long, gets an amber bar on the
+        dashboard — <b>On break</b>, <b>Lunch</b> or <b>Seen</b> quiets it. Signing off on the gun stops a team's clock. 0 turns it off.
+      </div>
+      <div class="inline">
+        <div class="auto"><label for="fIdleMinutes">Alert after (minutes)</label><input id="fIdleMinutes" type="number" min="0" max="240" class="sm" style="width:110px"></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fIdleTeams"> Send it to the Teams channel too</label></div>
+      </div>
       <div class="toolbar">
         <button class="primary" id="btnSaveSos">Save</button>
         <button id="btnTestTeams">Send a test card</button>

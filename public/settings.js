@@ -915,12 +915,15 @@
   }
 
   async function refreshSosSettings() {
-    const [reasons, teams] = await Promise.all([
+    const [reasons, teams, idle] = await Promise.all([
       api.json('/api/admin/sos-reasons'),
       api.json('/api/admin/teams-webhook'),
+      api.json('/api/admin/idle-config'),
     ]);
     sosState = reasons;
     teamsState = teams;
+    $('fIdleMinutes').value = idle.minutes;
+    $('fIdleTeams').checked = idle.teams;
     renderSos();
   }
 
@@ -948,6 +951,10 @@
         on: $('fTeamsOn').checked,
         tellWhenClosed: $('fTeamsClosed').checked,
       });
+      const idle = await api.post('/api/admin/idle-config', {
+        minutes: Number($('fIdleMinutes').value) || 0, teams: $('fIdleTeams').checked,
+      });
+      $('fIdleMinutes').value = idle.minutes;
       $('fTeamsUrl').value = '';
       renderSos();
       msg($('sosMsg'), 'ok', 'Saved.', 'Scanners pick the list up within about half a minute.');

@@ -436,6 +436,25 @@ if (!hasCol('sessions', 'board_note')) {
   db.exec('ALTER TABLE sessions ADD COLUMN board_note_at TEXT');
 }
 if (!hasCol('sessions', 'track_abc')) db.exec('ALTER TABLE sessions ADD COLUMN track_abc INTEGER NOT NULL DEFAULT 0');
+// a gun signing off ends that team's shift on the count: no clock, no stopped-scanning alert
+if (!hasCol('signons', 'ended_at')) db.exec('ALTER TABLE signons ADD COLUMN ended_at TEXT');
+// which shift a team works: '1', '2', or '' when it is not set
+if (!hasCol('teams', 'shift')) db.exec("ALTER TABLE teams ADD COLUMN shift TEXT NOT NULL DEFAULT ''");
+db.exec(`
+CREATE TABLE IF NOT EXISTS idle_alerts (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id   INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  team         TEXT NOT NULL,
+  last_scan    TEXT,                 -- the team's last activity when it was raised
+  raised_at    TEXT NOT NULL,
+  cleared_at   TEXT,
+  cleared_by   TEXT,
+  why          TEXT,                 -- scanning again | on break | seen | signed off
+  snooze_until TEXT,
+  sent_to      TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_idle_team ON idle_alerts(session_id, team, id);
+`);
 // the Testing tab's own count: never offered to a gun on the floor, never on the board
 if (!hasCol('sessions', 'practice')) db.exec('ALTER TABLE sessions ADD COLUMN practice INTEGER NOT NULL DEFAULT 0');
 if (!hasCol('pallets', 'abc')) db.exec('ALTER TABLE pallets ADD COLUMN abc TEXT');
@@ -630,6 +649,9 @@ export function masterPayload(sessionId) {
 /* ------------------------------------------------------------------- sign-ons */
 
 export function recordSignon(sessionId, { deviceId, team, employees }) {
+  // a scanner is one crew at a time: whoever had it before has finished with it
+  db.prepare('UPDATE signons SET ended_at = ? WHERE session_id = ? AND device_id = ? AND ended_at IS NULL')
+    .run(new Date().toISOString(), Number(sessionId), norm(deviceId));
   db.prepare(
     'INSERT INTO signons (session_id, device_id, team, employees, started_at) VALUES (?, ?, ?, ?, ?)'
   ).run(Number(sessionId), norm(deviceId), norm(team), JSON.stringify(employees || []), new Date().toISOString());

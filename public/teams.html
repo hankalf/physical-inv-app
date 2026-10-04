@@ -44,6 +44,8 @@
   .person select { padding: 3px 7px; font-size: 12px; width: auto; font-weight: 500; }
   .rule { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
   .rule .lv { font-weight: 800; min-width: 88px; }
+  .bucket .shiftrow { margin-top: 8px; }
+  .bucket .shiftrow select { width: auto; }
 </style>
 </head>
 <body class="app">
@@ -109,10 +111,19 @@
       <h2>Teams <span class="muted">drag people between the crew list and a team — or use the menu on a card</span></h2>
       <div class="inline">
         <div class="auto"><label for="fTeamName">New team</label><input id="fTeamName" class="sm" style="width:110px" placeholder="3"></div>
-        <div><label for="fTeamNotes">Notes</label><input id="fTeamNotes" placeholder="e.g. night shift, freezer"></div>
+        <div class="auto"><label for="fTeamShift">Shift</label>
+          <select id="fTeamShift" class="sm"><option value="">Not set</option><option value="1">1st shift</option><option value="2">2nd shift</option></select></div>
+        <div><label for="fTeamNotes">Notes</label><input id="fTeamNotes" placeholder="e.g. freezer, dock side"></div>
         <div class="auto"><button class="primary" id="btnAddTeam">Add team</button></div>
       </div>
       <div class="feedback" id="teamMsg"></div>
+      <div class="inline" style="margin-top:12px">
+        <div class="auto"><div class="seg" id="shiftView">
+          <button type="button" data-shift="">All shifts</button>
+          <button type="button" data-shift="1">1st shift</button>
+          <button type="button" data-shift="2">2nd shift</button>
+        </div></div>
+      </div>
 
       <div class="board" style="margin-top:14px">
         <div class="bucket" id="poolBucket" data-team="">
