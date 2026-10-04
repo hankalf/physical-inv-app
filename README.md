@@ -437,7 +437,8 @@ A scanner with no link can still type an ID on first run; it is marked "not regi
 The bare address (`/`) opens the supervisor sign-in. A scanner is opened from its
 registered link, `/?d=<uid>`, and from then on carries a cookie so its home-screen icon
 (which opens `/`) still lands on the scanner app; offline, the service worker answers
-before the server is asked.
+before the server is asked. `/?d=` with no id opens the scanner app's own setup screen,
+for a handheld that has to be pointed at a scanner by hand.
 
 **First run:** if the scanner was opened from its registered link, nothing to do. Otherwise
 it asks for an ID.

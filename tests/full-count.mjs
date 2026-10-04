@@ -185,8 +185,10 @@ async function scanner(tag) {
 
 /* ================= TEAM 1 on SCANNER-01 ================= */
 const t0 = await scanner('unregistered');
-await t0.p.goto(BASE); await t0.p.waitForSelector('#scrDevice.active');
-check('Handheld: with no link, first run asks for a scanner ID', true);
+await t0.p.goto(BASE); await t0.p.waitForTimeout(800);
+check('Handheld: the bare address is the office\'s now - it opens the supervisor sign-in', /\/admin(#|$)/.test(t0.p.url()) && await t0.p.isVisible('#btnLogin'), t0.p.url());
+await t0.p.goto(`${BASE}/?d=`); await t0.p.waitForSelector('#scrDevice.active');
+check('Handheld: opened as a scanner with no link, first run asks for a scanner ID', true);
 await shot(t0.p, 'hh-device-setup');
 await t0.p.goto(devLink['SCANNER-99']); await t0.p.waitForSelector('#scrDevice.active'); await t0.p.waitForTimeout(400);
 check('Handheld: a removed scanner link is refused', /removed by a supervisor/.test(await t0.T('#deviceMsg')), await t0.T('#deviceMsg'));
