@@ -101,7 +101,11 @@ sign-in covers all of them.
 | **Dashboard** (`/admin`) | Progress · Map · Team plan · Second counts · Reports |
 | **Cycle counts** (`/cycle`) | Today · Still open · Coverage · Program & data |
 | **Teams & crew** (`/teams`) | Crew & teams · Equipment rules |
-| **Settings** (`/settings`) | Logins · Scanners · Lists & racking · ERP & backups |
+| **Settings** (`/settings`) | Getting started · Scanner screen · Lists & racking · ERP & backups · Advanced |
+| **Front bins** (`/front`) | Pallets to move back · Move desk · Front-placed bins |
+| **Not in Location** (`/missing`) | — |
+| **Testing Suite** (`/testing`) | the real scanner on a practice count of your own |
+| **User guide** (`/guide`) | the SOP inside the app: journeys, what goes wrong at each step, an Ask box that answers a question or a pasted message, and a live "Right now" read of the count. Open to every login |
 
 Two splits, both deliberate. **Running a count** is the Dashboard; **setting one up** is
 Settings — anything you configure once and then leave alone. And within a section, one

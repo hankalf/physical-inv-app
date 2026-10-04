@@ -35,8 +35,8 @@ await shot(admin, 'admin-login');
 await admin.fill('#fPassword', 'changeme'); await admin.click('#btnLogin');
 await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(500);
 check('Admin: login', true);
-check('Admin: the tab bar links the supervisor pages, and the Testing tab',
-  (await admin.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/cycle,/front,/missing,/teams,/settings,/testing');
+check('Admin: the tab bar links the supervisor pages, the Testing tab and the guide',
+  (await admin.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/cycle,/front,/missing,/teams,/settings,/testing,/guide');
 
 /* ---- making the count lives under Settings → Getting started ---- */
 const toSettings = async () => { await admin.goto(BASE + '/settings'); await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(700); };

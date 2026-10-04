@@ -451,6 +451,16 @@ try {
       await saveCard(desk, '#modeList', 'testing-modes', 8);
     }
   }
+  /* ---------- the user guide: a question answered, a journey open ---------- */
+  await signIn('/guide');
+  await desk.waitForSelector('#journeys .journey'); await wait(1200);
+  await desk.fill('#askInput', 'the gun says offline'); await wait(400);
+  await saveCard(desk, '#askInput', 'guide-ask');
+  await desk.fill('#askInput', ''); await wait(200);
+  await saveCard(desk, '#nowList', 'guide-now');
+  await desk.click('#journeys .journey[data-key="day"]'); await wait(400);
+  await desk.evaluate(() => { const c = document.querySelector('#stepsCard'); c.style.maxHeight = '760px'; c.style.overflow = 'hidden'; });
+  await saveCard(desk, '#steps', 'guide-steps');
   await desk.close();
 
   /* ---------- the office board ---------- */

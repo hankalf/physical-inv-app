@@ -135,8 +135,8 @@ check('Settings: signing in as an account shows who you are in the header',
   /Dana Whitfield/.test(clean(await page.textContent('#navWho'))) && /admin/.test(clean(await page.textContent('#navWho'))), clean(await page.textContent('#navWho')));
 
 /* ---- the shell: a sidebar, and sub-tabs that show one thing at a time ---- */
-check('Shell: the sidebar links every page, Testing last, with this one marked',
-  (await page.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/cycle,/front,/missing,/teams,/settings,/testing'
+check('Shell: the sidebar links every page, the guide last, with this one marked',
+  (await page.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/cycle,/front,/missing,/teams,/settings,/testing,/guide'
     && (await page.$eval('#navTabs .tab.current', (a) => a.getAttribute('href'))) === '/settings');
 check('Shell: Settings is split into sub-tabs',
   (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.replace(/\d+$/, '').trim()))).join(' | ') === 'Getting started | Scanner screen | Lists & racking | ERP & backups | Advanced',
@@ -263,7 +263,7 @@ await sup.close();
   const narrow = await browser.newPage({ viewport: { width: 430, height: 940 } });
   narrow.on('pageerror', (e) => errors.push('narrow: ' + e.message));
   const bad = [];
-  for (const path of ['/admin', '/cycle', '/teams', '/settings', '/front', '/missing', '/testing', '/board']) {
+  for (const path of ['/admin', '/cycle', '/teams', '/settings', '/front', '/missing', '/testing', '/guide', '/board']) {
     await narrow.goto(BASE + path);
     if (path === '/board') {
       await narrow.waitForTimeout(1400);

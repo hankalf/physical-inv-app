@@ -45,6 +45,7 @@ on a PC.
 | **Settings** | `/settings` | Whoever sets the count up | Supervisor login |
 | **Office board** | `/board` | Anyone — put it on the office TV | **None.** Read-only |
 | **Cycle counts** | `/cycle` | Whoever runs the daily programme | Supervisor login |
+| **User guide** | `/guide` | Anyone with a login — new starters first | Supervisor login, any access |
 
 ![](images/sign-in.png)
 
@@ -449,6 +450,41 @@ never reach the real Not in Location page or a scanner on the floor. **Start ove
 ![](images/testing-modes.png)
 
 *What to practise: the cycle count picked, its five-bin list under the card.*
+
+### Step 8d — The user guide: this document, inside the app
+
+**User guide** in the sidebar, under *Learn*. Every login can open it, whatever else it may
+or may not do. It follows this SOP job by job and is the first place to send a new starter.
+
+- **Journeys.** Your first day, Set the site up, Set up a count, Counting day, Finish a count,
+  Cycle counts, Front bins and pallet moves, Not in Location, and On the scanner (the counter's
+  loop, for training). Each step says what to do, links to the card it is about, and then lists
+  **what tends to go wrong here** — the message you will see, what it means, what to do — and
+  **what people ask at this point**. Tick a step when it is done; the ticks stay in that browser,
+  so each person keeps their own place.
+- **Ask the guide.** Type a question in your own words (*"the gun says offline — did we lose the
+  counts?"*, *"how do I approve adjustments"*) or paste a message straight off the gun or the
+  dashboard. It searches every step, every question, and every message the gun and the server can
+  show, and answers with the fix and a link. *Gun*, *handheld* and *Zebra* all mean the scanner;
+  *Wi-Fi* means signal; *variance* means adjustment.
+- **Right now.** The guide reads the count in the picker — the guided setup, open SOS, second
+  counts, the thresholds, the scanners, the Teams channel — and lists what is missing, red for
+  required and amber for wanted, each with a link. Under it, **You will probably want to know**
+  offers the questions those gaps usually raise. It refreshes every fifteen seconds.
+- **Only doors you can open.** A login without Settings sees *"ask an admin"* in place of a
+  Settings link, never a link that bounces.
+
+![](images/guide-ask.png)
+
+*Ask the guide: a question in plain words, the answer, and where to go.*
+
+![](images/guide-now.png)
+
+*Right now: what this count is still missing, worked out from the data.*
+
+![](images/guide-steps.png)
+
+*A journey open: the step, what goes wrong there, and what people ask.*
 
 ### Step 9 — Set up the counting screen
 
@@ -1318,6 +1354,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | A counter says they pressed SOS and nothing happened | The gun had no signal | The gun tells them: *"No signal — this has NOT been sent."* It sends itself the moment there is signal. In a dead zone, walking ten metres usually fixes it |
 | The printed barcodes will not scan | The page was printed “fit to page”, or on glossy paper | Print again at **100%** on plain white paper. If a gun still refuses them, print with **Per row: 1** — the bars are wider on a bigger label |
 | A code in the spreadsheet will not print | Code 128 carries plain ASCII only — an accented letter or a smart quote cannot be drawn | The book says which character it was; retype that code with plain letters and numbers |
+| You do not know what a message means | The gun or the dashboard said something unfamiliar | Paste it into **User guide → Ask the guide**: it knows every message the gun and the server can show, with the fix. A new starter should begin at the guide's *Your first day* |
 | You cannot find where something is set | The app has four pages and twenty-odd cards | Type what you would call it into the search box at the top of the sidebar — *"upload bin list"*, *"keyboard"*, *"approve"* — and the **Go to** hits take you straight there. **/** puts the cursor in it |
 | Not sure whether a gun has the latest version | — | The sign-on screen's bottom line reads *"App build a1b2c3d4e5f6 on the server — this scanner is up to date"*. Compare it across two guns, or against a fresh reload |
 | A gun keeps saying "update did not take" | It reloaded and is still on the old version — something between it and the server is serving stale files | Close the app fully and reopen it. If it persists, clear the site data for the app on that device (Android → Settings → Apps → the app → Storage), then open its link again |

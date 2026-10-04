@@ -94,7 +94,7 @@ await page.goto(BASE + '/admin');
 await page.fill('#fUser', 'SUE'); await page.fill('#fPassword', 'dock-side-77'); await page.click('#btnLogin');
 await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(1500);
 const tabs = await page.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')));
-check('The sidebar offers only what she may open', tabs.join(',') === '/admin,/teams', tabs.join(','));
+check('The sidebar offers only what she may open, plus the guide everyone gets', tabs.join(',') === '/admin,/teams,/guide', tabs.join(','));
 check('Message the floor is there to read but not to send', await page.$eval('#btnSendMsg', (b) => b.disabled) && /not able|no access|not allowed/i.test(await page.$eval('#btnSendMsg', (b) => b.title)), await page.$eval('#btnSendMsg', (b) => b.title));
 check('Queueing aisles is switched off for her', await page.$eval('#btnAssign', (b) => b.disabled));
 await page.goto(BASE + '/settings'); await page.waitForTimeout(2500);
