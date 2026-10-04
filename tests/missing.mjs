@@ -126,6 +126,7 @@ check('The gun asks which aisle to look in, by where each pallet was last seen',
 await gun.click('#findAisles button >> nth=0'); await gun.waitForTimeout(300);
 check('Picking the aisle opens the desk: the pallet, where it was last seen, what it is', clean(await gun.textContent('#fdPallet')) === 'L-7' && clean(await gun.textContent('#fdLast')) === 'F02B001' && /Mango chunks/.test(await gun.textContent('#fdWhat')) && /qty 48/.test(await gun.textContent('#fdWhat')), clean(await gun.textContent('#fdWhat')));
 check('…with the pallet system framed under it, and no scan box', await gun.isVisible('#findSys') && (await gun.getAttribute('#findFrame', 'src')) === `${BASE}/board` && (await gun.$('#fFindScan')) === null);
+check('…and no address or link to it anywhere on the gun\'s screen', !(await gun.textContent('#scrFind')).includes('/board') && (await gun.$$('#scrFind a[href]')).length === 0);
 await gun.click('#btnFindFound'); await gun.waitForTimeout(1500);
 list = await get('/api/admin/missing');
 const l7 = list.rows.find((r) => r.pallet_id === 'L-7');

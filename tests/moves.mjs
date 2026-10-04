@@ -74,7 +74,8 @@ check('The gun asks which aisle to work, with how many are waiting in each', ais
 await gun.click('#moveAisles button >> nth=0');
 await gun.waitForTimeout(300);
 check('Picking an aisle opens the desk: the pallet, the bin it is in and the bin it goes to', clean(await gun.textContent('#mvPallet')) === 'M-1' && clean(await gun.textContent('#mvFrom')) === 'F01A001' && clean(await gun.textContent('#mvTo')) === 'F01A002' && /1 of 3 to move/.test(await gun.textContent('#mvLeft')), clean(await gun.textContent('#mvLeft')));
-check('…with the pallet system framed under it, from the address the office set, and a link to open it', await gun.isVisible('#moveSys') && (await gun.getAttribute('#moveFrame', 'src')) === `${BASE}/board` && (await gun.getAttribute('#moveOpen', 'href')) === `${BASE}/board` && /Pallet system:/.test(await gun.textContent('#mvUrlNote')));
+check('…with the pallet system framed under it, from the address the office set', await gun.isVisible('#moveSys') && (await gun.getAttribute('#moveFrame', 'src')) === `${BASE}/board`);
+check('…and no address or link to it anywhere on the gun\'s screen', !(await gun.textContent('#scrMove')).includes('/board') && (await gun.$$('#scrMove a[href]')).length === 0, clean(await gun.textContent('#scrMove')).slice(0, 160));
 check('…and no scan box and no skip: the scanning happens in that screen', (await gun.$('#fMoveScan')) === null && (await gun.$('#btnMoveSkip')) === null);
 await gun.click('#btnMoveNext'); await gun.waitForTimeout(200);
 check('› steps to the next pallet in the aisle, ‹ back', clean(await gun.textContent('#mvPallet')) === 'M-2' && /2 of 3/.test(await gun.textContent('#mvLeft')));

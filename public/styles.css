@@ -369,8 +369,6 @@ body.big-text .nextbin .nb-code { font-size: 30px; }
 .gdesk .arrow { color: var(--accent, #4c9dff); font-size: 20px; font-weight: 800; }
 .gdesk .gmeta { color: var(--muted, #8b95a7); font-size: 13px; margin-top: 4px; }
 .gdeskrow { margin-top: 8px; }
-.gbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 12px; }
-.gbar .muted { color: var(--muted, #8b95a7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.gbar a { color: var(--ok, #3fcf68); white-space: nowrap; }
+.gnote { margin-top: 8px; font-size: 13px; color: var(--muted, #8b95a7); }
 .mvsys { margin-top: 6px; border: 1px solid var(--line, #2a3240); border-radius: 12px; overflow: hidden; background: #fff; }
 .mvsys iframe { display: block; width: 100%; height: max(380px, calc(100vh - 330px)); border: 0; background: #fff; }

@@ -140,5 +140,5 @@ cradle.
 | *Bin done — nothing more here* | The bin is finished | Normal: the next bin comes up |
 | *F03-118 was on the Not in Location list — found!* | The office was looking for it | Count it as normal |
 | *No signal — this has NOT been sent* | Your SOS or line is waiting for signal | Walk ten metres |
-| *Pallet system: …* under a desk | The screen framed under the strip | Book the move or the find there |
+| *No pallet system set yet* under a desk | The office has not set the system's address | Tell the office; the strip still shows the pallet and its bins |
 | anything else | — | Ask a supervisor, or paste it into the User guide's Ask box |

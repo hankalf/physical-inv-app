@@ -2411,11 +2411,11 @@
   /** The pallet system under a desk: the frame when there is an address, the bar
       either way. The frame is made the first time it is needed, so a gun that
       never opens a desk never carries an empty one. */
-  function deskSystem(sysId, frameId, openId, noteId) {
+  function deskSystem(sysId, frameId, noteId) {
+    // the counter sees the system's screen, never its address
     const url = state.palletSystem || '';
     $(sysId).hidden = !url;
-    $(openId).hidden = !url;
-    $(noteId).textContent = url ? `Pallet system: ${url}` : 'No pallet system address set — the office sets it under Settings → Advanced.';
+    $(noteId).hidden = !!url;
     if (!url) return;
     let frame = $(frameId);
     if (!frame) {
@@ -2425,7 +2425,6 @@
       $(sysId).appendChild(frame);
     }
     if (frame.getAttribute('src') !== url) frame.src = url;
-    $(openId).href = url;
   }
 
   /** The aisle list: how many are waiting in each. */
@@ -2473,7 +2472,7 @@
     $('mvLeft').textContent = `${aisleLabel(moveState.aisle, zoneFor(moveState.aisle))}${task.level ? ' · level ' + task.level : ''} · ${moveState.at + 1} of ${open.length} to move`;
     $('btnMovePrev').disabled = moveState.at <= 0;
     $('btnMoveNext').disabled = moveState.at >= open.length - 1;
-    deskSystem('moveSys', 'moveFrame', 'moveOpen', 'mvUrlNote');
+    deskSystem('moveSys', 'moveFrame', 'mvNoSys');
   }
 
   async function finishMoveLocal(status, extra = {}) {
@@ -2543,7 +2542,7 @@
     $('fdLeft').textContent = `${t.aisle === '—' ? 'No known location' : aisleLabel(t.aisle, zoneFor(t.aisle))} · ${findState.at + 1} of ${open.length} to find`;
     $('btnFindPrev').disabled = findState.at <= 0;
     $('btnFindNext').disabled = findState.at >= open.length - 1;
-    deskSystem('findSys', 'findFrame', 'findOpen', 'fdUrlNote');
+    deskSystem('findSys', 'findFrame', 'fdNoSys');
   }
   async function finishFindLocal() {
     const t = findState.task;

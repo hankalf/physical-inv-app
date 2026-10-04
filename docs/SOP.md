@@ -1033,8 +1033,8 @@ with an empty bin behind it — or takes one you upload (Pallet, From bin, To bi
 3. The gun opens the **move desk**, the same strip as the office's: the **pallet**, the bin it is
    in (**from**) and the bin it goes to (**to**), **‹ ›** to step through the aisle, and
    underneath, the **pallet system's own screen** (the address the office set under *Settings →
-   Advanced → Pallet system*, with an **Open the pallet system** link beside it). There is
-   nothing to scan in the app: the move is booked, and scanned, in that screen.
+   Advanced → Pallet system*; the gun shows the screen, never the address). There is nothing to
+   scan in the app: the move is booked, and scanned, in that screen.
 4. Move the pallet, book it in the system, tap **Moved — next**. The next one comes up; when
    the aisle is finished the gun says so and goes back to the aisle list (**Aisles** goes back
    any time). A pallet that cannot be moved is left with **›**; the office skips it with the
@@ -1468,7 +1468,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | The printed barcodes will not scan | The page was printed “fit to page”, or on glossy paper | Print again at **100%** on plain white paper. If a gun still refuses them, print with **Per row: 1** — the bars are wider on a bigger label |
 | A code in the spreadsheet will not print | Code 128 carries plain ASCII only — an accented letter or a smart quote cannot be drawn | The book says which character it was; retype that code with plain letters and numbers |
 | The app still shows the old name somewhere | The name was changed under Settings → Advanced → Site name | Supervisor pages change at once. A scanner picks it up when it is next online; the board on its next refresh. The name under a home-screen icon comes from the app's install and updates when the app is next reinstalled |
-| The strip on the gun shows the pallet but no system under it | No pallet system address is set, or the system refuses to be framed | Settings → Advanced → Pallet system; a system that refuses a frame has the Open link beside the strip |
+| The strip on the gun shows the pallet but no system under it | No pallet system address is set (the gun says so), or the system refuses to be framed | Settings → Advanced → Pallet system. A system that refuses to be framed cannot be shown on the gun — the gun never shows its address; use the office desk's Open in a new tab, or ask the system's owner to allow framing from this site |
 | The site's address opens the supervisor sign-in, not the scanner | That is how it works: the bare address is the office's | A scanner is opened from its own link under Settings → Scanner screen (`/?d=…`); after that its home-screen icon lands on the app. If a handheld lost that (site data cleared), open its link again |
 | A gun does not offer the cycle count, Front2Back or Not in Location | That job is unticked under Settings → Scanner screen → What the scanners offer | Deliberate during a wall-to-wall; tick it back on when the count is over |
 | A gun offers Front2Back but says *Nothing waiting to move right now* | The job is ticked and the move list is empty | Normal: build a move list under Front bins, or untick the job |

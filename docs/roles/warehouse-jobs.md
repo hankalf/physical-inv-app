@@ -62,7 +62,8 @@ of a Zebra's screen; **Full width** opens it out and the choice is kept on that 
 
 1. **Pick the aisle**; each shows how many pallets are waiting.
 2. The desk opens on the first pallet: the pallet, **from** and **to**, **‹ ›** through the
-   aisle, and the pallet system framed underneath with an **Open the pallet system** link.
+   aisle, and the pallet system framed underneath. The gun shows the system's screen, never
+   its address.
    Nothing is scanned in the app: the move is booked, and scanned, in that screen.
 3. Move it, book it, tap **Moved — next**. When the aisle is finished the gun says so and goes
    back to the aisle list; **Aisles** goes back any time.
@@ -129,8 +130,9 @@ on a full count, on the cycle session, for inventory control to read.
 ## 7 — The pallet system under the desks
 
 Both desks frame the web address an admin sets under *Settings → Advanced → Pallet system*.
-A system that refuses to be shown inside another page shows an **Open the pallet system in a
-new tab** link instead; the strip above still works. With no address set the desks say so
+The office desks show the address and an **Open the pallet system in a new tab** link for a
+system that refuses to be shown inside another page; the scanners never show the address or a
+link, only the screen. With no address set the desks say so
 and the strip still works. Scanners pick the address up when they are next online.
 
 ## 8 — When something goes wrong
@@ -140,7 +142,7 @@ and the strip still works. Scanners pick the address up when they are next onlin
 | The gun does not offer Front2Back | No moves are waiting, or the job is unticked under Settings → Scanner screen → Jobs on the scanners | Build a move list; an admin ticks the job back on |
 | The gun does not offer Not in Location | Nothing on the list, or the job is unticked | Add to the list; an admin ticks the job back on |
 | A pallet on the gun's desk cannot be moved | The bin behind is not empty, or the pallet is not there | Leave it with ›; skip it with the reason from Front bins |
-| No pallet system under the strip | No address set, or the system refuses to be framed | Settings → Advanced → Pallet system (admin); a refusing system gets the new-tab link |
+| No pallet system under the strip | No address set (the gun says so), or the system refuses to be framed | Settings → Advanced → Pallet system (admin). A system that refuses framing cannot appear on the gun; work it from the office desk's new-tab link |
 | A move was done but the list still shows it open | The gun had no signal | It uploads with the next signal; Refresh on the gun pushes it |
 | A found pallet is still on the list | Same | Same; the gun's Refresh sends it |
 | Upload refused: *row N: bin is not on this count* | The move list names a bin the newest bin list does not have | Fix the row, or upload the bin list first |

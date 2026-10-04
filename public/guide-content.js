@@ -454,7 +454,7 @@
           watch: [
             { see: 'The gun does not offer Front2Back', means: 'No moves are waiting, or the job is unticked under Settings → Scanner screen → Jobs on the scanners.', fix: 'Build a move list under Front bins; an admin ticks the job back on.' },
             { see: 'A pallet on the desk cannot be moved', means: 'The bin behind is not empty, or the pallet is not there.', fix: 'Leave it with › on the gun; skip it with the reason from Front bins → Pallets to move back.' },
-            { see: 'No pallet system under the strip on the gun', means: 'No address set, or the system refuses to be framed.', fix: 'Settings → Advanced → Pallet system; a system that refuses a frame gets an Open in a new tab link.' },
+            { see: 'No pallet system under the strip on the gun', means: 'No address set, or the system refuses to be framed.', fix: 'Settings → Advanced → Pallet system. The gun shows the screen, never the address; a system that refuses framing is worked from the office desk’s new-tab link.' },
           ],
           ask: [],
         },
