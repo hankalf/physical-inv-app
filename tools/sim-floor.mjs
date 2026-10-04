@@ -243,6 +243,7 @@ try {
      Two teams in one block on different levels is what the block rule allows;
      a team that would clash simply waits for the racking to free up. */
   const levelOf = (code) => code.replace(/^[A-Z]+\d+/, '')[0] || '';
+  const expandLevels = (v) => String(v || '').toUpperCase().replace(/([A-Z])-([A-Z])/g, (m, a, b) => { let out = ''; for (let c = a.charCodeAt(0); c <= b.charCodeAt(0); c++) out += String.fromCharCode(c); return out; }).replace(/[^A-Z]/g, '');
   const jobs = [];
   for (const a of aisles) {
     const low = byAisle.get(a).filter((b) => 'ABC'.includes(levelOf(b))).length;
@@ -422,7 +423,8 @@ try {
         t.active = st.active;
         // the server says which bins the job covers (the aisle, on the levels given)
         t.activeBins = (st.bins && st.bins.length ? st.bins : byAisle.get(st.active.aisle) || []).slice();
-        const i = t.queue.findIndex((j) => j.aisle === st.active.aisle && (!st.active.levels || j.levels === st.active.levels));
+        // the server writes a level band out in full ("ABC" for "A-C"): compare them expanded
+        const i = t.queue.findIndex((j) => j.aisle === st.active.aisle && (!st.active.levels || expandLevels(j.levels) === expandLevels(st.active.levels)));
         if (i >= 0) t.queue.splice(i, 1);
       } else if (!st.active) { t.active = null; t.activeBins = null; }
       return st;
