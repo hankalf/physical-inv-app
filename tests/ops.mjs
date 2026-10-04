@@ -38,6 +38,18 @@ await fetch(`${BASE}/api/sessions/${sess.id}/counts`, { method: 'POST', headers:
   { clientId: 'o3', emptyBin: 1, palletId: '', qty: 0, location: 'F01A003', team: '1', employees: ['E1001'], deviceId: 'D1' },
 ]) });
 
+/* ---------------- a scanner whose clock is wrong ---------------- */
+// this gun thinks it is five hours ago: it says so on the line, and the server puts the scan at the real time
+const fiveAgo = new Date(Date.now() - 5 * 3600000).toISOString();
+await fetch(`${BASE}/api/sessions/${sess.id}/counts`, { method: 'POST', headers: api.headers, body: JSON.stringify([
+  { clientId: 'o-skew', palletId: 'PLT01004A', qty: 12, location: 'F01A004', team: '1', employees: ['E1001'], deviceId: 'D1', scannedAt: fiveAgo, sentAt: fiveAgo },
+]) });
+const skewCsv = await (await fetch(`${BASE}/api/admin/sessions/${sess.id}/export/counts.csv`, { headers: A })).text();
+const skewHead = skewCsv.trim().split('\n')[0].split(',');
+const skewRow = skewCsv.trim().split('\n').slice(1).map((l) => l.split(',')).find((c) => c[skewHead.indexOf('pallet_id')] === 'PLT01004A');
+const skewAt = skewRow ? Date.parse(skewRow[skewHead.indexOf('scanned_at')]) : 0;
+check('A scanner with a clock five hours slow has its scan recorded at the real time', skewAt > 0 && Math.abs(Date.now() - skewAt) < 120000, skewRow ? skewRow[skewHead.indexOf('scanned_at')] : 'no row');
+
 /* ---------------- audit ---------------- */
 const log = await j(await fetch(`${BASE}/api/admin/audit?limit=50`, { headers: A }));
 const actions = log.map((r) => r.action);
@@ -137,6 +149,13 @@ await sheetTab.screenshot({ path: `${S}screenshots/ops-count-sheet.png`, fullPag
 const bump = await j(await fetch(`${BASE}/api/admin/audit?limit=200`, { headers: A }));
 check('Printing and exporting are themselves recorded',
   bump.some((r) => r.action === 'printed a count sheet') && bump.some((r) => r.action === 'exported to the ERP'), '');
+
+/* ---------------- signing out ends the sign-in on the server ---------------- */
+const outTok = (await j(await fetch(`${BASE}/api/admin/login`, { method: 'POST', headers: hdr, body: JSON.stringify({ password: 'changeme' }) }))).token;
+const O = { ...hdr, authorization: 'Bearer ' + outTok };
+check('A fresh sign-in works', (await fetch(`${BASE}/api/admin/me`, { headers: O })).status === 200);
+await fetch(`${BASE}/api/admin/logout`, { method: 'POST', headers: O });
+check('…and after signing out the same token is refused', (await fetch(`${BASE}/api/admin/me`, { headers: O })).status === 401);
 
 console.log('\nerrors:', errors.length ? errors : 'none');
 console.log(`\n${results.filter(Boolean).length}/${results.length} ops checks passed`);

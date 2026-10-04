@@ -1043,14 +1043,24 @@
   /* Only the tabs this login has are fetched: a tab it may not open would be
      refused by the server, and one refusal must not stop the rest. */
   const tab = (name) => api.canTab('/admin', name);
+  /* Only what is on screen is fetched: the pallet report of a twenty-thousand-bin
+     count is not pulled every half minute by a page sitting on Progress. The
+     progress figures (the header's percentage) and the alerts (the SOS bar, the
+     badge) are light and always wanted. A pane that becomes visible is fetched
+     at once, on the subshow event below. */
+  // function declarations, so the first refresh - which runs before this line - can use them
+  function shown(name) { const pane = document.querySelector(`[data-sub="${name}"]`); return !!pane && (pane.classList.contains('active') || pane.getClientRects().length > 0); }
+  function paneJobs() {
+    return {
+      progress: [refreshNotes, refreshProgress], teams: [refreshAssignments], reports: [refreshPallets, refreshLabels], map: [refreshMap],
+      second: [refreshRecounts], alerts: [refreshMessages, refreshAlerts], adjust: [refreshAdjustments],
+    };
+  }
   async function refreshAll() {
     if (!sessionId) return;
-    const jobs = [
-      [true, refreshSources], [tab('progress'), refreshNotes], [tab('progress'), refreshProgress], [tab('teams'), refreshAssignments],
-      [tab('reports'), refreshPallets], [tab('map'), refreshMap], [tab('second'), refreshRecounts], [true, refreshPicker],
-      [tab('alerts'), refreshMessages], [tab('adjust'), refreshAdjustments], [tab('reports'), refreshLabels], [tab('alerts'), refreshAlerts],
-    ];
-    await Promise.all(jobs.filter(([ok]) => ok).map(([, f]) => Promise.resolve().then(f).catch(() => {})));
+    const jobs = [refreshSources, refreshPicker, refreshProgress, refreshAlerts];
+    for (const [name, fns] of Object.entries(paneJobs())) if (tab(name) && shown(name)) for (const f of fns) if (!jobs.includes(f)) jobs.push(f);
+    await Promise.all(jobs.map((f) => Promise.resolve().then(f).catch(() => {})));
   }
 
   /* ------------------------------------------------------- adjustments
@@ -1534,7 +1544,8 @@
   // The map is the expensive one and it is usually off-screen, so redraw it when
   // its tab is opened rather than every thirty seconds behind the user's back.
   document.addEventListener('subshow', (e) => {
-    if (e.detail === 'map' && sessionId) refreshMap().catch(() => {});
+    if (!sessionId) return;
+    for (const f of paneJobs()[e.detail] || []) if (tab(e.detail)) Promise.resolve().then(f).catch(() => {});
   });
 
   const download = (path, filename) =>

@@ -739,6 +739,23 @@ export function saveCounts(sessionId, rows) {
   const rejected = [];
   const firstCountPallets = new Set();
   const countedBins = new Set();
+  /* A handheld's clock can be wrong by hours - nobody sets it, and a cradle in
+     a freezer does not keep time. Each line says when it was scanned by that
+     clock and when it was sent by that clock; the difference between "sent" and
+     "arrived" is the clock's error (plus a moment of network), and the scan
+     time is corrected by it. A line queued offline for an hour keeps its hour. */
+  const skewOf = (r) => {
+    const sent = Date.parse(r.sentAt || '');
+    if (!Number.isFinite(sent)) return 0;
+    const skew = Date.now() - sent;
+    return Math.abs(skew) > 120000 ? skew : 0;
+  };
+  const whenScanned = (r) => {
+    const t = Date.parse(r.scannedAt || '');
+    if (!Number.isFinite(t)) return now;
+    const skew = skewOf(r);
+    return skew ? new Date(t + skew).toISOString() : String(r.scannedAt);
+  };
   db.exec('BEGIN');
   try {
     for (const r of rows) {
@@ -771,7 +788,7 @@ export function saveCounts(sessionId, rows) {
         ['typed', 'none'].includes(r.labelIssue) ? r.labelIssue : '',
         // the rack label, which can also be 'assumed' - the app said which bin, the counter agreed
         ['typed', 'assumed', 'none'].includes(r.binLabelIssue) ? r.binLabelIssue : '',
-        r.scannedAt || now, now
+        whenScanned(r), now
       );
       accepted.push(r.clientId);
       if (!empty && Number(r.pass) !== 2) firstCountPallets.add(norm(r.palletId));
@@ -843,6 +860,38 @@ export function updateDevice(uid, { name, notes }) {
 export const deleteDevice = (uid) => db.prepare('DELETE FROM devices WHERE uid = ?').run(String(uid || '')).changes;
 
 const hashToken = (t) => createHash('sha256').update(String(t)).digest('hex');
+
+/* ---------------------------------------------------------- supervisor sign-ins
+   A sign-in used to live in the server's memory, so a redeploy or a restart on
+   count day signed every supervisor out at once. It is a row now - the token's
+   hash, never the token - and it lasts thirty days from its last use. */
+db.exec(`
+CREATE TABLE IF NOT EXISTS admin_tokens (
+  token_hash TEXT PRIMARY KEY,
+  username   TEXT NOT NULL,
+  name       TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  last_seen  TEXT NOT NULL
+);`);
+const TOKEN_DAYS = 30;
+export function saveAdminToken(token, { username, name }) {
+  const at = new Date().toISOString();
+  db.prepare('INSERT OR REPLACE INTO admin_tokens (token_hash, username, name, created_at, last_seen) VALUES (?, ?, ?, ?, ?)')
+    .run(hashToken(token), String(username), String(name), at, at);
+}
+export function adminTokenInfo(token) {
+  if (!token) return null;
+  const row = db.prepare('SELECT * FROM admin_tokens WHERE token_hash = ?').get(hashToken(token));
+  if (!row) return null;
+  const age = Date.now() - Date.parse(row.last_seen);
+  if (age > TOKEN_DAYS * 86400000) { db.prepare('DELETE FROM admin_tokens WHERE token_hash = ?').run(row.token_hash); return null; }
+  if (age > 3600000) db.prepare('UPDATE admin_tokens SET last_seen = ? WHERE token_hash = ?').run(new Date().toISOString(), row.token_hash);
+  return { username: row.username, name: row.name };
+}
+export const dropAdminToken = (token) => db.prepare('DELETE FROM admin_tokens WHERE token_hash = ?').run(hashToken(token)).changes;
+export const dropAdminTokensFor = (username) => db.prepare('DELETE FROM admin_tokens WHERE username = ?').run(String(username)).changes;
+export const purgeAdminTokens = () =>
+  db.prepare('DELETE FROM admin_tokens WHERE last_seen < ?').run(new Date(Date.now() - TOKEN_DAYS * 86400000).toISOString()).changes;
 
 /**
  * Trade the enrolment link for a token this scanner keeps and sends on every

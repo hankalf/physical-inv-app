@@ -39,6 +39,10 @@ const t8 = await post('/api/admin/people/teams', { name: '8' });
 check('A team can be made with its shift', t7.shift === '1');
 const t8b = await post(`/api/admin/people/teams/${t8.id}/shift`, { shift: '2' });
 check('…and an existing team moved to 2nd shift', t8b.shift === '2');
+const t9 = await post('/api/admin/people/teams', { name: '9', shift: '1st' });
+const t10 = await post('/api/admin/people/teams', { name: '10', shift: 'Night' });
+check('A shift written in words is understood: "1st" is 1, "Night" is 2', t9.shift === '1' && t10.shift === '2', `${t9.shift} ${t10.shift}`);
+for (const t of [t9, t10]) await fetch(`${BASE}/api/admin/people/teams/${t.id}`, { method: 'DELETE', headers: A });   // the shift view below counts teams
 const bad = await post(`/api/admin/people/teams/${t8.id}/shift`, { shift: '9' });
 check('A shift that is not 1st or 2nd is cleared, not stored', bad.shift === '');
 await post(`/api/admin/people/teams/${t8.id}/shift`, { shift: '2' });

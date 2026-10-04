@@ -384,9 +384,9 @@ check('Recounts: the gun is told the reason, never the numbers', /Quantity diffe
 const takeBy1 = await fetch(`${BASE}/api/sessions/1/recounts/${qtyTask.id}/take`, { method: 'POST', headers: api.headers, body: JSON.stringify({ team: '1' }) });
 check('Recounts: team 1 cannot take the second count of its own first count (409)', takeBy1.status === 409);
 // a bin nobody has touched, requested by hand and assigned to team 2
-await admin.fill('#fRecBin', 'F02A012'); await admin.fill('#fRecNote', 'supervisor spot check'); await admin.fill('#fRecTeam', '2'); await admin.click('#btnRecAdd'); await admin.waitForTimeout(700);
+await admin.fill('#fRecBin', 'F05A012'); await admin.fill('#fRecNote', 'supervisor spot check'); await admin.fill('#fRecTeam', '2'); await admin.click('#btnRecAdd'); await admin.waitForTimeout(700);
 check('Recounts: manual request from the dashboard', /Second count requested/.test(clean(await admin.textContent('#recountMsg'))), clean(await admin.textContent('#recountMsg')));
-const manual = (await getRecs()).find((r) => r.bin === 'F02A012');
+const manual = (await getRecs()).find((r) => r.bin === 'F05A012');
 check('Recounts: the manual one is marked manual and assigned to team 2', manual && manual.source === 'manual' && manual.team === '2', `${manual?.source} team ${manual?.team}`);
 // team 2 works the queue: the qty-variance bin first, then the manual one
 await fetch(`${BASE}/api/admin/sessions/1/recounts/${qtyTask.id}`, { method: 'POST', headers: adm, body: JSON.stringify({ team: '2' }) });
@@ -413,8 +413,8 @@ const pr = (await (await fetch(`${BASE}/api/admin/sessions/1/pallets?limit=1000`
 const rec = pr.find((r) => r.pallet_id === qtyPallet);
 check('Report: the second count supersedes the first, and the first is kept for the record', rec.recounted === 1 && rec.counted_qty === 96 && Number(rec.first_count_qty) !== 96, `1st=${rec.first_count_qty} now=${rec.counted_qty} status=${rec.status}`);
 // finish the manual one by marking the bin empty
-await t2.p.click('#btnEmpty'); await t2.scan('F02A012'); await t2.p.waitForTimeout(1000);
-check('Handheld T2: marking a recount bin EMPTY completes the task', (await getRecs()).find((r) => r.bin === 'F02A012').status === 'done');
+await t2.p.click('#btnEmpty'); await t2.scan('F05A012'); await t2.p.waitForTimeout(1000);
+check('Handheld T2: marking a recount bin EMPTY completes the task', (await getRecs()).find((r) => r.bin === 'F05A012').status === 'done');
 
 /* ================= STAGGER ================= */
 await admin.reload(); await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(1200);

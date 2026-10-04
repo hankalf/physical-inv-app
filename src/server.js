@@ -10,8 +10,7 @@ import {
   db, listSessions, getSession, createSession, sandboxOf, deleteSession, checkSessionDeletable, sessionContents, lastUsedLayout, publicSession, masterPayload,
   saveCounts, countedPallets, recordSignon, norm,
   listDevices, getDevice, createDevice, updateDevice, deleteDevice, touchDevice,
-  enrollDevice, deviceByToken, resetDevice,
-} from './db.js';
+  enrollDevice, deviceByToken, resetDevice, saveAdminToken, adminTokenInfo, dropAdminToken, dropAdminTokensFor, purgeAdminTokens } from './db.js';
 import { importMaster, pruneAreaAisles } from './routes/master.js';
 import { boardData } from './routes/board.js';
 import { sendMessage, listMessages, messagesFor, ackMessage, clearMessage } from './routes/messages.js';
@@ -210,7 +209,12 @@ function currentUser(req, url) {
   let token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
   // a count sheet is opened in a new tab, which cannot carry a header
   if (!token && url && /\/print\//.test(url.pathname)) token = url.searchParams.get('t') || '';
-  const t = adminTokens.get(token);
+  let t = adminTokens.get(token);
+  if (!t && token) {
+    // a sign-in from before the last restart: the row remembers it
+    const saved = adminTokenInfo(token);
+    if (saved) { t = { name: saved.name, username: saved.username }; adminTokens.set(token, t); }
+  }
   if (!t) return null;
   /* The role and the access list come from the account every time, not from
      the sign-in: a change an admin makes applies to the next request, and a
@@ -549,6 +553,7 @@ async function handleAdmin(req, res, url, m) {
     const user = username ? authenticate(username, body.password) : null;
     if (!user) throw httpError(401, 'that username and password do not match');
     adminTokens.set(token, { name: user.name, username: user.username, role: user.role });
+    saveAdminToken(token, { username: user.username, name: user.name });
     audit(user.name, 'signed in', `as ${user.username} (${user.role})`);
     // a starter password gets them in, but only as far as choosing a real one
     return sendJson(req, res, 200, {
@@ -558,6 +563,13 @@ async function handleAdmin(req, res, url, m) {
   }
 
   const actor = requireAdmin(req, url);
+  // signing out ends this sign-in on the server too, not only in the browser
+  if (p === '/api/admin/logout' && method === 'POST') {
+    const token = String(req.headers.authorization || '').slice(7);
+    adminTokens.delete(token);
+    dropAdminToken(token);
+    return sendJson(req, res, 200, { ok: true });
+  }
   // the address supervisors reach this on, for the link in a Teams card the timer sends
   lastOrigin = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host || 'localhost'}`;
 
@@ -909,6 +921,11 @@ async function handleAdmin(req, res, url, m) {
     requireAccountAdmin(req, url);
     const body = await readJson(req);
     const u = updateUser(m[1], body);
+    // a login taken away, or a password reset, ends every sign-in that login had
+    if (body.active === false || body.password !== undefined) {
+      dropAdminTokensFor(u.username);
+      for (const [tok, info] of adminTokens) if (info.username === u.username) adminTokens.delete(tok);
+    }
     audit(actor, 'changed an account', `${u.username}: ${Object.keys(body).filter((k) => k !== 'password').join(', ') || 'password'}`);
     return sendJson(req, res, 200, u);
   }
@@ -1679,6 +1696,7 @@ server.listen(PORT, HOST, () => {
   /* Seed the superadmin before reporting the state, so the two agree. Create
      only: an account already there is never touched, so a password changed in
      the app survives every restart. */
+  purgeAdminTokens();
   if (SUPERADMIN_USER) {
     try {
       const seeded = ensureSuperadmin({ username: SUPERADMIN_USER, name: SUPERADMIN_NAME, password: SUPERADMIN_PASSWORD });

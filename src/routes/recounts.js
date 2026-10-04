@@ -183,6 +183,26 @@ export function autoAfterAisle(sessionId, aisle, levels, team) {
 /** Tasks a team may work: assigned to it, or unassigned and not its own first count. */
 export function tasksForTeam(sessionId, team) {
   const t = norm(team);
+  const id = Number(sessionId);
+  /* Nearest first. A list in bin order sends a team that has just finished F11
+     to F01; this one starts with the aisle they are in, then the racking block
+     they are in, then the aisles nearest by number - still their own tasks
+     before anybody's. */
+  const where = db.prepare(
+    "SELECT aisle FROM assignments WHERE session_id = ? AND team = ? AND status IN ('active', 'done') ORDER BY status = 'done', position DESC, id DESC LIMIT 1")
+    .get(id, t)?.aisle
+    || db.prepare('SELECT aisle FROM counts WHERE session_id = ? AND team = ? AND voided = 0 ORDER BY id DESC LIMIT 1').get(id, t)?.aisle
+    || null;
+  const aisleOf = new Map(db.prepare('SELECT code, aisle FROM locations WHERE session_id = ?').all(id).map((l) => [l.code, l.aisle]));
+  const blockOf = new Map(db.prepare('SELECT aisle, block FROM aisles WHERE session_id = ?').all(id).map((a) => [a.aisle, a.block]));
+  const num = (a) => Number(String(a || '').replace(/\D/g, '')) || 0;
+  const distance = (bin) => {
+    if (!where) return 0;
+    const a = aisleOf.get(bin) || String(bin).slice(0, 3);
+    if (a === where) return 0;
+    if (blockOf.has(a) && blockOf.get(a) === blockOf.get(where)) return 1;
+    return 2 + Math.abs(num(a) - num(where));
+  };
   return db
     .prepare(
       `SELECT id, bin, pallet_id, reason, status, team, batch_id
@@ -191,9 +211,10 @@ export function tasksForTeam(sessionId, team) {
           AND (team = ? OR (team IS NULL AND COALESCE(first_team, '') != ?))
         ORDER BY CASE WHEN team = ? THEN 0 ELSE 1 END, bin`
     )
-    .all(Number(sessionId), t, t, t)
+    .all(id, t, t, t)
     .map((r) => ({ id: r.id, bin: r.bin, palletId: r.pallet_id, reason: REASONS[r.reason] || r.reason,
-                   kind: r.reason === 'CYCLE' ? 'cycle' : 'recount', mine: r.team === t, status: r.status }));
+                   kind: r.reason === 'CYCLE' ? 'cycle' : 'recount', mine: r.team === t, status: r.status }))
+    .sort((a, b) => Number(b.mine) - Number(a.mine) || distance(a.bin) - distance(b.bin) || a.bin.localeCompare(b.bin, undefined, { numeric: true }));
 }
 
 export function takeRecount(sessionId, recountId, team) {

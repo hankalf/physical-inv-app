@@ -146,6 +146,8 @@
     },
 
     logout() {
+      // tell the server first, best effort, so the sign-in cannot be reused
+      if (api.token) { try { fetch('/api/admin/logout', { method: 'POST', headers: { authorization: 'Bearer ' + api.token }, keepalive: true }).catch(() => {}); } catch { /* offline */ } }
       api.token = ''; api.me = null;
       const box = document.getElementById('navSetPassword');
       if (box) { box.hidden = true; box.classList.remove('active'); }

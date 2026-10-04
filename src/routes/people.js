@@ -221,7 +221,13 @@ export function listTeams() {
   });
 }
 
-const cleanShift = (v) => (['1', '2'].includes(String(v ?? '').trim()) ? String(v).trim() : '');
+/* 1 or 2 - however it was written: "1st", "first", "day", "2nd", "second", "night" */
+const cleanShift = (v) => {
+  const t = String(v ?? '').trim().toLowerCase();
+  if (/^(1|1st|first|day|days|morning|am|a)$/.test(t)) return '1';
+  if (/^(2|2nd|second|night|nights|evening|afternoon|pm|b)$/.test(t)) return '2';
+  return '';
+};
 
 export function createTeam({ name, notes, shift }) {
   const n = norm(name);

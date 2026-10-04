@@ -392,6 +392,8 @@
     recountId: l.recountId || null, overrideReason: l.overrideReason,
     lot: l.lot || null, expiry: l.expiry || null, aliasOf: l.aliasOf || null,
     labelIssue: l.labelIssue || '', binLabelIssue: l.binLabelIssue || '', scannedAt: l.ts,
+    // the gun's clock now, so the server can tell a wrong clock from a late send
+    sentAt: new Date().toISOString(),
   });
 
   /** Send what is waiting for one count, two hundred lines at a time. */

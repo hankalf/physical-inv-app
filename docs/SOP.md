@@ -945,7 +945,8 @@ system in a new tab**.
 ### Step 16 — The supervisor's procedure (on the dashboard)
 
 **Dashboard**, with the count picked in the header. It refreshes itself every 30
-seconds.
+seconds, fetching only the tab on screen (plus the progress figures and the alerts, which are
+light), so three dashboards left open on a big count do not keep rebuilding the pallet report.
 
 > **How it looks** is up to you: **Settings → Advanced → Appearance** offers four themes —
 > *Midnight* (dark blue), *Graphite* (dark grey), *Daylight* and *Frost* (light) — nine accent
@@ -1107,7 +1108,9 @@ supervisor.
   tasks. It deliberately leaves alone pallets in aisles nobody has counted yet — mid-count
   those are not missing, just not reached — and tells you how many it skipped and why.
 - The tasks appear on the handhelds: a team taps **Start second counts** on the
-  assignment screen, counts the bin again, and presses **Bin done — nothing more here**.
+  assignment screen, counts the bin again, and presses **Bin done — nothing more here**. The
+  list is **nearest first**: the aisle the team is in, then its racking block, then the aisles
+  nearest by number, so a team finishing F11 is not sent to F01.
 - A second count that agrees with the first settles the line.
 
 Work these down before you close the count. A count closed with open second counts is a
@@ -1331,6 +1334,8 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | A reason code edit "did not reach" a gun | It takes up to about half a minute, and only lands between pallets | Wait for the counter to finish the pallet they are on |
 | Can nobody sign in? | All logins lost | The superadmin is made from the Railway variables the first time the app starts; if it was deleted or demoted later, set `SUPERADMIN_USER` to a new username and restart, which makes a fresh admin login |
 | Numbers look wrong after an ERP import | The inventory report moved on | Re-upload it with **Replace what is there**, then re-read the pallet report |
+| A scanner's scan times are hours out | The handheld's clock is wrong | Nothing to do: every line carries the gun's own send time, and the server corrects the scan time by the clock's error. Set the clock when you can, all the same |
+| Everyone was signed out of the dashboards | The server restarted (a deploy, a Railway restart) | Sign-ins now survive a restart; if it still happens, the server lost its database volume — check Railway |
 
 ---
 

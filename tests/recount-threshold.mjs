@@ -85,5 +85,15 @@ const rf = await j(await fetch(`${BASE}/api/admin/sessions/${f.id}/recounts`, { 
 check('With thresholds at 0 a single unit still raises one, as it always did',
   rf.some((r) => r.pallet_id === f01[0][0]), '');
 
+
+/* ---- nearest first: the list starts where the team is ---- */
+const n1 = await freshSession('nearest first', { autoRecount: false });
+await fetch(`${BASE}/api/admin/sessions/${n1.id}/assignments`, { method: 'POST', headers: A, body: JSON.stringify({ team: '4', aisles: ['F11'], levels: 'A-F', force: true }) });
+for (const bin of ['F01A001', 'F11A003', 'F05A001', 'F11A001', 'F12A001']) {
+  await fetch(`${BASE}/api/admin/sessions/${n1.id}/recounts`, { method: 'POST', headers: A, body: JSON.stringify({ bin, reason: 'MANUAL', detail: 'look again' }) });
+}
+const near = (await j(await fetch(`${BASE}/api/sessions/${n1.id}/recounts?team=4`, { headers: D }))).tasks.map((t) => t.bin);
+check('A team on F11 is offered F11 first, then the aisles nearest by number', near.join(',') === 'F11A001,F11A003,F12A001,F05A001,F01A001', near.join(','));
+
 console.log(`\n${results.filter(Boolean).length}/${results.length} recount-threshold checks passed`);
 if (results.some((r) => r === false)) process.exitCode = 1;

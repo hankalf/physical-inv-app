@@ -547,6 +547,19 @@ Supervisor (`Authorization: Bearer <token>` from `POST /api/admin/login`):
 
 ---
 
+## Things that keep count day calm
+
+- **Sign-ins survive a restart.** A supervisor's sign-in is a row in the database (the token's
+  hash, thirty days from last use), so a deploy mid-count signs nobody out. **Log out** ends it on
+  the server; deactivating a login or resetting its password ends all of that login's sign-ins.
+- **A scanner's clock can be wrong.** Each line carries the gun's scan time and its send time;
+  the server corrects the scan time by the difference between "sent" and "arrived" when it is
+  more than two minutes, so a cradle-in-the-freezer clock does not put scans in the wrong hour or
+  trip the stopped-scanning alert.
+- **Second counts are offered nearest first**: the team's aisle, then its racking block, then by
+  aisle number.
+- **The dashboard fetches only the tab on screen**, plus the light progress and alert figures.
+
 ## The whole floor, rehearsed — `tools/sim-floor.mjs`
 
 `node tools/sim-floor.mjs` plays a complete count against a throwaway server: twenty teams
