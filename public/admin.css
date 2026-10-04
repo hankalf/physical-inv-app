@@ -37,7 +37,7 @@
   --stripe:      rgba(255,255,255,.045);
   --hover:       rgba(76,157,255,.12);
   --radius:      12px;
-  --side:        212px;
+  --side:        240px;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -661,8 +661,8 @@ html[data-corners="square"] .card, html[data-corners="square"] button, html[data
 html[data-corners="square"] .stat, html[data-corners="square"] .chip, html[data-corners="square"] .tag, html[data-corners="square"] .feedback { border-radius: 3px !important; }
 html[data-corners="soft"] .card, html[data-corners="soft"] button, html[data-corners="soft"] input, html[data-corners="soft"] select, html[data-corners="soft"] textarea,
 html[data-corners="soft"] .stat, html[data-corners="soft"] .feedback { border-radius: 7px !important; }
-html[data-side="narrow"] { --side: 176px; }
-html[data-side="wide"] { --side: 262px; }
+html[data-side="narrow"] { --side: 204px; }
+html[data-side="wide"] { --side: 290px; }
 html[data-contrast="high"] { --line: #4b5a6e; --line-soft: #3a4759; --text-dim: var(--text); --muted: #b9c4d2; }
 html[data-contrast="high"][data-theme="daylight"], html[data-contrast="high"][data-theme="frost"] { --line: #7f93aa; --line-soft: #a3b3c6; --muted: #3f5166; }
 /* a light theme keeps the primary button's text readable on the accent */
