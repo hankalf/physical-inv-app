@@ -330,6 +330,97 @@ const nsMade = await post('/api/admin/practice', {}, N);
 check('…and opening the Testing tab gives them a fresh one of their own', nsMade.session && ![pid, fresh.session.id, other.session.id].includes(nsMade.session.id)
   && nsMade.checklist.every((c) => !c.done) && nsMade.device.name === 'TEST-NEWSTARTER', nsMade.device && nsMade.device.name);
 
+/* ---------------- before you start ---------------- */
+for (let t = 0; t < 8000; t += 400) { if (/ready to test/.test(await page.textContent('#readySum'))) break; await wait(400); }
+check('"Before you start" says the tab is ready, once the gun is up', /ready to test/.test(await page.textContent('#readySum')), clean(await page.textContent('#readySum')));
+const readyText = clean(await page.textContent('#readyList'));
+check('…listing the test data, the test scanner, the team\'s aisles and the gun', /Test data loaded — 24 bins, 25 pallets/.test(readyText)
+  && /Test scanner TEST-DANA-WHITFIELD registered/.test(readyText) && /Team 99 has 2 aisles/.test(readyText) && /scanner app is running/.test(readyText), readyText.slice(0, 260));
+check('…and says plainly when you are on the shared password, and what to do', /shared password/.test(readyText) && /Settings → Logins/.test(readyText));
+
+/* ---------------- your own test pallets ---------------- */
+const badUp = await fetch(`${BASE}/api/admin/practice/upload?name=bad.csv`, { method: 'POST', headers: { authorization: 'Bearer ' + tok, 'content-type': 'text/csv' },
+  body: 'Bin,Pallet,Qty\nZ01A001,ZP-1,ten\n' });
+check('A file with a bad quantity is refused, naming the row', badUp.status === 400 && /row 2: "ten" is not a quantity/.test((await badUp.json()).error));
+const mine = 'Bin,Pallet,Qty,Note,Lot,Best Before\nZ01A001,ZP-1,40,Chicken,L1,2027-01-01\nZ01A001,ZP-2,12,Peas,,\nZ01A002,,,empty bay,,\nZ02A001,ZP-3,30,Corn,,\n';
+await page.setInputFiles('#fPracticeFile', { name: 'dock-test.csv', mimeType: 'text/csv', buffer: Buffer.from(mine) });
+await page.click('#btnPracticeUpload');
+for (let t = 0; t < 10000; t += 300) { if (/Loaded/.test(await page.textContent('#uploadMsg'))) break; await wait(300); }
+check('Uploading your own Bin / Pallet / Qty file starts a run on it', /Loaded 3 pallets in 3 bins from dock-test.csv/.test(clean(await page.textContent('#uploadMsg'))), clean(await page.textContent('#uploadMsg')));
+check('…the sheet shows your pallets, not the built-in ones', await chipFor('ZP-1').isVisible() && await page.locator('#shelves .scan', { hasText: /^F01-001$/ }).count() === 0);
+check('…and says it is testing on your file', /dock-test/.test(await page.textContent('#dataSource')));
+const ownSheet = await get('/api/admin/practice');
+check('…with a checklist for a plain count: every pallet, the empty bins, an aisle, an SOS', ownSheet.source === 'upload'
+  && ownSheet.checklist.map((c) => c.key).join(',') === 'signon,first,every,empty,nextAisle,sos', ownSheet.checklist.map((c) => c.key).join(','));
+check('…and team 99 queued on its aisles', ownSheet.assignment.map((a) => a.aisle).join(',') === 'Z01,Z02', ownSheet.assignment.map((a) => a.aisle).join(','));
+gun = await gunFrame();
+await wait(800);
+await page.click('#teamVals .scan'); await wait(300);
+await page.click('#crewVals .scan >> nth=0'); await wait(300);
+await gun.click('#btnStart');
+await waitScreen('scrAssign');
+await gun.click('#btnCount');
+await atPalletStep();
+await count('ZP-1', 'Z01A001');
+for (let t = 0; t < 9000; t += 300) { if ((await get('/api/admin/practice')).checklist.find((c) => c.key === 'first').done) break; await wait(300); }
+const afterOwn = await get('/api/admin/practice');
+check('The gun counts your pallets like any other', afterOwn.checklist.find((c) => c.key === 'first').done && /1 of 3/.test(afterOwn.checklist.find((c) => c.key === 'every').label),
+  afterOwn.checklist.find((c) => c.key === 'every').label);
+const ownId = afterOwn.session.id;
+await page.click('#btnReset');
+for (let t = 0; t < 8000; t += 300) { if ((await get('/api/admin/practice')).session.id !== ownId) break; await wait(300); }
+const again2 = await get('/api/admin/practice');
+check('Start over on your file starts over on the same file', again2.source === 'upload' && again2.session.id !== ownId && again2.totals.pallets === 3 && again2.totals.lines === 0);
+await page.click('#btnBuiltIn');
+for (let t = 0; t < 8000; t += 300) { if ((await get('/api/admin/practice')).source === 'built-in') break; await wait(300); }
+const back2 = await get('/api/admin/practice');
+check('"Back to the built-in test data" does what it says', back2.source === 'built-in' && back2.totals.pallets === 25);
+check('…and every run so far is in your history', back2.history.length >= 3, `${back2.history.length} runs`);
+
+/* ---------------- the features that ship turned off ---------------- */
+const optRow = (k) => page.locator(`#optList .opt[data-key="${k}"]`);
+check('The Testing tab lists the features that ship turned off', await optRow('askLot').isVisible() && await optRow('requireApproval').isVisible() && await optRow('trackAbc').isVisible());
+check('…each off to start with', !(await optRow('askLot').locator('input').isChecked()) && !(await optRow('trackAbc').locator('input').isChecked()));
+check('…saying whether the practice data has what it needs', /✓ 25 of 25 pallets have a lot code/.test(await optRow('askLot').textContent()), clean(await optRow('askLot').textContent()));
+check('…and how to get it when it does not', /No ABC classes yet/.test(await optRow('trackAbc').textContent()) && await optRow('trackAbc').locator('button').isVisible());
+await optRow('askLot').locator('input').check();
+await wait(800);
+let opts = (await get('/api/admin/practice')).options;
+check('Switching one on changes your practice count', opts.values.askLot === true);
+check('…and nothing else: the live count is untouched', !(await get('/api/admin/sessions')).find((x) => x.id === live.id).ask_lot);
+check('…nor anybody else\'s practice count', !(await get('/api/admin/practice', O)).options.values.askLot);
+await optRow('trackAbc').locator('button').click();
+await wait(800);
+check('"Work out ABC classes" fills them in', /✓ 25 of 25 pallets have an ABC class/.test(await optRow('trackAbc').textContent()), clean(await optRow('trackAbc').textContent()));
+await optRow('requireApproval').locator('input').check();
+await wait(800);
+check('Approvals show their thresholds once switched on', await optRow('requireApproval').locator('input[type=number]').count() === 2);
+await optRow('palletMode').locator('select').selectOption('strict');
+await wait(800);
+opts = (await get('/api/admin/practice')).options;
+check('The pallet check can be tried strict', opts.values.palletMode === 'strict' && opts.values.requireApproval && opts.values.trackAbc, JSON.stringify(opts.values));
+// the gun takes the lot question between pallets
+gun = await gunFrame();
+let lotAsked = false;
+for (let t = 0; t < 30000 && !lotAsked; t += 1000) {
+  await wait(1000);
+  lotAsked = await gun.evaluate(() => {
+    try { return JSON.parse(JSON.stringify(window.__state || null)) && false; } catch { return false; }
+  }) || await gun.evaluate(async () => {
+    const r = await fetch('/api/sessions?practice=1', { headers: { authorization: 'Device ' + (await new Promise((res) => {
+      const q = indexedDB.open([...new URLSearchParams(location.search).entries()].length ? `invcount-practice-${new URLSearchParams(location.search).get('d')}` : 'invcount');
+      q.onsuccess = () => { const g = q.result.transaction('meta').objectStore('meta').get('deviceToken'); g.onsuccess = () => res(g.result); };
+    })) } });
+    const list = await r.json();
+    return list.length === 1 && list[0].askLot === true;
+  });
+}
+check('The test gun is told to ask for the lot', lotAsked);
+/* an uploaded file without lots says so */
+const noLots = await fetch(`${BASE}/api/admin/practice/upload?name=plain.csv`, { method: 'POST', headers: { authorization: 'Bearer ' + otherTok, 'content-type': 'text/csv' },
+  body: 'Bin,Pallet,Qty\nY01A001,YP-1,10\n' }).then((r) => r.json());
+check('On a file with no lot codes, the lot option says what to add to the file', /Add a “Lot” column/.test(noLots.options.needs.askLot.text), noLots.options.needs.askLot.text);
+
 /* ---------------- over to the dashboard ---------------- */
 await page.click('#btnDashboard');
 await page.waitForURL(/\/admin/);

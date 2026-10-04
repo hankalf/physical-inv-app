@@ -67,6 +67,23 @@
   .check i { flex: 0 0 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--line); font-style: normal; font-size: 11px; display: grid; place-items: center; margin-top: 1px; }
   .check.done { color: var(--text); }
   .check.done i { background: var(--ok); border-color: var(--ok); color: #06210f; font-weight: 900; }
+  .checks.ready { grid-template-columns: 1fr; gap: 4px; margin-top: 4px; }
+  .check .fix { display: block; font-size: 12.5px; color: var(--warn); margin-top: 2px; }
+  .check.opt i { border-color: var(--warn); color: var(--warn); }
+  .opts { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .opt { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: start; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+  .opt:nth-child(even) { background: var(--surface); }
+  .opt > input, .opt > select { margin-top: 2px; }
+  .opt input[type=checkbox] { width: 18px; height: 18px; }
+  .opt .t { font-weight: 700; }
+  .opt .d { grid-column: 2; font-size: 13px; color: var(--text-dim); }
+  .opt .need { grid-column: 2; font-size: 12.5px; }
+  .opt .need.ok { color: var(--ok); }
+  .opt .need.no { color: var(--warn); }
+  .opt .more { grid-column: 2; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .opt .more input { width: 80px; }
+  .tlink { color: var(--accent); font-weight: 700; text-decoration: none; display: inline-block; padding: 8px 0; }
   .meter { height: 8px; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; margin-top: 10px; }
   .meter > i { display: block; height: 100%; background: var(--ok); width: 0; transition: width .4s; }
 
@@ -79,7 +96,10 @@
   table.shelf td { overflow-wrap: break-word; white-space: normal; }
   table.shelf .state { white-space: normal; }
   table.shelf th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
-  table.shelf td { padding: 8px 10px; border-bottom: 1px solid var(--line-soft); vertical-align: top; font-size: 13.5px; }
+  table.shelf td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 13.5px; }
+  /* one band per bin - its pallets and its tip - every other bin shaded */
+  table.shelf tbody tr:nth-child(even) { background: none; }
+  table.shelf tbody tr.band { background: rgba(255,255,255,.045); }
   table.shelf tr.binstart td { border-top: 1px solid var(--line); }
   table.shelf tr.binstart.counted td:first-child { box-shadow: inset 3px 0 0 var(--ok); }
   table.shelf tr.tip td { padding-top: 0; }
@@ -153,6 +173,11 @@
         </div>
 
         <div class="sheet">
+          <div class="card" id="readyCard">
+            <h2>Before you start <span class="muted" id="readySum"></span></h2>
+            <div class="checks ready" id="readyList"></div>
+          </div>
+
           <div class="card">
             <h2>Try the scanner on test data</h2>
             <div class="hint" style="margin-top:0">
@@ -180,6 +205,39 @@
             <h2>2 · Things to try <span class="muted" id="checkCount"></span></h2>
             <div class="meter"><i id="checkMeter"></i></div>
             <div class="checks" id="checks"></div>
+          </div>
+
+          <div class="card" id="optionsCard">
+            <h2>Try the features that ship turned off <span class="muted">on your practice count only</span></h2>
+            <div class="hint" style="margin-top:0">
+              These are off on a new count. Switch any of them on here to see what it does — on the gun and on the dashboard
+              (<b>Open the dashboard on this count</b>). It changes your practice count and nothing else; the gun picks it up between pallets.
+            </div>
+            <div id="optList" class="opts"></div>
+            <div class="feedback" id="optMsg"></div>
+            <h3>Set for the whole site, so not changed here</h3>
+            <div class="hint" style="margin-top:0">
+              The <b>Teams channel</b>, the <b>stopped-scanning alert</b> (Settings → Scanners), and the scanner screen —
+              <b>large text</b>, <b>full screen</b>, the question order (Settings → Scanner screen) — apply to every scanner,
+              so changing them for a test would change them on the floor too.
+            </div>
+          </div>
+
+          <div class="card" id="uploadCard">
+            <h2>Your own test pallets <span class="muted" id="dataSource"></span></h2>
+            <div class="hint" style="margin-top:0">
+              Test with your own bins and pallets: a sheet with <b>Bin</b>, <b>Pallet</b> and <b>Qty</b> (a <b>Note</b>, <b>Lot</b> and
+              <b>Best Before</b> are read if they are there; a row with a bin and no pallet is an empty bin). It is the same sheet as the
+              <b>barcode test book</b> under Settings → Scanners — print the book, upload the same file here, and scan the paper.
+              Uploading starts a new practice run on your data; the run you were on is kept below.
+            </div>
+            <div class="inline" style="margin-top:12px">
+              <div><label for="fPracticeFile">CSV or Excel file</label><input type="file" id="fPracticeFile" accept=".csv,.txt,.xlsx,.xlsm,.xls"></div>
+              <div class="auto"><button class="primary fit" id="btnPracticeUpload">Upload and start</button></div>
+              <div class="auto"><a href="/templates/practice-pallets.csv" download class="tlink">⬇ Template (CSV)</a></div>
+              <div class="auto"><button class="fit" id="btnBuiltIn" hidden>Back to the built-in test data</button></div>
+            </div>
+            <div class="feedback" id="uploadMsg"></div>
           </div>
 
           <div class="card" id="historyCard" hidden>

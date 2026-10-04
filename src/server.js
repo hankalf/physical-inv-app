@@ -19,10 +19,11 @@ import { listAdjustments, adjustmentView, decideAdjustments, adjustmentReasons, 
 import { accuracy, accuracyCsv, deriveAbc, accuracyTargets, saveAccuracyTargets } from './routes/accuracy.js';
 import { setupState } from './routes/setup.js';
 import { searchAll } from './routes/search.js';
+import { autoPlan, applyPlan } from './routes/auto-plan.js';
 import { endTrial, setTrial } from './routes/trial.js';
 import { exportEverything } from './routes/export-all.js';
 import { idleConfig, saveIdleConfig, teamClocks, checkIdle, answerIdle, openIdleAlerts, recentIdleAlerts, tellTeamsIdle, idleTick, recordSignoff } from './routes/idle.js';
-import { practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, ownerOf } from './routes/practice.js';
+import { practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, practiceReadiness, practiceFromFile, practiceOptions, setPracticeOptions, ownerOf } from './routes/practice.js';
 import { raiseAlert, tellTeams, listAlerts, seeAlert, closeAlert, alertsForDevice, sosReasons, saveSosReasons, DEFAULT_REASONS } from './routes/alerts.js';
 import { teamsConfig, saveTeamsConfig, postToTeams, testCard, alertCard } from './util/teams.js';
 import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout } from './routes/scanner-prompts.js';
@@ -485,6 +486,18 @@ async function handleHandheld(req, res, url, m) {
 
 let lastOrigin = '';
 
+/** Everything the Testing tab draws, for one person. */
+function practicePayload(who, owner, s, dev) {
+  return {
+    ...practiceSheet(s.id),
+    device: { uid: dev.uid, name: dev.name },
+    history: practiceHistory(owner),
+    ready: practiceReadiness(who, s.id, dev),
+    options: practiceOptions(s.id),
+    teamsChannel: teamsConfig().on,
+  };
+}
+
 async function handleAdmin(req, res, url, m) {
   const method = req.method;
   const p = url.pathname;
@@ -587,15 +600,34 @@ async function handleAdmin(req, res, url, m) {
     const s = method === 'POST' ? ensurePractice(owner) : practiceSession(owner);
     if (!s) return sendJson(req, res, 200, { session: null, history: practiceHistory(owner) });
     const dev = practiceDevice(who);
-    return sendJson(req, res, 200, { ...practiceSheet(s.id), device: { uid: dev.uid, name: dev.name }, history: practiceHistory(owner) });
+    return sendJson(req, res, 200, practicePayload(who, owner, s, dev));
   }
   if (p === '/api/admin/practice/reset' && method === 'POST') {
     const who = currentUser(req, url);
     const owner = ownerOf(who);
-    const s = resetPractice(owner);
-    audit(actor, 'started a new practice run', `now #${s.id}`, s.id);
-    const dev = practiceDevice(who);
-    return sendJson(req, res, 200, { ...practiceSheet(s.id), device: { uid: dev.uid, name: dev.name }, history: practiceHistory(owner) });
+    const body = await readJson(req);
+    const s = resetPractice(owner, { builtIn: !!body.builtIn });
+    audit(actor, 'started a new practice run', `now #${s.id}${body.builtIn ? ' on the built-in data' : ''}`, s.id);
+    return sendJson(req, res, 200, practicePayload(who, owner, s, practiceDevice(who)));
+  }
+  // the features that ship off, switched on for this person's practice count only
+  if (p === '/api/admin/practice/options' && method === 'POST') {
+    const who = currentUser(req, url);
+    const owner = ownerOf(who);
+    const body = await readJson(req);
+    // working the classes out is asking to try the feature, so it goes on too
+    const s = setPracticeOptions(owner, body.deriveAbc ? { ...body, trackAbc: true } : body);
+    if (body.deriveAbc) deriveAbc(s.id, { force: true });
+    audit(actor, 'changed the options on their practice count', JSON.stringify(body), s.id);
+    return sendJson(req, res, 200, practicePayload(who, owner, getSession(s.id), practiceDevice(who)));
+  }
+  // a practice run from the person's own Bin / Pallet / Qty file
+  if (p === '/api/admin/practice/upload' && method === 'POST') {
+    const who = currentUser(req, url);
+    const owner = ownerOf(who);
+    const s = practiceFromFile(owner, await readBody(req), url.searchParams.get('name') || 'your file');
+    audit(actor, 'uploaded their own practice pallets', `now #${s.id}`, s.id);
+    return sendJson(req, res, 200, practicePayload(who, owner, s, practiceDevice(who)));
   }
 
   if (p === '/api/admin/sessions' && method === 'POST') {
@@ -755,6 +787,14 @@ async function handleAdmin(req, res, url, m) {
   // --- assignments
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments$/)) && method === 'GET') {
     return sendJson(req, res, 200, listAssignments(m[1]));
+  }
+  // a staggered plan for every team at once: preview, then apply
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments\/auto$/)) && method === 'POST') {
+    const body = await readJson(req);
+    if (body.preview) return sendJson(req, res, 200, autoPlan(m[1], body));
+    const out = applyPlan(m[1], body);
+    audit(actor, 'auto-assigned the aisles', `${out.queued} aisle assignments across ${out.teams.filter((t) => t.aisles.length).length} teams${body.replace ? ', replacing what was queued' : ''}`, m[1]);
+    return sendJson(req, res, 200, out);
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments$/)) && method === 'POST') {
     const body = await readJson(req);

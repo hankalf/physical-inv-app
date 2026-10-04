@@ -438,6 +438,9 @@ if (!hasCol('sessions', 'board_note')) {
 if (!hasCol('sessions', 'track_abc')) db.exec('ALTER TABLE sessions ADD COLUMN track_abc INTEGER NOT NULL DEFAULT 0');
 // a test scanner belongs to one person's practice
 if (!hasCol('devices', 'practice_owner')) db.exec('ALTER TABLE devices ADD COLUMN practice_owner TEXT');
+// a practice run built from a person's own file, and that file, so Start over can rebuild it
+if (!hasCol('sessions', 'practice_source')) db.exec("ALTER TABLE sessions ADD COLUMN practice_source TEXT NOT NULL DEFAULT ''");
+if (!hasCol('sessions', 'practice_rows')) db.exec('ALTER TABLE sessions ADD COLUMN practice_rows TEXT');
 // whose practice count it is: each login on the Testing tab has its own
 if (!hasCol('sessions', 'practice_owner')) db.exec('ALTER TABLE sessions ADD COLUMN practice_owner TEXT');
 // a trial run: counted like the real thing, then cleared before the real thing

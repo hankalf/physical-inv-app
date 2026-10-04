@@ -311,8 +311,90 @@
     renderTeamTable();
   }
 
+  /* ---------------------------------------------------- the staggered plan */
+  let planShown = null;
+  const planBody = () => ({
+    teams: $('fPlanTeams').value, shift: $('fPlanShift').value, levels: $('fPlanLevels').value,
+    order: $('fPlanOrder').value, replace: $('fPlanReplace').checked,
+  });
+
+  function renderRules(r) {
+    if (!r) return;
+    const box = $('planRules');
+    const items = [
+      [r.paired > 0, `Racking blocks: ${r.paired} of ${r.aisles} aisles paired`, r.paired ? '' : 'Without them, two teams can be sent into back-to-back racking at once. Settings → Lists & racking → Pair the aisles.', '/settings#lists'],
+      [r.teamsWithCrew > 0, `Equipment: ${r.teamsWithCrew} of ${r.teams} teams have a crew, so their reach is known`, r.teamsWithCrew ? '' : 'A team with nobody on it is given every level. Put people on teams under Teams & crew.', '/teams'],
+      [true, `Levels in this count: ${r.levels ? r.levels.split('').join(', ') : 'none yet'}`, '', ''],
+    ];
+    box.innerHTML = '';
+    for (const [ok, text, fix, href] of items) {
+      const d = document.createElement('div');
+      d.className = 'rule ' + (ok ? 'ok' : 'no');
+      d.append(Object.assign(document.createElement('i'), { textContent: ok ? '✓' : '!' }), document.createTextNode(text));
+      if (!ok && fix) {
+        const a = document.createElement('a');
+        a.href = href; a.textContent = ' ' + fix;
+        d.appendChild(a);
+      }
+      box.appendChild(d);
+    }
+  }
+
+  function renderPlan(plan, applied) {
+    planShown = plan;
+    renderRules(plan.rules);
+    const out = $('planOut');
+    out.innerHTML = '';
+    out.hidden = false;
+    for (const t of plan.teams) {
+      const row = document.createElement('div');
+      row.className = 'planrow' + (t.aisles.length ? '' : ' none');
+      const head = document.createElement('div');
+      head.className = 'ph';
+      head.append(Object.assign(document.createElement('b'), { textContent: `Team ${t.team}` }));
+      head.append(Object.assign(document.createElement('span'), { className: 'muted',
+        textContent: [t.shift ? (t.shift === '1' ? '1st shift' : '2nd shift') : '', t.known ? `reaches ${levelsLabel(t.reach)}` : 'no crew on Teams & crew — given every level',
+          `${t.bins.toLocaleString()} bins`].filter(Boolean).join(' · ') }));
+      row.appendChild(head);
+      row.appendChild(Object.assign(document.createElement('div'), { className: 'pa', textContent: t.text || '— nothing —' }));
+      out.appendChild(row);
+    }
+    if (plan.teams.some((t) => t.aisles.some((a) => a.extra))) {
+      out.appendChild(Object.assign(document.createElement('div'), { className: 'muted', textContent: '* levels another team could not reach, taken after this team\'s own stretch' }));
+    }
+    for (const w of plan.warnings) out.appendChild(Object.assign(document.createElement('div'), { className: 'pwarn', textContent: w }));
+    for (const u of plan.unassigned) out.appendChild(Object.assign(document.createElement('div'), { className: 'pbad', textContent: `${u.aisle} ${levelsLabel(u.levels)}: ${u.why}` }));
+    if (plan.skipped.length) {
+      out.appendChild(Object.assign(document.createElement('div'), { className: 'muted', textContent: `Left as they are: ${plan.skipped.map((s) => `${s.aisle} (${s.why})`).join(', ')}` }));
+    }
+    $('btnPlanApply').disabled = applied || !plan.teams.some((t) => t.aisles.length);
+  }
+
+  $('btnPlanPreview').onclick = async () => {
+    try {
+      clearMsg($('planMsg'));
+      renderPlan(await postJson(`/api/admin/sessions/${sessionId}/assignments/auto`, { ...planBody(), preview: true }), false);
+      msg($('planMsg'), 'warn', 'This is a preview — nothing is queued yet.', 'Queue this plan puts it on the scanners.');
+    } catch (err) { msg($('planMsg'), 'err', err.message); }
+  };
+  $('btnPlanApply').onclick = async () => {
+    if (!planShown) return;
+    const n = planShown.teams.reduce((k, t) => k + t.aisles.length, 0);
+    if (!confirm(`Queue ${n} aisle assignments across ${planShown.teams.filter((t) => t.aisles.length).length} teams?${$('fPlanReplace').checked ? '\n\nEverything still queued is replaced.' : ''}`)) return;
+    try {
+      const out = await postJson(`/api/admin/sessions/${sessionId}/assignments/auto`, planBody());
+      renderPlan(out, true);
+      msg($('planMsg'), 'ok', `Queued ${out.queued} aisle assignments.`, out.activated.length ? `Started now: ${out.activated.map((a) => `team ${a.team} on ${a.aisle}`).join(', ')}.` : '');
+      await refreshAssignments();
+    } catch (err) { msg($('planMsg'), 'err', err.message); }
+  };
+  for (const id of ['fPlanTeams', 'fPlanShift', 'fPlanLevels', 'fPlanOrder', 'fPlanReplace']) {
+    $(id).addEventListener('change', () => { $('btnPlanApply').disabled = true; });    // a changed form needs a fresh preview
+  }
+
   /* ------------------------------------------------------------ assignments */
   async function refreshAssignments() {
+    if (!planShown) postJson(`/api/admin/sessions/${sessionId}/assignments/auto`, { preview: true, teams: 'x' }).then((p) => renderRules(p.rules)).catch(() => {});
     const [rows, aisles] = await Promise.all([
       apiJson(`/api/admin/sessions/${sessionId}/assignments`),
       apiJson(`/api/admin/sessions/${sessionId}/aisles`),

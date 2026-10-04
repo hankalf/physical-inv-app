@@ -103,6 +103,7 @@ button:active { transform: translateY(1px); }
   background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
   padding: 8px 10px; margin-bottom: 6px; font-size: 14px;
 }
+.list .item:nth-child(even) { background: var(--panel-2); }
 .list .item.voided { opacity: .45; text-decoration: line-through; }
 .list .item .top { display: flex; justify-content: space-between; font-weight: 700; }
 .list .item .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
@@ -350,4 +351,5 @@ body.big-text .nextbin .nb-code { font-size: 30px; }
 .errow input { width: 26px; height: 26px; flex: 0 0 auto; }
 .errow b { font-size: 19px; letter-spacing: .02em; }
 .errow span { color: var(--muted); font-size: 14px; margin-left: auto; text-align: right; }
+.errow:nth-child(even) { background: var(--panel); }
 .errow.done { opacity: .55; }

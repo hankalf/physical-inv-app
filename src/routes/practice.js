@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { db, norm, getSession, createSession, createDevice, listDevices } from '../db.js';
 import { importMaster } from './master.js';
+import { parseRecords, pick } from '../util/csv.js';
 import { queueAssignments } from './assignments.js';
 
 /*
@@ -118,14 +119,15 @@ const now = () => new Date().toISOString();
 const TEMPLATE = fileURLToPath(new URL('../../public/templates/front-royal-bins.csv', import.meta.url));
 
 /** The bin list: the real rows from the Front Royal template for the bins used. */
-function binCsv() {
-  const want = new Set(BINS.map((b) => b.bin));
+function binCsv(codes = BINS.map((b) => b.bin)) {
+  const want = new Set(codes);
   let rows = [];
   try {
     rows = readFileSync(TEMPLATE, 'utf8').split(/\r?\n/).filter((l) => want.has(l.split(',')[0]));
   } catch { /* fall back to plain rows below */ }
   const have = new Set(rows.map((l) => l.split(',')[0]));
-  for (const b of BINS) if (!have.has(b.bin)) rows.push(`${b.bin},Freezer,${b.bin.slice(0, 3)},"Practice bin ${b.bin}"`);
+  // a bin that is not Front Royal racking: its aisle is worked out from the code on import
+  for (const c of codes) if (!have.has(c)) rows.push(`${c},,,"Practice bin ${c}"`);
   return 'Bin Location,Zone,Aisle,Description\n' + rows.join('\n') + '\n';
 }
 
@@ -168,17 +170,93 @@ export function ensurePractice(owner) {
   return practiceSession(owner) || buildPractice(owner);
 }
 
-/**
- * Start again. The run so far is closed and kept, so a person can look back at
- * what they have tried; only the oldest runs beyond the last ten are deleted.
- */
-export function resetPractice(owner) {
+/* ------------------------------------------------- a person's own test data
+   The same sheet as the barcode test book - Bin, Pallet, Qty, and a Note - so
+   the book that was printed and the data the gun is tested with can be one and
+   the same file. Lot and best-before are read if they are there. A row with a
+   bin and no pallet is an empty bin. */
+const COL = {
+  bin: ['bin', 'bin location', 'location', 'bin code', 'rack'],
+  pallet: ['pallet', 'pallet id', 'pallet number', 'lpn', 'tag', 'license plate'],
+  qty: ['qty', 'quantity', 'count', 'cases'],
+  lot: ['lot', 'lot code', 'batch'],
+  bestBefore: ['best before', 'expiry', 'expiration', 'expiry date', 'bbd'],
+  item: ['item', 'sku', 'item number', 'product'],
+  note: ['note', 'description', 'desc'],
+  abc: ['abc', 'abc class', 'class', 'velocity'],
+};
+const csvCell = (v) => (/[",\r\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+
+/** Read and check the file. Throws with the row number for anything a person has to fix. */
+export function readPracticeFile(text) {
+  const { records } = parseRecords(String(text || ''));
+  if (!records.length) throw Object.assign(new Error('no rows found - the first row should be the headings: Bin, Pallet, Qty'), { status: 400 });
+  if (records.length > 2000) throw Object.assign(new Error(`${records.length} rows - keep a practice file to 2,000 rows or fewer`), { status: 400 });
+  const rows = [];
+  const seen = new Map();
+  records.forEach((r, i) => {
+    const line = i + 2;                    // the heading is row 1
+    const bin = norm(pick(r, COL.bin));
+    const pallet = norm(pick(r, COL.pallet));
+    const rawQty = pick(r, COL.qty);
+    if (!bin && !pallet) return;           // a blank line
+    if (!bin) throw Object.assign(new Error(`row ${line}: pallet ${pallet} has no bin`), { status: 400 });
+    if (pallet) {
+      const qty = Number(String(rawQty).replace(/[\s,]/g, ''));
+      if (rawQty === '' || !Number.isFinite(qty) || qty < 0) throw Object.assign(new Error(`row ${line}: "${rawQty}" is not a quantity for pallet ${pallet}`), { status: 400 });
+      if (seen.has(pallet)) throw Object.assign(new Error(`row ${line}: pallet ${pallet} is already on row ${seen.get(pallet)}`), { status: 400 });
+      seen.set(pallet, line);
+      rows.push({ bin, pallet, qty, lot: pick(r, COL.lot), bestBefore: pick(r, COL.bestBefore), item: pick(r, COL.item), note: pick(r, COL.note),
+        abc: norm(pick(r, COL.abc)).slice(0, 1) });
+    } else {
+      rows.push({ bin, pallet: '', qty: 0 });
+    }
+  });
+  if (!rows.some((r) => r.pallet)) throw Object.assign(new Error('no pallets found - check the Pallet column'), { status: 400 });
+  return rows;
+}
+
+function buildFromRows(owner, rows, label) {
+  const s = createSession({ name: `${PRACTICE_NAME} — ${label}`.slice(0, 80), mode: 'full', palletMode: 'warn', guided: 1, askComments: 1 });
+  db.prepare("UPDATE sessions SET practice = 1, practice_owner = ?, practice_source = 'upload', practice_rows = ? WHERE id = ?")
+    .run(owner, JSON.stringify({ label, rows }), s.id);
+  importMaster(s.id, 'bins', binCsv([...new Set(rows.map((r) => r.bin))]));
+  let report = 'Pallet ID,SKU,Description,Qty,Location,Lot Code,Best Before,ABC\n';
+  for (const r of rows.filter((x) => x.pallet)) {
+    report += [r.pallet, r.item || '', r.note || '', r.qty, r.bin, r.lot || '', r.bestBefore || '', r.abc || ''].map(csvCell).join(',') + '\n';
+  }
+  importMaster(s.id, 'pallets', report);
+  const aisles = db.prepare('SELECT aisle FROM aisles WHERE session_id = ? ORDER BY aisle').all(s.id).map((a) => a.aisle);
+  if (aisles.length) queueAssignments(s.id, PRACTICE_TEAM, aisles, 'A-Z', { force: true });
+  return getSession(s.id);
+}
+
+/** A new practice run from the person's own file; the run they were on is kept. */
+export function practiceFromFile(owner, text, label = 'your file') {
+  const rows = readPracticeFile(text);
+  closeRuns(owner);
+  return buildFromRows(owner, rows, String(label || 'your file').replace(/\.(csv|xlsx?|xlsm|txt)$/i, '').slice(0, 40));
+}
+
+function closeRuns(owner) {
   db.prepare("UPDATE sessions SET status = 'closed', closed_at = ? WHERE practice = 1 AND practice_owner = ? AND status = 'open'")
     .run(new Date().toISOString(), owner);
   const old = db.prepare("SELECT id FROM sessions WHERE practice = 1 AND practice_owner = ? AND status = 'closed' ORDER BY id DESC")
     .all(owner).slice(HISTORY_KEEP);
   for (const s of old) db.prepare('DELETE FROM sessions WHERE id = ?').run(s.id);
-  return buildPractice(owner);
+}
+
+/**
+ * Start again. The run so far is closed and kept, so a person can look back at
+ * what they have tried; only the oldest runs beyond the last ten are deleted.
+ */
+export function resetPractice(owner, { builtIn = false } = {}) {
+  // starting over on your own file starts over on that file, unless you ask for the built-in data
+  const cur = practiceSession(owner);
+  let own = null;
+  if (!builtIn && cur && cur.practice_source === 'upload') { try { own = JSON.parse(cur.practice_rows); } catch { own = null; } }
+  closeRuns(owner);
+  return own && Array.isArray(own.rows) ? buildFromRows(owner, own.rows, own.label || 'your file') : buildPractice(owner);
 }
 
 /** This person's earlier runs, newest first, with how far each one got. */
@@ -227,6 +305,7 @@ export function practiceSheet(sessionId) {
   }
   const reportAt = new Map(db.prepare('SELECT pallet_id, expected_qty, expected_location FROM pallets WHERE session_id = ?')
     .all(id).map((p) => [p.pallet_id, p]));
+  if (s && s.practice_source === 'upload') return uploadedSheet(s, lines, byPallet, emptyBins, countedBins);
 
   const bins = BINS.map((b) => {
     const shelf = b.shelf.map((p) => {
@@ -268,6 +347,7 @@ export function practiceSheet(sessionId) {
     "SELECT aisle, status FROM assignments WHERE session_id = ? AND team = ? ORDER BY position").all(id, PRACTICE_TEAM);
   const pallets = bins.reduce((n, b) => n + b.shelf.length, 0);
   return {
+    source: 'built-in',
     session: s ? { id: s.id, name: s.name, status: s.status, askLot: !!s.ask_lot, askExpiry: !!s.ask_expiry } : null,
     team: PRACTICE_TEAM,
     crew: PRACTICE_CREW,
@@ -276,4 +356,135 @@ export function practiceSheet(sessionId) {
     checklist: CHECKS.map(([key, label]) => ({ key, label, done: done.has(key) })),
     totals: { bins: bins.length, binsCounted: bins.filter((b) => b.counted).length, pallets, lines: lines.length },
   };
+}
+
+/* A run built from a person's own file: the shelf is the file, so there is
+   nothing planted to find - the checklist is the plain work of a count. */
+function uploadedSheet(s, lines, byPallet, emptyBins, countedBins) {
+  const id = s.id;
+  let label = 'your file';
+  try { label = JSON.parse(s.practice_rows || '{}').label || label; } catch { /* keep the default */ }
+  const locs = db.prepare('SELECT code, aisle FROM locations WHERE session_id = ?').all(id)
+    .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+  const pals = db.prepare('SELECT * FROM pallets WHERE session_id = ?').all(id);
+  const at = new Map();
+  for (const p of pals) { if (!at.has(p.expected_location)) at.set(p.expected_location, []); at.get(p.expected_location).push(p); }
+  const bins = locs.map((l) => {
+    const shelf = (at.get(l.code) || []).map((p) => {
+      const got = byPallet.get(p.pallet_id) || null;
+      return {
+        id: p.pallet_id, qty: p.expected_qty, sku: p.sku || '', desc: p.description || '', lot: p.lot || '', bestBefore: p.expiry || '',
+        expired: !!p.expiry && p.expiry < new Date().toISOString().slice(0, 10),
+        report: { qty: p.expected_qty, bin: p.expected_location },
+        counted: got ? { qty: got.qty, bin: got.location_code, right: got.location_code === l.code && Number(got.qty) === Number(p.expected_qty) } : null,
+      };
+    });
+    return {
+      bin: l.code, aisle: l.aisle || l.code, noScan: '', try: shelf.length ? '' : 'Nothing here — record it empty.',
+      shelf, missing: [], counted: countedBins.has(l.code), recordedEmpty: emptyBins.has(l.code),
+    };
+  });
+  const allPallets = pals.length;
+  const countedPallets = pals.filter((p) => byPallet.has(p.pallet_id)).length;
+  const hasEmpty = bins.some((b) => !b.shelf.length);
+  const checks = [
+    ['signon', 'Sign on with team 99 and a clock-in number', !!db.prepare('SELECT 1 FROM signons WHERE session_id = ?').get(id)],
+    ['first', 'Count a pallet: pallet, quantity, bin', lines.some((l) => !l.empty_bin)],
+    ['every', `Count every pallet in your file (${countedPallets} of ${allPallets})`, allPallets > 0 && countedPallets === allPallets],
+    ...(hasEmpty ? [['empty', 'Record the empty bins', bins.filter((b) => !b.shelf.length).every((b) => b.recordedEmpty)]] : []),
+    ['nextAisle', 'Finish an aisle with “Aisle complete”', !!db.prepare("SELECT 1 FROM assignments WHERE session_id = ? AND status = 'done'").get(id)],
+    ['sos', 'Send an SOS (and see it on the dashboard)', !!db.prepare('SELECT 1 FROM alerts WHERE session_id = ?').get(id)],
+  ];
+  return {
+    source: 'upload',
+    label,
+    session: { id: s.id, name: s.name, status: s.status, askLot: !!s.ask_lot, askExpiry: !!s.ask_expiry },
+    team: PRACTICE_TEAM,
+    crew: PRACTICE_CREW,
+    bins,
+    assignment: db.prepare('SELECT aisle, status FROM assignments WHERE session_id = ? AND team = ? ORDER BY position').all(id, PRACTICE_TEAM),
+    checklist: checks.map(([key, lbl, done]) => ({ key, label: lbl, done })),
+    totals: { bins: bins.length, binsCounted: bins.filter((b) => b.counted).length, pallets: allPallets, lines: lines.length },
+  };
+}
+
+/**
+ * What has to be true before the Testing tab is any use, each with what to do
+ * about it. Most of it the tab does by itself; this is so nobody has to guess.
+ */
+export function practiceReadiness(who, sessionId, device) {
+  const s = sessionId ? getSession(sessionId) : null;
+  const n = (sql) => (s ? db.prepare(sql).get(s.id).n : 0);
+  const bins = n('SELECT COUNT(*) n FROM locations WHERE session_id = ?');
+  const pallets = n('SELECT COUNT(*) n FROM pallets WHERE session_id = ?');
+  const aisles = n("SELECT COUNT(*) n FROM assignments WHERE session_id = ? AND status != 'done'")
+    + n("SELECT COUNT(*) n FROM assignments WHERE session_id = ? AND status = 'done'");
+  const dev = device ? db.prepare('SELECT * FROM devices WHERE uid = ?').get(device.uid) : null;
+  const own = !!(who && who.username);
+  return [
+    { key: 'login', ok: own, optional: !own,
+      label: own ? `Signed in as ${who.username} — your practice is kept under your login` : 'Signed in with the shared password',
+      fix: own ? '' : `Your practice is kept under the name you typed (“${(who && who.name) || ''}”). Sign in with your own login (Settings → Logins) so it is yours alone.` },
+    { key: 'data', ok: bins > 0 && pallets > 0,
+      label: bins && pallets ? `Test data loaded — ${bins} bins, ${pallets} pallets${s && s.practice_source === 'upload' ? ' from your file' : ' (built in)'}` : 'Test data loaded',
+      fix: bins && pallets ? '' : 'Use the built-in data, or upload a Bin / Pallet / Qty file below.' },
+    { key: 'scanner', ok: !!dev, label: dev ? `Test scanner ${dev.name} registered` : 'Test scanner registered', fix: dev ? '' : 'Reload this page — the tab registers one for you.' },
+    { key: 'linked', ok: !!(dev && dev.enrolled_at), label: dev && dev.enrolled_at ? 'Test scanner signed in' : 'Test scanner signed in',
+      fix: dev && dev.enrolled_at ? '' : 'Wait for the gun on the left to load, or press Restart the gun.' },
+    { key: 'plan', ok: aisles > 0, label: aisles ? `Team 99 has ${aisles} aisle${aisles === 1 ? '' : 's'} to count` : 'Team 99 has aisles to count',
+      fix: aisles ? '' : 'Press Start over to rebuild the practice count.' },
+  ];
+}
+
+/* ------------------------------------------- the features that ship turned off
+   Each of these is a setting on a count. On a person's practice count they can
+   be switched on freely - it changes nothing for anybody else - and each says
+   what data it needs, whether the practice data has it, and how to add it. */
+export function practiceOptions(sessionId) {
+  const s = getSession(sessionId);
+  if (!s) return null;
+  const n = (sql) => db.prepare(sql).get(s.id).n;
+  const pallets = n('SELECT COUNT(*) n FROM pallets WHERE session_id = ?');
+  const lots = n("SELECT COUNT(*) n FROM pallets WHERE session_id = ? AND COALESCE(lot, '') != ''");
+  const dates = n("SELECT COUNT(*) n FROM pallets WHERE session_id = ? AND COALESCE(expiry, '') != ''");
+  const abc = n("SELECT COUNT(*) n FROM pallets WHERE session_id = ? AND COALESCE(abc, '') != ''");
+  const own = s.practice_source === 'upload';
+  const need = (have, what, column) => (have
+    ? { ok: true, text: `${have} of ${pallets} pallets have ${what}.` }
+    : { ok: false, text: own
+      ? `None of the pallets in your file have ${what}. Add a “${column}” column to the file and upload it again — or go back to the built-in data, which has them.`
+      : `The practice data has no ${what}.` });
+  return {
+    values: {
+      askLot: !!s.ask_lot, askExpiry: !!s.ask_expiry, requireApproval: !!s.require_approval,
+      approvalMinQty: s.approval_min_qty || 0, approvalMinPct: s.approval_min_pct || 0,
+      trackAbc: !!s.track_abc, autoRecount: !!s.auto_recount, askComments: !!s.ask_comments, palletMode: s.pallet_mode || 'warn',
+    },
+    needs: {
+      askLot: need(lots, 'a lot code', 'Lot'),
+      askExpiry: need(dates, 'a best-before date', 'Best Before'),
+      trackAbc: abc ? { ok: true, text: `${abc} of ${pallets} pallets have an ABC class.` }
+        : { ok: false, canDerive: pallets > 0,
+          text: own ? 'No ABC classes yet. Add an “ABC” column (A, B or C) to your file and upload it again, or work them out from the quantities here.'
+            : 'No ABC classes yet. Work them out from the quantities here — the biggest 80% of stock is A, the next 15% B, the rest C.' },
+      requireApproval: { ok: true, text: 'Count a pallet short or over, then approve or reject it under Dashboard → Adjustments.' },
+    },
+  };
+}
+
+const NUM = (v, max) => Math.max(0, Math.min(max, Number(v) || 0));
+
+/** Change the options on this person's practice count, and nothing else. */
+export function setPracticeOptions(owner, body = {}) {
+  const s = practiceSession(owner);
+  if (!s) throw Object.assign(new Error('open the Testing tab first - there is no practice count yet'), { status: 404 });
+  const flag = (k, col) => (body[k] === undefined ? s[col] : (body[k] ? 1 : 0));
+  const mode = ['off', 'warn', 'strict'].includes(body.palletMode) ? body.palletMode : s.pallet_mode;
+  db.prepare(`UPDATE sessions SET ask_lot = ?, ask_expiry = ?, require_approval = ?, approval_min_qty = ?, approval_min_pct = ?,
+                track_abc = ?, auto_recount = ?, ask_comments = ?, pallet_mode = ? WHERE id = ? AND practice = 1 AND practice_owner = ?`)
+    .run(flag('askLot', 'ask_lot'), flag('askExpiry', 'ask_expiry'), flag('requireApproval', 'require_approval'),
+      body.approvalMinQty === undefined ? s.approval_min_qty : NUM(body.approvalMinQty, 1e6),
+      body.approvalMinPct === undefined ? s.approval_min_pct : NUM(body.approvalMinPct, 100),
+      flag('trackAbc', 'track_abc'), flag('autoRecount', 'auto_recount'), flag('askComments', 'ask_comments'), mode, s.id, owner);
+  return getSession(s.id);
 }

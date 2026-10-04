@@ -538,6 +538,8 @@
     ['Stopped-scanning alert setting', '/settings', 'scanners', 'idle stopped scanning minutes alert teams break'],
     ['1st and 2nd shift teams', '/teams', 'crew', 'shift first second 1st 2nd night day team'],
     ['Front-placed bins for cycle counts', '/cycle', 'front', 'front back face placed bins list cycle aisle side'],
+    ['Auto-assign the aisles — a staggered plan', '/admin', 'teams', 'auto assign plan stagger staggered aisles teams spread automatic queue every team'],
+    ['Test with your own pallets, and try features that are off', '/testing', '', 'testing upload own pallets file lot expiry approval abc try features off practice'],
   ].map(([title, page, sub, words]) => ({ title, page, sub, words }));
 
   const PENDING = 'searchGoto';

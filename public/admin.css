@@ -203,9 +203,11 @@ th {
 }
 th:first-child { border-top-left-radius: 8px; }
 th:last-child { border-top-right-radius: 8px; }
-tbody tr { border-bottom: 1px solid var(--line-soft); }
-tbody tr:nth-child(even) { background: rgba(255,255,255,.017); }
-tbody tr:hover { background: rgba(76,157,255,.06); }
+/* Long lists are read across: a line under every row and every other row
+   shaded, so the eye does not slip from one pallet onto the next. */
+tbody tr { border-bottom: 1px solid var(--line); }
+tbody tr:nth-child(even) { background: rgba(255,255,255,.045); }
+tbody tr:hover { background: rgba(76,157,255,.12); }
 tbody tr:last-child { border-bottom: 0; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 td.wrap { white-space: normal; }
@@ -521,3 +523,25 @@ td.neg { color: var(--err); font-weight: 700; }
   background: var(--warn-ink); color: #f2cc60; font-size: 14px; }
 .trialbanner b { color: #1a1300; background: var(--warn); padding: 1px 8px; border-radius: 6px; margin-right: 6px; letter-spacing: .04em; }
 .fieldset.trialset { margin-top: 14px; }
+
+/* lists that are not tables read the same way: a line between, every other shaded */
+.sess-menu .sess-row + .sess-row { border-top: 1px solid var(--line); }
+.sess-menu .sess-row:nth-of-type(even):not(.current) { background: rgba(255,255,255,.035); }
+.navsearch .hit + .hit { border-top: 1px solid var(--line-soft); border-radius: 0; }
+.navsearch .hit:nth-of-type(even) { background: rgba(255,255,255,.035); }
+
+/* the staggered plan */
+.rules { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; font-size: 13px; }
+.rules .rule { display: flex; gap: 8px; align-items: baseline; color: var(--text-dim); }
+.rules .rule i { font-style: normal; font-weight: 900; width: 16px; text-align: center; }
+.rules .rule.ok i { color: var(--ok); }
+.rules .rule.no i, .rules .rule.no { color: var(--warn); }
+.rules .rule a { color: var(--accent); }
+.plan { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.planrow { padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+.planrow:nth-child(even) { background: var(--surface); }
+.planrow.none { opacity: .6; }
+.planrow .ph { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.planrow .pa { margin-top: 4px; font-size: 13.5px; line-height: 1.6; }
+.pwarn { color: var(--warn); font-size: 13px; }
+.pbad { color: var(--err); font-size: 13px; }

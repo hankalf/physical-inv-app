@@ -303,6 +303,30 @@
       </div>
 
       <div data-sub="teams" data-sub-label="Team plan">
+    <div class="card" id="autoPlanCard">
+      <h2>Auto-assign the aisles <span class="muted">a staggered plan for every team, in one go</span></h2>
+      <div class="hint" style="margin-top:0">
+        The aisles are walked in order and split into one continuous stretch per team, about the same racking each,
+        so the teams start spread across the building and never bunch up. A team gets only the levels its equipment
+        reaches; what it cannot reach goes to the nearest team that can, after its own stretch. <b>Preview</b> shows the
+        plan before anything is queued.
+      </div>
+      <div class="rules" id="planRules"></div>
+      <div class="inline" style="margin-top:10px">
+        <div><label for="fPlanTeams">Teams</label><input id="fPlanTeams" placeholder="blank = every team on Teams &amp; crew — or 1, 2, 3"></div>
+        <div class="auto"><label for="fPlanShift">Shift</label>
+          <select id="fPlanShift" class="sm"><option value="">All</option><option value="1">1st shift</option><option value="2">2nd shift</option></select></div>
+        <div class="auto"><label for="fPlanLevels">Levels</label><input id="fPlanLevels" class="sm" style="width:90px" placeholder="all"></div>
+        <div class="auto"><label for="fPlanOrder">Walk the aisles</label>
+          <select id="fPlanOrder" class="sm"><option value="asc">Low to high</option><option value="desc">High to low</option></select></div>
+        <div class="auto"><label class="cb" title="Drop every aisle still queued and plan again. Aisles being counted, or done, are left alone."><input type="checkbox" id="fPlanReplace"> Replace what is queued</label></div>
+        <div class="auto"><button id="btnPlanPreview">Preview</button></div>
+        <div class="auto"><button class="primary fit" id="btnPlanApply" disabled>Queue this plan</button></div>
+      </div>
+      <div class="feedback" id="planMsg"></div>
+      <div class="plan" id="planOut" hidden></div>
+    </div>
+
     <div class="card" id="teamPlanCard">
       <h2>Team assignments</h2>
       <div class="hint">Queue aisles per team in counting order, with the <b>levels</b> that team's equipment covers (A–C on foot, D–F with the lift, A–F for all). Levels are required. Two teams can share an aisle on different levels. A team's next aisle waits while another team holds those levels in its racking block — that is what staggers them. Which aisles share racking is set under <a href="/settings" style="color:var(--accent)">Settings</a>.</div>

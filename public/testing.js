@@ -121,12 +121,14 @@
       thead.appendChild(hr);
       const tbody = el('tbody');
 
+      let band = false;
       for (const b of data.bins.filter((x) => x.aisle === aisle)) {
+        band = !band;
         const rows = Math.max(1, b.shelf.length);
         const span = rows + (b.try ? 1 : 0);
         for (let i = 0; i < rows; i++) {
           const p = b.shelf[i];
-          const tr = el('tr', (i === 0 ? 'binstart' : '') + (b.counted ? ' counted' : ''));
+          const tr = el('tr', (i === 0 ? 'binstart' : '') + (b.counted ? ' counted' : '') + (band ? '' : ' band'));
           if (i === 0) {
             const tdBin = el('td');
             tdBin.rowSpan = span;
@@ -170,7 +172,7 @@
         }
         /* what this bin is here to teach, under its pallets */
         if (b.try) {
-          const tr = el('tr', 'tip' + (b.counted ? ' counted' : ''));
+          const tr = el('tr', 'tip' + (b.counted ? ' counted' : '') + (band ? '' : ' band'));
           const td = el('td');
           td.colSpan = 3;
           const note = el('div', 'what');
@@ -184,6 +186,101 @@
       wrap.appendChild(t);
       box.appendChild(wrap);
     }
+  }
+
+  /* Before you start: what has to be true for the tab to be any use. The gun
+     being up is checked here, in the page; the rest comes from the server. */
+  function renderReady() {
+    const w = frame().contentWindow;
+    let gunUp = false;
+    try { gunUp = !!(w && typeof w.wedge === 'function'); } catch { gunUp = false; }
+    const items = [...(data.ready || []),
+      { key: 'gun', ok: gunUp, label: 'The scanner app is running on the left', fix: gunUp ? '' : 'Give it a few seconds, or press Restart the gun.' },
+      { key: 'teams', ok: !!data.teamsChannel, optional: true,
+        label: data.teamsChannel ? 'Teams channel set — an SOS from the test gun posts there too' : 'Teams channel — not set (optional)',
+        fix: data.teamsChannel ? '' : 'An SOS still shows on the dashboard. Set the channel under Settings → Scanners to test Teams as well.' }];
+    const todo = items.filter((i) => !i.ok && !i.optional).length;
+    $('readySum').textContent = todo ? `${todo} thing${todo === 1 ? '' : 's'} to do first` : 'ready to test';
+    $('readySum').style.color = todo ? 'var(--warn)' : 'var(--ok)';
+    $('readyList').replaceChildren(...items.map((i) => {
+      const row = el('div', 'check' + (i.ok ? ' done' : i.optional ? ' opt' : ''));
+      const txt = el('span', '', i.label);
+      if (!i.ok && i.fix) txt.appendChild(el('span', 'fix', i.fix));
+      row.append(el('i', '', i.ok ? '✓' : i.optional ? '!' : ''), txt);
+      return row;
+    }));
+  }
+
+  /* The features that ship off, one row each: the switch, what it does, and
+     whether the practice data has what it needs - with how to add it if not. */
+  const OPTIONS = [
+    { key: 'askLot', label: 'Ask for the lot code', what: 'The gun adds a LOT CODE question after the quantity, and calls out a lot that does not match the report.' },
+    { key: 'askExpiry', label: 'Ask for the best-before date', what: 'The gun adds an EXPIRY question, and flags a date that has already passed.' },
+    { key: 'requireApproval', label: 'Adjustments need approval', what: 'Every difference from the report has to be approved, with a reason, before it can go to the ERP. See Dashboard → Adjustments.', more: 'approval' },
+    { key: 'trackAbc', label: 'ABC classes & accuracy', what: 'Dashboard → Reports shows count accuracy by A, B and C, against a target for each.' },
+    { key: 'palletMode', label: 'Pallet ID check', what: 'Allow override (the default) asks YES / NO for a pallet not on the list. No overrides refuses it. Accept any ID does not check at all.', select: [['warn', 'Allow override'], ['strict', 'No overrides'], ['off', 'Accept any ID']] },
+    { key: 'autoRecount', label: 'Raise second counts automatically', what: 'On by default: a pallet that disagrees with the report puts its bin on the second-count list.' },
+    { key: 'askComments', label: 'Comments step', what: 'On by default: the optional comments question at the end of each pallet.' },
+  ];
+
+  let optDrawn = '';
+  function renderOptions() {
+    const o = data.options;
+    if (!o) return;
+    // redrawn only when the options change, so a number half-typed is not wiped by the refresh
+    const sig = JSON.stringify(o);
+    if (sig === optDrawn) return;
+    optDrawn = sig;
+    const box = $('optList');
+    box.innerHTML = '';
+    for (const def of OPTIONS) {
+      const row = el('label', 'opt');
+      row.dataset.key = def.key;
+      let input;
+      if (def.select) {
+        input = el('select', 'sm');
+        for (const [v, l] of def.select) { const op = el('option', '', l); op.value = v; input.appendChild(op); }
+        input.value = o.values[def.key];
+        input.onchange = () => saveOption({ [def.key]: input.value });
+      } else {
+        input = el('input');
+        input.type = 'checkbox';
+        input.checked = !!o.values[def.key];
+        input.onchange = () => saveOption({ [def.key]: input.checked });
+      }
+      row.append(input, el('span', 't', def.label), el('span', 'd', def.what));
+      const need = o.needs[def.key];
+      if (need) {
+        row.appendChild(el('span', 'need ' + (need.ok ? 'ok' : 'no'), (need.ok ? '✓ ' : '⚠ ') + need.text));
+        if (!need.ok && need.canDerive) {
+          const more = el('span', 'more');
+          const b = el('button', 'sm fit', 'Work out ABC classes from the quantities');
+          b.type = 'button';
+          b.onclick = (e) => { e.preventDefault(); saveOption({ deriveAbc: true }, 'ABC classes worked out.'); };
+          more.appendChild(b);
+          row.appendChild(more);
+        }
+      }
+      if (def.more === 'approval' && o.values.requireApproval) {
+        const more = el('span', 'more');
+        const q = el('input', 'sm'); q.type = 'number'; q.min = '0'; q.value = o.values.approvalMinQty;
+        const p = el('input', 'sm'); p.type = 'number'; p.min = '0'; p.max = '100'; p.value = o.values.approvalMinPct;
+        const go = () => saveOption({ approvalMinQty: Number(q.value) || 0, approvalMinPct: Number(p.value) || 0 });
+        q.onchange = go; p.onchange = go;
+        more.append('Approve over', q, 'units, or over', p, '% — smaller ones go through by themselves (0 and 0: everything needs approving).');
+        row.appendChild(more);
+      }
+      box.appendChild(row);
+    }
+  }
+
+  async function saveOption(body, okText) {
+    try {
+      const next = await api.post('/api/admin/practice/options', body);
+      drawn = '';
+      render(next);
+      msg($('optMsg'), 'ok', okText || 'Saved for your practice count.', 'The gun picks it up the next time it is between pallets.');
+    } catch (err) { msg($('optMsg'), 'err', err.message); }
   }
 
   function renderHistory() {
@@ -210,12 +307,18 @@
     renderChecks();
     renderShelves();
     renderHistory();
+    renderReady();
+    renderOptions();
+    const own = data.source === 'upload';
+    $('dataSource').textContent = own ? `testing on “${data.label}”` : 'testing on the built-in data';
+    $('btnBuiltIn').hidden = !own;
   }
 
   async function refresh() {
     const next = await api.json('/api/admin/practice');
     if (!next.session) return start();
     render(next);
+    renderReady();             // the gun coming up changes this without the server knowing
   }
 
   /* The practice count is made the first time anybody opens this page. */
@@ -280,7 +383,43 @@
     } catch (err) { msg($('rigMsg'), 'err', err.message); }
   };
 
-  frame().addEventListener('load', () => { $('gunLed').className = 'led'; });
+  /* A new run - from a file, or back on the built-in data - swaps the gun's
+     storage for a clean one, exactly like Start over. */
+  async function newRun(make, okText) {
+    const f = frame();
+    const gone = waitLoad(f);
+    f.src = 'about:blank';
+    await gone;
+    gunUrl = '';
+    const next = await make();
+    await wipeGunStorage();
+    drawn = '';
+    render(next);
+    loadGun({ force: true });
+    msg($('uploadMsg'), 'ok', okText(next), 'Sign on again on the gun — your last run is kept under “Your earlier runs”.');
+  }
+
+  $('btnPracticeUpload').onclick = async () => {
+    const file = $('fPracticeFile').files[0];
+    if (!file) return msg($('uploadMsg'), 'err', 'Choose a file first', 'A CSV or Excel sheet with Bin, Pallet and Qty columns.');
+    try {
+      const text = await window.appUi.fileToCsv(file);
+      await newRun(async () => {
+        const res = await api.call(`/api/admin/practice/upload?name=${encodeURIComponent(file.name)}`, {
+          method: 'POST', headers: { 'content-type': 'text/csv' }, body: text,
+        });
+        return res.json();
+      }, (n) => `Loaded ${n.totals.pallets} pallets in ${n.totals.bins} bins from ${file.name}.`);
+      $('fPracticeFile').value = '';
+    } catch (err) { msg($('uploadMsg'), 'err', 'That file did not load', err.message); }
+  };
+  $('btnBuiltIn').onclick = async () => {
+    try {
+      await newRun(() => api.post('/api/admin/practice/reset', { builtIn: true }), () => 'Back on the built-in test data.');
+    } catch (err) { msg($('uploadMsg'), 'err', err.message); }
+  };
+
+  frame().addEventListener('load', () => { $('gunLed').className = 'led'; setTimeout(() => { if (data) renderReady(); }, 1500); });
 
   document.addEventListener('auth', (e) => {
     clearInterval(timer);

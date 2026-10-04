@@ -375,6 +375,25 @@ to see it all from the supervisor's side: progress, the pallet report, the SOS b
   The test gun keeps its own storage in the browser, separate from a real scanner's and from
   anyone else's.
 
+**Before you start** at the top of the tab is the checklist: signed in with your own login, test data
+loaded, the test scanner registered and signed in, team 99 with aisles, the gun running — each with
+what to do if not. It reads **ready to test** when there is nothing to do.
+
+**Your own test pallets.** Upload a sheet with **Bin**, **Pallet** and **Qty** (and, if you have them,
+**Note**, **Lot**, **Best Before**, **ABC**) and the practice run is built from it instead. It is the
+same sheet as the barcode test book (step 8a): print the book, upload the same file here, and scan
+the paper. A row with a bin and no pallet is an empty bin. The file is checked row by row and told
+back plainly (*row 7: "ten" is not a quantity*). **Back to the built-in test data** returns to the
+shipped aisles.
+
+**Try the features that ship turned off.** Lot codes, best-before dates, adjustments needing
+approval (with its thresholds), ABC classes and accuracy, the pallet check (allow override / no
+overrides / accept any), automatic second counts, the comments step — each can be switched on for
+**your practice count only**; nothing else changes. Each one says whether the practice data has what
+it needs (*✓ 25 of 25 pallets have a lot code*) and, when it does not, what to add to your file — or,
+for ABC, a button to work the classes out from the quantities. Settings that apply to every scanner
+(the Teams channel, the stopped-scanning limit, the scanner screen) are not changed from here.
+
 **Start over** begins a new practice run. The one you were on is kept under **Your earlier runs**
 — when it started, how many of the twelve things you tried, how much you counted — so you can
 see your own progress. The last ten are kept. Nothing on a real count is touched.
@@ -576,6 +595,22 @@ or queue aisles by hand here.
   foot, they will not be queued onto level D. A supervisor can override this.
 - Two teams **can** share one aisle as long as their levels do not overlap — a forklift
   crew high and a crew on foot low.
+
+**Auto-assign the aisles.** The card above the queue does the whole plan at once, staggered:
+
+1. Pick the **teams** (blank is every team on Teams & crew, or one **shift**), the **levels**
+   (blank is all), and which way to **walk the aisles**.
+2. **Preview.** The aisles are split into one continuous stretch per team, about the same racking
+   each, so the teams start spread across the building and never bunch up. A team gets only the
+   levels its equipment reaches; what it cannot reach goes to the nearest team that can, after its
+   own stretch (marked `*`). The preview lists each team's aisles in order, with warnings — two
+   teams starting in the same racking block, a level nobody can reach — and what it left alone.
+3. **Queue this plan.** Each team's first aisle starts at once. **Replace what is queued** re-plans
+   the queued aisles and leaves anything being counted, or done, alone.
+
+The rules it follows are shown on the card, with what to fix if one is missing: **racking blocks**
+(step 7 — without them two teams can be released into back-to-back racking), **equipment** on
+Teams & crew (a team with nobody on it is given every level), and the **shift**.
 
 ![](images/dashboard-team-plan.png)
 
