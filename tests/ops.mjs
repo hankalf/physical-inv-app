@@ -11,8 +11,9 @@ const clean = (t) => (t || '').replace(/\s+/g, ' ').trim();
 const hdr = { 'content-type': 'application/json' };
 const j = (r) => r.json();
 
-const { token, name } = await j(await fetch(`${BASE}/api/admin/login`, { method: 'POST', headers: hdr, body: JSON.stringify({ password: 'changeme', name: 'Dana' }) }));
-check('Sign-in records who is at the keyboard', name === 'Dana', name);
+// the superadmin's password alone signs the superadmin in - the account's name is the one on record
+const { token, name } = await j(await fetch(`${BASE}/api/admin/login`, { method: 'POST', headers: hdr, body: JSON.stringify({ password: 'changeme' }) }));
+check('Sign-in records who is at the keyboard', name === 'Dana Whitfield', name);
 const A = { ...hdr, authorization: 'Bearer ' + token };
 
 const sess = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'ops session' }) }));
@@ -41,7 +42,7 @@ await fetch(`${BASE}/api/sessions/${sess.id}/counts`, { method: 'POST', headers:
 const log = await j(await fetch(`${BASE}/api/admin/audit?limit=50`, { headers: A }));
 const actions = log.map((r) => r.action);
 check('The log records every dashboard change, attributed to a person',
-  log.filter((r) => r.action !== 'scanner enrolled').every((r) => r.actor === 'Dana')
+  log.filter((r) => r.action !== 'scanner enrolled' && r.actor !== 'startup').every((r) => r.actor === 'Dana Whitfield')
     && actions.includes('created session') && actions.includes('uploaded bins') && actions.includes('assigned aisles'),
   actions.slice(0, 8).join(' · '));
 check('A scanner signing itself in is logged against the scanner, not a supervisor',
@@ -112,7 +113,7 @@ page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => { if (m.type() === 'error' && !/40[19]/.test(m.text())) errors.push(m.text()); });
 // backups, the log and the ERP file live under Settings; the count sheet stays on the dashboard
 await page.goto(BASE + '/settings');
-await page.fill('#fUser', 'Dana'); await page.fill('#fPassword', 'changeme'); await page.click('#btnLogin');
+await page.fill('#fUser', 'DANA-WHITFIELD'); await page.fill('#fPassword', 'changeme'); await page.click('#btnLogin');
 await page.waitForSelector('#scrMain.active'); await expandSubTabs(page); await page.waitForTimeout(1800);
 check('Settings: the backup list and the log are on screen',
   (await page.$$('#backupTable tbody tr')).length > 0 && (await page.$$('#auditTable tbody tr')).length > 3,

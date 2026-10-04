@@ -227,7 +227,7 @@ try {
   const teams = [];
   for (let t = 1; t <= TEAMS; t++) {
     const crew = [0, 1].map((k) => ({ badge: `E${pad(1000 + t * 10 + k, 4)}`, name: `${FIRST[(t * 2 + k) % FIRST.length]} ${LAST[(t * 3 + k * 7) % LAST.length]}`, equipment: k === 0 ? ['HIGH REACH', 'SCISSOR LIFT'] : ['DOCK TRUCK', 'FOOT'] }));
-    teams.push({ name: String(t), crew, guns: [], queue: [], active: null, bins: 0, done: 0, lines: 0 });
+    teams.push({ name: String(t), crew, guns: [], queue: [], active: null, handed: new Set(), bins: 0, done: 0, lines: 0 });
   }
   let rosterCsv = 'Clock in number,Name,Department,Equipment\n';
   for (const t of teams) for (const c of t.crew) rosterCsv += `${c.badge},${c.name},${Number(t.name) <= 10 ? 'Freezer A' : 'Freezer B'},"${c.equipment.join(', ')}"\n`;
@@ -237,17 +237,30 @@ try {
     if (made && made.id) for (const c of t.crew) await post('/api/admin/people/assign', { badge: c.badge, teamId: made.id }).catch(() => {});
   }
 
-  /* the plan: aisles come in racking blocks of two; a team gets whole blocks,
-     the lightest-loaded team the next block, so nobody shares racking */
-  const blocks = [];
-  for (let i = 0; i < aisles.length; i += 2) blocks.push(aisles.slice(i, i + 2));
-  blocks.sort((x, y) => y.reduce((n, a) => n + byAisle.get(a).length, 0) - x.reduce((n, a) => n + byAisle.get(a).length, 0));
-  for (const blk of blocks) {
-    const t = teams.reduce((a, b) => (a.bins <= b.bins ? a : b));
-    for (const a of blk) { t.queue.push(a); t.bins += byAisle.get(a).length; }
+  /* the plan: with more teams than racking blocks, an aisle is two jobs - the
+     low levels for a team on a dock truck, the high levels for one with the
+     reach - and the lightest-loaded team takes the next job, biggest first.
+     Two teams in one block on different levels is what the block rule allows;
+     a team that would clash simply waits for the racking to free up. */
+  const levelOf = (code) => code.replace(/^[A-Z]+\d+/, '')[0] || '';
+  const jobs = [];
+  for (const a of aisles) {
+    const low = byAisle.get(a).filter((b) => 'ABC'.includes(levelOf(b))).length;
+    const high = byAisle.get(a).length - low;
+    if (high && low) { jobs.push({ aisle: a, levels: 'A-C', bins: low }); jobs.push({ aisle: a, levels: 'D-F', bins: high }); }
+    else jobs.push({ aisle: a, levels: 'A-F', bins: byAisle.get(a).length });
   }
-  for (const t of teams) await post(`/api/admin/sessions/${sess.id}/assignments`, { team: t.name, aisles: t.queue, levels: 'A-F', force: true });
-  log(`plan: ${teams.map((t) => `${t.name}:${t.queue.join('+')}(${t.bins})`).join(' ')}`);
+  jobs.sort((x, y) => y.bins - x.bins || x.aisle.localeCompare(y.aisle, undefined, { numeric: true }));
+  for (const job of jobs) {
+    const t = teams.reduce((a, b) => (a.bins <= b.bins ? a : b));
+    t.queue.push(job); t.bins += job.bins;
+  }
+  for (const t of teams) {
+    // the same aisle's two halves back to back are no use to one team: spread the queue
+    t.queue.sort((x, y) => x.aisle.localeCompare(y.aisle, undefined, { numeric: true }));
+    for (const job of t.queue) await post(`/api/admin/sessions/${sess.id}/assignments`, { team: t.name, aisles: [job.aisle], levels: job.levels, force: true });
+  }
+  log(`plan: ${teams.map((t) => `${t.name}:${t.queue.map((j) => j.aisle + (j.levels === 'A-F' ? '' : j.levels === 'A-C' ? 'lo' : 'hi')).join('+')}(${t.bins})`).join(' ')}`);
 
   /* forty scanners, registered in the office */
   for (const t of teams) {
@@ -283,14 +296,18 @@ try {
     await page.screenshot({ path: join(FRAMES, file), type: 'jpeg', quality: 62 });
     return `frames/${file}`;
   }
-  async function snapshot(label, { extra = null, event = '' } = {}) {
+  /* one photograph at a time: an event's snapshot waits for the scheduled one */
+  let snapChain = Promise.resolve();
+  const snapshot = (label, opts) => (snapChain = snapChain.catch(() => {}).then(() => takeSnapshot(label, opts)));
+  async function takeSnapshot(label, { extra = null, event = '' } = {}) {
     const t = clock();
     frameNo++;
     const frames = {};
     const prog = await get(`/api/admin/sessions/${sess.id}/progress`).catch(() => null);
     const alerts = await get(`/api/admin/sessions/${sess.id}/alerts`).catch(() => ({ alerts: [] }));
     const adj = await get(`/api/admin/sessions/${sess.id}/adjustments`).catch(() => ({ adjustments: [] }));
-    const rec = await get(`/api/admin/sessions/${sess.id}/recounts`).catch(() => ({ tasks: [] }));
+    const recAll = await get(`/api/admin/sessions/${sess.id}/recounts`).catch(() => []);
+    const rec = { tasks: Array.isArray(recAll) ? recAll : (recAll.tasks || recAll.recounts || []) };
     try {
       await desk.reload({ waitUntil: 'domcontentloaded' });
       await desk.waitForSelector('#scrMain.active', { timeout: 15000 });
@@ -317,7 +334,7 @@ try {
       n: frameNo, at: new Date().toISOString(), wall: Math.round((Date.now() - T0) / 60000), day: t.day, dayName: t.dayName, sim: t.hhmm, label, event,
       lines: prog ? prog.lines : 0, bins: prog ? prog.bins_counted : 0, binsTotal: prog ? prog.bins_total : binCodes.length, pallets: prog ? prog.pallets_counted : 0,
       exceptions: prog ? prog.exceptions : 0, teams: prog ? prog.teams : 0,
-      sosOpen: (alerts.alerts || []).filter((a) => a.status === 'open').length, sosTotal: (alerts.alerts || []).length,
+      sosOpen: (alerts.alerts || []).filter((a) => a.status !== 'closed').length, sosTotal: (alerts.alerts || []).length,
       pending: (adj.adjustments || []).filter((a) => a.status === 'pending').length, approved: (adj.adjustments || []).filter((a) => a.status === 'approved').length, rejected: (adj.adjustments || []).filter((a) => a.status === 'rejected').length,
       secondOpen: (rec.tasks || []).filter((r) => r.status !== 'done').length, secondDone: (rec.tasks || []).filter((r) => r.status === 'done').length,
       lat: { count: stat(lat.count), dashboard: stat(lat.dashboard) },
@@ -361,7 +378,7 @@ try {
     return left;
   };
   let binsLeft = binCodes.length;
-  const teamBinsLeft = (t) => t.queue.reduce((n, a) => n + byAisle.get(a).length, 0) + (t.activeBins ? t.activeBins.length : 0);
+  const teamBinsLeft = (t) => t.queue.reduce((n, j) => n + j.bins, 0) + (t.activeBins ? t.activeBins.length : 0);
 
   const clientIds = new Set();
   const cid = (gun) => { let id; do { id = `${gun.name}-${Math.random().toString(36).slice(2, 10)}`; } while (clientIds.has(id)); clientIds.add(id); return id; };
@@ -396,17 +413,21 @@ try {
   /* the team's active aisle, from the server's point of view */
   async function takeActive(t, H) {
     const st = await get(`/api/sessions/${sess.id}/team-status?team=${t.name}`, H);
+    if (st.active && t.handed.has(st.active.id)) return st;        // the hand-back is still landing
     if (st.active && (!t.active || t.active.id !== st.active.id)) {
       t.active = st.active;
-      t.activeBins = (byAisle.get(st.active.aisle) || []).slice();
-      t.queue = t.queue.filter((a) => a !== st.active.aisle);
+      // the server says which bins the job covers (the aisle, on the levels given)
+      t.activeBins = (st.bins && st.bins.length ? st.bins : byAisle.get(st.active.aisle) || []).slice();
+      const i = t.queue.findIndex((j) => j.aisle === st.active.aisle && (!st.active.levels || j.levels === st.active.levels));
+      if (i >= 0) t.queue.splice(i, 1);
     } else if (!st.active) { t.active = null; t.activeBins = null; }
     return st;
   }
 
   async function handBack(t, gun) {
-    if (!t.active) return;
+    if (!t.active || t.handed.has(t.active.id)) return;
     const a = t.active;
+    t.handed.add(a.id);
     t.active = null; t.activeBins = null;
     try {
       await post(`/api/sessions/${sess.id}/assignments/${a.id}/complete`, { team: t.name }, gun.H);
@@ -480,7 +501,7 @@ try {
           continue;
         }
       }
-      const bin = t.activeBins.shift();
+      const bin = t.activeBins ? t.activeBins.shift() : null;
       if (!bin) {
         // the aisle is finished: a few second counts on the way out, then hand it back
         if (sinceAisleRecounts < 1) { sinceAisleRecounts++; await doSecondCounts(gun, 3); continue; }
@@ -530,16 +551,17 @@ try {
         const adj = await get(`/api/admin/sessions/${sess.id}/adjustments`, M, 'office');
         const pending = (adj.adjustments || []).filter((a) => a.status === 'pending');
         if (pending.length) {
-          const approve = pending.filter(() => Math.random() < 0.85).slice(0, 25);
-          const reject = pending.filter((a) => !approve.includes(a)).slice(0, 5);
+          const batch = Math.max(25, Math.ceil(pending.length * 0.6));
+          const approve = pending.filter(() => Math.random() < 0.85).slice(0, batch);
+          const reject = pending.filter((a) => !approve.includes(a)).slice(0, Math.max(5, Math.ceil(batch / 6)));
           if (approve.length) { await post(`/api/admin/sessions/${sess.id}/adjustments/decide`, { palletIds: approve.map((a) => a.pallet_id), decision: 'approve', reason: pick(adjReasons.length ? adjReasons : ['Miscount — first count was wrong']) }, M); state.approved += approve.length; }
           if (reject.length) { await post(`/api/admin/sessions/${sess.id}/adjustments/decide`, { palletIds: reject.map((a) => a.pallet_id), decision: 'reject', reason: 'Recount it first', note: 'Second count requested' }, M); state.rejected += reject.length; }
         }
         // SOS calls: seen within a minute, closed once somebody has been
         const alerts = await get(`/api/admin/sessions/${sess.id}/alerts`, A, 'office');
-        for (const a of (alerts.alerts || []).filter((x) => x.status === 'open')) {
+        for (const a of (alerts.alerts || []).filter((x) => x.status !== 'closed')) {
           const age = Date.now() - new Date(a.created_at).getTime();
-          if (!a.seen_at && age > 20000) await post(`/api/admin/sessions/${sess.id}/alerts/${a.id}/seen`, {}, M).catch(() => {});
+          if (a.status === 'open' && age > 20000) await post(`/api/admin/sessions/${sess.id}/alerts/${a.id}/seen`, {}, M).catch(() => {});
           if (age > rnd(90000, 240000)) await post(`/api/admin/sessions/${sess.id}/alerts/${a.id}/close`, { outcome: pick(['Sorted on the spot', 'Pallet moved, aisle clear', 'Spare battery brought out', 'Maintenance called']) }, M).catch(() => {});
         }
       } catch (err) { log('office:', err.message); }
@@ -722,20 +744,21 @@ try {
     const pending = (adj.adjustments || []).filter((a) => a.status === 'pending').map((a) => a.pallet_id);
     for (let i = 0; i < pending.length; i += 50) await post(`/api/admin/sessions/${sess.id}/adjustments/decide`, { palletIds: pending.slice(i, i + 50), decision: 'approve', reason: 'Counted twice, same result' }, M);
     const alerts = await get(`/api/admin/sessions/${sess.id}/alerts`, A);
-    for (const a of (alerts.alerts || []).filter((x) => x.status === 'open')) await post(`/api/admin/sessions/${sess.id}/alerts/${a.id}/close`, { outcome: 'Count finished' }, M).catch(() => {});
+    for (const a of (alerts.alerts || []).filter((x) => x.status !== 'closed')) await post(`/api/admin/sessions/${sess.id}/alerts/${a.id}/close`, { outcome: 'Count finished' }, M).catch(() => {});
   } catch (err) { log('final clear-up:', err.message); }
 
   /* --------------------------------------------------------- the summary */
   const prog = await get(`/api/admin/sessions/${sess.id}/progress`);
   const rep = await get(`/api/admin/sessions/${sess.id}/pallets?limit=100000`, M);
   const adj = await get(`/api/admin/sessions/${sess.id}/adjustments`, M);
-  const rec = await get(`/api/admin/sessions/${sess.id}/recounts`);
+  const recRaw = await get(`/api/admin/sessions/${sess.id}/recounts`);
+  const rec = { tasks: Array.isArray(recRaw) ? recRaw : (recRaw.tasks || recRaw.recounts || []) };
   const alerts = await get(`/api/admin/sessions/${sess.id}/alerts`);
   const assign = await get(`/api/admin/sessions/${sess.id}/assignments`);
   const statusCount = (s) => rep.rows.filter((r) => r.status === s).length;
   const summary = {
     bins: prog.bins_counted, binsTotal: prog.bins_total, lines: prog.lines, pallets: prog.pallets_counted, exceptions: prog.exceptions,
-    match: statusCount('MATCH'), variance: rep.rows.filter((r) => /VARIANCE|SHORT|OVER/.test(r.status)).length, missing: statusCount('MISSING'), unlisted: rep.rows.filter((r) => /NOT ON|UNLISTED|UNKNOWN/.test(r.status)).length,
+    match: statusCount('MATCH'), variance: statusCount('QTY VARIANCE') + statusCount('WRONG BIN'), missing: statusCount('MISSING'), unlisted: statusCount('NOT IN MASTER'), twice: statusCount('COUNTED TWICE'),
     statuses: rep.rows.reduce((o, r) => { o[r.status] = (o[r.status] || 0) + 1; return o; }, {}),
     approved: (adj.adjustments || []).filter((a) => a.status === 'approved').length, rejected: (adj.adjustments || []).filter((a) => a.status === 'rejected').length, pending: (adj.adjustments || []).filter((a) => a.status === 'pending').length,
     secondDone: (rec.tasks || []).filter((r) => r.status === 'done').length, secondOpen: (rec.tasks || []).filter((r) => r.status !== 'done').length,

@@ -88,51 +88,62 @@ export function palletReport(sessionId, { only = null } = {}) {
   const ids = only ? [...only] : null;
   const filter = ids && ids.length ? ` AND pallet_id IN (${ids.map(() => '?').join(',')})` : '';
   if (ids && !ids.length) return [];
-  const rows = db
-    .prepare(
-      `WITH counted AS (
-         SELECT c.pallet_id,
-                COUNT(*) AS times_counted,
-                SUM(c.qty) AS counted_qty,
-                GROUP_CONCAT(DISTINCT c.location_code) AS found_locations,
-                GROUP_CONCAT(DISTINCT c.team) AS teams,
-                GROUP_CONCAT(DISTINCT c.lot) AS counted_lots,
-                SUM(CASE WHEN c.alias_of IS NULL THEN 0 ELSE 1 END) AS alias_lines,
-                MAX(c.alias_of) AS alias_of,
-                MIN(c.expiry) AS counted_expiry,
-                MAX(c.scanned_at) AS last_scan,
-                GROUP_CONCAT(c.comments, ' | ') AS comments,
-                MAX(c.pass) AS max_pass
-           FROM counts c
-          WHERE c.session_id = ? AND ${LIVE('c')} AND c.empty_bin = 0${filter.replace('pallet_id', 'c.pallet_id')}
-          GROUP BY c.pallet_id
-       ),
-       firstpass AS (
-         SELECT pallet_id, SUM(qty) AS first_qty, GROUP_CONCAT(DISTINCT location_code) AS first_locations
-           FROM counts WHERE session_id = ? AND voided = 0 AND pass = 1 AND empty_bin = 0${filter} GROUP BY pallet_id
-       ),
-       keys AS (
-         SELECT pallet_id FROM pallets WHERE session_id = ?${filter}
-         UNION
-         SELECT pallet_id FROM counted
-       )
-       SELECT k.pallet_id,
-              p.sku, p.description, p.uom, COALESCE(p.source, '') AS source,
-              p.expected_qty, p.expected_location, p.lot AS expected_lot, p.expiry AS expected_expiry,
-              c.times_counted, c.counted_qty, c.found_locations, c.teams, c.last_scan, c.comments, c.max_pass,
-              c.counted_lots, c.counted_expiry, c.alias_lines, c.alias_of,
-              (SELECT GROUP_CONCAT(DISTINCT a.pallet_id) FROM counts a
-                WHERE a.session_id = ? AND a.voided = 0 AND a.alias_of = k.pallet_id) AS also_tagged,
-              f.first_qty, f.first_locations,
-              (SELECT COUNT(*) FROM recounts r WHERE r.session_id = ? AND r.pallet_id = k.pallet_id AND r.status != 'done') AS open_recounts,
-              CASE WHEN p.pallet_id IS NULL THEN 1 ELSE 0 END AS not_in_master
-         FROM keys k
-         LEFT JOIN pallets p ON p.session_id = ? AND p.pallet_id = k.pallet_id
-         LEFT JOIN counted c ON c.pallet_id = k.pallet_id
-         LEFT JOIN firstpass f ON f.pallet_id = k.pallet_id
-        ORDER BY k.pallet_id`
-    )
-    .all(...(ids ? [id, ...ids, id, ...ids, id, ...ids, id, id, id] : [id, id, id, id, id, id]));
+  /* Five indexed passes and a join in memory. One query with the aggregates as
+     CTEs read well but SQLite joined the materialised CTEs by nested loop: on a
+     twenty-thousand-bin count that was six seconds, during which nothing else
+     on the server moved. This is under a tenth of a second on the same count. */
+  const inList = filter ? ` AND pallet_id IN (${ids.map(() => '?').join(',')})` : '';
+  const args = ids ? [id, ...ids] : [id];
+  const counted = new Map(db.prepare(
+    `SELECT pallet_id,
+            COUNT(*) AS times_counted,
+            SUM(qty) AS counted_qty,
+            GROUP_CONCAT(DISTINCT location_code) AS found_locations,
+            GROUP_CONCAT(DISTINCT team) AS teams,
+            GROUP_CONCAT(DISTINCT lot) AS counted_lots,
+            SUM(CASE WHEN alias_of IS NULL THEN 0 ELSE 1 END) AS alias_lines,
+            MAX(alias_of) AS alias_of,
+            MIN(expiry) AS counted_expiry,
+            MAX(scanned_at) AS last_scan,
+            GROUP_CONCAT(comments, ' | ') AS comments,
+            MAX(pass) AS max_pass
+       FROM counts
+      WHERE session_id = ? AND ${LIVE('counts')} AND empty_bin = 0${inList}
+      GROUP BY pallet_id`).all(...args).map((r) => [r.pallet_id, r]));
+  const firstpass = new Map(db.prepare(
+    `SELECT pallet_id, SUM(qty) AS first_qty, GROUP_CONCAT(DISTINCT location_code) AS first_locations
+       FROM counts WHERE session_id = ? AND voided = 0 AND pass = 1 AND empty_bin = 0${inList} GROUP BY pallet_id`).all(...args).map((r) => [r.pallet_id, r]));
+  const tagged = new Map(db.prepare(
+    `SELECT alias_of AS pallet_id, GROUP_CONCAT(DISTINCT pallet_id) AS also_tagged
+       FROM counts WHERE session_id = ? AND voided = 0 AND alias_of IS NOT NULL GROUP BY alias_of`).all(id).map((r) => [r.pallet_id, r.also_tagged]));
+  const openRecounts = new Map(db.prepare(
+    `SELECT pallet_id, COUNT(*) AS n FROM recounts WHERE session_id = ? AND status != 'done' AND pallet_id IS NOT NULL GROUP BY pallet_id`).all(id).map((r) => [r.pallet_id, r.n]));
+  const master = db.prepare(
+    `SELECT pallet_id, sku, description, uom, COALESCE(source, '') AS source, expected_qty, expected_location, lot AS expected_lot, expiry AS expected_expiry
+       FROM pallets WHERE session_id = ?${inList}`).all(...args);
+  const seen = new Set(master.map((p) => p.pallet_id));
+  const keys = master.map((p) => p.pallet_id);
+  for (const k of counted.keys()) if (!seen.has(k)) keys.push(k);
+  keys.sort();
+  const byId = new Map(master.map((p) => [p.pallet_id, p]));
+  const rows = keys.map((k) => {
+    const p = byId.get(k) || null;
+    const c = counted.get(k) || null;
+    const f = firstpass.get(k) || null;
+    return {
+      pallet_id: k,
+      sku: p ? p.sku : null, description: p ? p.description : null, uom: p ? p.uom : null, source: p ? p.source : '',
+      expected_qty: p ? p.expected_qty : null, expected_location: p ? p.expected_location : null,
+      expected_lot: p ? p.expected_lot : null, expected_expiry: p ? p.expected_expiry : null,
+      times_counted: c ? c.times_counted : null, counted_qty: c ? c.counted_qty : null, found_locations: c ? c.found_locations : null,
+      teams: c ? c.teams : null, last_scan: c ? c.last_scan : null, comments: c ? c.comments : null, max_pass: c ? c.max_pass : null,
+      counted_lots: c ? c.counted_lots : null, counted_expiry: c ? c.counted_expiry : null, alias_lines: c ? c.alias_lines : null, alias_of: c ? c.alias_of : null,
+      also_tagged: tagged.get(k) || null,
+      first_qty: f ? f.first_qty : null, first_locations: f ? f.first_locations : null,
+      open_recounts: openRecounts.get(k) || 0,
+      not_in_master: p ? 0 : 1,
+    };
+  });
 
   return rows.map((r) => {
     const counted = r.times_counted > 0;
