@@ -435,11 +435,13 @@ check('…and every run so far is in your history', back2.history.length >= 3, `
 const siteBefore = await get('/api/admin/scanner-prompts');
 gun = await gunFrame();
 /* asked through the gun itself, with its own token - enrolling its link again would sign it out */
-const gunFetch = (path) => gun.evaluate(async (p) => {
+const gunFetch = (path, body) => gun.evaluate(async ([p, b]) => {
   const name = `invcount-practice-${new URLSearchParams(location.search).get('d')}`;
   const tok = await new Promise((res) => { const q = indexedDB.open(name); q.onsuccess = () => { const g = q.result.transaction('meta').objectStore('meta').get('deviceToken'); g.onsuccess = () => res(g.result); }; });
-  return (await fetch(p, { headers: { authorization: 'Device ' + tok } })).json();
-}, path);
+  const init = { headers: { authorization: 'Device ' + tok, 'content-type': 'application/json' } };
+  if (b) { init.method = 'POST'; init.body = JSON.stringify(b); }
+  return (await fetch(p, init)).json();
+}, [path, body || null]);
 const gunView = async () => (await gunFetch('/api/sessions?practice=1')).find((s) => s.name.startsWith('Practice count'));
 check('A practice count holds the comments step for 5 seconds, whatever the site says', (await gunView()).prompts.commentTimeout === 5);
 check('The sandbox card shows the gun\'s settings', Number(await page.inputValue('#sbTimeout')) === 5 && (await page.inputValue('#sbComments')).includes('Damaged'));
@@ -480,8 +482,10 @@ await wait(800);
 check('Approvals show their thresholds once switched on', await optRow('requireApproval').locator('input[type=number]').count() === 2);
 await optRow('palletMode').locator('select').selectOption('strict');
 await wait(800);
+await optRow('autoRecount').locator('input').check();
+await wait(800);
 opts = (await get('/api/admin/practice')).options;
-check('The pallet check can be tried strict', opts.values.palletMode === 'strict' && opts.values.requireApproval && opts.values.trackAbc, JSON.stringify(opts.values));
+check('The pallet check can be tried strict, and second counts switched on', opts.values.palletMode === 'strict' && opts.values.requireApproval && opts.values.trackAbc && opts.values.autoRecount, JSON.stringify(opts.values));
 // the gun takes the lot question between pallets
 gun = await gunFrame();
 let lotAsked = false;
@@ -499,6 +503,14 @@ for (let t = 0; t < 30000 && !lotAsked; t += 1000) {
   });
 }
 check('The test gun is told to ask for the lot', lotAsked);
+for (let t = 0; t < 8000; t += 400) { if ((await page.$$('#shelves .scan.lot')).length) break; await wait(400); }
+check('With lot codes on, the sheet grows lot chips to scan', (await page.$$('#shelves .scan.lot')).length >= 20);
+/* a short pallet, counted with the gun's own token, is an adjustment waiting */
+await gunFetch(`/api/sessions/${(await get('/api/admin/practice')).session.id}/counts`,
+  [{ clientId: 'feat-short-1', palletId: 'F01-004', qty: 30, location: 'F01A004', team: '99', deviceId: 'TEST', lot: 'L1' }]);
+const grown = await get('/api/admin/practice');
+check('…and the things to try grow with the features that are on', ['lot', 'approve', 'second'].every((k) => grown.checklist.some((c) => c.key === k)), grown.checklist.map((c) => c.key).join(','));
+check('…with the counts the tips speak up on: an adjustment waiting, from the short pallet', grown.extras.pendingApprovals >= 1, JSON.stringify(grown.extras));
 /* an uploaded file without lots says so */
 const noLots = await fetch(`${BASE}/api/admin/practice/upload?name=plain.csv`, { method: 'POST', headers: { authorization: 'Bearer ' + otherTok, 'content-type': 'text/csv' },
   body: 'Bin,Pallet,Qty\nY01A001,YP-1,10\n' }).then((r) => r.json());

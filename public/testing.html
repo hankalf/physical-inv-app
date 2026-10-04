@@ -57,6 +57,9 @@
   .scan.torn { border-style: dashed; }
   .scan.torn::before { content: "✂ "; color: var(--warn); letter-spacing: 0; }
   .scan.qty::before { content: "# "; letter-spacing: 0; }
+  .scan.lot::before { content: "L "; letter-spacing: 0; color: var(--accent); }
+  .scan.exp::before { content: "📅 "; letter-spacing: 0; }
+  table.shelf .extra { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
 
   .signon { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
   .signon .lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { db, norm, getSession, createSession, createDevice, listDevices, sandboxOf } from '../db.js';
+import { refreshAdjustments } from './adjustments.js';
 import { scannerPrompts, scannerLayout } from './scanner-prompts.js';
 import { sosReasons } from './alerts.js';
 import { importMaster } from './master.js';
@@ -165,7 +166,7 @@ const SANDBOX_START = JSON.stringify({ prompts: { commentTimeout: 5 }, layout: {
 
 function buildPractice(owner) {
   const s = createSession({ name: PRACTICE_NAME, mode: 'full', palletMode: 'warn', guided: 1, askComments: 1 });
-  db.prepare('UPDATE sessions SET practice = 1, practice_owner = ?, sandbox = ? WHERE id = ?').run(owner, SANDBOX_START, s.id);
+  db.prepare('UPDATE sessions SET practice = 1, practice_owner = ?, sandbox = ?, auto_recount = 0 WHERE id = ?').run(owner, SANDBOX_START, s.id);
   importMaster(s.id, 'bins', binCsv());
   importMaster(s.id, 'pallets', reportCsv());
   queueAssignments(s.id, PRACTICE_TEAM, ['F01', 'F02'], 'A-F', { force: true });
@@ -224,7 +225,7 @@ export function readPracticeFile(text) {
 
 function buildFromRows(owner, rows, label) {
   const s = createSession({ name: `${PRACTICE_NAME} — ${label}`.slice(0, 80), mode: 'full', palletMode: 'warn', guided: 1, askComments: 1 });
-  db.prepare("UPDATE sessions SET practice = 1, practice_owner = ?, practice_source = 'upload', practice_rows = ?, sandbox = ? WHERE id = ?")
+  db.prepare("UPDATE sessions SET practice = 1, practice_owner = ?, practice_source = 'upload', practice_rows = ?, sandbox = ?, auto_recount = 0 WHERE id = ?")
     .run(owner, JSON.stringify({ label, rows }), SANDBOX_START, s.id);
   importMaster(s.id, 'bins', binCsv([...new Set(rows.map((r) => r.bin))]));
   let report = 'Pallet ID,SKU,Description,Qty,Location,Lot Code,Best Before,ABC\n';
@@ -299,7 +300,7 @@ export function practiceSheet(sessionId) {
   const id = Number(sessionId);
   const s = getSession(id);
   const lines = db.prepare(
-    `SELECT pallet_id, qty, location_code, empty_bin, label_issue, bin_label_issue, override_reason, team, scanned_at
+    `SELECT pallet_id, qty, location_code, empty_bin, label_issue, bin_label_issue, override_reason, team, scanned_at, lot, expiry
        FROM counts WHERE session_id = ? AND voided = 0 ORDER BY id`).all(id);
   const byPallet = new Map();
   const emptyBins = new Set();
@@ -352,16 +353,44 @@ export function practiceSheet(sessionId) {
   const assignment = db.prepare(
     "SELECT aisle, status FROM assignments WHERE session_id = ? AND team = ? ORDER BY position").all(id, PRACTICE_TEAM);
   const pallets = bins.reduce((n, b) => n + b.shelf.length, 0);
+  const feat = featureChecks(s, lines);
   return {
     source: 'built-in',
+    extras: feat.counts,
     session: s ? { id: s.id, name: s.name, status: s.status, askLot: !!s.ask_lot, askExpiry: !!s.ask_expiry } : null,
     team: PRACTICE_TEAM,
     crew: PRACTICE_CREW,
     bins,
     assignment,
-    checklist: CHECKS.map(([key, label]) => ({ key, label, done: done.has(key) })),
+    checklist: [...CHECKS.map(([key, label]) => ({ key, label, done: done.has(key) })), ...feat.checks],
     totals: { bins: bins.length, binsCounted: bins.filter((b) => b.counted).length, pallets, lines: lines.length },
   };
+}
+
+/* The features that are switched on in this sandbox each add a thing to try,
+   and the counts the tips need to know when to speak up. A practice count
+   starts with every one of them off - second counts included, which real
+   counts have on - so the first run is the plain count and each feature is
+   something to switch on and try. */
+function featureChecks(s, lines) {
+  const id = s.id;
+  const checks = [];
+  if (s.require_approval) { try { refreshAdjustments(id); } catch { /* the count can still be read */ } }
+  const counts = {
+    pendingApprovals: s.require_approval ? db.prepare("SELECT COUNT(*) n FROM adjustments WHERE session_id = ? AND status = 'pending'").get(id).n : 0,
+    openSecondCounts: db.prepare("SELECT COUNT(*) n FROM recounts WHERE session_id = ? AND status != 'done'").get(id).n,
+  };
+  if (s.ask_lot) checks.push({ key: 'lot', label: 'Count a pallet with its lot code (lot codes are on)', done: lines.some((l) => l.lot) });
+  if (s.ask_expiry) checks.push({ key: 'expiry', label: 'Enter a best-before date (best-before is on)', done: lines.some((l) => l.expiry) });
+  if (s.require_approval) {
+    checks.push({ key: 'approve', label: 'Approve or reject an adjustment — Dashboard → Adjustments (approvals are on)',
+      done: db.prepare("SELECT 1 FROM adjustments WHERE session_id = ? AND status IN ('approved', 'rejected')").get(id) != null });
+  }
+  if (s.auto_recount) {
+    checks.push({ key: 'second', label: 'Do a second count the gun raised — My aisle → Start second counts',
+      done: db.prepare("SELECT 1 FROM recounts WHERE session_id = ? AND status = 'done' AND source = 'auto'").get(id) != null });
+  }
+  return { checks, counts };
 }
 
 /* A run built from a person's own file: the shelf is the file, so there is
@@ -409,7 +438,8 @@ function uploadedSheet(s, lines, byPallet, emptyBins, countedBins) {
     crew: PRACTICE_CREW,
     bins,
     assignment: db.prepare('SELECT aisle, status FROM assignments WHERE session_id = ? AND team = ? ORDER BY position').all(id, PRACTICE_TEAM),
-    checklist: checks.map(([key, lbl, done]) => ({ key, label: lbl, done })),
+    checklist: [...checks.map(([key, lbl, done]) => ({ key, label: lbl, done })), ...featureChecks(s, lines).checks],
+    extras: featureChecks(s, lines).counts,
     totals: { bins: bins.length, binsCounted: bins.filter((b) => b.counted).length, pallets: allPallets, lines: lines.length },
   };
 }

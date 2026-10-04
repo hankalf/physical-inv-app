@@ -150,8 +150,15 @@
             tdP.appendChild(chip(p.id, b.noScan === 'pallet'
               ? { cls: 'torn', title: 'This label is torn — on the gun tap “Label will not scan”, then “let me type it”. Clicking here types it for you.' }
               : {}));
+            const opt = (data.options && data.options.values) || {};
+            if ((opt.askLot && p.lot) || (opt.askExpiry && p.bestBefore)) {
+              const extra = el('div', 'extra');
+              if (opt.askLot && p.lot) extra.appendChild(chip(p.lot, { cls: 'lot', title: 'The lot code on the pallet — scan it when the gun asks for the lot' }));
+              if (opt.askExpiry && p.bestBefore) extra.appendChild(chip(p.bestBefore, { cls: 'exp', title: 'The best-before date — enter it when the gun asks for the expiry' }));
+              tdP.appendChild(extra);
+            }
             tdP.appendChild(el('div', 'item' + (p.expired ? ' expired' : ''),
-              `${p.desc} · lot ${p.lot} · best before ${p.bestBefore}${p.expired ? ' (expired)' : ''}`));
+              `${p.desc}${opt.askLot ? '' : ' · lot ' + p.lot} · best before ${p.bestBefore}${p.expired ? ' (expired)' : ''}`));
             const rep = [];
             if (!p.report) rep.push('not on the report');
             else {
@@ -223,7 +230,7 @@
     { key: 'requireApproval', label: 'Adjustments need approval', what: 'Every difference from the report has to be approved, with a reason, before it can go to the ERP. See Dashboard → Adjustments.', more: 'approval' },
     { key: 'trackAbc', label: 'ABC classes & accuracy', what: 'Dashboard → Reports shows count accuracy by A, B and C, against a target for each.' },
     { key: 'palletMode', label: 'Pallet ID check', what: 'Allow override (the default) asks YES / NO for a pallet not on the list. No overrides refuses it. Accept any ID does not check at all.', select: [['warn', 'Allow override'], ['strict', 'No overrides'], ['off', 'Accept any ID']] },
-    { key: 'autoRecount', label: 'Raise second counts automatically', what: 'On by default: a pallet that disagrees with the report puts its bin on the second-count list.' },
+    { key: 'autoRecount', label: 'Raise second counts automatically', what: 'Off here until you switch it on (real counts have it on): a pallet that disagrees with the report puts its bin on the second-count list, to try under My aisle → Start second counts.' },
     { key: 'askComments', label: 'Comments step', what: 'On by default: the optional comments question at the end of each pallet.' },
   ];
 
@@ -457,6 +464,28 @@
         text: `The gun wants a <b>pallet</b>. Click <b>${row.dataset.pallet}</b> — that is the pallet on this shelf.${lines ? '' : ' Then it will ask for the quantity, then the bin.'}` };
       if (q && row) return { key: 'qty:' + row.dataset.pallet, target: row.querySelector('.scan.qty'), step: 'Step 3 · count a pallet', text: 'Now the <b>quantity</b>. Click the number — on a real gun the counter keys it in.' };
       if (b && row) return { key: 'bin:' + row.dataset.pallet, target: row.querySelector(`.scan[data-code="${row.dataset.bin}"]`) || $('shelves').querySelector(`.scan[data-code="${row.dataset.bin}"]`), step: 'Step 3 · count a pallet', text: `Last, the <b>bin</b> — click <b>${row.dataset.bin}</b>, the rack label. That saves the line.` };
+      const lotQ = /LOT/i.test(g.prompt), expQ = /EXPIRY/i.test(g.prompt);
+      if (lotQ && row) return { key: 'lot:' + row.dataset.pallet, target: row.querySelector('.scan.lot') || $('gunFrame').closest('.gun'), step: 'Lot codes are on',
+        text: row.querySelector('.scan.lot') ? 'The gun asks for the <b>lot code</b> — click it. A lot that does not match the report is called out on the spot.' : 'The gun asks for the <b>lot code</b>. This pallet has none — tap <b>Skip</b> on the gun.', pos: row.querySelector('.scan.lot') ? '' : 'left' };
+      if (expQ && row) return { key: 'exp:' + row.dataset.pallet, target: row.querySelector('.scan.exp') || $('gunFrame').closest('.gun'), step: 'Best-before is on',
+        text: row.querySelector('.scan.exp') ? 'Now the <b>best-before date</b> — click it. A date that has passed is flagged for a supervisor.' : 'The gun asks for the <b>best-before date</b>. None on this one — tap <b>Skip</b>.', pos: row.querySelector('.scan.exp') ? '' : 'left' };
+      /* a feature switched on in the sandbox gets its moment, once, between pallets */
+      if (p) {
+        const o = (data.options && data.options.values) || {};
+        const x = data.extras || {};
+        const feat = (key, t) => (shownFeat.has(key) ? null : { key: 'feat:' + key, ...t });
+        const f = (x.openSecondCounts > 0 && feat('second', { target: $('gunFrame').closest('.gun'), step: 'Second counts', pos: 'left',
+            text: 'A pallet you counted disagreed with the report, so the gun raised a <b>second count</b>. Tap <b>My aisle</b>, then <b>Start second counts</b>, and count that bin again.' }))
+          || (x.pendingApprovals > 0 && feat('approve', { target: $('btnDashboard'), step: 'Approvals are on',
+            text: 'A difference is waiting to be signed for. <b>Open the dashboard</b> → <b>Adjustments</b>: approve it with a reason, or reject it.' }))
+          || (o.palletMode === 'strict' && feat('strict', { target: $('fWedge'), step: 'No overrides is on',
+            text: 'Type a pallet that is not on the report — <b>FOUND-99</b> — and press <b>SCAN</b>. With no overrides, the gun refuses it instead of asking.' }))
+          || (o.trackAbc && lines >= 3 && feat('abc', { target: $('btnDashboard'), step: 'ABC classes are on',
+            text: '<b>Open the dashboard</b> → <b>Reports</b> shows count accuracy by A, B and C class against the target for each.' }))
+          || (o.askComments === false && !shownFeat.has('nocomments') && feat('nocomments', { target: $('gunFrame').closest('.gun'), step: 'Comments step is off', pos: 'left',
+            text: 'With the comments step off, the gun goes straight to the next pallet after the bin. Count one and watch.' }));
+        if (f) return f;
+      }
       if (c) return { key: 'comments', target: $('gunFrame').closest('.gun'), step: 'Comments', text: 'Optional. Tap a reason on the gun, or <b>Skip</b> — or just wait, it moves on by itself.', pos: 'left' };
       if (p && !row) return { key: 'done', target: $('checks'), step: 'All counted', text: 'Every pallet on the sheet is counted. See what is left under <b>Things to try</b> — then <b>Open the dashboard</b> to see the office side.' };
     }
@@ -464,10 +493,12 @@
     return null;
   }
 
+  const shownFeat = new Set();     // a feature's tip has had its say once the person moves on
   function placeCoach(t) {
     const box = $('coach');
     if (!t || !t.target) { box.hidden = true; if (lastTarget) lastTarget.classList.remove('spot'); lastTarget = null; lastKey = ''; return; }
     if (t.key !== lastKey) {
+      if (lastKey.startsWith('feat:')) shownFeat.add(lastKey.slice(5));
       // a new step: light the target, bring it on screen, and say so
       if (lastTarget) lastTarget.classList.remove('spot');
       t.target.classList.add('spot');
