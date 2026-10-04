@@ -1374,5 +1374,220 @@
    "other": "frames/032-second.jpg",
    "otherLabel": "Second counts"
   }
+ },
+ {
+  "n": 33,
+  "at": "2026-10-04T14:13:50.670Z",
+  "wall": 294,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "09:49",
+  "label": "Wednesday 09:49",
+  "event": "",
+  "lines": 22221,
+  "bins": 20000,
+  "binsTotal": 20000,
+  "pallets": 18591,
+  "exceptions": 197,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 25,
+  "pending": 0,
+  "approved": 296,
+  "rejected": 62,
+  "secondOpen": 333,
+  "secondDone": 324,
+  "lat": {
+   "count": {
+    "n": 20255,
+    "p50": 9,
+    "p95": 747,
+    "max": 3476
+   },
+   "dashboard": {
+    "n": 3720,
+    "p50": 185,
+    "p95": 1262,
+    "max": 4645
+   }
+  },
+  "frames": {
+   "progress": "frames/033-progress.jpg",
+   "board": "frames/033-board.jpg",
+   "other": "frames/033-adjust.jpg",
+   "otherLabel": "Adjustments"
+  }
+ },
+ {
+  "n": 34,
+  "at": "2026-10-04T14:23:54.668Z",
+  "wall": 304,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "10:32",
+  "label": "Wednesday 10:32",
+  "event": "",
+  "lines": 22333,
+  "bins": 20000,
+  "binsTotal": 20000,
+  "pallets": 18591,
+  "exceptions": 197,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 25,
+  "pending": 0,
+  "approved": 296,
+  "rejected": 62,
+  "secondOpen": 250,
+  "secondDone": 407,
+  "lat": {
+   "count": {
+    "n": 20255,
+    "p50": 9,
+    "p95": 747,
+    "max": 3476
+   },
+   "dashboard": {
+    "n": 3843,
+    "p50": 198,
+    "p95": 1333,
+    "max": 4645
+   }
+  },
+  "frames": {
+   "progress": "frames/034-progress.jpg",
+   "board": "frames/034-board.jpg",
+   "other": "frames/034-teams.jpg",
+   "otherLabel": "Teams & crew"
+  }
+ },
+ {
+  "n": 35,
+  "at": "2026-10-04T14:33:58.387Z",
+  "wall": 314,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "11:15",
+  "label": "Wednesday 11:15",
+  "event": "",
+  "lines": 22447,
+  "bins": 20000,
+  "binsTotal": 20000,
+  "pallets": 18591,
+  "exceptions": 197,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 25,
+  "pending": 0,
+  "approved": 296,
+  "rejected": 62,
+  "secondOpen": 161,
+  "secondDone": 496,
+  "lat": {
+   "count": {
+    "n": 20255,
+    "p50": 9,
+    "p95": 747,
+    "max": 3476
+   },
+   "dashboard": {
+    "n": 3967,
+    "p50": 209,
+    "p95": 1356,
+    "max": 4645
+   }
+  },
+  "frames": {
+   "progress": "frames/035-progress.jpg",
+   "board": "frames/035-board.jpg",
+   "other": "frames/035-reports.jpg",
+   "otherLabel": "Reports"
+  }
+ },
+ {
+  "n": 36,
+  "at": "2026-10-04T14:44:07.026Z",
+  "wall": 325,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "11:58",
+  "label": "Lunch: the floor stops, the clocks notice",
+  "event": "lunch",
+  "lines": 22558,
+  "bins": 20000,
+  "binsTotal": 20000,
+  "pallets": 18591,
+  "exceptions": 197,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 25,
+  "pending": 0,
+  "approved": 296,
+  "rejected": 62,
+  "secondOpen": 75,
+  "secondDone": 582,
+  "lat": {
+   "count": {
+    "n": 20255,
+    "p50": 9,
+    "p95": 747,
+    "max": 3476
+   },
+   "dashboard": {
+    "n": 4090,
+    "p50": 224,
+    "p95": 1451,
+    "max": 4645
+   }
+  },
+  "frames": {
+   "progress": "frames/036-progress.jpg",
+   "board": "frames/036-board.jpg",
+   "other": "frames/036-teams.jpg",
+   "otherLabel": "Team plan"
+  }
+ },
+ {
+  "n": 37,
+  "at": "2026-10-04T14:54:02.576Z",
+  "wall": 335,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "12:40",
+  "label": "Wednesday 12:40",
+  "event": "",
+  "lines": 22655,
+  "bins": 20000,
+  "binsTotal": 20000,
+  "pallets": 18591,
+  "exceptions": 197,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 25,
+  "pending": 0,
+  "approved": 296,
+  "rejected": 62,
+  "secondOpen": 0,
+  "secondDone": 657,
+  "lat": {
+   "count": {
+    "n": 20255,
+    "p50": 9,
+    "p95": 747,
+    "max": 3476
+   },
+   "dashboard": {
+    "n": 4212,
+    "p50": 243,
+    "p95": 1473,
+    "max": 4645
+   }
+  },
+  "frames": {
+   "progress": "frames/037-progress.jpg",
+   "board": "frames/037-board.jpg",
+   "other": "frames/037-teams.jpg",
+   "otherLabel": "Team plan"
+  }
  }
 ]
