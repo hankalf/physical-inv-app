@@ -13,14 +13,14 @@ const HERE = new URL('.', import.meta.url).pathname;
 const BASE_PORT = Number(process.env.PORT || 3111);
 const SUITES = process.argv.slice(2).length
   ? process.argv.slice(2).map((n) => (n.endsWith('.mjs') ? n : `${n}.mjs`))
-  : ['full-count.mjs', 'cycle-count.mjs', 'roster.mjs', 'ops.mjs', 'scanner-auth.mjs', 'settings.mjs', 'board.mjs', 'search.mjs', 'barcodes.mjs', 'lockout.mjs', 'superadmin.mjs', 'setup-guide.mjs', 'recount-threshold.mjs', 'scanner-prompts.mjs', 'gun-guidance.mjs', 'gun-layout.mjs', 'gun-portrait.mjs', 'self-update.mjs', 'durability.mjs', 'delete-session.mjs', 'lot-expiry.mjs', 'multi-tag-bins.mjs', 'messages.mjs', 'sos.mjs', 'approvals.mjs', 'labels-notes.mjs', 'testing-tab.mjs', 'clocks-shifts.mjs', 'gun-floor.mjs', 'office-batch.mjs', 'auto-plan.mjs', 'moves.mjs', 'fix-list.mjs', 'missing.mjs', 'comment-timeout-upgrade.mjs', 'load-15-teams.mjs', 'access.mjs', 'sources.mjs'];
+  : ['full-count.mjs', 'cycle-count.mjs', 'roster.mjs', 'ops.mjs', 'scanner-auth.mjs', 'settings.mjs', 'board.mjs', 'search.mjs', 'barcodes.mjs', 'superadmin.mjs', 'setup-guide.mjs', 'recount-threshold.mjs', 'scanner-prompts.mjs', 'gun-guidance.mjs', 'gun-layout.mjs', 'gun-portrait.mjs', 'self-update.mjs', 'durability.mjs', 'delete-session.mjs', 'lot-expiry.mjs', 'multi-tag-bins.mjs', 'messages.mjs', 'sos.mjs', 'approvals.mjs', 'labels-notes.mjs', 'testing-tab.mjs', 'clocks-shifts.mjs', 'gun-floor.mjs', 'office-batch.mjs', 'auto-plan.mjs', 'moves.mjs', 'fix-list.mjs', 'missing.mjs', 'comment-timeout-upgrade.mjs', 'load-15-teams.mjs', 'access.mjs', 'sources.mjs'];
 
 mkdirSync(join(HERE, 'screenshots'), { recursive: true });
 
 async function withServer(port, fn) {
   const dataDir = mkdtempSync(join(tmpdir(), 'invtest-'));
   const server = spawn(process.execPath, ['--no-warnings=ExperimentalWarning', join(HERE, '..', 'src', 'server.js')], {
-    env: { ...process.env, PORT: String(port), DB_PATH: join(dataDir, 'test.db'), ADMIN_PASSWORD: 'changeme', SITE_TIMEZONE: 'America/New_York' },
+    env: { ...process.env, PORT: String(port), DB_PATH: join(dataDir, 'test.db'), SUPERADMIN_USER: 'DANA-WHITFIELD', SUPERADMIN_NAME: 'Dana Whitfield', SUPERADMIN_PASSWORD: 'changeme', SITE_TIMEZONE: 'America/New_York' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let log = '';

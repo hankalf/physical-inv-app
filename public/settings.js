@@ -96,57 +96,7 @@
     const isAdmin = me.role === 'admin';
     $('adminOnly').hidden = !isAdmin;
     $('notAdmin').hidden = isAdmin;
-    $('ownPassword').hidden = !me.username;
-    $('ownPasswordNA').hidden = !!me.username;
-    /* Three states, and the middle one is the one worth naming: the setting says
-       off, but there is no admin account to sign in with, so it is being held
-       open rather than locking the building. */
-    const chip = $('sharedChip');
-    chip.hidden = false;
-    if (me.sharedLoginHeldOpen) {
-      chip.className = 'chip offline';
-      chip.textContent = 'shared password held open';
-      chip.title = 'SHARED_PASSWORD_LOGIN is off, but turning it off now would leave nobody able to sign in.';
-    } else if (!me.sharedLogin) {
-      chip.className = 'chip online';
-      chip.textContent = 'logins only';
-      chip.title = 'The shared password is turned off — every supervisor signs in as themselves.';
-    } else {
-      chip.className = 'chip ' + (me.admins ? 'offline' : '');
-      chip.textContent = me.admins ? 'shared password still accepted' : 'shared password only';
-      chip.title = 'Set SHARED_PASSWORD_LOGIN=off once somebody has an admin login.';
-    }
-
-    // and say what to do about it, in the card rather than only in a tooltip
-    const note = $('sharedNote');
-    if (me.sharedLoginHeldOpen) {
-      note.className = 'feedback show warn';
-      note.textContent = 'SHARED_PASSWORD_LOGIN is off, but it is still being accepted.';
-      const d = document.createElement('div');
-      d.className = 'detail';
-      d.textContent = 'There is no admin account yet, so turning it off would leave nobody able to sign in — '
-        + 'and nobody able to create the account that would fix it. Add an admin login below and the setting '
-        + 'takes effect on its own, no redeploy.';
-      note.appendChild(d);
-    } else if (me.sharedLogin && me.admins) {
-      note.className = 'feedback show warn';
-      note.textContent = 'The shared password still works.';
-      const d = document.createElement('div');
-      d.className = 'detail';
-      d.textContent = `${me.admins} admin login${me.admins === 1 ? '' : 's'} exist${me.admins === 1 ? 's' : ''}, so nothing needs it now. `
-        + 'Set SHARED_PASSWORD_LOGIN=off in the server environment and everyone signs in as themselves.';
-      note.appendChild(d);
-    } else if (me.sharedLogin) {
-      note.className = 'feedback show warn';
-      note.textContent = 'The shared password is the only way in.';
-      const d = document.createElement('div');
-      d.className = 'detail';
-      d.textContent = 'Add an admin login below, sign in as it to check it works, then set SHARED_PASSWORD_LOGIN=off.';
-      note.appendChild(d);
-    } else {
-      note.className = 'feedback';
-      note.textContent = '';
-    }
+    $('ownPassword').hidden = false;
     if (isAdmin) await refreshUsers();
   }
 
@@ -211,8 +161,23 @@
           note.textContent = 'Settings is for admins only.';
           panel.appendChild(note);
           pick.append(sum, panel);
-          // one list open at a time
-          pick.addEventListener('toggle', () => { if (pick.open) for (const o of document.querySelectorAll('details.accpick[open]')) if (o !== pick) o.open = false; });
+          /* The table sits in a scroll box, which would clip a panel inside it,
+             so the open panel floats over the page from where the button is.
+             One open at a time; an outside click or a scroll closes it. */
+          const place = () => {
+            const r = sum.getBoundingClientRect();
+            panel.style.top = `${Math.min(r.bottom + 4, window.innerHeight - panel.offsetHeight - 8)}px`;
+            panel.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - panel.offsetWidth - 8))}px`;
+          };
+          pick.addEventListener('toggle', () => {
+            if (!pick.open) return;
+            for (const o of document.querySelectorAll('details.accpick[open]')) if (o !== pick) o.open = false;
+            place();
+            const away = (e) => { if (!pick.contains(e.target)) { pick.open = false; document.removeEventListener('click', away, true); } };
+            setTimeout(() => document.addEventListener('click', away, true), 0);
+            const onScroll = () => { if (pick.open) place(); else window.removeEventListener('scroll', onScroll, true); };
+            window.addEventListener('scroll', onScroll, true);
+          });
           say();
           tdAcc.appendChild(pick);
         }
@@ -259,7 +224,7 @@
         for (const b of act.querySelectorAll('button')) b.style.marginRight = '4px';
         tr.appendChild(act);
         return tr;
-      }, 'No logins yet — everyone is signing in with the shared password.');
+      }, 'No logins yet besides the superadmin.');
   }
 
   /* A starter password is shown once, big enough to read across a desk, and is

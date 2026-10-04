@@ -54,7 +54,9 @@ check('…F12314-111 is on the report in F01A006, and sitting in F01A005', shelf
 check('…F19999-999 is on the shelf and not on the report', shelf('F19999-999').report === null);
 check('…and F12321-111 is on the report and not on the shelf', bin('F01B006').missing.some((m) => m.id === 'F12321-111' && !m.foundIn));
 
-const otherTok = await login('Marcus Obi');
+// a second supervisor is a second account now - there is no shared password to sign in under another name
+await fetch(`${BASE}/api/admin/users`, { method: 'POST', headers: A, body: JSON.stringify({ username: 'MARCUS-OBI', name: 'Marcus Obi', password: 'dock-side-77', mustChange: false }) });
+const otherTok = (await (await fetch(`${BASE}/api/admin/login`, { method: 'POST', headers: hdr, body: JSON.stringify({ username: 'MARCUS-OBI', password: 'dock-side-77' }) })).json()).token;
 const O = { ...hdr, authorization: 'Bearer ' + otherTok };
 const other = await post('/api/admin/practice', {}, O);
 check('A second supervisor gets a different test scanner, so they cannot sign each other out',
@@ -420,7 +422,7 @@ check('"Before you start" says the tab is ready, once the gun is up', /ready to 
 const readyText = clean(await page.textContent('#readyList'));
 check('…listing the test data, the test scanner, the team\'s aisles and the gun', /Test data loaded — 24 bins, 25 pallets/.test(readyText)
   && /Test scanner TEST-DANA-WHITFIELD registered/.test(readyText) && /Team 99 has 2 aisles/.test(readyText) && /scanner app is running/.test(readyText), readyText.slice(0, 260));
-check('…and says plainly when you are on the shared password, and what to do', /shared password/.test(readyText) && /Settings → Advanced/.test(readyText));
+check('…and says whose login the practice is kept under', /Signed in as DANA-WHITFIELD/.test(readyText), readyText.slice(0, 80));
 
 /* ---------------- your own test pallets ---------------- */
 const badUp = await fetch(`${BASE}/api/admin/practice/upload?name=bad.csv`, { method: 'POST', headers: { authorization: 'Bearer ' + tok, 'content-type': 'text/csv' },

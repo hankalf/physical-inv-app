@@ -67,13 +67,13 @@ const SCANNER_AUTH = String(process.env.SCANNER_AUTH || 'required').toLowerCase(
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'changeme';
-/* A real admin login, seeded from the environment so a site never has to
-   bootstrap through the shared password. The password falls back to
-   ADMIN_PASSWORD when SUPERADMIN_PASSWORD is not set separately. */
-const SUPERADMIN_USER = process.env.SUPERADMIN_USER || '';
+/* The one login that exists before anyone makes another: the superadmin, set
+   in the environment (Railway variables). There is no shared password - every
+   person signs in as themselves, and the log names them. ADMIN_PASSWORD is
+   still read as the superadmin's password, for deployments set up before. */
+const SUPERADMIN_PASSWORD = process.env.SUPERADMIN_PASSWORD || process.env.ADMIN_PASSWORD || '';
+const SUPERADMIN_USER = process.env.SUPERADMIN_USER || (SUPERADMIN_PASSWORD ? 'ADMIN' : '');
 const SUPERADMIN_NAME = process.env.SUPERADMIN_NAME || '';
-const SUPERADMIN_PASSWORD = process.env.SUPERADMIN_PASSWORD || ADMIN_PASSWORD;
 const PUBLIC_DIR = resolve(fileURLToPath(new URL('../public', import.meta.url)));
 const MAX_BODY = Number(process.env.MAX_UPLOAD_MB || 64) * 1024 * 1024;
 
@@ -108,9 +108,6 @@ try {
 }
 console.log(`[app] build ${appBuild.version}`);
 
-if (ADMIN_PASSWORD === 'changeme') {
-  console.warn('[warn] ADMIN_PASSWORD is unset - the dashboard password is "changeme".');
-}
 if (!SCANNER_AUTH) {
   console.warn('[warn] SCANNER_AUTH=off - anyone who can reach this server can post counts.');
 }
@@ -207,27 +204,6 @@ const httpError = (status, message) => Object.assign(new Error(message), { statu
 
 // token -> { name, username, role }
 const adminTokens = new Map();
-
-/*
- * The shared password is the way in before anyone has an account, and the way
- * back in when everyone has forgotten theirs. Its use is always logged as such.
- *
- * SHARED_PASSWORD_LOGIN=off turns it off - but only once there is an admin
- * account to turn it off in favour of. Off with no admin is not a locked door,
- * it is a bricked deployment: nobody can sign in, and nobody can create the
- * account that would let them, without a redeploy. So the switch waits, says
- * so at startup, and takes effect by itself the moment an admin exists.
- */
-const SHARED_LOGIN_WANTED = String(process.env.SHARED_PASSWORD_LOGIN || 'on').toLowerCase() !== 'off';
-const sharedLoginOn = () => SHARED_LOGIN_WANTED || countAdmins() === 0;
-/** True when the setting is off but being held open because nobody could get back in. */
-const sharedLoginHeldOpen = () => !SHARED_LOGIN_WANTED && countAdmins() === 0;
-
-function passwordMatches(candidate) {
-  const a = Buffer.from(String(candidate || ''));
-  const b = Buffer.from(ADMIN_PASSWORD);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
 
 function currentUser(req, url) {
   const auth = String(req.headers.authorization || '');
@@ -566,34 +542,17 @@ async function handleAdmin(req, res, url, m) {
   if (p === '/api/admin/login' && method === 'POST') {
     const body = await readJson(req);
     const token = randomUUID();
-    const username = String(body.username || '').trim();
-
-    // A real account first. What was typed can be either a username or, at a site
-    // still on the shared password, just a name - so an unknown name falls
-    // through, while a name that IS an account must get that account's password.
-    if (username) {
-      const user = authenticate(username, body.password);
-      if (user) {
-        adminTokens.set(token, { name: user.name, username: user.username, role: user.role });
-        audit(user.name, 'signed in', `as ${user.username} (${user.role})`);
-        // a starter password gets them in, but only as far as choosing a real one
-        return sendJson(req, res, 200, {
-          token, name: user.name, username: user.username, role: user.role,
-          mustChange: user.mustChange, accounts: countUsers(),
-        });
-      }
-      if (getUser(username)) throw httpError(401, 'that username and password do not match');
-    }
-
-    // otherwise the shared password, which is recorded for what it is
-    if (!sharedLoginOn()) throw httpError(401, 'sign in with your username and password');
-    if (!passwordMatches(body.password)) throw httpError(401, 'bad password');
-    const who = String(body.name || username || '').trim().slice(0, 40) || 'shared password';
-    adminTokens.set(token, { name: who, username: '', role: 'admin' });
-    audit(who, 'signed in with the shared password', sharedLoginHeldOpen()
-      ? 'SHARED_PASSWORD_LOGIN is off but held open - no admin account exists yet'
-      : countUsers() ? 'accounts exist - this should be rare' : 'no accounts yet');
-    return sendJson(req, res, 200, { token, name: who, username: '', role: 'admin', shared: true, accounts: countUsers() });
+    // a password with no username is the superadmin's: the one login the site started with
+    const username = String(body.username || '').trim() || SUPERADMIN_USER;
+    const user = username ? authenticate(username, body.password) : null;
+    if (!user) throw httpError(401, 'that username and password do not match');
+    adminTokens.set(token, { name: user.name, username: user.username, role: user.role });
+    audit(user.name, 'signed in', `as ${user.username} (${user.role})`);
+    // a starter password gets them in, but only as far as choosing a real one
+    return sendJson(req, res, 200, {
+      token, name: user.name, username: user.username, role: user.role,
+      mustChange: user.mustChange, accounts: countUsers(),
+    });
   }
 
   const actor = requireAdmin(req, url);
@@ -919,12 +878,11 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, {
       ...who, role: whoNow.role, access: whoNow.access, accessKeys: ACCESS, mustChange: !!(account && account.must_change),
       accounts: countUsers(), admins: countAdmins(),
-      sharedLogin: sharedLoginOn(), sharedLoginHeldOpen: sharedLoginHeldOpen(),
     });
   }
   if (p === '/api/admin/users' && method === 'GET') {
     requireAccountAdmin(req, url);
-    return sendJson(req, res, 200, { users: listUsers(), sharedLogin: sharedLoginOn(), sharedLoginHeldOpen: sharedLoginHeldOpen() });
+    return sendJson(req, res, 200, { users: listUsers() });
   }
   if (p === '/api/admin/users' && method === 'POST') {
     const me = requireAccountAdmin(req, url);
@@ -1645,28 +1603,24 @@ server.listen(PORT, HOST, () => {
   console.log(`  dashboard: http://<server-ip>:${PORT}/admin`);
   console.log(`  office board: http://<server-ip>:${PORT}/board`);
 
-  /* Seed the superadmin before reporting the state, so the two agree. Never with
-     the default password: that would put a live admin account behind a password
-     published in this repo's README. */
+  /* Seed the superadmin before reporting the state, so the two agree. Create
+     only: an account already there is never touched, so a password changed in
+     the app survives every restart. */
   if (SUPERADMIN_USER) {
-    if (SUPERADMIN_PASSWORD === 'changeme') {
-      console.warn(`[warn] SUPERADMIN_USER=${SUPERADMIN_USER} not created: its password would be "changeme".`);
-      console.warn('       Set SUPERADMIN_PASSWORD (or ADMIN_PASSWORD) to something real and restart.');
-    } else {
-      try {
-        const seeded = ensureSuperadmin({ username: SUPERADMIN_USER, name: SUPERADMIN_NAME, password: SUPERADMIN_PASSWORD });
-        if (seeded.status === 'created') {
-          console.log(`  superadmin: created ${seeded.username} - sign in with it and change its password`);
-          audit('startup', 'created the superadmin account', `${seeded.username} from SUPERADMIN_USER`);
-        } else if (seeded.status === 'already there') {
-          console.log(`  superadmin: ${seeded.username} already exists, left untouched${seeded.note ? ' - ' + seeded.note : ''}`);
-        } else if (seeded.status === 'refused') {
-          console.warn(`[warn] SUPERADMIN_USER=${SUPERADMIN_USER} not created: ${seeded.why}`);
-        }
-      } catch (err) {
-        // a bad value here must never stop the app coming up
-        console.warn(`[warn] could not create SUPERADMIN_USER=${SUPERADMIN_USER}: ${err.message}`);
+    try {
+      const seeded = ensureSuperadmin({ username: SUPERADMIN_USER, name: SUPERADMIN_NAME, password: SUPERADMIN_PASSWORD });
+      if (seeded.status === 'created') {
+        console.log(`  superadmin: created ${seeded.username} - sign in with it and change its password`);
+        if (SUPERADMIN_PASSWORD === 'changeme') console.warn('[warn] its password is "changeme" - set SUPERADMIN_PASSWORD to something real and change it in the app');
+        audit('startup', 'created the superadmin account', `${seeded.username} from SUPERADMIN_USER`);
+      } else if (seeded.status === 'already there') {
+        console.log(`  superadmin: ${seeded.username} already exists, left untouched${seeded.note ? ' - ' + seeded.note : ''}`);
+      } else if (seeded.status === 'refused') {
+        console.warn(`[warn] SUPERADMIN_USER=${SUPERADMIN_USER} not created: ${seeded.why}`);
       }
+    } catch (err) {
+      // a bad value here must never stop the app coming up
+      console.warn(`[warn] could not create SUPERADMIN_USER=${SUPERADMIN_USER}: ${err.message}`);
     }
   }
 
@@ -1683,17 +1637,9 @@ server.listen(PORT, HOST, () => {
 
   // Say plainly how somebody signs in, because getting this wrong locks people out.
   const admins = countAdmins();
-  console.log(`  sign-in:   ${admins} admin account(s), ${countUsers()} login(s) in total`);
-  if (sharedLoginHeldOpen()) {
-    console.warn('[warn] SHARED_PASSWORD_LOGIN=off, but there is no admin account yet, so the');
-    console.warn('       shared password is STILL ACCEPTED - turning it off now would leave');
-    console.warn('       nobody able to sign in. Sign in with it, add an admin under');
-    console.warn('       Settings -> Logins, and the setting takes effect on its own.');
-  } else if (!SHARED_LOGIN_WANTED) {
-    console.log('  shared password: off - everyone signs in with their own login');
-  } else if (admins) {
-    console.log('  shared password: ON - set SHARED_PASSWORD_LOGIN=off now that admins exist');
-  } else {
-    console.log('  shared password: ON - the only way in until you add an admin login');
+  console.log(`  sign-in:   ${admins} admin account(s), ${countUsers()} login(s) in total - everyone signs in as themselves`);
+  if (!admins) {
+    console.warn('[warn] there is NO admin account, so nobody can sign in. Set SUPERADMIN_USER and');
+    console.warn('       SUPERADMIN_PASSWORD (at least 8 characters) in the environment and restart.');
   }
 });

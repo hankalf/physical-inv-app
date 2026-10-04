@@ -86,7 +86,7 @@ redeploy.
 **On a PC inside the warehouse (no internet needed).**
 
 ```bash
-ADMIN_PASSWORD='pick-something' docker compose up -d
+SUPERADMIN_PASSWORD='pick-something' docker compose up -d
 ```
 
 Then give that PC a static IP or a DHCP reservation, because the handhelds are pointed
@@ -100,12 +100,11 @@ before anybody signs in:
 
 | Setting | Set it to | Why |
 |---|---|---|
-| `ADMIN_PASSWORD` | A password only supervisors know | The shared way in, used once to create real logins |
 | `DB_PATH` | A path on the persistent volume, e.g. `/data/inventory.db` | Otherwise a redeploy loses the count |
 | `SITE_TIMEZONE` | `America/New_York` | Dates on reports and cycle-count due dates |
-| `SUPERADMIN_USER` | e.g. `sitelead` | Creates one permanent admin login at start-up |
+| `SUPERADMIN_USER` | e.g. `sitelead` (defaults to `ADMIN`) | The one admin login the site starts with, made at start-up |
 | `SUPERADMIN_NAME` | That person's name, as it should appear in the log | Shown against everything they do |
-| `SUPERADMIN_PASSWORD` | A strong password, at least 8 characters | If unset it falls back to `ADMIN_PASSWORD` |
+| `SUPERADMIN_PASSWORD` | A strong password, at least 8 characters | Its password; `ADMIN_PASSWORD` is read as the same thing |
 
 The superadmin account is created when the server starts and cannot be deleted from
 inside the app, so you can never lock yourself out. The app refuses to create it if the
@@ -117,8 +116,9 @@ so in the start-up log and carry on without it.
 
 ### Step 3 — Sign in for the first time
 
-Open `/settings`. Sign in with the shared `ADMIN_PASSWORD` (leave the username box
-empty), or with the superadmin username and password if you set one.
+Open `/admin`. The page is a plain sign-in until you are in. Sign in as the superadmin —
+its username and the password you set in Railway (a password typed with no username is
+taken as the superadmin's). There is no shared password.
 
 ### Step 4 — Create a login for each supervisor
 
@@ -149,19 +149,11 @@ own password from **Change my password** at the foot of the sidebar.
 
 *Settings &rarr; Advanced. Each person has their own login and their own password; the starter password is shown once.*
 
-### Step 5 — Turn the shared password off
+### Step 5 — Change the superadmin's password
 
-Once at least one admin login exists, set `SHARED_PASSWORD_LOGIN=off` in the server
-settings. From then on everybody signs in as themselves and the log names who did what.
-
-The app will not let this lock you out: if there are no admin accounts, the shared
-password keeps working regardless of the setting.
-
----
-
-## Part 2 — First-time setup: the warehouse
-
-> Also once, though you will come back to steps 6 and 7 whenever the racking changes.
+Sign in as the superadmin, press **Change my password** at the foot of the sidebar, and
+pick one only you know. The environment variable no longer opens the account after that;
+a restart never puts the old password back.
 
 ### Step 6 — Upload the bin list
 
@@ -1272,7 +1264,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | Second-count list is enormous | Thresholds are at 0 | Set **Recount over** and **or over %**, and a **cap** (Part 3, step 13) |
 | The map is a schematic, not your drawing | No rack drawing on this count | Settings → Getting started → Count session → **Map drawing** |
 | A reason code edit "did not reach" a gun | It takes up to about half a minute, and only lands between pallets | Wait for the counter to finish the pallet they are on |
-| Can nobody sign in? | All logins lost | The shared password turns itself back on when there are no admin accounts; the superadmin login is recreated at start-up |
+| Can nobody sign in? | All logins lost | The superadmin is made from the Railway variables the first time the app starts; if it was deleted or demoted later, set `SUPERADMIN_USER` to a new username and restart, which makes a fresh admin login |
 | Numbers look wrong after an ERP import | The inventory report moved on | Re-upload it with **Replace what is there**, then re-read the pallet report |
 
 ---
@@ -1360,7 +1352,7 @@ Dates are read in either order — `2027-03-15` and `03/15/2027` both work.
 
 | Setting | Default | What it does |
 |---|---|---|
-| `ADMIN_PASSWORD` | `changeme` | The shared supervisor password. Change it |
+| `SUPERADMIN_PASSWORD` | — | The superadmin's password. Set it |
 | `SHARED_PASSWORD_LOGIN` | `on` | `off` requires named logins — ignored if no admin account exists, so it cannot lock you out |
 | `SUPERADMIN_USER` | — | Username of the permanent admin, created at start-up |
 | `SUPERADMIN_NAME` | — | That person's name, as it appears in the log |

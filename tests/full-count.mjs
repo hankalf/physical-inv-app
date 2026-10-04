@@ -30,7 +30,7 @@ const A = (sel) => admin.$(sel);
 const card = async (sel) => (await admin.$(sel)).evaluateHandle((el) => el.closest('.card'));
 await admin.goto(BASE + '/admin');
 await admin.fill('#fPassword', 'wrong'); await admin.click('#btnLogin'); await admin.waitForTimeout(300);
-check('Admin: wrong password rejected', clean(await admin.textContent('#loginMsg')) === 'bad password', clean(await admin.textContent('#loginMsg')));
+check('Admin: wrong password rejected', /do not match/.test(clean(await admin.textContent('#loginMsg'))), clean(await admin.textContent('#loginMsg')));
 await shot(admin, 'admin-login');
 await admin.fill('#fPassword', 'changeme'); await admin.click('#btnLogin');
 await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(500);

@@ -38,7 +38,7 @@
     <section class="screen active" id="scrLogin">
       <div class="card signin">
         <h2>Supervisor sign-in</h2>
-        <label for="fUser">Username <span style="text-transform:none;letter-spacing:0">— or your name, if your site still uses the shared password</span></label>
+        <label for="fUser">Username</label>
         <input id="fUser" autocomplete="username" placeholder="e.g. DANA">
         <label for="fPassword">Password</label>
         <input id="fPassword" type="password" autocomplete="current-password">
@@ -524,14 +524,14 @@
     <!-- ============ advanced: the things set once and left alone ============ -->
       <div data-sub="advanced" data-sub-label="Advanced">
     <div class="card">
-      <h2>Supervisor logins <span class="chip" id="sharedChip" hidden></span>
+      <h2>Supervisor logins
         <span class="muted">everyone who changes something is recorded by name in the log</span></h2>
-      <div class="feedback" id="sharedNote"></div>
       <div id="adminOnly">
         <div class="hint">
-          Give each supervisor their own login. <b>Admins</b> can manage accounts and everything else;
-          <b>supervisors</b> can do everything except manage accounts. Deactivating a login keeps its history
-          in the log but stops it being used.
+          Give each supervisor their own login. <b>Admins</b> can manage accounts, Settings and everything else;
+          <b>supervisors</b> get the pages and functions ticked under <b>May use</b>. Deactivating a login keeps its history
+          in the log but stops it being used. The <b>superadmin</b> is the login the site started with, set in the server's
+          environment (Railway variables); there is no shared password.
         </div>
         <div class="inline" style="margin-top:10px">
           <div class="auto"><label for="fNewUser">Username</label><input id="fNewUser" style="width:140px" placeholder="DANA"></div>
@@ -565,7 +565,6 @@
         <div class="auto"><label for="fNextPass">New</label><input id="fNextPass" type="password" autocomplete="new-password" style="width:160px" placeholder="8+ characters"></div>
         <div class="auto"><button class="fit" id="btnChangePass">Change password</button></div>
       </div>
-      <div class="hint" id="ownPasswordNA" hidden>You are signed in with the shared password, which has no account to change. Ask an admin for a login of your own.</div>
       <div class="feedback" id="passMsg"></div>
     </div>
 

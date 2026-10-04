@@ -241,7 +241,30 @@
   };
   const mayOpen = (href) => api.can(PAGE_KEY[href] || '');
 
+  /* Before sign-in the page is a plain splash: the logo and the name, the
+     sign-in box, nothing else. The sidebar comes with the sign-in. */
+  function splash() {
+    document.documentElement.classList.toggle('signed-in', !!api.me);
+    const card = document.querySelector('#scrLogin .card.signin');
+    if (card && !card.querySelector('.splashbrand')) {
+      const b = document.createElement('div');
+      b.className = 'splashbrand';
+      b.innerHTML = '<img class="logo" alt="" hidden><div class="mark">▦</div><div class="name">Inventory Count<span>Front Royal</span></div>';
+      card.prepend(b);
+    }
+    const img = card && card.querySelector('.splashbrand img.logo');
+    if (img) {
+      let b = null;
+      try { b = JSON.parse(localStorage.getItem('siteBranding') || 'null'); } catch { b = null; }
+      const has = !!(b && b.logo);
+      img.hidden = !has;
+      if (has && img.src !== b.logo) img.src = b.logo;
+      card.querySelector('.splashbrand .mark').hidden = has;
+    }
+  }
+
   function renderTabs() {
+    splash();
     const bar = document.getElementById('navTabs');
     if (!bar) return;
     bar.innerHTML = '';
@@ -312,11 +335,8 @@
     const who = document.getElementById('navWho');
     if (who) {
       who.hidden = !api.me;
-      // The shared password is always admin, so saying so adds nothing - flag it instead.
-      const shared = !!api.me && !api.me.username;
-      who.textContent = !api.me ? '' : shared ? api.me.name : `${api.me.name}${api.me.role === 'admin' ? ' · admin' : ''}`;
-      who.title = !api.me ? '' : shared ? 'signed in with the shared password, not an account of your own' : `signed in as ${api.me.username}`;
-      who.classList.toggle('shared', shared);
+      who.textContent = !api.me ? '' : `${api.me.name}${api.me.role === 'admin' ? ' · admin' : ''}`;
+      who.title = !api.me ? '' : `signed in as ${api.me.username}`;
     }
     const out = document.getElementById('navLogout');
     if (out) out.hidden = !api.me;
@@ -336,10 +356,9 @@
     }
   }
 
-  async function signIn(usernameOrName, password) {
-    // One field: it is a username if there is an account by that name, and
-    // otherwise just who to record against the shared password. The server decides.
-    const body = { username: usernameOrName, name: usernameOrName, password };
+  async function signIn(username, password) {
+    // a password on its own is the superadmin's; everyone else types their username
+    const body = { username, password };
     const res = await fetch('/api/admin/login', {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
     });
@@ -725,7 +744,7 @@
     ['Level rules for equipment', '/teams', 'rules', 'level rules reach equipment which levels forklift high reach'],
     ['Getting started checklist', '/settings', 'start', 'getting started checklist setup first time what next'],
     ['Scanner screen layout', '/settings', 'gun', 'scanner screen questions order keyboard text size upright portrait update comments countdown gun handheld'],
-    ['Supervisor logins', '/settings', 'advanced', 'login user password account supervisor admin shared advanced'],
+    ['Supervisor logins', '/settings', 'advanced', 'login user password account supervisor admin access advanced'],
     ['Microsoft Teams channel', '/settings', 'advanced', 'teams channel webhook alerts sos notify card advanced'],
     ['Theme and accent colour', '/settings', 'advanced', 'theme dark light colour color accent look appearance advanced'],
     ['Site logo', '/settings', 'advanced', 'logo brand image picture upload company header scanner advanced'],
@@ -957,6 +976,7 @@
       const b = await (await fetch('/api/branding', { cache: 'no-cache' })).json();
       drawLogo(b);
       try { localStorage.setItem('siteBranding', JSON.stringify({ logo: b.logo })); } catch { /* private window */ }
+      splash();
       document.dispatchEvent(new CustomEvent('branding', { detail: b }));
       return b;
     } catch { return null; }

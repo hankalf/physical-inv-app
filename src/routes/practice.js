@@ -494,11 +494,8 @@ export function practiceReadiness(who, sessionId, device) {
   const aisles = n("SELECT COUNT(*) n FROM assignments WHERE session_id = ? AND status != 'done'")
     + n("SELECT COUNT(*) n FROM assignments WHERE session_id = ? AND status = 'done'");
   const dev = device ? db.prepare('SELECT * FROM devices WHERE uid = ?').get(device.uid) : null;
-  const own = !!(who && who.username);
   return [
-    { key: 'login', ok: own, optional: !own,
-      label: own ? `Signed in as ${who.username} — your practice is kept under your login` : 'Signed in with the shared password',
-      fix: own ? '' : `Your practice is kept under the name you typed (“${(who && who.name) || ''}”). Sign in with your own login (Settings → Advanced → Supervisor logins) so it is yours alone.` },
+    { key: 'login', ok: true, label: `Signed in as ${(who && (who.username || who.name)) || 'you'} — your practice is kept under your login`, fix: '' },
     { key: 'data', ok: bins > 0 && pallets > 0,
       label: bins && pallets ? `Test data loaded — ${bins} bins, ${pallets} pallets${s && s.practice_source === 'upload' ? ' from your file' : ' (built in)'}` : 'Test data loaded',
       fix: bins && pallets ? '' : 'Use the built-in data, or upload a Bin / Pallet / Qty file below.' },

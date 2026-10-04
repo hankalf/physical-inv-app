@@ -12,13 +12,13 @@ const j = (r) => r.json();
 const login = (body) => fetch(`${BASE}/api/admin/login`, { method: 'POST', headers: hdr, body: JSON.stringify(body) });
 const bearer = (t) => ({ ...hdr, authorization: 'Bearer ' + t });
 
-/* ---------------- the shared password, before anyone has an account ---------------- */
+/* ---------------- the superadmin: the login the site starts with ---------------- */
 const shared = await login({ password: 'changeme', name: 'Dana' });
 const D = await j(shared);
-check('The shared password still works when there are no accounts', shared.ok && D.role === 'admin' && D.shared === true, `${D.name} / ${D.role}`);
+check('A password on its own signs in the superadmin set in the environment', shared.ok && D.role === 'admin' && D.username === 'DANA-WHITFIELD' && D.name === 'Dana Whitfield', `${D.name} / ${D.role}`);
 const A = bearer(D.token);
 const me0 = await j(await fetch(`${BASE}/api/admin/me`, { headers: A }));
-check('Who am I: the shared password has no username of its own', me0.username === '' && me0.accounts === 0 && me0.sharedLogin === true, JSON.stringify(me0));
+check('Who am I: the superadmin is a real account, the only one so far', me0.username === 'DANA-WHITFIELD' && me0.accounts === 1 && me0.admins === 1, JSON.stringify(me0).slice(0, 120));
 check('Who am I needs a sign-in', (await fetch(`${BASE}/api/admin/me`)).status === 401);
 
 /* ---------------- creating accounts ---------------- */
@@ -42,10 +42,9 @@ check('A supervisor signs in with their own username and password', asDana.ok &&
 const wrong = await login({ username: 'dana', password: 'freezer-2025' });
 check('A wrong password on a real account is refused', wrong.status === 401 && /do not match/.test((await j(wrong)).error), '');
 const sneak = await login({ username: 'dana', name: 'dana', password: 'changeme' });
-check('The shared password does NOT open somebody else\'s account', sneak.status === 401, String(sneak.status));
+check('The superadmin\'s password does NOT open somebody else\'s account', sneak.status === 401, String(sneak.status));
 const unknown = await login({ username: 'Casey', name: 'Casey', password: 'changeme' });
-check('A name that is not an account still signs in on the shared password, recorded as that name',
-  unknown.ok && (await j(unknown.clone())).name === 'Casey' && (await j(unknown)).shared === true, '');
+check('A name that is not an account is refused — there is no shared password to fall back on', unknown.status === 401, String(unknown.status));
 
 /* ---------------- a login that sets its own password ---------------- */
 const gen = await j(await fetch(`${BASE}/api/admin/users`, { method: 'POST', headers: A, body: JSON.stringify({ username: 'PAT', name: 'Pat Nkemelu' }) }));
@@ -84,12 +83,15 @@ const badCurrent = await fetch(`${BASE}/api/admin/me/password`, { method: 'POST'
 check('Changing your password needs the old one', badCurrent.status === 403, String(badCurrent.status));
 const changed = await fetch(`${BASE}/api/admin/me/password`, { method: 'POST', headers: SAM, body: JSON.stringify({ current: 'dock-truck-9', next: 'high-reach-77' }) });
 check('You can change your own password', changed.ok && (await login({ username: 'SAM', password: 'high-reach-77' })).ok, '');
-const sharedPw = await fetch(`${BASE}/api/admin/me/password`, { method: 'POST', headers: A, body: JSON.stringify({ current: 'changeme', next: 'something-else' }) });
-check('The shared password has no account, so it cannot be changed here', sharedPw.status === 400, String(sharedPw.status));
+const superWrong = await fetch(`${BASE}/api/admin/me/password`, { method: 'POST', headers: A, body: JSON.stringify({ current: 'not-it', next: 'something-else' }) });
+check('The superadmin changes its password like any login — with the old one', superWrong.status === 403, String(superWrong.status));
 
 /* ---------------- the last admin ---------------- */
-const lastAdmin = await fetch(`${BASE}/api/admin/users/DANA`, { method: 'POST', headers: bearer(DA.token), body: JSON.stringify({ role: 'supervisor' }) });
-check('The last admin cannot demote themselves out of existence', lastAdmin.status >= 400 && /last admin/.test((await j(lastAdmin)).error), '');
+// the superadmin and Dana are both admins; take Dana down to a supervisor and the superadmin is the last one standing
+await fetch(`${BASE}/api/admin/users/DANA`, { method: 'POST', headers: A, body: JSON.stringify({ role: 'supervisor' }) });
+const lastAdmin = await fetch(`${BASE}/api/admin/users/DANA-WHITFIELD`, { method: 'POST', headers: A, body: JSON.stringify({ role: 'supervisor' }) });
+check('The last admin cannot demote themselves out of existence', lastAdmin.status >= 400 && /last admin/.test((await j(lastAdmin)).error), String(lastAdmin.status));
+await fetch(`${BASE}/api/admin/users/DANA`, { method: 'POST', headers: A, body: JSON.stringify({ role: 'admin' }) });
 await fetch(`${BASE}/api/admin/users/SAM`, { method: 'POST', headers: bearer(DA.token), body: JSON.stringify({ role: 'admin' }) });
 const nowFine = await fetch(`${BASE}/api/admin/users/DANA`, { method: 'POST', headers: bearer(DA.token), body: JSON.stringify({ role: 'supervisor' }) });
 check('With a second admin in place, the first can step down', nowFine.ok, String(nowFine.status));
@@ -107,10 +109,10 @@ check('...and cannot slip in on the shared password either', (await login({ user
 const log = await j(await fetch(`${BASE}/api/admin/audit?limit=100`, { headers: A }));
 const actions = log.map((r) => r.action);
 check('Account changes are recorded against the person who made them',
-  actions.includes('created an account') && actions.includes('changed an account') && log.find((r) => r.action === 'created an account').actor === 'Dana',
+  actions.includes('created an account') && actions.includes('changed an account') && log.find((r) => r.action === 'created an account').actor === 'Dana Whitfield',
   actions.slice(0, 6).join(' · '));
-check('Use of the shared password is logged as exactly that',
-  log.some((r) => r.action === 'signed in with the shared password'), '');
+check('Every sign-in is logged against the account, the superadmin\'s included',
+  log.some((r) => r.action === 'signed in' && /DANA-WHITFIELD/.test(r.detail || '')), '');
 check('A sign-in with a real account is logged with the username',
   log.some((r) => r.action === 'signed in' && /as DANA \(admin\)/.test(r.detail || '')), '');
 
@@ -180,14 +182,14 @@ check('Dashboard: the setup cards are gone from it',
 await dash.close();
 
 check('Settings: the accounts table lists everyone and flags who is still on a starter',
-  (await page.$$('#userTable tbody tr')).length === 3 && /starter/.test(await page.textContent('#userTable')),
+  (await page.$$('#userTable tbody tr')).length === 4 && /starter/.test(await page.textContent('#userTable')),
   clean(await page.textContent('#userTable')).slice(0, 140));
 await page.fill('#fNewUser', 'RILEY'); await page.fill('#fNewFullName', 'Riley Chen');
 await page.click('#btnAddUser'); await page.waitForTimeout(900);
 const starter = clean(await page.textContent('#starterBox'));
 const starterPw = (/([a-z]+-[A-Z2-9]{4})/.exec(starter) || [])[1];
 check('Settings: adding a login with no password shows a starter to read out, once',
-  !!starterPw && /RILEY can sign in now/.test(starter) && (await page.$$('#userTable tbody tr')).length === 4, starterPw || starter.slice(0, 90));
+  !!starterPw && /RILEY can sign in now/.test(starter) && (await page.$$('#userTable tbody tr')).length === 5, starterPw || starter.slice(0, 90));
 check('Settings: that starter actually signs them in', (await login({ username: 'RILEY', password: starterPw })).ok, '');
 await page.click('#userTable tbody tr:has-text("RILEY") button:text-is("Reset password")'); await page.waitForTimeout(900);
 check('Settings: an admin can reset somebody\'s password for them',

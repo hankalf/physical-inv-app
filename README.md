@@ -57,7 +57,7 @@ npm start                 # http://localhost:3000
 ### On a PC in the warehouse
 
 ```bash
-ADMIN_PASSWORD='pick-something' docker compose up -d
+SUPERADMIN_PASSWORD='pick-something' docker compose up -d
 ```
 
 Handhelds then point at `http://<that-pc-lan-ip>:3000/`. Give the PC a static IP or a
@@ -69,7 +69,7 @@ Deploy from this repo — `railway.json` builds the Dockerfile. Then:
 
 1. Add a **volume mounted at `/data`** (Service → Settings → Volumes). Without it the
    app starts with a warning and counts are lost on redeploy.
-2. Set `ADMIN_PASSWORD`.
+2. Set `SUPERADMIN_PASSWORD` (and `SUPERADMIN_USER`, or take the default `ADMIN`).
 
 Scanners need internet access for this option, not just warehouse Wi-Fi.
 
@@ -79,16 +79,14 @@ Scanners need internet access for this option, not just warehouse Wi-Fi.
 |---|---|---|
 | `PORT` | `3000` | Listening port |
 | `HOST` | `0.0.0.0` | Bind address |
-| `ADMIN_PASSWORD` | `changeme` | Supervisor dashboard password — **set this** |
+| `SUPERADMIN_PASSWORD` | — | The superadmin's password (at least 8 characters) — **set this**. `ADMIN_PASSWORD` is still read as the same thing |
 | `DB_PATH` | `./data/inventory.db` | SQLite file (falls back to `./data` if unwritable) |
 | `MAX_UPLOAD_MB` | `64` | Upload size cap |
 | `BACKUP_DIR` | `<DB_PATH>/../backups` | Where daily backups are written |
 | `BACKUP_KEEP` | `14` | How many backups to keep |
 | `SCANNER_AUTH` | `required` | `off` lets any client post counts — closed networks only |
-| `SHARED_PASSWORD_LOGIN` | `on` | `off` refuses `ADMIN_PASSWORD` — but only once an admin login exists (see below) |
-| `SUPERADMIN_USER` | — | Username of an admin login to create at startup, e.g. `SITEADMIN`. Unset, nothing is seeded |
+| `SUPERADMIN_USER` | `ADMIN` | Username of the admin login created at startup, e.g. `SITEADMIN` |
 | `SUPERADMIN_NAME` | the username | The name shown for it, e.g. `Site Administrator` |
-| `SUPERADMIN_PASSWORD` | `ADMIN_PASSWORD` | Its password, if you want it different from the shared one |
 | `SITE_TIMEZONE` | `America/New_York` | The warehouse's clock — dates a cycle batch is due, and the hour a schedule fires |
 
 ---
@@ -520,7 +518,7 @@ Supervisor (`Authorization: Bearer <token>` from `POST /api/admin/login`):
 | `POST`/`DELETE` | `/api/admin/people/teams` · `/teams/:id` | Create / delete a team |
 | `POST` | `/api/admin/people/assign` | Move someone onto a team |
 | `POST` | `/api/admin/people/equipment` | Save the equipment and level rules |
-| `GET` | `/api/admin/me` | Who am I, and does this site still take the shared password |
+| `GET` | `/api/admin/me` | Who am I, my role and what I may use |
 | `POST` | `/api/admin/me/password` | Change your own password |
 | `GET`/`POST` | `/api/admin/users` | List / create supervisor logins (admins only) |
 | `POST`/`DELETE` | `/api/admin/users/:username` | Change role, name, password, active · remove |
@@ -592,60 +590,33 @@ two roles: an **admin** can manage logins, a **supervisor** can do everything el
 change is recorded in the audit log against the person who made it, and passwords are
 stored scrypt-hashed, never in the clear.
 
-The **shared password** (`ADMIN_PASSWORD`) is how you get in before any account exists, and
-how you get back in when everyone has forgotten theirs. Its use is logged as exactly that.
-The sign-in box takes either: type your username, or — if the site is still on the shared
-password — just your name, which is what the log then records. An existing username always
-needs that account's own password, so the shared password can never open somebody else's
-account.
+There is **no shared password**. Every person signs in as themselves, and the log names who
+did what. What each login may use is ticked per login under **Settings → Advanced**; Settings
+itself is for admins only.
 
 ### The superadmin
 
-Set `SUPERADMIN_USER` and the app puts a real admin login in the database the first time
-it starts, so nobody has to bootstrap through the shared password:
+The login a site starts with comes from the environment (Railway variables):
 
 ```
-SUPERADMIN_USER     = SITEADMIN
+SUPERADMIN_USER     = SITEADMIN                 # defaults to ADMIN
 SUPERADMIN_NAME     = Site Administrator
-SUPERADMIN_PASSWORD = <a real password>      # optional; defaults to ADMIN_PASSWORD
+SUPERADMIN_PASSWORD = <a real password>         # at least 8 characters; ADMIN_PASSWORD is read as the same thing
 ```
 
-Its password comes from the environment and is **never a literal in this repo**. A password
-committed here would be readable by anyone who can read the repo, could not be rotated
-without a redeploy, and would stay in the history for good.
+The app puts that admin login in the database the first time it starts. Its password is
+**never a literal in this repo**. A password typed into the sign-in box with no username is
+the superadmin's.
 
 **Create only.** If the account is already there, startup leaves it completely alone. So a
 password you change in the app survives every restart, and a restart is never a way to put
 a known password back onto a live account — once you have changed it, the environment
 variable no longer opens it. Seeding it is recorded in the audit log.
 
-It refuses to create the account if the password would be `changeme`, if the username is
-malformed, or if the password is under 8 characters — and in every one of those cases it
-says so at startup and the app still comes up. A failed seed leaves you with no admin, so
-the shared password is held open (below) rather than locking you out.
-
-### Switching the shared password off
-
-With a superadmin seeded, set both at once and you are done — the account exists on the
-first boot, so `off` takes effect immediately.
-
-Without one, in this order:
-
-1. Set `ADMIN_PASSWORD` to something real. A fresh deployment warns at startup while it is
-   still `changeme`.
-2. Sign in with it and add yourself an **admin** login under **Settings → Logins**.
-3. Sign in as that login and check it works.
-4. Set `SHARED_PASSWORD_LOGIN=off`.
-
-Get that order wrong and it does not matter: **`off` is ignored while there is no admin
-account.** Off with nobody to sign in as is not a locked door, it is a bricked deployment —
-nobody can sign in, and nobody can create the account that would fix it, without a
-redeploy. So the switch waits, says so at startup and in the Settings card, and takes
-effect by itself the moment an admin login exists. No redeploy, no restart.
-
-The same guard works the other way: the last admin account cannot be deleted or demoted,
-so the door cannot be sealed from the inside either. And if it ever comes to it, putting
-`SHARED_PASSWORD_LOGIN` back to `on` always lets you in.
+A malformed username or a password under 8 characters is refused, said so at startup, and
+the app still comes up — with no admin, which the startup log also says plainly, because
+then nobody can sign in until the variables are fixed. The last admin account can never be
+deleted or demoted, so the door cannot be sealed from the inside either.
 
 Tokens are in-memory, so a restart signs supervisors out. If the app is exposed publicly,
 still put it behind a VPN or an authenticating proxy.
