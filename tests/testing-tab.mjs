@@ -341,7 +341,9 @@ const dash = page.frames().find((f) => /\/admin\?embed=/.test(f.url()));
 check('The dashboard at the top is the real admin page', !!dash && !!(await dash.$('#subTabs button[data-goto="progress"]')) && !!(await dash.$('#subTabs button[data-goto="adjust"]')));
 check('…without its sidebar or header', !!dash && await dash.evaluate(() => document.documentElement.classList.contains('embed') && getComputedStyle(document.querySelector('.side')).display === 'none'));
 check('…locked to the practice count', !!dash && (await dash.evaluate(() => window.appApi.currentSession())) === pid, String(dash && await dash.evaluate(() => window.appApi.currentSession())));
-check('…showing what was just counted', !!dash && /F01/.test(await dash.evaluate(() => (document.querySelector('#teamTable') || document.body).innerText)));
+// team 99 has finished F01 by now and is on F02: the live dashboard says so
+const teamRow = dash ? clean(await dash.evaluate(() => (document.querySelector('#teamTable') || document.body).innerText)) : '';
+check('…showing what was just counted: team 99, on its aisle, with its lines', /\b99\b/.test(teamRow) && /Aisle F0[12]/.test(teamRow), teamRow.slice(0, 160));
 check('…and its tabs can be switched from the page', !!dash && await dash.evaluate(() => { window.appApi.showSub('second'); return document.querySelector('[data-sub="second"]').classList.contains('active'); }));
 
 /* ---------------- nothing leaked ---------------- */

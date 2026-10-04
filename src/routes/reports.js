@@ -119,7 +119,8 @@ export function palletReport(sessionId, { only = null } = {}) {
   const openRecounts = new Map(db.prepare(
     `SELECT pallet_id, COUNT(*) AS n FROM recounts WHERE session_id = ? AND status != 'done' AND pallet_id IS NOT NULL GROUP BY pallet_id`).all(id).map((r) => [r.pallet_id, r.n]));
   const master = db.prepare(
-    `SELECT pallet_id, sku, description, uom, COALESCE(source, '') AS source, expected_qty, expected_location, lot AS expected_lot, expiry AS expected_expiry
+    `SELECT pallet_id, sku, description, uom, COALESCE(source, '') AS source, COALESCE(variant, '') AS variant, COALESCE(entry_no, '') AS entry_no,
+            expected_qty, expected_location, lot AS expected_lot, expiry AS expected_expiry
        FROM pallets WHERE session_id = ?${inList}`).all(...args);
   const seen = new Set(master.map((p) => p.pallet_id));
   const keys = master.map((p) => p.pallet_id);
@@ -133,6 +134,7 @@ export function palletReport(sessionId, { only = null } = {}) {
     return {
       pallet_id: k,
       sku: p ? p.sku : null, description: p ? p.description : null, uom: p ? p.uom : null, source: p ? p.source : '',
+      variant: p ? p.variant : '', entry_no: p ? p.entry_no : '',
       expected_qty: p ? p.expected_qty : null, expected_location: p ? p.expected_location : null,
       expected_lot: p ? p.expected_lot : null, expected_expiry: p ? p.expected_expiry : null,
       times_counted: c ? c.times_counted : null, counted_qty: c ? c.counted_qty : null, found_locations: c ? c.found_locations : null,
@@ -186,6 +188,8 @@ export function palletReport(sessionId, { only = null } = {}) {
     return {
       pallet_id: r.pallet_id,
       source: r.source || '',
+      variant: r.variant || '',
+      entry_no: r.entry_no || '',
       sku: r.sku || '',
       description: r.description || '',
       uom: r.uom || '',

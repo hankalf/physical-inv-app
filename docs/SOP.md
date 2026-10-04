@@ -1395,18 +1395,32 @@ upload card shows exactly which columns it recognised.
 | Description | description, desc, name |
 | Last counted | last phys invt date, last counted, last count date, last inventory date |
 
-**Inventory report** — the only required column is the pallet ID.
+**Inventory report** — upload it exactly as the site's systems export it. The columns are:
 
-| What | Accepted column names |
-|---|---|
-| Pallet (required) | pallet id, pallet, container, container id, LPN, licence plate, pallet no, id, tag |
-| SKU | sku, item, item number, item code, part number, product, material, stock code |
-| Description | description, desc, item description, product name |
-| Quantity | qty, quantity, on hand, on hand qty, expected, expected qty, system qty, cases, units |
-| Unit | uom, unit, unit of measure, um |
-| Location | *same names as the bin list* |
-| Lot | lot, lot code, lot no, lot number, batch, batch code, batch number |
-| Expiry | expiry, expiry date, expiration, expires, best before, use by, shelf life date |
+| Column | What it is | Required |
+|---|---|---|
+| **Bin Code** | the position (F18D064); lower case is fine | yes |
+| **Container No.** | the pallet's number as printed on its label (FR12345678, F61409-006, 4748025); a leading `$` from the ERP is dropped | yes |
+| **Item No.** | the item | |
+| **Description** | the item's description | |
+| **Variant Code** | DIST, REWORK, DONATE, ALLERGEN, DESTROY, REJECTED, RND — kept on the pallet and in the exports | |
+| **Quantity** | the system's quantity; zero and negative quantities are kept as the report says, and counted in the upload summary | |
+| **Unit of Measure Code** | CS, CS30LB, C10KG, CASE, BAG, BOX … | |
+| **Entry No.** | the ERP's item ledger entry number, carried through to the pallet report and the ERP file so adjustments post against the right entry | |
+| **Lot No.** | the lot (F61409, 50479-1, PO123456) | |
+| **System** | which system the pallet belongs to (JustFood, SGI, NTFF); `OPEN` with no container is an empty position | |
+
+Other names for these columns are understood too (pallet id, LPN, item, SKU, qty, location, bin,
+lot code, unit, source …), as is a **Best Before** or **Expiry** column when the file has one.
+
+Three things in a real export, and what the upload does with them:
+
+- **Empty positions.** A row with a bin and no container (System `OPEN`) is a position the count
+  expects to find empty. It is not a pallet; the summary says how many there were.
+- **A container on two rows.** The first row stands; the summary lists the rest, with both bins,
+  so somebody can look. Nothing is overwritten quietly.
+- **Odd quantities.** Zero and negative quantities are kept exactly as the report has them, and
+  the summary counts them.
 
 **Barcode test book** — one row per practice line.
 

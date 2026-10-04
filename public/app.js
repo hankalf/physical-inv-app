@@ -1512,6 +1512,8 @@
     }
 
     if (step === 'pallet') {
+      // a label printed with the ERP's $ prefix is the same container as the report's
+      if (/^\$+[A-Z0-9]/.test(value) && !(await lookupPallet(value))) value = value.replace(/^\$+/, '');
       const dup = await alreadyCounted(value);
       const pal = await lookupPallet(value);
       const mode = state.session.palletMode || 'warn';

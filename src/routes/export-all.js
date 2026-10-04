@@ -104,10 +104,10 @@ export function exportEverything(sessionId, { by = '' } = {}) {
   })));
 
   const report = sheet('Pallets', [
-    'Pallet', 'System', 'Item', 'Description', 'Result', 'Report quantity', 'Counted quantity', 'Difference', 'Report bin',
+    'Pallet', 'System', 'Item', 'Description', 'Variant', 'Entry No.', 'Result', 'Report quantity', 'Counted quantity', 'Difference', 'Report bin',
     'Found in', 'Times counted', 'Teams', 'Report lot', 'Counted lot', 'Best before', 'Second label', 'Last scanned', 'Comments',
   ], pallets.map((r) => ({
-    'Pallet': r.pallet_id, 'System': r.source || '', 'Item': r.sku || '', 'Description': r.description || '', 'Result': STATUS[r.status] || r.status,
+    'Pallet': r.pallet_id, 'System': r.source || '', 'Item': r.sku || '', 'Description': r.description || '', 'Variant': r.variant || '', 'Entry No.': r.entry_no || '', 'Result': STATUS[r.status] || r.status,
     'Report quantity': r.expected_qty, 'Counted quantity': r.counted_qty, 'Difference': r.variance_qty,
     'Report bin': r.expected_location || '', 'Found in': r.found_location || '', 'Times counted': r.times_counted || 0,
     'Teams': r.teams || '', 'Report lot': r.expected_lot || '', 'Counted lot': r.found_lot || '', 'Best before': r.expiry || '',

@@ -810,7 +810,11 @@
       msg(out, 'ok', `Imported ${stats.rows.toLocaleString()} rows from ${label}`,
         `This count now has ${t.bins.toLocaleString()} bins in ${t.aisles} aisles, ${t.pallets.toLocaleString()} pallets, ${t.assignments} planned aisle assignments` +
         (stats.skipped ? ` · ${stats.skipped} row(s) skipped (${stats.skippedNoLevels ? stats.skippedNoLevels + ' with no levels; ' : ''}missing required column, or unknown aisle)` : '') +
-        (stats.excluded ? ` · ${stats.excluded} bins left out (counted manually: ${stats.excludedGroups.join(', ')})` : ''));
+        (stats.excluded ? ` · ${stats.excluded} bins left out (counted manually: ${stats.excludedGroups.join(', ')})` : '') +
+        (stats.openBins ? ` · ${stats.openBins.toLocaleString()} rows were empty positions (OPEN), expected to be found empty` : '') +
+        (stats.duplicates ? ` · ${stats.duplicates} container${stats.duplicates === 1 ? '' : 's'} listed more than once — the first row stands: ${stats.duplicateList.slice(0, 5).join('; ')}${stats.duplicates > 5 ? ' …' : ''}` : '') +
+        (stats.nonPositive ? ` · ${stats.nonPositive} row${stats.nonPositive === 1 ? '' : 's'} with a zero or negative quantity, kept as the report says` : '') +
+        (stats.bySource ? ` · systems: ${Object.entries(stats.bySource).map(([k, v]) => `${k} ${v.toLocaleString()}`).join(', ')}` : ''));
       await refreshAisles();
       await refreshSetup().catch(() => {});
     } catch (err) { msg(out, 'err', 'Upload failed', err.message); }

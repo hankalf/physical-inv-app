@@ -150,25 +150,27 @@ try {
      case UOM, best-before as MM/DD/YYYY, three source systems. And the truth
      under it: what the counters will actually find. */
   const ITEMS = [
-    ['SKU-8840', 'Strawberry sliced IQF', 'C30LB', 44], ['SKU-8810', 'Blueberry wild IQF', 'C30LB', 40], ['SKU-8710', 'Mango chunks IQF', 'C20LB', 48],
-    ['SKU-8720', 'Peach slices IQF', 'C25LB', 42], ['SKU-8850', 'Raspberry whole IQF', 'C10LB', 60], ['SKU-8730', 'Pineapple tidbits IQF', 'C20LB', 48],
-    ['SKU-8860', 'Dark sweet cherries pitted IQF', 'C30LB', 36], ['SKU-8870', 'Blackberry whole IQF', 'C30LB', 40], ['SKU-8880', 'Mixed berries IQF', 'C40LB', 30],
-    ['SKU-8740', 'Banana slices IQF', 'C40LB', 32], ['SKU-8750', 'Avocado halves IQF', 'C20LB', 50], ['SKU-8890', 'Cranberry whole IQF', 'C30LB', 40],
+    ['WFC1085316', 'WFC Conv. Mango Chunks 16oz/12', 'CS', 75], ['MMC1742964', 'Strawberry sliced IQF', 'CS30LB', 40], ['BLUCWHCL', 'Blueberry wild IQF', 'CS30LB', 48],
+    ['SCC1742001', 'Peach slices IQF', 'C10KG', 42], ['WFO1203344', 'Raspberry whole IQF', 'CASE', 60], ['1140-GTV', 'Pineapple tidbits IQF', 'C10KG', 48],
+    ['SCC1742018', 'Dark sweet cherries pitted IQF', 'CS30LB', 36], ['BLKCWHCL', 'Blackberry whole IQF', 'CS30LB', 40], ['WFO1203391', 'Mixed berries IQF', 'CS40LB', 30],
+    ['1177-GTV', 'Banana slices IQF', 'BAG', 32], ['WFC1085402', 'Avocado halves IQF', 'BOX', 50], ['SCC1742077', 'Cranberry whole IQF', 'CS30LB', 40],
   ];
-  const SYSTEMS = ['WMS', 'ERP', 'Legacy'];
+  const SYSTEMS = ['JustFood', 'SGI', 'NTFF'];
   const d9 = () => 1 + Math.floor(Math.random() * 9);
   const lotOf = () => `F${d9()}${d9()}${d9()}${d9()}${d9()}`;
   const usDate = (days) => { const d = new Date(Date.now() + days * 86400000); return `${pad(d.getMonth() + 1)}/${pad(d.getDate())}/${d.getFullYear()}`; };
-  let report = 'Pallet ID,SKU,Description,UOM,Qty,Location,Lot Code,Best Before,System\n';
+  let report = 'Bin Code,Container No.,Item No.,Description,Variant Code,Quantity,Unit of Measure Code,Entry No.,Lot No.,System,Best Before\n';
+  let entryNo = 2500000;
   const truth = new Map();              // bin -> [{ id, qty, sku, kind }] what is physically there
   const planted = { short: 0, over: 0, missing: 0, unlisted: 0, moved: 0, label: 0, expired: 0 };
   const usedIds = new Set();
-  const newId = (lot) => { let id; do { id = `${lot}-${d9()}${d9()}${d9()}`; } while (usedIds.has(id)); usedIds.add(id); return id; };
+  const newId = (lot) => { let id; do { id = Math.random() < 0.7 ? `FR${10000000 + Math.floor(Math.random() * 89999999)}` : `${lot}-${d9()}${d9()}${d9()}`; } while (usedIds.has(id)); usedIds.add(id); return id; };
   let reportRows = 0;
   for (let i = 0; i < binCodes.length; i++) {
     const bin = binCodes[i];
     const r = Math.random();
     const n = r < 0.14 ? 0 : r < 0.92 ? 1 : 2;                 // 14% empty, 78% one pallet, 8% two
+    if (!n) report += `${bin},,,,,,,,,OPEN,\n`;              // the report lists its empty positions too
     const here = [];
     for (let k = 0; k < n; k++) {
       const [sku, desc, uom, base] = ITEMS[(i * 7 + k * 3) % ITEMS.length];
@@ -178,7 +180,7 @@ try {
       const days = Math.random() < 0.015 ? -Math.floor(rnd(1, 40)) : Math.floor(rnd(45, 540));
       if (days < 0) planted.expired++;
       const sys = SYSTEMS[i % 97 < 55 ? 0 : i % 97 < 85 ? 1 : 2];
-      report += `${id},${sku},"${desc}",${uom},${qty},${bin},${lot},${usDate(days)},${sys}\n`;
+      report += `${bin},${id},${sku},"${desc}",${i % 53 === 0 ? 'DIST' : i % 211 === 0 ? 'REWORK' : ''},${qty},${uom},${entryNo++},${lot},${sys},${usDate(days)}\n`;
       reportRows++;
       // what the shelf really holds
       const f = Math.random();

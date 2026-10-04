@@ -12,7 +12,7 @@
  * it did before any of this existed. That is checked first.
  */
 import { chromium } from 'playwright-core';
-import { signIn, pickSession } from './helpers.mjs';
+import { expandSubTabs, signIn, pickSession } from './helpers.mjs';
 
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
 const results = [];
@@ -189,7 +189,7 @@ await page.reload();
    be there to fill in. */
 await page.waitForSelector('#scrLogin.active, #scrMain.active');
 if (await page.$('#scrLogin.active')) await signIn(page);
-else await page.waitForTimeout(600);
+else { await expandSubTabs(page); await page.waitForTimeout(600); }
 await pickSession(page, sess.id);
 await page.waitForTimeout(1200);
 check('Dashboard: with approvals off, the tab explains itself',

@@ -11,6 +11,16 @@
  */
 export async function expandSubTabs(page) {
   await page.addStyleTag({ content: '[data-sub] { display: block !important; }' });
+  /* a page fetches a sub-tab's data when that tab is shown; flattened, every
+     tab is shown, so say so for each one */
+  await page.evaluate(() => {
+    const panes = [...document.querySelectorAll('[data-sub]')];
+    // the tab that really is current goes last, so a page keeps its state on it
+    for (const pane of [...panes.filter((p) => !p.classList.contains('active')), ...panes.filter((p) => p.classList.contains('active'))]) {
+      document.dispatchEvent(new CustomEvent('subshow', { detail: pane.dataset.sub }));
+    }
+  }).catch(() => {});
+  await page.waitForTimeout(600);
 }
 
 /** Sign in on a supervisor page and flatten the tabs. */

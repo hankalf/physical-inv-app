@@ -39,16 +39,16 @@ export const PRACTICE_TEAM = '99';
 export const PRACTICE_CREW = ['T1001', 'T1002'];
 
 const ITEMS = {
-  straw: ['SKU-8840', 'Strawberry sliced IQF', 'C30LB'],
-  blue: ['SKU-8810', 'Blueberry wild IQF', 'C30LB'],
-  mango: ['SKU-8710', 'Mango chunks IQF', 'C20LB'],
-  peach: ['SKU-8720', 'Peach slices IQF', 'C25LB'],
-  rasp: ['SKU-8850', 'Raspberry whole IQF', 'C10LB'],
-  pine: ['SKU-8730', 'Pineapple tidbits IQF', 'C20LB'],
-  cherry: ['SKU-8860', 'Dark sweet cherries pitted IQF', 'C30LB'],
-  black: ['SKU-8870', 'Blackberry whole IQF', 'C30LB'],
-  mixed: ['SKU-8880', 'Mixed berries IQF', 'C40LB'],
-  banana: ['SKU-8740', 'Banana slices IQF', 'C40LB'],
+  straw: ['SKU-8840', 'Strawberry sliced IQF', 'CS30LB'],
+  blue: ['SKU-8810', 'Blueberry wild IQF', 'CS30LB'],
+  mango: ['SKU-8710', 'Mango chunks IQF', 'C10KG'],
+  peach: ['SKU-8720', 'Peach slices IQF', 'CS'],
+  rasp: ['SKU-8850', 'Raspberry whole IQF', 'CS'],
+  pine: ['SKU-8730', 'Pineapple tidbits IQF', 'C10KG'],
+  cherry: ['SKU-8860', 'Dark sweet cherries pitted IQF', 'CS30LB'],
+  black: ['SKU-8870', 'Blackberry whole IQF', 'CS30LB'],
+  mixed: ['SKU-8880', 'Mixed berries IQF', 'CS40LB'],
+  banana: ['SKU-8740', 'Banana slices IQF', 'CS40LB'],
 };
 
 /*
@@ -140,12 +140,18 @@ function binCsv(codes = BINS.map((b) => b.bin)) {
   return 'Bin Location,Zone,Aisle,Description\n' + rows.join('\n') + '\n';
 }
 
+/* The report in the site's own layout - the columns its systems export - with
+   an OPEN row for each empty position, as the real file has. */
+const SYSTEM_OF = (lot) => (['JustFood', 'SGI', 'NTFF'][Number(lot.slice(-1)) % 3]);
 function reportCsv() {
-  let csv = 'Pallet ID,SKU,Description,UOM,Qty,Location,Lot Code,Best Before\n';
+  let csv = 'Bin Code,Container No.,Item No.,Description,Variant Code,Quantity,Unit of Measure Code,Entry No.,Lot No.,System,Best Before\n';
+  let entry = 2517386;
   for (const b of BINS) {
-    for (const p of b.report || b.shelf) {
+    const rows = b.report || b.shelf;
+    if (!rows.length) { csv += `${b.bin},,,,,,,,,OPEN,\n`; continue; }
+    for (const p of rows) {
       const [sku, desc, uom] = ITEMS[p.item];
-      csv += `${p.id},${sku},"${desc}",${uom},${p.qty},${b.bin},${p.lot},${usDate(day(p.days))}\n`;
+      csv += `${b.bin},${p.id},${sku},"${desc}",,${p.qty},${uom},${entry++},${p.lot},${SYSTEM_OF(p.lot)},${usDate(day(p.days))}\n`;
     }
   }
   return csv;
@@ -193,13 +199,13 @@ export function ensurePractice(owner) {
    bin and no pallet is an empty bin. */
 const COL = {
   bin: ['bin', 'bin location', 'location', 'bin code', 'rack'],
-  pallet: ['pallet', 'pallet id', 'pallet number', 'lpn', 'tag', 'license plate'],
+  pallet: ['pallet', 'pallet id', 'pallet number', 'container no', 'container', 'lpn', 'tag', 'license plate'],
   qty: ['qty', 'quantity', 'count', 'cases'],
-  lot: ['lot', 'lot code', 'batch'],
+  lot: ['lot', 'lot code', 'lot no', 'batch'],
   bestBefore: ['best before', 'expiry', 'expiration', 'expiry date', 'bbd'],
-  item: ['item', 'sku', 'item number', 'product'],
+  item: ['item', 'sku', 'item no', 'item number', 'product'],
   note: ['note', 'description', 'desc'],
-  uom: ['uom', 'unit', 'unit of measure', 'case'],
+  uom: ['uom', 'unit', 'unit of measure', 'unit of measure code', 'case'],
 };
 const csvCell = (v) => (/[",\r\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
 

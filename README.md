@@ -547,6 +547,16 @@ Supervisor (`Authorization: Bearer <token>` from `POST /api/admin/login`):
 
 ---
 
+## The inventory report, as the site exports it
+
+Upload the report straight from the systems: **Bin Code, Container No., Item No., Description,
+Variant Code, Quantity, Unit of Measure Code, Entry No., Lot No., System**. Variant and Entry No.
+ride along to the pallet report, the CSV, Export everything and the ERP file (`entryNo` and
+`variant` are fields a format can use). `OPEN` rows with no container are empty positions, a
+container listed twice is reported with both bins (the first row stands), zero and negative
+quantities are kept and counted, lower-case bin codes match, and a `$` prefix on a container is
+dropped. `public/templates/pallets-template.csv` is a five-row example in that layout.
+
 ## Things that keep count day calm
 
 - **Sign-ins survive a restart.** A supervisor's sign-in is a row in the database (the token's

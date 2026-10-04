@@ -1609,7 +1609,7 @@ async function handleAdmin(req, res, url, m) {
     'duplicate_pallet', 'empty_bin', 'label_issue', 'bin_label_issue', 'pass', 'recount_id', 'override_reason', 'voided', 'scanned_at', 'received_at',
   ];
   const PALLET_COLS = [
-    'pallet_id', 'sku', 'description', 'uom', 'expected_qty', 'counted_qty', 'variance_qty',
+    'pallet_id', 'source', 'sku', 'description', 'variant', 'uom', 'entry_no', 'expected_qty', 'counted_qty', 'variance_qty',
     'expected_location', 'found_location', 'times_counted', 'teams', 'comments', 'last_scan', 'status',
     'recounted', 'first_count_qty', 'open_recounts',
     'expected_lot', 'found_lot', 'lot_status', 'expiry', 'expiry_status', 'alias_of', 'also_tagged',

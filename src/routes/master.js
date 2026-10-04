@@ -4,13 +4,16 @@ import { autoActivate } from './assignments.js';
 import { loadLayout, classifyByRules } from '../util/layouts.js';
 import { parseRecords, pick } from '../util/csv.js';
 
-const LOCATION_ALIASES = ['location', 'loc', 'bin', 'binlocation', 'locationcode', 'slot', 'code', 'warehouselocation', 'binlocationcode'];
+const LOCATION_ALIASES = ['location', 'loc', 'bin', 'bincode', 'binlocation', 'locationcode', 'slot', 'code', 'warehouselocation', 'binlocationcode'];
 const AISLE_ALIASES = ['aisle', 'row', 'aisleno', 'aislenumber'];
 const ZONE_ALIASES = ['zone', 'area', 'section', 'region', 'warehouse'];
 const DESC_ALIASES = ['description', 'desc', 'itemdescription', 'name', 'productname', 'palletdescription'];
 const PALLET_ALIASES = ['palletid', 'pallet', 'containerid', 'container', 'containernumber', 'containerno', 'lpn', 'license', 'licenseplate', 'palletnumber', 'palletno', 'id', 'tag'];
-const SKU_ALIASES = ['sku', 'item', 'itemnumber', 'itemcode', 'partnumber', 'part', 'product', 'productcode', 'material', 'stockcode'];
-const UOM_ALIASES = ['uom', 'unit', 'unitofmeasure', 'um'];
+const SKU_ALIASES = ['sku', 'item', 'itemno', 'itemnumber', 'itemcode', 'partnumber', 'part', 'product', 'productcode', 'material', 'stockcode'];
+const UOM_ALIASES = ['uom', 'unit', 'unitofmeasure', 'unitofmeasurecode', 'uomcode', 'um'];
+/* the site's report: a variant (DIST, REWORK, DONATE, ALLERGEN ...) and the ERP's item ledger entry number */
+const VARIANT_ALIASES = ['variantcode', 'variant', 'variantno'];
+const ENTRY_ALIASES = ['entryno', 'entry', 'entrynumber', 'ledgerentryno', 'itemledgerentryno', 'ileno'];
 const SOURCE_ALIASES = ['system', 'source', 'sourcesystem', 'erp', 'origin', 'systemname', 'company'];
 const QTY_ALIASES = ['qty', 'quantity', 'onhand', 'onhandqty', 'expected', 'expectedqty', 'systemqty', 'qtyonhand', 'cases', 'units'];
 const TEAM_ALIASES = ['team', 'teamnumber', 'teamno', 'crew', 'group'];
@@ -62,8 +65,8 @@ const upAisle = db.prepare(
    ON CONFLICT(session_id, aisle) DO NOTHING`
 );
 const upPallet = db.prepare(
-  `INSERT INTO pallets (session_id, pallet_id, sku, description, uom, expected_qty, expected_location, lot, expiry, abc, source)
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `INSERT INTO pallets (session_id, pallet_id, sku, description, uom, expected_qty, expected_location, lot, expiry, abc, source, variant, entry_no)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
    ON CONFLICT(session_id, pallet_id) DO UPDATE SET
      sku = COALESCE(NULLIF(excluded.sku, ''), pallets.sku),
      description = COALESCE(NULLIF(excluded.description, ''), pallets.description),
@@ -73,7 +76,9 @@ const upPallet = db.prepare(
      lot = COALESCE(NULLIF(excluded.lot, ''), pallets.lot),
      expiry = COALESCE(NULLIF(excluded.expiry, ''), pallets.expiry),
      abc = COALESCE(NULLIF(excluded.abc, ''), pallets.abc),
-     source = COALESCE(NULLIF(excluded.source, ''), pallets.source)`
+     source = COALESCE(NULLIF(excluded.source, ''), pallets.source),
+     variant = COALESCE(excluded.variant, pallets.variant),
+     entry_no = COALESCE(excluded.entry_no, pallets.entry_no)`
 );
 
 /**
@@ -92,7 +97,8 @@ export function importMaster(sessionId, kind, text, { replace = false, source = 
   const { headers, records } = parseRecords(text);
   if (!records.length) throw Object.assign(new Error('no data rows found'), { status: 400 });
 
-  const stats = { kind, rows: records.length, bins: 0, aisles: 0, pallets: 0, planned: 0, skipped: 0, headers };
+  const stats = { kind, rows: records.length, bins: 0, aisles: 0, pallets: 0, planned: 0, skipped: 0, headers, openBins: 0, duplicates: 0, duplicateList: [], nonPositive: 0 };
+  const seenPallets = new Map();        // container -> the bin it was first listed in, within this file
   const newAisles = new Set();
   const layout = loadLayout(session.layout);
   const areas = new Set(((layout && layout.areas) || []).map(norm));
@@ -140,21 +146,39 @@ export function importMaster(sessionId, kind, text, { replace = false, source = 
       }
 
       if (kind === 'pallets') {
-        const pallet = norm(pick(rec, PALLET_ALIASES));
-        if (!pallet) { stats.skipped++; continue; }
+        // a leading $ on a container number is the ERP's prefix, never on the label
+        const pallet = norm(pick(rec, PALLET_ALIASES)).replace(/^\$+/, '');
+        const binOfRow = norm(pick(rec, LOCATION_ALIASES));
+        if (!pallet) {
+          /* the site's report lists its empty positions too: a bin, a System of
+             OPEN, and nothing else - a bin the count expects to find empty */
+          if (binOfRow) { stats.openBins = (stats.openBins || 0) + 1; continue; }
+          stats.skipped++; continue;
+        }
+        if (seenPallets.has(pallet)) {
+          /* the same container on two rows (two bins, two entries): the first
+             row stands, the rest are reported rather than quietly overwriting it */
+          stats.duplicates = (stats.duplicates || 0) + 1;
+          if (stats.duplicateList.length < 25) stats.duplicateList.push(`${pallet} (${seenPallets.get(pallet)} and ${binOfRow || 'no bin'})`);
+          continue;
+        }
+        seenPallets.set(pallet, binOfRow || 'no bin');
         const qtyRaw = pick(rec, QTY_ALIASES);
         const qty = Number(String(qtyRaw).replace(/[, ]/g, ''));
+        if (qtyRaw !== '' && Number.isFinite(qty) && qty <= 0) stats.nonPositive = (stats.nonPositive || 0) + 1;
         upPallet.run(
           id, pallet,
           norm(pick(rec, SKU_ALIASES)),
           pick(rec, DESC_ALIASES),
           norm(pick(rec, UOM_ALIASES)),
           qtyRaw !== '' && Number.isFinite(qty) ? qty : null,
-          norm(pick(rec, LOCATION_ALIASES)),
+          binOfRow,
           norm(pick(rec, LOT_ALIASES)),
           parseDate(pick(rec, EXPIRY_ALIASES)),
           normClass(pick(rec, ABC_ALIASES)),
-          norm(pick(rec, SOURCE_ALIASES)) || norm(source)
+          norm(pick(rec, SOURCE_ALIASES)) || norm(source),
+          norm(pick(rec, VARIANT_ALIASES)) || null,
+          String(pick(rec, ENTRY_ALIASES) || '').trim() || null
         );
         { const src = norm(pick(rec, SOURCE_ALIASES)) || norm(source); if (src) { stats.bySource = stats.bySource || {}; stats.bySource[src] = (stats.bySource[src] || 0) + 1; } }
         if (norm(pick(rec, LOT_ALIASES))) stats.withLots = (stats.withLots || 0) + 1;

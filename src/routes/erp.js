@@ -24,6 +24,9 @@ const FIELDS = {
   variance: (r) => r.variance,
   status: (r) => r.status,
   system: (r) => r.source || '',
+  // the ERP's own item ledger entry number and the variant, straight back off the report
+  entryNo: (r) => r.entryNo || '',
+  variant: (r) => r.variant || '',
   countedAt: (r) => r.countedAt,
   countDate: () => localDate(),
   team: (r) => r.team,
@@ -136,6 +139,7 @@ function sourceRows(sessionId, rowsOf, source = null) {
     const b = bins.get(found) || {};
     return {
       location: found, pallet: r.pallet_id, sku: r.sku, description: r.description, uom: r.uom, source: r.source || '',
+      entryNo: r.entry_no || '', variant: r.variant || '',
       counted: r.counted_qty === '' ? 0 : r.counted_qty, expected: r.expected_qty, variance: r.variance_qty,
       status: r.status, countedAt: r.last_scan, team: r.teams, employees: '',
       zone: b.zone || '', aisle: b.aisle || '', level: b.level || '', reference,

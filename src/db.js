@@ -440,6 +440,9 @@ if (!hasCol('sessions', 'track_abc')) db.exec('ALTER TABLE sessions ADD COLUMN t
 if (!hasCol('users', 'access')) db.exec('ALTER TABLE users ADD COLUMN access TEXT');
 /* Three systems share one warehouse: which one a pallet row came from, so the office can tell them apart. The guns never see it. */
 if (!hasCol('pallets', 'source')) db.exec('ALTER TABLE pallets ADD COLUMN source TEXT');
+// the site's report carries a variant (DIST, REWORK, DONATE ...) and the ERP's own entry number
+if (!hasCol('pallets', 'variant')) db.exec('ALTER TABLE pallets ADD COLUMN variant TEXT');
+if (!hasCol('pallets', 'entry_no')) db.exec('ALTER TABLE pallets ADD COLUMN entry_no TEXT');
 // a test scanner belongs to one person's practice
 if (!hasCol('devices', 'practice_owner')) db.exec('ALTER TABLE devices ADD COLUMN practice_owner TEXT');
 // whether the scanners are offered this count at sign-on (a count being set up, or kept for the office, is not)
