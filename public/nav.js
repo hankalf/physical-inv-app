@@ -13,6 +13,7 @@
     ['/teams', 'Teams & crew', '☰', 'The site'],
     ['/settings', 'Settings', '⚙', 'The site'],
     ['/testing', 'Testing Suite', '▶', 'Learn'],
+    ['/guide', 'User guide', '?', 'Learn'],
   ];
 
   /* Each page's sections, so the sidebar can open them out under the page.
@@ -25,6 +26,7 @@
     '/front': [['moves', 'Pallets to move back'], ['desk', 'Move desk'], ['bins', 'Front-placed bins']],
     '/missing': [],
     '/testing': [],
+    '/guide': [],
   };
 
   const here = location.pathname.replace(/\/$/, '') || '/admin';
@@ -267,7 +269,8 @@
 
   /* What this login may open. Nothing is known before sign-in, so every tab
      shows; once /me has answered, the ones not on the list go. */
-  const PAGE_KEY = { '/admin': 'dashboard', '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/teams': 'teams', '/settings': 'admin', '/testing': 'testing' };
+  /* The guide has no key: every login may read it. */
+  const PAGE_KEY = { '/admin': 'dashboard', '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/teams': 'teams', '/settings': 'admin', '/testing': 'testing', '/guide': '' };
   api.can = (key) => {
     const me = api.me;
     if (!me) return true;
@@ -281,12 +284,13 @@
      in the list (Settings, the Testing Suite) are all or nothing. */
   api.canTab = (href, sub) => {
     const page = PAGE_KEY[href] || '';
-    if (!page || page === 'admin') return api.can(page);
+    if (!page) return true;
+    if (page === 'admin') return api.can(page);
     const me = api.me;
     if (!me || me.role === 'admin' || !Array.isArray(me.access)) return true;
     return me.access.includes(page) || me.access.includes(`${page}.${sub}`);
   };
-  const mayOpen = (href) => api.can(PAGE_KEY[href] || '');
+  const mayOpen = (href) => !PAGE_KEY[href] || api.can(PAGE_KEY[href]);
 
   /* Before sign-in the page is a plain splash: the logo and the name, the
      sign-in box, nothing else. The sidebar comes with the sign-in. */
@@ -812,6 +816,7 @@
     ['Send to the ERP', '/settings', 'erp', 'erp export send file layout columns adjustments posting'],
     ['Backups and the log', '/settings', 'erp', 'backup restore log audit who did what download'],
     ['Testing Suite — try the scanner on test data', '/testing', '', 'testing suite test practice training try demo scanner gun emulator simulator learn new starter'],
+    ['User guide — step by step, with what goes wrong and what people ask', '/guide', '', 'guide help manual how to instructions sop new user start learn question error message what does it mean faq'],
     ['Export everything to Excel', '/admin', 'reports', 'export everything excel workbook xlsx all data readable download report auditor'],
     ['Trial run — rehearse, then clear', '/settings', 'start', 'trial run rehearsal dry run practice clear reset start fresh'],
     ['Positive and negative adjustments', '/admin', 'adjust', 'adjustments positive negative found more less add take off net variance'],

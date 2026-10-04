@@ -269,6 +269,7 @@ async function serveStatic(req, res, pathname) {
     : /^\/testing\/?$/.test(pathname) ? '/testing.html'
     : /^\/front\/?$/.test(pathname) ? '/front.html'
     : /^\/missing\/?$/.test(pathname) ? '/missing.html'
+    : /^\/guide\/?$/.test(pathname) ? '/guide.html'
     : pathname;
   const filePath = join(PUBLIC_DIR, normalize(rel).replace(/^(\.\.[/\\])+/, ''));
   if (!filePath.startsWith(PUBLIC_DIR)) return send(req, res, 403, 'forbidden');
