@@ -143,6 +143,13 @@ taken as the superadmin's). There is no shared password.
 If somebody forgets their password, an admin presses **Reset password** on their row and
 gives them the new starter password. The same forced change happens again.
 
+**Roles.** Each row has a **Role**: *Admin* (everything, Settings included), *Supervisor*
+(every page and function but Settings), *Inventory control* (the Dashboard, the Testing Suite,
+approving adjustments and downloads — nothing to do with teams, warehouse jobs or cycle counts),
+*Floor lead* (the Dashboard and Teams & crew, messages, SOS and aisles), *Warehouse jobs* (Front
+bins and Not in Location), *Cycle counts*, and *Custom* for a list of your own. Picking a role sets
+the list; changing the list makes it Custom.
+
 **What each login may use.** Every supervisor row has a **May use** column: tick the
 **pages** they may open (Dashboard, Cycle counts, Front bins, Not in Location, Teams &
 crew, Testing Suite) and what they **can also** do (approve adjustments, message the floor,
@@ -155,7 +162,11 @@ own password from **Change my password** at the foot of the sidebar.
 
 ![](images/settings-logins.png)
 
-*Settings &rarr; Advanced. Each person has their own login and their own password; the starter password is shown once.*
+*Settings &rarr; Advanced. Each person has their own login, a role and their own password; the starter password is shown once.*
+
+![](images/settings-access.png)
+
+*May use, opened on one login: the pages, each page's tabs, and the functions — a tick takes effect on their next click.*
 
 ### Step 5 — Change the superadmin's password
 
@@ -335,7 +346,11 @@ dashboard — and a card in the Teams channel if **Send it to the Teams channel 
 
 ![](images/settings-sos.png)
 
-*The SOS list and the channel it goes to.*
+*The SOS list, under Scanner screen.*
+
+![](images/settings-teams-channel.png)
+
+*The Teams channel it goes to, under Advanced: the address is kept, never shown again in full.*
 
 ### Step 8c — The Testing Suite: try the scanner on test data
 
@@ -413,9 +428,27 @@ it needs (*✓ 25 of 25 pallets have a lot code*) and, when it does not, what to
 — when it started, how many of the twelve things you tried, how much you counted — so you can
 see your own progress. The last ten are kept. Nothing on a real count is touched.
 
+**What to practise.** A count is not the only thing a scanner does, so the card under the guide
+offers the other jobs, each set up on your practice the first time you pick it — and only the jobs
+your login may do for real (a login without Cycle counts is not offered the cycle count):
+
+| Pick | What is set up | What the gun does |
+|---|---|---|
+| **Cycle count** | A practice cycle count beside your run, with a five-bin list: a plain bin, two pallets, an empty bin, a short pallet, one whose pallet has gone | **Cycle count** at the top of the sign-on screen; sign on with a clock-in number alone; **Start counting the list**; every pallet in the bin, then **Bin done** |
+| **Move pallets** | Three front pallets to put back in the empty bin behind — one of them into a bin that turns out not to be empty | **Move pallets** at sign-on; pick the aisle; scan the pallet, put it back, scan the bin; **Cannot move it** with a reason for the one that will not go |
+| **Not in Location** | Three lost pallets on the list, for you alone: two are on the shelves, one is nowhere | Count the full count as normal; the gun says **found!** the moment it scans one, and the office is told where |
+
+Each job adds its own lines to **Things to try**, the tips follow it on the gun, and the pane under the
+card shows the list — bins, pallets, moves, lost pallets — with what is done. The planted lost pallets
+never reach the real Not in Location page or a scanner on the floor. **Start over** clears the lot.
+
 ![](images/testing-tab.png)
 
 *The Testing tab: the real gun on the left, the shelves and what to try on the right.*
+
+![](images/testing-modes.png)
+
+*What to practise: the cycle count picked, its five-bin list under the card.*
 
 ### Step 9 — Set up the counting screen
 
@@ -574,7 +607,7 @@ questions it asks change between pallets, never mid-line.
 > one-unit difference, and by mid-morning the second-count list is longer than the count.
 > Set them once and the list stays short enough that people actually walk it.
 
-![](images/dashboard-count-options.png)
+![](images/settings-count-session.png)
 
 *Settings &rarr; Getting started &rarr; Count session: every option above, on one card, for the count picked at the top of the page.*
 
@@ -897,6 +930,18 @@ system in a new tab**.
 5. Done moves update the report, so the count that follows expects the pallet where it now is.
    With no signal they queue and send later, like count lines.
 
+![](images/front-moves.png)
+
+*Front bins &rarr; Pallets to move back: the list built from the report, and how each one went.*
+
+![](images/front-move-desk.png)
+
+*The move desk: the next pallet and its two bins at the top, the pallet system underneath.*
+
+![](images/settings-pallet-system.png)
+
+*Settings &rarr; Advanced &rarr; Pallet system: the address the desk opens, set once.*
+
 ### Step 16 — The supervisor's procedure (on the dashboard)
 
 **Dashboard**, with the count picked in the header. It refreshes itself every 30
@@ -909,19 +954,34 @@ seconds.
 > light. The same tab takes a **logo**: your company's mark at the top of the sidebar and, if you
 > tick it, in the header of every scanner.
 
+![](images/settings-appearance.png)
+
+*Settings &rarr; Advanced &rarr; Appearance: theme, accent, text size, density, corners, sidebar and contrast — per computer.*
+
+![](images/settings-logo.png)
+
+*The logo card: one upload, shown on every supervisor page and, if ticked, on the scanners.*
+
 - **Progress** — lines, bins counted, pallets, exceptions; and a row per team with its
   **shift**, what it is counting right now, **when it started**, a **clock** of its time on the
   count, and when it last scanned. *All shifts / 1st shift / 2nd shift* above the table narrows it.
-  A team's clock stops when it signs off on the gun or finishes its last aisle.
+  A team's clock stops when it signs off on the gun or finishes its last aisle. When the report
+  carries a **System** column — three systems' stock in one warehouse — a tile per system shows how
+  many of its pallets have been found, and the pallet report, adjustments and ERP files can each
+  be narrowed to one system. The scanners never see the difference.
+
+![](images/dashboard-progress.png)
+
+*Progress: the count in numbers, then a row per team with its shift, aisle, clock and last scan.*
+
+![](images/dashboard-systems.png)
+
+*Pallets found, per source system.*
 - **Stopped scanning** — a team that is signed on and still has an aisle, but has not scanned for
   the site's limit (Settings → Scanner screen, 10 minutes to start), gets an **amber bar above every
   tab**, and its last scan turns amber in the table. **On break** (30 minutes) and **Lunch**
   (45) quiet it for that long; **Seen — I am on it** quiets it until the team scans again. If the
   site turned it on, the same alert goes to the Teams channel.
-
-![](images/dashboard-progress.png)
-
-*Dashboard &rarr; Progress. The row per team is the one to watch: what they are on, how much they have done, and when they last scanned.*
 
 - **Map** — the warehouse from above. Aisles are outlined by state: not started, being
   counted now (with the team's number), done. Click an aisle for its bins, who counted
@@ -973,6 +1033,10 @@ what happened and whether the Teams channel took it.
 
 *An SOS above the page: team, what is wrong, where they are, and the two things a supervisor can do
 about it.*
+
+![](images/dashboard-alerts.png)
+
+*Alerts &rarr; SOS from the floor: every call, open or closed, and what became of it. The tab carries a badge until the open ones are cleared.*
 
 ### Step 16b — Finding anything: the search box
 
@@ -1097,26 +1161,9 @@ says how many rows match out of the whole report; **Clear filters** is back to t
 
 *A recall: five cases of the lot found on the floor, and a sixth the report still expects in an aisle nobody has reached.*
 
-![](images/dashboard-accuracy.png)
+![](images/dashboard-fix-list.png)
 
-*Count accuracy by class, with the whole count on the bottom row. Each class is held to its
-own target and marked MEETS or UNDER — and the one pallet with no class is the tag that was
-not on the report at all.*
-
-- **Labels to replace** — every label that would not scan, on a pallet or on the racking,
-  with the bin to walk to, what was counted there, and whether there was a readable number
-  on it at all. This is the walk-round with a label printer after the count. The **RACK**
-  ones are listed first: everybody walks up to those.
-
-![](images/dashboard-labels.png)
-
-*The relabel list: which bin, what was counted there, and whether there was a number on it
-at all.*
-- **Count sheets** — printable paper sheets by aisle and level, for a dead battery or an
-  auditor.
-- **Exports** — the full count (every line as scanned), exceptions only, uncounted bins,
-  the pallet report, second counts, the accuracy scorecard, the relabel list, and the
-  adjustments with their reasons and signatures.
+*The fix list: labels that would not scan, damage and blocked bins from the gun, each with the bin, the pallet and who saw it. Fixed ticks it off.*
 
 ### Step 20 — Approve the adjustments
 

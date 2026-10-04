@@ -28,7 +28,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 mkdirSync(OUT, { recursive: true });
 const dataDir = mkdtempSync(join(tmpdir(), 'sopshots-'));
 const server = spawn(process.execPath, ['--no-warnings=ExperimentalWarning', join(ROOT, 'src', 'server.js')], {
-  env: { ...process.env, PORT: String(PORT), DB_PATH: join(dataDir, 'demo.db'), ADMIN_PASSWORD: 'changeme', SITE_TIMEZONE: 'America/New_York' },
+  env: { ...process.env, PORT: String(PORT), DB_PATH: join(dataDir, 'demo.db'), SUPERADMIN_USER: 'DANA-WHITFIELD', SUPERADMIN_NAME: 'Dana Whitfield', SUPERADMIN_PASSWORD: 'changeme', SITE_TIMEZONE: 'America/New_York' },
   stdio: ['ignore', 'ignore', 'inherit'],
 });
 
@@ -40,11 +40,17 @@ try {
   }
 
   /* ------------------------------------------------------------- seed */
-  const tok = (await j(await fetch(`${BASE}/api/admin/login`, { method: 'POST', headers: hdr, body: JSON.stringify({ password: 'changeme', name: 'Dana Whitfield' }) }))).token;
+  const tok = (await j(await fetch(`${BASE}/api/admin/login`, { method: 'POST', headers: hdr, body: JSON.stringify({ username: 'DANA-WHITFIELD', password: 'changeme' }) }))).token;
   const A = { ...hdr, authorization: 'Bearer ' + tok };
   const csv = { authorization: 'Bearer ' + tok, 'content-type': 'text/csv' };
   const post = (p, body, h = A) => fetch(BASE + p, { method: 'POST', headers: h, body: typeof body === 'string' ? body : JSON.stringify(body) }).then(j);
 
+  for (const u of [
+    { username: 'MARCUS-OBI', name: 'Marcus Obi', password: 'dock-side-77', mustChange: false, profile: 'supervisor' },
+    { username: 'IVY-CHEN', name: 'Ivy Chen', password: 'cold-room-11', mustChange: false, profile: 'inventory' },
+    { username: 'LUIS-FERREIRA', name: 'Luis Ferreira', password: 'reach-truck-4', mustChange: true, profile: 'floor' },
+  ]) await post('/api/admin/users', u).catch(() => {});
+  await post('/api/admin/pallet-system', { url: 'https://wms.example.com/pallets' }).catch(() => {});
   const sess = await post('/api/admin/sessions', { name: 'Q3 2026 wall-to-wall' });
   const binCsv = readFileSync(join(ROOT, 'public', 'templates', 'front-royal-bins.csv'), 'utf8');
   await post(`/api/admin/sessions/${sess.id}/master?kind=bins`, binCsv, csv);
@@ -65,7 +71,8 @@ try {
   // most positions hold one pallet, some hold two, a few hold three or four
   const palletsIn = (i) => (i % 23 === 7 ? 4 : i % 11 === 3 ? 3 : i % 5 === 2 ? 2 : 1);
 
-  let report = 'Pallet ID,SKU,Description,Qty,Location,Lot Code,Best Before\n';
+  let report = 'Pallet ID,SKU,Description,Qty,Location,Lot Code,Best Before,System\n';
+  const SYSTEMS = ['WMS', 'ERP', 'Legacy'];
   const expected = new Map();
   const palletAt = new Map();            // bin -> the pallet ids in it
   let seq = 0;
@@ -82,7 +89,7 @@ try {
         const exp = day(n % 17 === 0 ? -20 : n % 11 === 0 ? 12 : 120 + (n % 400));
         expected.set(id, { bin, qty, sku, desc, lot, exp });
         here.push(id);
-        report += `${id},${sku},"${desc}",${qty},${bin},${lot},${exp}\n`;
+        report += `${id},${sku},"${desc}",${qty},${bin},${lot},${exp},${SYSTEMS[n % 11 < 6 ? 0 : n % 11 < 9 ? 1 : 2]}\n`;
       }
       palletAt.set(bin, here);
     });
@@ -255,6 +262,7 @@ try {
   const signIn = async (path) => {
     await desk.goto(BASE + path);
     if (await desk.$('#scrLogin.active')) {
+      await desk.fill('#fUser', 'DANA-WHITFIELD');
       await desk.fill('#fPassword', 'changeme');
       await desk.click('#btnLogin');
     }
@@ -287,20 +295,41 @@ try {
   await sub('start');  await saveCard(desk, '#startSteps', 'settings-getting-started-new');
   await pick(sess.id);
   await sub('start');
-  await sub('logins'); await saveCard(desk, '#userTable', 'settings-logins');
-  await sub('scanners');
-  await saveCard(desk, '#deviceTable', 'settings-scanners');
-  await saveCard(desk, '#commentList', 'settings-reason-codes');
-  await saveCard(desk, '#reasonList', 'settings-adjustment-reasons');
-  await saveCard(desk, '#sosList', 'settings-sos');
+  await saveCard(desk, '#fPalletMode', 'settings-count-session');
   await saveCard(desk, '#btnBookTemplate', 'settings-barcode-book');
   await sub('gun');    await saveCard(desk, '#stepOrder', 'settings-scanner-screen');
+  await saveCard(desk, '#deviceTable', 'settings-scanners');
+  await saveCard(desk, '#commentList', 'settings-reason-codes');
+  await saveCard(desk, '#sosList', 'settings-sos');
   await sub('lists');
   await saveCard(desk, '#fFile-bins', 'settings-bin-list');
   await saveCard(desk, '#aisleTable', 'settings-racking-blocks', 10);
   await sub('erp');
   await saveCard(desk, '#fErpFormat', 'settings-erp');
+  await saveCard(desk, '#reasonList', 'settings-adjustment-reasons');
   await saveCard(desk, '#backupTable', 'settings-backups', 8);
+  await sub('advanced');
+  await saveCard(desk, '#userTable', 'settings-logins');
+  /* the access list, open on one login: what a supervisor may use, down to the tab */
+  {
+    const row = desk.locator('#userTable tr', { hasText: 'MARCUS-OBI' }).first();
+    const pickBtn = row.locator('details.accpick summary');
+    if (await pickBtn.count()) {
+      await pickBtn.click(); await wait(700);
+      const box = await desk.$('#userTable');
+      const r = await box.boundingBox();
+      const pop = await desk.$('.accpanel');
+      const pr = pop ? await pop.boundingBox() : null;
+      const top = Math.max(0, Math.min(r.y, pr ? pr.y : r.y) - 60);
+      const bottom = Math.max(r.y + Math.min(r.height, 300), pr ? pr.y + pr.height : 0) + 12;
+      await save({ screenshot: (o) => desk.screenshot({ ...o, clip: { x: Math.max(0, r.x - 10), y: top, width: Math.min(1540, r.width + 20), height: Math.min(900, bottom - top) } }) }, 'settings-access');
+      await desk.keyboard.press('Escape'); await wait(300);
+    }
+  }
+  await saveCard(desk, '#btnSaveTeams', 'settings-teams-channel');
+  await saveCard(desk, '#lookPick', 'settings-appearance');
+  await saveCard(desk, '#fPalletSystemUrl', 'settings-pallet-system');
+  await saveCard(desk, '#fLogo', 'settings-logo');
 
   // the printable setup cards, as they come off the printer
   const cards = await browser.newPage({ viewport: { width: 1000, height: 1100 }, deviceScaleFactor: 1 });
@@ -311,8 +340,8 @@ try {
   await signIn('/admin');
   await pick(sess.id);
   await sub('progress');
-  await saveCard(desk, '#fPalletMode', 'dashboard-count-options');
   await saveCard(desk, '#teamTable', 'dashboard-progress');
+  if (await desk.$('#bySystem:not([hidden])')) await saveCard(desk, '#bySystem', 'dashboard-systems');
   await desk.click('#sessionPick .sess-btn').catch(() => {});
   await wait(700);
   await save(desk, 'dashboard-session-picker');
@@ -324,6 +353,7 @@ try {
   await saveCard(desk, '#mapSub', 'dashboard-map-aisle');
   await sub('teams');
   await saveCard(desk, '#teamList', 'dashboard-team-plan');
+  await sub('alerts');
   await saveCard(desk, '#msgTable', 'dashboard-message-floor', 6);
   await sub('second'); await saveCard(desk, '#recountTable', 'dashboard-second-counts', 10);
   /* an SOS waiting to be answered, which is what the bar above the page is for */
@@ -333,17 +363,17 @@ try {
   }, gunOf[2].H).catch(() => {});
   /* The dashboard looks for alerts every few seconds on its own - no reload,
      which would send the page back to whichever count it defaults to. */
-  await sub('teams');
+  await sub('alerts');
   await desk.waitForFunction(() => {
     const el = document.getElementById('sosAlert');
     return el && !el.hidden && el.textContent.trim();
   }, null, { timeout: 30000 }).catch(() => {});
   const sosBar = await desk.$('#sosAlert');
   if (sosBar && !(await sosBar.evaluate((el) => el.hidden))) await save(sosBar, 'dashboard-sos');
+  await saveCard(desk, '#sosTable', 'dashboard-alerts', 6);
   await sub('adjust'); await saveCard(desk, '#adjustTable', 'dashboard-adjustments', 10);
   await sub('reports');
-  await saveCard(desk, '#accuracyTable', 'dashboard-accuracy', 8);
-  await saveCard(desk, '#labelTable', 'dashboard-labels', 6);
+  await saveCard(desk, '#fixTable', 'dashboard-fix-list', 6);
   // a lot that really is in the seeded report, on a pallet in every aisle
   await desk.fill('#fLotSearch', expected.get('F01-005').lot);
   await desk.click('#btnFindLot'); await wait(1400);
@@ -371,6 +401,22 @@ try {
   await sub('setup'); await wait(800);
   await save(desk, 'cycle-batches');
 
+  /* ---------- front bins: the pallets to move back, and the desk ---------- */
+  await post(`/api/admin/sessions/${sess.id}/moves/build`, { aisle: 'F03 F04' }).catch(() => {});
+  /* a few moves of our own, so the list and the desk have something in hand,
+     and the office board standing in for the pallet system's screen */
+  const mv = ['F05A001', 'F05A003', 'F06A001'].map((b, i) => [(palletAt.get(b) || [])[0], b, b.replace(/\d{3}$/, (n) => String(Number(n) + 1).padStart(3, '0'))]).filter(([p]) => p);
+  /* Front bins works from the site's newest bin list, which is the cycle programme's here */
+  for (const sid of [sess.id, cyc.id]) await fetch(`${BASE}/api/admin/sessions/${sid}/moves/import`, { method: 'POST', headers: csv, body: 'Pallet,From bin,To bin\n' + mv.map((r) => r.join(',')).join('\n') + '\n' }).catch(() => {});
+  await post('/api/admin/pallet-system', { url: `${BASE}/board?session=${sess.id}` }).catch(() => {});
+  await desk.goto(BASE + '/front');
+  await desk.waitForSelector('#scrMain.active', { state: 'attached' }); await wait(2000);
+  await sub('moves'); await wait(600);
+  await saveCard(desk, '#mvTable', 'front-moves', 8);
+  await sub('desk'); await wait(3000);
+  await saveCard(desk, '#deskStrip', 'front-move-desk');
+  await post('/api/admin/pallet-system', { url: 'https://wms.example.com/pallets' }).catch(() => {});
+
   /* ---------- the Testing tab: signed on, a few pallets in ---------- */
   await signIn('/testing');
   await desk.waitForSelector('#shelves table.shelf');
@@ -388,16 +434,21 @@ try {
     await tap('99'); await tap('T1001');
     await tg.click('#btnStart'); await wait(1800);
     await tg.click('#btnCount').catch(() => {}); await wait(600);
-    for (const [pal, q, b] of [['F01-001', '40', 'F01A001'], ['F01-002', '32', 'F01A002']]) {
+    for (const [pal, , b] of [['F12311-111', '40', 'F01A001'], ['F12312-111', '32', 'F01A002']]) {
       await tap(pal);
       await desk.locator('#shelves tr', { has: desk.locator('.scan', { hasText: new RegExp(`^${pal}$`) }) }).locator('.scan.qty').click(); await wait(400);
       await tap(b);
       if (await tg.isVisible('#btnSkip')) { await tg.click('#btnSkip'); await wait(500); }
     }
-    await tap('F01-003');
+    await tap('F12312-112');
     await wait(3500);                        // the sheet's own refresh
     await desk.evaluate(() => window.scrollTo(0, 0));
     await save(desk, 'testing-tab');
+    // the other jobs: the cycle count's list, set up with one click
+    if (await desk.$('#modeList button[data-mode="cycle"]')) {
+      await desk.click('#modeList button[data-mode="cycle"]'); await wait(2500);
+      await saveCard(desk, '#modeList', 'testing-modes', 8);
+    }
   }
   await desk.close();
 

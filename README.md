@@ -547,6 +547,17 @@ Supervisor (`Authorization: Bearer <token>` from `POST /api/admin/login`):
 
 ---
 
+## The whole floor, rehearsed — `tools/sim-floor.mjs`
+
+`node tools/sim-floor.mjs` plays a complete count against a throwaway server: twenty teams
+with two scanners each, twenty thousand bins (the real Front Royal list plus freezer aisles in
+the same shape), three shifts compressed into six hours of real time — the sign-on rush,
+breaks, a lunch that trips the stopped-scanning alert, SOS calls, second counts behind the
+variances, the office approving adjustments over the top. Every ten minutes it photographs the
+dashboard and the office board; the frames, figures and latencies land in `docs/load-test/`
+as a page you can scrub through (`index.html`), a `timeline.json` and a `summary.json`.
+`SIM_HOURS=0.25 SIM_SNAP_MIN=1` is a fifteen-minute rehearsal of the same thing.
+
 ## Housekeeping
 
 **Who changed what.** Sign-in asks for a name, and every change a supervisor makes is
