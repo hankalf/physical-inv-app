@@ -59,8 +59,43 @@
     await refreshAll();
   }
 
+  function renderTrial(s) {
+    const on = !!(s && s.trial);
+    $('trialBanner').hidden = !on;
+    $('btnTrialOn').hidden = on || !s || s.status !== 'open';
+    $('btnTrialEnd').hidden = !on;
+    $('trialState').textContent = on ? 'This count is a trial run.'
+      : s && s.cleared_at ? `A trial run was cleared ${new Date(s.cleared_at).toLocaleString()} — this is the real count.` : '';
+  }
+
+  $('btnTrialOn').onclick = async () => {
+    const s = sessions.find((x) => x.id === sessionId);
+    if (!s) return;
+    const lines = s.lines || 0;
+    if (lines && !confirm(`This count already has ${lines.toLocaleString()} lines. Make it a trial run? Ending the trial later clears them.`)) return;
+    try {
+      await postJson(`/api/admin/sessions/${sessionId}/trial`, { on: true });
+      msg($('trialMsg'), 'ok', 'This count is a trial run.', 'The guns show TRIAL RUN within a minute, between pallets.');
+      await loadSessions();
+    } catch (err) { msg($('trialMsg'), 'err', err.message); }
+  };
+  $('btnTrialEnd').onclick = async () => {
+    const s = sessions.find((x) => x.id === sessionId);
+    if (!s) return;
+    const typed = prompt(`End the trial run and clear it?\n\nEvery line (${(s.lines || 0).toLocaleString()}), sign-on, SOS and second count on "${s.name}" goes. The bin list, the report, the team plan and the settings stay, and the aisles go back to the start.\n\nType CLEAR to go ahead.`);
+    if (typed === null) return;
+    if (typed.trim().toUpperCase() !== 'CLEAR') return msg($('trialMsg'), 'warn', 'Nothing cleared.', 'Type CLEAR to end the trial run.');
+    try {
+      const r = await postJson(`/api/admin/sessions/${sessionId}/trial`, { end: true });
+      msg($('trialMsg'), 'ok', `Trial run cleared: ${r.cleared.lines.toLocaleString()} lines, ${r.cleared.signons} sign-ons.`,
+        'This is the real count now. The guns forget the trial the next time they check in.');
+      await loadSessions();
+    } catch (err) { msg($('trialMsg'), 'err', err.message); }
+  };
+
   function applySessionSettings() {
     const s = sessions.find((x) => x.id === sessionId);
+    renderTrial(s);
     if (!s) {
       $('sessionCardSub').textContent = 'no count session yet — create one below';
       return;
@@ -1568,6 +1603,34 @@
   $('fLotSearch').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnFindLot').click(); });
 
   $('btnExportPallets').onclick = () => download(`/api/admin/sessions/${sessionId}/export/pallets.csv`, `pallets-session-${sessionId}.csv`);
+  /* Everything about this count, readable: one sheet per table, plain headings,
+     Yes and No, times on the warehouse clock. */
+  $('btnExportAll').onclick = async () => {
+    if (!sessionId) return;
+    const b = $('btnExportAll');
+    const was = b.textContent;
+    b.disabled = true;
+    b.textContent = 'Building the workbook…';
+    try {
+      const [data, XLSX] = await Promise.all([apiJson(`/api/admin/sessions/${sessionId}/export/everything`), window.appUi.loadXlsx()]);
+      const wb = XLSX.utils.book_new();
+      for (const sh of data.sheets) {
+        const ws = XLSX.utils.json_to_sheet(sh.rows, { header: sh.columns });
+        // wide enough to read without dragging every column
+        ws['!cols'] = sh.columns.map((c) => ({
+          wch: Math.min(60, Math.max(String(c).length, ...sh.rows.slice(0, 500).map((r) => String(r[c] ?? '').length)) + 2),
+        }));
+        if (sh.rows.length && sh.name !== 'Summary') ws['!autofilter'] = { ref: ws['!ref'] };
+        XLSX.utils.book_append_sheet(wb, ws, sh.name.slice(0, 31));
+      }
+      XLSX.writeFile(wb, data.filename);
+    } catch (err) {
+      alert('Could not build the export: ' + err.message);
+    } finally {
+      b.disabled = false;
+      b.textContent = was;
+    }
+  };
   $('btnExportCounts').onclick = () => download(`/api/admin/sessions/${sessionId}/export/counts.csv`, `counts-session-${sessionId}.csv`);
   $('btnExportExceptions').onclick = () => download(`/api/admin/sessions/${sessionId}/export/exceptions.csv`, `exceptions-session-${sessionId}.csv`);
   $('btnExportUncounted').onclick = () => download(`/api/admin/sessions/${sessionId}/export/uncounted.csv`, `uncounted-bins-session-${sessionId}.csv`);

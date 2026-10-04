@@ -318,6 +318,11 @@ shown again in full; the page only shows which server it points at.
 > **A Teams outage never costs you an alert.** The SOS is on the dashboard either way, and the row
 > says whether the channel took it (`teams`, or `teams failed: …`).
 
+**When a team stops scanning.** On the same card: a team that is signed on and still has an
+aisle, but has not scanned for this many minutes (10 to start with), gets an amber bar on the
+dashboard — and a card in the Teams channel if **Send it to the Teams channel too** is ticked.
+**0** turns it off.
+
 ![](images/settings-sos.png)
 
 *The SOS list and the channel it goes to.*
@@ -364,12 +369,15 @@ to see it all from the supervisor's side: progress, the pallet report, the SOS b
   test gun is never offered anything else.
 - The office board never shows it. In every dashboard's count picker it is listed **last** and
   marked **PRACTICE**, so no page opens on it by mistake.
-- Each supervisor gets their own test scanner (**TEST-** and their name, under Scanners), so two
-  people practising at once do not sign each other out. It keeps its own storage in the browser,
-  separate from a real scanner's.
+- **It is yours.** Each login has its own practice count and its own test scanner (**TEST-** and
+  their name, under Scanners), kept from one sign-in to the next. Nobody else sees it, two people
+  practising at once never touch each other's, and a **new user** opens the tab to a fresh one.
+  The test gun keeps its own storage in the browser, separate from a real scanner's and from
+  anyone else's.
 
-**Start over** wipes the practice count and the test gun and builds both again from nothing.
-Nothing on a real count is touched.
+**Start over** begins a new practice run. The one you were on is kept under **Your earlier runs**
+— when it started, how many of the twelve things you tried, how much you counted — so you can
+see your own progress. The last ten are kept. Nothing on a real count is touched.
 
 ![](images/testing-tab.png)
 
@@ -512,7 +520,7 @@ questions it asks change between pallets, never mid-line.
 
 | Option | What it does | Suggested |
 |---|---|---|
-| **Pallet ID check** | *Validate — allow override with reason*: an unknown pallet can be accepted with a reason. *Validate — no overrides*: it cannot. *Accept any ID*: no checking, though duplicates are still blocked. | Validate with override |
+| **Pallet ID check** | *Validate — allow override*: a pallet not on the report asks the counter **Count it anyway? YES / NO**; YES counts it and it shows as a positive adjustment. *Validate — no overrides*: it cannot be counted. *Accept any ID*: no checking, though duplicates are still blocked. | Validate with override |
 | **Guided by aisle plan** | Teams are sent to their assigned aisle and warned when they scan a bin outside it. Off means anyone can count anything. | On for a wall-to-wall |
 | **Ask for comments** | Adds the optional comments step at the end of each pallet. | On |
 | **Auto second counts** | Raises a "go back and look again" task automatically when a line disagrees with the report. | On |
@@ -535,6 +543,24 @@ questions it asks change between pallets, never mid-line.
 ![](images/dashboard-count-options.png)
 
 *Dashboard &rarr; Progress &rarr; Count session: every option above, on one card, for the count picked in the header.*
+
+### Step 13a — A trial run, before the real count
+
+**Dashboard → Progress → Count session → Trial run.**
+
+The way to find out that a crew does not know the empty-bin button, or that an aisle has no
+rack labels, is to run the count for real a shift or a day before it matters. **Make this a
+trial run** turns the count into a rehearsal on the same bin list, report and team plan:
+
+- the guns show **TRIAL RUN** in the header, and so do the dashboard and the office board;
+- nothing can be sent to the ERP, and nothing counted moves a bin's *last counted* date;
+- everything else works exactly as on the day — teams, aisles, SOS, second counts, reports.
+
+When it is done, **End the trial — clear it for the real count**, and type **CLEAR**. Every line,
+sign-on, SOS and second count goes; the bin list, the report, the team plan and every setting
+stay, and each team's aisles go back to the start. The guns are told the next time they check in
+(within a minute, between pallets): they forget what they counted in the trial, so no pallet
+comes back as "already counted", and a trial line a gun sends late is dropped.
 
 ### Step 14 — Give the teams their aisles
 
@@ -559,6 +585,10 @@ or queue aisles by hand here.
 
 *Teams &amp; crew (`/teams`): the crew list and who is on which team. Equipment is what decides which levels a team can be sent to.*
 
+**1st and 2nd shift.** Each team on Teams & crew has a **shift** — set it when you add the team,
+or on the team's card. The page can show one shift at a time, and so can the team table on the
+dashboard, so the 2nd-shift lead sees only their crews.
+
 ---
 
 ## Part 4 — Counting day
@@ -571,6 +601,13 @@ or queue aisles by hand here.
 > nobody expected, a message from the office, voiding a line, losing the wifi, and handing the
 > aisle back. Open it in any browser. It is worth showing a new crew before their first shift.
 
+
+**English or Spanish**
+
+The button at the top right of every screen switches the gun between English and **Español**.
+It stays that way on that scanner until somebody switches it back. Everything the counter
+reads is translated; what reaches the office — the lines, the SOS, the reasons — stays in
+English, so the office reads one language whoever counted.
 
 **Signing on**
 
@@ -589,7 +626,8 @@ or queue aisles by hand here.
 
 The gun asks one question per screen, in the order the site configured:
 
-1. **Scan PALLET ID** — it shows what the ERP says is on that pallet.
+1. **Scan PALLET ID** — the gun says which pallet, and nothing about what is on it. **This is a
+   blind count**: the counter counts what is in front of them, not what the system expects.
 2. **Enter QUANTITY** — big numbers may have to be typed twice.
 3. **Scan LOT CODE** / **Enter EXPIRY** — only on counts that ask for them. A lot that
    disagrees with the report, or a date already past, is called out on the spot.
@@ -604,7 +642,7 @@ many lines are still queued.
 
 | | | |
 |:--:|:--:|:--:|
-| ![](images/gun-your-aisle.png)<br>**After sign-on** — the aisle this team has been given, what is queued behind it, and any second counts waiting | ![](images/gun-step-pallet-mid.png)<br>**Question 1** — *Next bin* tells the team which bin comes next in the aisle, so nothing gets skipped | ![](images/gun-pallet-scanned.png)<br>**Question 2** — the gun shows what the ERP says is on that pallet, so the counter can see they are at the right one |
+| ![](images/gun-your-aisle.png)<br>**After sign-on** — the aisle this team has been given, what is queued behind it, and any second counts waiting | ![](images/gun-step-pallet-mid.png)<br>**Question 1** — *Next bin* tells the team which bin comes next in the aisle, so nothing gets skipped | ![](images/gun-pallet-scanned.png)<br>**Question 2** — the pallet is recognised; the gun does not say what is on it, so the count is blind |
 | ![](images/gun-step-lot.png)<br>**Questions 3 and 4** — only on counts that ask for them. A lot that disagrees with the report is called out here, not a week later in a report | ![](images/gun-step-bin.png)<br>**The last required question** — the gun says where that bin is and which face it is on | ![](images/gun-step-comments.png)<br>**Comments** — tap a reason rather than type one. Left alone, the gun counts down and moves to the next bin by itself |
 
 **A bin with more than one pallet in it**
@@ -622,6 +660,11 @@ to find before they walk on.
   may be a second pallet in it that the ERP has never heard of. Tap **Nothing more here →**
   when it is clear.
 - **Bin is EMPTY** closes a bin outright.
+- **Several empty bins in a row** — for a stretch of an aisle with nothing in it. Scan the
+  **first** empty bin and the **last**; the gun lists every bin between them in walking order,
+  already ticked. Untick any that are not empty, then **Mark N bins EMPTY**. Each is recorded as
+  its own empty bin, exactly as if they had been done one at a time; bins already counted are
+  shown and left alone.
 
 The tally counts what the whole team has done, not just this scanner, so two handhelds
 working the same aisle never double-walk a bay or leave one half counted.
@@ -767,9 +810,15 @@ if it helps, and press **Accept and continue**. The line is saved and flagged fo
 **Dashboard**, with the count picked in the header. It refreshes itself every 30
 seconds.
 
-- **Progress** — lines, bins counted, pallets, exceptions; and a row per team with what
-  they are counting right now and when they last scanned. A team whose last scan was 40
-  minutes ago is a team with a problem.
+- **Progress** — lines, bins counted, pallets, exceptions; and a row per team with its
+  **shift**, what it is counting right now, **when it started**, a **clock** of its time on the
+  count, and when it last scanned. *All shifts / 1st shift / 2nd shift* above the table narrows it.
+  A team's clock stops when it signs off on the gun or finishes its last aisle.
+- **Stopped scanning** — a team that is signed on and still has an aisle, but has not scanned for
+  the site's limit (Settings → Scanners, 10 minutes to start), gets an **amber bar above every
+  tab**, and its last scan turns amber in the table. **On break** (30 minutes) and **Lunch**
+  (45) quiet it for that long; **Seen — I am on it** quiets it until the team scans again. If the
+  site turned it on, the same alert goes to the Teams channel.
 
 ![](images/dashboard-progress.png)
 
@@ -794,14 +843,17 @@ seconds.
 *Message the floor, under Team plan. "1 of 1" with the scanner named is a message that
 landed; "0 of 3" is one nobody has looked at yet.*
 - **Second counts** — see step 18.
-- **Adjustments** — what this count would do to the ERP, and who signed for it. Only on
-  counts with approvals turned on; see step 20.
+- **Adjustments** — **Positive and negative** at the top, on every count: stock to add (found
+  more, or a pallet not on the report) and stock to take off (found less, or not found), with the
+  units and the net. Click a side to list it, and download that list. Below it, on counts with
+  approvals turned on, who signed for each one; see step 20.
 - **Reports** — see step 19.
 
 **Watch for, during the count:**
 
 - Exceptions climbing on one team — usually a training problem, worth a radio call.
-- A team stopped for a long time — dead battery, or stuck behind a trailer.
+- A team stopped for a long time — dead battery, or stuck behind a trailer. The amber
+  *stopped scanning* bar is there so you do not have to watch for it.
 - An aisle nobody has started by mid-afternoon.
 
 ### Step 16a — Answering an SOS
@@ -904,6 +956,14 @@ count with known-wrong numbers in it.
 ### Step 19 — Read the reports
 
 **Dashboard → Reports.**
+
+**Export everything (Excel)** — one workbook with every table the app keeps for this count, in a
+form a person can read: a **Summary**, every **count line**, the **pallet** report, the
+**adjustments** (positive and negative), the **bins** and the ones **not counted**, the **teams**
+and their times, **sign-ons**, **SOS**, **stopped scanning**, **second counts** and the **log**.
+Headings are plain words, flags are *Yes* / *No*, and times are on the warehouse's clock. It is
+the file for an auditor, a manager or the shared drive. (The CSV buttons beside it are for
+machines — the ERP, a reconciliation sheet.)
 
 - **Pallet report** — one row per pallet: expected vs counted, which bin the ERP expected
   and where it was actually found, and a status you can act on: `MATCH`, `QTY VARIANCE`,
@@ -1055,11 +1115,18 @@ a handful of bins are counted every day.
    - **how many bins** in the batch,
    - **which bins**: *longest since it was counted*, *never counted*, or a *random sample*,
    - optionally a **zone, aisle or levels** to stay inside.
+   - optionally only **front** or only **back** bins (*Face*).
 4. **Preview**, then **Generate**. The bins appear on the handhelds as tasks.
 
 ![](images/cycle-counts.png)
 
 *`/cycle` &rarr; Today's bins: how many, which ones, and optionally the zone or aisles to stay inside.*
+
+**Front-placed bins.** The **Front bins** tab lists the bins on the aisle face of the racking —
+narrow it by zone, aisle or level — to look at, **download**, or send to the scanners in one go
+with **Count these — make a batch**. Which face a bin is on comes from the bin list's own
+description (*… Position # 001 – Front*), or, where the list does not say, from the site drawing
+(odd positions front, even back).
 
 5. Counters pick **Cycle count** at sign-on and work the list. Each bin is counted as it
    stands — it is *the* count for that bin, not a second opinion.

@@ -64,7 +64,7 @@ export function boardData(sessionId) {
     }));
 
   return {
-    session: { id: session.id, name: session.name, mode: session.mode || 'full', status: session.status },
+    session: { id: session.id, name: session.name, mode: session.mode || 'full', status: session.status, trial: !!session.trial },
     sessions: listBoardSessions(),
     /* The line the office writes for the floor: when lunch is, which dock is
        blocked. It sits above everything else on the board because that is the

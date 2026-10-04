@@ -22,7 +22,8 @@
   try { EMBEDDED = window.top !== window.self; } catch { EMBEDDED = true; }
 
   /* ------------------------------------------------------------ IndexedDB */
-  const DB_NAME = PRACTICE ? 'invcount-practice' : 'invcount';
+  // each person's practice gun keeps its own storage: the link names their test scanner
+  const DB_NAME = PRACTICE ? `invcount-practice-${new URLSearchParams(location.search).get('d') || 'x'}` : 'invcount';
   const DB_VERSION = 2;
   let idb = null;
 
@@ -326,6 +327,44 @@
   const SETTINGS_EVERY_MS = 15000;   // the gun syncs on a twenty-second tick anyway
   let settingsReadAt = 0;
 
+  /*
+   * A trial run that a supervisor has cleared.
+   *
+   * Everything this gun counted before the clear was the rehearsal: the lines
+   * go (sent or not - the server drops a late one anyway), and so does the list
+   * of pallets already counted, or every pallet of the trial would come back as
+   * "already counted" on the real count.
+   */
+  async function applyTrialClear(session) {
+    $('chipTrial').hidden = !session || !session.trial;
+    if (!session || !session.clearedAt) return;
+    const key = `clearedAt:${session.id}`;
+    const seen = await metaGet(key);
+    if (seen === session.clearedAt) return;
+    const all = await wrap(tx('lines', 'readonly').getAll());
+    const old = all.filter((l) => l.sessionId === session.id && l.ts < session.clearedAt);
+    if (old.length) {
+      await new Promise((res, rej) => {
+        const t = idb.transaction('lines', 'readwrite');
+        for (const l of old) t.objectStore('lines').delete(l.clientId);
+        t.oncomplete = res; t.onerror = () => rej(t.error);
+      });
+    }
+    await clearStores(['dup']);
+    await metaSet('dupWatermark', '');
+    // bins this gun closed during the trial
+    const keys = await wrap(tx('meta', 'readonly').getAllKeys());
+    for (const k of keys) if (String(k).startsWith(`closedBins:${session.id}:`)) await wrap(tx('meta', 'readwrite').delete(k));
+    countedInAisle = new Set(); tagsInBin = new Map(); closedBins = new Set();
+    state.lastBin = ''; state.lastPallet = null;
+    await metaSet(key, session.clearedAt);
+    updateChips();
+    if (seen !== undefined || old.length) {
+      feedback($('scanMsg'), 'warn', 'The trial run was cleared', 'This is the real count now — everything starts fresh.');
+      beep('warn');
+    }
+  }
+
   async function refreshSiteSettings() {
     if (!state.session || state.stepIndex !== 0 || state.draft.palletId) return;
     if (Date.now() - settingsReadAt < SETTINGS_EVERY_MS) return;
@@ -336,6 +375,7 @@
     const merged = { ...state.session, ...fresh, id: state.session.id, name: state.session.name };
     state.session = merged;
     await metaSet('session', merged);
+    await applyTrialClear(merged);
     state.steps = stepsFor(merged);
     document.body.classList.toggle('big-text', (merged.layout_cfg || {}).textSize === 'large');
     holdUpright();
@@ -588,6 +628,7 @@
       }
       await metaSet('session', session);
       await metaSet('lastSessionId', session.id);
+      await applyTrialClear(session);
       await metaSet('team', team);
       await metaSet('employees', state.employees);
 

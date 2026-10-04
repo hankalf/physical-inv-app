@@ -19,8 +19,10 @@ import { listAdjustments, adjustmentView, decideAdjustments, adjustmentReasons, 
 import { accuracy, accuracyCsv, deriveAbc, accuracyTargets, saveAccuracyTargets } from './routes/accuracy.js';
 import { setupState } from './routes/setup.js';
 import { searchAll } from './routes/search.js';
+import { endTrial, setTrial } from './routes/trial.js';
+import { exportEverything } from './routes/export-all.js';
 import { idleConfig, saveIdleConfig, teamClocks, checkIdle, answerIdle, openIdleAlerts, recentIdleAlerts, tellTeamsIdle, idleTick, recordSignoff } from './routes/idle.js';
-import { practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet } from './routes/practice.js';
+import { practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, ownerOf } from './routes/practice.js';
 import { raiseAlert, tellTeams, listAlerts, seeAlert, closeAlert, alertsForDevice, sosReasons, saveSosReasons, DEFAULT_REASONS } from './routes/alerts.js';
 import { teamsConfig, saveTeamsConfig, postToTeams, testCard, alertCard } from './util/teams.js';
 import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout } from './routes/scanner-prompts.js';
@@ -33,7 +35,7 @@ import {
   listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
   tasksForTeam, takeRecount, finishRecount, updateRecount, deleteRecount,
 } from './routes/recounts.js';
-import { generateBatch, previewBatch, listBatches, deleteBatch, coverage, runSchedules, STRATEGIES, levelsOnOpenTasks } from './routes/cycles.js';
+import { generateBatch, previewBatch, binList, listBatches, deleteBatch, coverage, runSchedules, STRATEGIES, levelsOnOpenTasks } from './routes/cycles.js';
 import {
   listEmployees, upsertEmployee, deleteEmployee, importEmployees, importHelpers,
   listTeams, createTeam, deleteTeam, setTeamShift, assignMember, getConfig, setConfig, getEmployee,
@@ -337,7 +339,12 @@ async function handleHandheld(req, res, url, m) {
     /* A gun on the floor never sees the Testing tab's practice count, and the
        practice gun sees nothing else - so nobody tests into the live count. */
     const practice = url.searchParams.get('practice') === '1';
-    return sendJson(req, res, 200, listSessions('open').filter((s) => !!s.practice === practice).map(publicSession));
+    if (!practice) return sendJson(req, res, 200, listSessions('open').filter((s) => !s.practice).map(publicSession));
+    // a test scanner sees its own person's practice count, and only that
+    const auth = String(req.headers.authorization || '');
+    const me = device || (auth.startsWith('Device ') ? deviceByToken(auth.slice(7)) : null);
+    const owner = me && me.practice_owner;
+    return sendJson(req, res, 200, listSessions('open').filter((s) => s.practice && owner && s.practice_owner === owner).map(publicSession));
   }
 
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/master$/)) && method === 'GET') {
@@ -567,21 +574,28 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, { deleted: deleteDevice(m[1]) });
   }
 
-  if (p === '/api/admin/sessions' && method === 'GET') return sendJson(req, res, 200, listSessions());
+  if (p === '/api/admin/sessions' && method === 'GET') {
+    // a practice count is its owner's alone, and only the one they are on
+    const mine = ownerOf(currentUser(req, url));
+    return sendJson(req, res, 200, listSessions().filter((s) => !s.practice || (s.practice_owner === mine && s.status === 'open')));
+  }
 
   // --- the Testing tab: a practice count and a scanner of this supervisor's own
   if (p === '/api/admin/practice' && (method === 'GET' || method === 'POST')) {
     const who = currentUser(req, url);
-    const s = method === 'POST' ? ensurePractice() : practiceSession();
-    if (!s) return sendJson(req, res, 200, { session: null });
+    const owner = ownerOf(who);
+    const s = method === 'POST' ? ensurePractice(owner) : practiceSession(owner);
+    if (!s) return sendJson(req, res, 200, { session: null, history: practiceHistory(owner) });
     const dev = practiceDevice(who);
-    return sendJson(req, res, 200, { ...practiceSheet(s.id), device: { uid: dev.uid, name: dev.name } });
+    return sendJson(req, res, 200, { ...practiceSheet(s.id), device: { uid: dev.uid, name: dev.name }, history: practiceHistory(owner) });
   }
   if (p === '/api/admin/practice/reset' && method === 'POST') {
-    const s = resetPractice();
-    audit(actor, 'reset the practice count', `now #${s.id}`, s.id);
-    const dev = practiceDevice(currentUser(req, url));
-    return sendJson(req, res, 200, { ...practiceSheet(s.id), device: { uid: dev.uid, name: dev.name } });
+    const who = currentUser(req, url);
+    const owner = ownerOf(who);
+    const s = resetPractice(owner);
+    audit(actor, 'started a new practice run', `now #${s.id}`, s.id);
+    const dev = practiceDevice(who);
+    return sendJson(req, res, 200, { ...practiceSheet(s.id), device: { uid: dev.uid, name: dev.name }, history: practiceHistory(owner) });
   }
 
   if (p === '/api/admin/sessions' && method === 'POST') {
@@ -651,6 +665,19 @@ async function handleAdmin(req, res, url, m) {
     const state = setupState(m[1]);
     if (!state) throw httpError(404, 'session not found');
     return sendJson(req, res, 200, state);
+  }
+
+  // --- a trial run: on, off, and cleared ready for the real thing
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/trial$/)) && method === 'POST') {
+    const body = await readJson(req);
+    if (body.end) {
+      const out = endTrial(m[1]);
+      audit(actor, 'ended the trial run and cleared it', `${out.cleared.lines} lines, ${out.cleared.signons} sign-ons, ${out.cleared.sos} SOS, ${out.cleared.secondCounts} second counts cleared`, m[1]);
+      return sendJson(req, res, 200, out);
+    }
+    const s = setTrial(m[1], !!body.on);
+    audit(actor, body.on ? 'made this count a trial run' : 'turned the trial run off (counts kept)', '', m[1]);
+    return sendJson(req, res, 200, { session: s });
   }
 
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/settings$/)) && method === 'POST') {
@@ -847,6 +874,7 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, { formats: saveFormat(body.id, body) });
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/erp\/([a-z0-9-]+)\.csv$/))) {
+    if (getSession(m[1])?.trial) throw httpError(409, 'this count is a trial run - end the trial and count it for real before sending anything to the ERP');
     const built = buildExport(m[1], m[2]);
     audit(actor, 'exported to the ERP',
       `${m[2]}: ${built.rows} rows${built.held ? `, ${built.held} held back waiting for approval` : ''}`, m[1]);
@@ -1007,6 +1035,17 @@ async function handleAdmin(req, res, url, m) {
       siteDate: localDate(), siteTimezone: siteTimezone(), siteHour: localHour(),
     });
   }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/bins$/)) && method === 'GET') {
+    const q = Object.fromEntries(url.searchParams);
+    const list = binList(m[1], q);
+    if (q.format === 'csv') {
+      return sendCsv(req, res, `${list.face || 'all'}-bins-session-${m[1]}.csv`, toCsv(list.bins.map((b) => ({
+        Bin: b.code, Zone: b.zone, Aisle: b.aisle, Level: b.level, Face: b.face ? b.face[0].toUpperCase() + b.face.slice(1) : '',
+        'Last counted': b.last_counted ? b.last_counted.slice(0, 10) : 'never', 'Cycle task open': b.open_task ? 'Yes' : 'No',
+      })), ['Bin', 'Zone', 'Aisle', 'Level', 'Face', 'Last counted', 'Cycle task open']));
+    }
+    return sendJson(req, res, 200, list);
+  }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/cycle\/preview$/)) && method === 'POST') {
     const body = await readJson(req);
     return sendJson(req, res, 200, previewBatch(m[1], body));
@@ -1031,6 +1070,7 @@ async function handleAdmin(req, res, url, m) {
       weekday: Number(body.weekday ?? 1),
       weekdays: Array.isArray(body.weekdays) ? body.weekdays.map(Number) : [1, 2, 3, 4, 5],
       zone: body.zone || '', aisle: body.aisle || '', levels: body.levels || '',
+      face: ['front', 'back'].includes(body.face) ? body.face : '',
     }) : null;
     audit(actor, plan ? 'set the cycle schedule' : 'turned the cycle schedule off', plan || '', m[1]);
     db.prepare('UPDATE sessions SET cycle_schedule = ? WHERE id = ?').run(plan, Number(m[1]));
@@ -1294,6 +1334,11 @@ async function handleAdmin(req, res, url, m) {
     'recounted', 'first_count_qty', 'open_recounts',
     'expected_lot', 'found_lot', 'lot_status', 'expiry', 'expiry_status', 'alias_of', 'also_tagged',
   ];
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/everything$/)) && method === 'GET') {
+    const out = exportEverything(m[1], { by: actor });
+    audit(actor, 'exported everything', `${out.sheets.length} sheets`, m[1]);
+    return sendJson(req, res, 200, out);
+  }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/counts\.csv$/))) {
     return sendCsv(req, res, `counts-session-${m[1]}.csv`, toCsv(rawCounts(m[1]), COUNT_COLS));
   }

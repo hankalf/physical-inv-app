@@ -55,9 +55,14 @@ check('…F01-099 is on the shelf and not on the report', shelf('F01-099').repor
 check('…and F01-013 is on the report and not on the shelf', bin('F01B006').missing.some((m) => m.id === 'F01-013' && !m.foundIn));
 
 const otherTok = await login('Marcus Obi');
-const other = await post('/api/admin/practice', {}, { ...hdr, authorization: 'Bearer ' + otherTok });
+const O = { ...hdr, authorization: 'Bearer ' + otherTok };
+const other = await post('/api/admin/practice', {}, O);
 check('A second supervisor gets a different test scanner, so they cannot sign each other out',
   other.device.name === 'TEST-MARCUS-OBI' && other.device.uid !== made.device.uid);
+check('…and a practice count of their own, starting fresh', other.session.id !== pid && other.checklist.every((c) => !c.done), `#${other.session.id} vs #${pid}`);
+check('Each person sees only their own practice count in the dashboards',
+  (await get('/api/admin/sessions')).filter((s) => s.practice).map((s) => s.id).join(',') === String(pid)
+  && (await get('/api/admin/sessions', O)).filter((s) => s.practice).map((s) => s.id).join(',') === String(other.session.id));
 
 /* ---------------- where it must not show ---------------- */
 const floorDev = await post('/api/admin/devices', { name: 'FLOOR-01' });
@@ -66,8 +71,11 @@ const F = { ...hdr, authorization: 'Device ' + ftok };
 const floorList = await get('/api/sessions', F);
 check('A gun on the floor is never offered the practice count', floorList.length && floorList.every((s) => !s.practice) && floorList.some((s) => s.id === live.id),
   floorList.map((s) => s.name).join(', '));
-const practiceList = await get('/api/sessions?practice=1', F);
-check('The practice gun is offered the practice count and nothing else', practiceList.length === 1 && practiceList[0].id === pid);
+check('A floor gun asking for practice counts gets none', (await get('/api/sessions?practice=1', F)).length === 0);
+const T = { ...hdr, authorization: 'Device ' + (await post(`/api/devices/${other.device.uid}`, {}, hdr)).token };
+const practiceList = await get('/api/sessions?practice=1', T);
+check('A test gun is offered its own person\'s practice count and nothing else', practiceList.length === 1 && practiceList[0].id === other.session.id,
+  practiceList.map((x) => x.id).join(','));
 const board = await get('/api/board');
 check('The office board does not fall back to the practice count', board.session && board.session.id === live.id, board.session && board.session.name);
 check('…nor list it', !(board.sessions || []).some((s) => s.id === pid));
@@ -281,7 +289,7 @@ check('The meter reads twelve of twelve', clean(await page.textContent('#checkCo
 const liveCounts = await get(`/api/admin/sessions/${live.id}/progress`);
 check('The live count received nothing', liveCounts.lines === 0, `${liveCounts.lines} lines`);
 const dbs = await page.evaluate(async () => (indexedDB.databases ? (await indexedDB.databases()).map((d) => d.name) : []));
-check('The practice gun keeps its own storage, apart from a real scanner\'s', dbs.includes('invcount-practice') && !dbs.includes('invcount'), dbs.join(','));
+check('The practice gun keeps its own storage, apart from a real scanner\'s and from anyone else\'s', dbs.includes(`invcount-practice-${made.device.uid}`) && !dbs.includes('invcount'), dbs.join(','));
 const sw = await page.evaluate(async () => (navigator.serviceWorker ? (await navigator.serviceWorker.getRegistrations()).length : 0));
 check('…and installs no service worker over the admin pages', sw === 0);
 
@@ -298,14 +306,29 @@ await gun.click('#btnOverrideCancel').catch(() => {});
 await page.click('#btnReset');
 for (let t = 0; t < 8000; t += 200) { if ((await done()).length === 0) break; await wait(200); }
 const fresh = await get('/api/admin/practice');
-check('Start over makes a fresh practice count', fresh.session.id !== pid && fresh.checklist.every((c) => !c.done), `#${fresh.session.id}`);
+check('Start over makes a fresh practice run', fresh.session.id !== pid && fresh.checklist.every((c) => !c.done), `#${fresh.session.id}`);
+check('…and keeps the last one as history, with how far it got', fresh.history.length === 1 && fresh.history[0].id === pid && fresh.history[0].tried === 12,
+  JSON.stringify(fresh.history));
+await wait(3500);
+check('Your earlier runs are listed on the page', await page.isVisible('#historyCard') && /12 of 12/.test(await page.textContent('#historyTable')));
 check('…the sheet is back to nothing done', clean(await page.textContent('#checkCount')) === '0 of 12 done');
 gun = await gunFrame();
 await wait(800);
 check('…and the gun starts again at sign-on with nothing queued', (await screenOf()) === 'scrSignon'
   && !(await gun.isVisible('#chipQueue')), await screenOf());
-check('The old practice count is gone, the live one untouched', !(await get('/api/admin/sessions')).some((s) => s.id === pid)
+check('The old run is out of the count pickers, the live count untouched', !(await get('/api/admin/sessions')).some((s) => s.id === pid)
   && (await get('/api/admin/sessions')).some((s) => s.id === live.id));
+check('…and the other person\'s practice was not touched', (await post('/api/admin/practice', {}, O)).session.id === other.session.id);
+
+/* a brand-new user starts with nothing */
+await post('/api/admin/users', { username: 'newstarter', name: 'New Starter', password: 'starter-pass-1', role: 'supervisor' });
+const nsLogin = await (await fetch(`${BASE}/api/admin/login`, { method: 'POST', headers: hdr, body: JSON.stringify({ username: 'newstarter', password: 'starter-pass-1' }) })).json();
+const N = { ...hdr, authorization: 'Bearer ' + nsLogin.token };
+const ns = await get('/api/admin/practice', N);
+check('A new user has no practice yet, and no history', ns.session === null && (ns.history || []).length === 0);
+const nsMade = await post('/api/admin/practice', {}, N);
+check('…and opening the Testing tab gives them a fresh one of their own', nsMade.session && ![pid, fresh.session.id, other.session.id].includes(nsMade.session.id)
+  && nsMade.checklist.every((c) => !c.done) && nsMade.device.name === 'TEST-NEWSTARTER', nsMade.device && nsMade.device.name);
 
 /* ---------------- over to the dashboard ---------------- */
 await page.click('#btnDashboard');

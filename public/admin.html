@@ -78,6 +78,8 @@
     <div class="sosalert" id="sosAlert" hidden></div>
     <!-- a team that should be counting has gone quiet -->
     <div class="sosalert idle" id="idleAlert" hidden></div>
+    <!-- a rehearsal says so on every tab -->
+    <div class="trialbanner" id="trialBanner" hidden><b>TRIAL RUN</b> — this count is a rehearsal. Nothing goes to the ERP; clear it under Count session when you are done.</div>
 
     <section class="screen active" id="scrLogin">
       <div class="card signin">
@@ -193,6 +195,20 @@
             <div class="auto"><label for="fApprMinPct" title="...or at least this percentage of what the report expected. Either threshold is enough.">or over</label><input id="fApprMinPct" class="sm" type="number" min="0" max="100" style="width:66px" placeholder="0"><span class="muted"> %</span></div>
           </div>
         </div>
+      </div>
+
+      <div class="fieldset trialset" id="trialSet">
+        <div class="legend">Trial run</div>
+        <div class="hint" style="margin-top:0" id="trialHint">
+          Run this count for real — real guns, real teams, this bin list — as a rehearsal. The guns say <b>TRIAL RUN</b>,
+          nothing goes to the ERP, and when it is done one button clears every line and puts the aisles back, ready for the real count.
+        </div>
+        <div class="toolbar" style="margin-top:8px">
+          <button id="btnTrialOn">Make this a trial run</button>
+          <button class="danger" id="btnTrialEnd" hidden>End the trial — clear it for the real count</button>
+          <span class="muted" id="trialState"></span>
+        </div>
+        <div class="feedback" id="trialMsg"></div>
       </div>
 
       <div class="toolbar">
@@ -475,6 +491,7 @@
       <div class="toolbar">
         <label class="cb"><input type="checkbox" id="fOnlyExceptions" checked> Hide matching pallets</label>
         <span class="spacer"></span>
+        <button class="primary" id="btnExportAll" title="One Excel workbook: a summary, every count line, the pallet report, adjustments, bins, teams, sign-ons, SOS, second counts and the log — in plain words">Export everything (Excel)</button>
         <button id="btnExportPallets">Pallet report CSV</button>
         <button id="btnExportCounts">Raw counts CSV</button>
         <button id="btnExportExceptions">Exceptions CSV</button>

@@ -128,6 +128,11 @@ check('Cycle: bins counted today are not picked again', !t2.tasks.some((t) => t.
 await admin.check('#fCycAuto'); await admin.fill('#fCycSchedBins', '60'); await admin.fill('#fCycHour', '5');
 await admin.click('#btnCycSchedule'); await admin.waitForTimeout(900);
 check('Cycle page: schedule saved', /60 bins every weekday from 5:00 site time/.test(clean(await admin.textContent('#cycleMsg'))), clean(await admin.textContent('#cycleMsg')));
+/* The page saves a weekday schedule; on a Saturday or Sunday at the site that
+   rightly generates nothing. What is checked below is "once per due date", so
+   run it on a seven-day schedule and the answer does not depend on the day. */
+await fetch(`${BASE}/api/admin/sessions/${sess.id}/cycle/schedule`, { method: 'POST', headers: A,
+  body: JSON.stringify({ every: 'day', bins: 60, hour: 0, weekdays: [0, 1, 2, 3, 4, 5, 6] }) });
 const run1 = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/cycle/run-schedule`, { method: 'POST', headers: A, body: '{}' }));
 const run2 = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/cycle/run-schedule`, { method: 'POST', headers: A, body: '{}' }));
 const health = await j(await fetch(`${BASE}/api/health`));

@@ -436,6 +436,13 @@ if (!hasCol('sessions', 'board_note')) {
   db.exec('ALTER TABLE sessions ADD COLUMN board_note_at TEXT');
 }
 if (!hasCol('sessions', 'track_abc')) db.exec('ALTER TABLE sessions ADD COLUMN track_abc INTEGER NOT NULL DEFAULT 0');
+// a test scanner belongs to one person's practice
+if (!hasCol('devices', 'practice_owner')) db.exec('ALTER TABLE devices ADD COLUMN practice_owner TEXT');
+// whose practice count it is: each login on the Testing tab has its own
+if (!hasCol('sessions', 'practice_owner')) db.exec('ALTER TABLE sessions ADD COLUMN practice_owner TEXT');
+// a trial run: counted like the real thing, then cleared before the real thing
+if (!hasCol('sessions', 'trial')) db.exec('ALTER TABLE sessions ADD COLUMN trial INTEGER NOT NULL DEFAULT 0');
+if (!hasCol('sessions', 'cleared_at')) db.exec('ALTER TABLE sessions ADD COLUMN cleared_at TEXT');
 // a gun signing off ends that team's shift on the count: no clock, no stopped-scanning alert
 if (!hasCol('signons', 'ended_at')) db.exec('ALTER TABLE signons ADD COLUMN ended_at TEXT');
 // which shift a team works: '1', '2', or '' when it is not set
@@ -604,6 +611,9 @@ export const publicSession = (s) => ({
   // the count a scanner should land on at sign-on, if a supervisor picked one
   isDefault: defaultSessionId() === s.id,
   practice: !!s.practice,
+  // a trial run says so on the gun; a trial that was cleared tells the gun to forget it
+  trial: !!s.trial,
+  clearedAt: s.cleared_at || null,
 });
 
 /* ------------------------------------------------------- handheld master data */
@@ -679,6 +689,7 @@ const skuOf = db.prepare('SELECT sku FROM pallets WHERE session_id = ? AND palle
 export function saveCounts(sessionId, rows) {
   const id = Number(sessionId);
   const now = new Date().toISOString();
+  const sess = getSession(id) || {};
   const accepted = [];
   const rejected = [];
   const firstCountPallets = new Set();
@@ -693,6 +704,9 @@ export function saveCounts(sessionId, rows) {
       if (!Number.isFinite(qty)) { rejected.push({ clientId: r.clientId, reason: 'invalid qty' }); continue; }
       if (!empty && !norm(r.palletId)) { rejected.push({ clientId: r.clientId, reason: 'missing pallet id' }); continue; }
       if (!norm(r.location)) { rejected.push({ clientId: r.clientId, reason: 'missing location' }); continue; }
+      /* A line scanned before a trial run was cleared belongs to the trial. Taken
+         as sent - so the gun stops offering it - and dropped. */
+      if (sess.cleared_at && r.scannedAt && String(r.scannedAt) < sess.cleared_at) { accepted.push(r.clientId); continue; }
       insertCount.run(
         String(r.clientId), id, empty ? 'EMPTY' : norm(r.palletId), qty, norm(r.location),
         r.comments ? String(r.comments).slice(0, 500) : null,
@@ -723,8 +737,9 @@ export function saveCounts(sessionId, rows) {
     db.exec('ROLLBACK');
     throw err;
   }
-  // a counted bin is a counted bin: keep the cycle-count clock honest
-  if (accepted.length) {
+  // a counted bin is a counted bin: keep the cycle-count clock honest - but a
+  // trial run is a rehearsal, and leaves the clock where the ERP put it
+  if (accepted.length && !sess.trial) {
     const stamp = db.prepare('UPDATE locations SET last_counted = ? WHERE session_id = ? AND code = ?');
     for (const bin of countedBins) stamp.run(now, id, bin);
   }

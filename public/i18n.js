@@ -234,6 +234,8 @@
     ', or the button below — then open it from the home-screen icon.': ', o el botón de abajo — luego ábrela desde el ícono.',
     'This scanner reloaded and is still on the old version. Tell a supervisor.': 'Este escáner se recargó y sigue con la versión anterior. Avisa a un supervisor.',
     'marked empty as part of a run': 'marcada vacía en grupo',
+    'The trial run was cleared': 'Se borró la prueba',
+    'This is the real count now — everything starts fresh.': 'Ahora es el conteo real — todo empieza de nuevo.',
     'Not on the list - counted anyway': 'No está en la lista — contada de todos modos',
     'This scanner link was removed by a supervisor. Ask for a new one.': 'Un supervisor quitó el enlace de este escáner. Pide uno nuevo.',
     'Cannot reach the server to check this scanner link. Connect to Wi-Fi and reload.': 'No se puede conectar para revisar el enlace del escáner. Conéctate al Wi-Fi y recarga.',

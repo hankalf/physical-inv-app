@@ -129,7 +129,55 @@
   const opts = () => ({
     target: Number($('fCycBins').value), strategy: $('fCycStrategy').value,
     zone: $('fCycZone').value, aisle: $('fCycAisle').value, levels: $('fCycLevels').value, team: $('fCycTeam').value,
+    face: $('fCycFace').value,
   });
+
+  /* ------------------------------------------------- front-placed bins */
+  const frQuery = () => new URLSearchParams({
+    face: $('fFrFace').value, zone: $('fFrZone').value.trim(), aisle: $('fFrAisle').value.trim(), levels: $('fFrLevels').value.trim(),
+  });
+  const FACE = { front: 'Front', back: 'Back' };
+
+  $('btnFrList').onclick = async () => {
+    if (!needSession($('frMsg'))) return;
+    try {
+      const r = await apiJson(`/api/admin/sessions/${sessionId}/cycle/bins?${frQuery()}`);
+      const shown = r.bins.slice(0, 1000);
+      msg($('frMsg'), r.count ? 'ok' : 'warn',
+        `${r.count.toLocaleString()} ${r.face ? FACE[r.face].toLowerCase() + '-placed ' : ''}bin${r.count === 1 ? '' : 's'}`,
+        r.count > shown.length ? `Showing the first ${shown.length.toLocaleString()} — download for the rest.` : (r.count ? '' : 'Nothing matches. Check the zone and aisles, or the face.'));
+      table($('frTable'),
+        [{ label: 'Bin' }, { label: 'Zone' }, { label: 'Aisle' }, { label: 'Level' }, { label: 'Face' }, { label: 'Last counted' }, { label: 'Cycle task' }],
+        shown,
+        (b) => {
+          const tr = document.createElement('tr');
+          tr.append(cell(b.code), cell(b.zone || '—'), cell(b.aisle || '—'), cell(b.level || '—'), cell(FACE[b.face] || '—'),
+            cell(b.last_counted ? b.last_counted.slice(0, 10) : 'never'), cell(b.open_task ? 'open' : '—'));
+          return tr;
+        }, 'Nothing matches.');
+    } catch (err) { msg($('frMsg'), 'err', err.message); }
+  };
+  $('btnFrCsv').onclick = async () => {
+    if (!needSession($('frMsg'))) return;
+    const q = frQuery(); q.set('format', 'csv');
+    try { await api.download(`/api/admin/sessions/${sessionId}/cycle/bins?${q}`, `${$('fFrFace').value || 'all'}-bins.csv`); }
+    catch (err) { msg($('frMsg'), 'err', err.message); }
+  };
+  $('btnFrBatch').onclick = async () => {
+    if (!needSession($('frMsg'))) return;
+    try {
+      const list = await apiJson(`/api/admin/sessions/${sessionId}/cycle/bins?${frQuery()}`);
+      const free = list.bins.filter((b) => !b.open_task).length;
+      if (!free) return msg($('frMsg'), 'warn', 'Every bin in this list already has an open cycle task.');
+      if (!confirm(`Put ${free.toLocaleString()} ${list.face ? FACE[list.face].toLowerCase() + '-placed ' : ''}bins on today's cycle count?`)) return;
+      const r = await postJson(`/api/admin/sessions/${sessionId}/cycle/batches`, {
+        target: free, strategy: 'oldest', face: $('fFrFace').value, zone: $('fFrZone').value, aisle: $('fFrAisle').value,
+        levels: $('fFrLevels').value, name: `${new Date().toISOString().slice(0, 10)} · ${list.face ? FACE[list.face].toLowerCase() + ' bins' : 'bins'}`,
+      });
+      msg($('frMsg'), 'ok', `Sent ${r.created.toLocaleString()} bins to the scanners.`, 'Teams see them at sign-on, or after a refresh.');
+      await refresh();
+    } catch (err) { msg($('frMsg'), 'err', err.message); }
+  };
 
   async function fileToCsv(file) {
     if (!/\.xls[xm]?$/i.test(file.name)) return file.text();
@@ -216,7 +264,7 @@
       const body = $('fCycAuto').checked
         ? { every: $('fCycEvery').value, bins: Number($('fCycSchedBins').value), strategy: $('fCycStrategy').value,
             hour: Number($('fCycHour').value), weekday: Number($('fCycWeekday').value),
-            zone: $('fCycZone').value, aisle: $('fCycAisle').value, levels: $('fCycLevels').value }
+            zone: $('fCycZone').value, aisle: $('fCycAisle').value, levels: $('fCycLevels').value, face: $('fCycFace').value }
         : {};
       await postJson(`/api/admin/sessions/${sessionId}/cycle/schedule`, body);
       msg($('cycleMsg'), 'ok', $('fCycAuto').checked

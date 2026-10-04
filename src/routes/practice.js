@@ -140,29 +140,58 @@ function reportCsv() {
   return csv;
 }
 
-export const practiceSession = () =>
-  db.prepare("SELECT * FROM sessions WHERE practice = 1 AND status = 'open' ORDER BY id DESC LIMIT 1").get() || null;
+/*
+ * Whose practice it is. Each login has its own practice count, so two people
+ * learning at once never see each other's lines, and a new person starts on a
+ * clean one. A site still on the shared password is told apart by the name
+ * typed at sign-in.
+ */
+export const ownerOf = (who) => (who && who.username ? `user:${String(who.username).toLowerCase()}`
+  : `name:${String((who && who.name) || 'supervisor').trim().toLowerCase()}`);
 
-/** Build the practice count from nothing: bins, report, and the team's two aisles. */
-function buildPractice() {
+const HISTORY_KEEP = 10;             // earlier runs kept per person
+
+export const practiceSession = (owner) =>
+  db.prepare("SELECT * FROM sessions WHERE practice = 1 AND practice_owner = ? AND status = 'open' ORDER BY id DESC LIMIT 1").get(owner) || null;
+
+/** Build a practice count from nothing: bins, report, and the team's two aisles. */
+function buildPractice(owner) {
   const s = createSession({ name: PRACTICE_NAME, mode: 'full', palletMode: 'warn', guided: 1, askComments: 1 });
-  db.prepare('UPDATE sessions SET practice = 1 WHERE id = ?').run(s.id);
+  db.prepare('UPDATE sessions SET practice = 1, practice_owner = ? WHERE id = ?').run(owner, s.id);
   importMaster(s.id, 'bins', binCsv());
   importMaster(s.id, 'pallets', reportCsv());
   queueAssignments(s.id, PRACTICE_TEAM, ['F01', 'F02'], 'A-F', { force: true });
   return getSession(s.id);
 }
 
-export function ensurePractice() {
-  return practiceSession() || buildPractice();
+export function ensurePractice(owner) {
+  return practiceSession(owner) || buildPractice(owner);
 }
 
-/** Start again: every line, sign-on and SOS on the practice count goes. */
-export function resetPractice() {
-  for (const s of db.prepare('SELECT id FROM sessions WHERE practice = 1').all()) {
-    db.prepare('DELETE FROM sessions WHERE id = ?').run(s.id);
-  }
-  return buildPractice();
+/**
+ * Start again. The run so far is closed and kept, so a person can look back at
+ * what they have tried; only the oldest runs beyond the last ten are deleted.
+ */
+export function resetPractice(owner) {
+  db.prepare("UPDATE sessions SET status = 'closed', closed_at = ? WHERE practice = 1 AND practice_owner = ? AND status = 'open'")
+    .run(new Date().toISOString(), owner);
+  const old = db.prepare("SELECT id FROM sessions WHERE practice = 1 AND practice_owner = ? AND status = 'closed' ORDER BY id DESC")
+    .all(owner).slice(HISTORY_KEEP);
+  for (const s of old) db.prepare('DELETE FROM sessions WHERE id = ?').run(s.id);
+  return buildPractice(owner);
+}
+
+/** This person's earlier runs, newest first, with how far each one got. */
+export function practiceHistory(owner) {
+  return db.prepare("SELECT * FROM sessions WHERE practice = 1 AND practice_owner = ? AND status = 'closed' ORDER BY id DESC")
+    .all(owner).map((s) => {
+      const sheet = practiceSheet(s.id);
+      return {
+        id: s.id, started: s.created_at, ended: s.closed_at,
+        tried: sheet.checklist.filter((c) => c.done).length, of: sheet.checklist.length,
+        lines: sheet.totals.lines, bins: sheet.totals.binsCounted,
+      };
+    });
 }
 
 /**
@@ -172,9 +201,10 @@ export function resetPractice() {
 export function practiceDevice(who) {
   const base = norm((who && (who.username || who.name)) || 'SUPERVISOR').replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 20) || 'SUPERVISOR';
   const name = `TEST-${base}`;
-  const found = listDevices().find((d) => d.name === name);
-  if (found) return found;
-  return createDevice({ name, notes: 'The Testing tab — counts into the practice count only' });
+  const owner = ownerOf(who);
+  const d = listDevices().find((x) => x.name === name) || createDevice({ name, notes: 'The Testing tab — counts into this person\'s practice count only' });
+  if (d.practice_owner !== owner) db.prepare('UPDATE devices SET practice_owner = ? WHERE uid = ?').run(owner, d.uid);
+  return { ...d, practice_owner: owner };
 }
 
 /**

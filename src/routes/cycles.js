@@ -1,4 +1,5 @@
 import { db, norm, getSession } from '../db.js';
+import { loadLayout } from '../util/layouts.js';
 import { localDate, localHour, localWeekday, siteTimezone } from '../util/localtime.js';
 
 /*
@@ -24,8 +25,39 @@ export const STRATEGIES = {
   random: 'Random sample',
 };
 
+/*
+ * Which face of the racking a bin is on: the front, which is what a team sees
+ * and reaches from the aisle, or the back. The bin list's own description says
+ * so at most sites ("... Position # 001 - Front"); where it does not, the site
+ * drawing says which positions face front (odd or even).
+ */
+export function faceOf(code, description, faces) {
+  const d = String(description || '');
+  if (/\bfront\b/i.test(d)) return 'front';
+  if (/\bback\b/i.test(d)) return 'back';
+  if (faces) {
+    const m = /(\d+)\s*$/.exec(String(code || ''));
+    if (m) {
+      const side = Number(m[1]) % 2 === 1 ? faces.odd : faces.even;
+      if (/front/i.test(side || '')) return 'front';
+      if (/back/i.test(side || '')) return 'back';
+    }
+  }
+  return '';
+}
+
+const facesFor = (sessionId) => loadLayout(getSession(sessionId)?.layout)?.faces || null;
+
+/** Keep the bins on one face, when a face was asked for. */
+function onFace(sessionId, rows, face) {
+  const want = String(face || '').toLowerCase();
+  if (want !== 'front' && want !== 'back') return rows;
+  const faces = facesFor(sessionId);
+  return rows.filter((r) => faceOf(r.code, r.description, faces) === want);
+}
+
 /** Bins eligible for a batch, in the order the strategy wants them. */
-function candidates(sessionId, { strategy = 'oldest', zone = '', aisle = '', levels = '' } = {}) {
+function candidates(sessionId, { strategy = 'oldest', zone = '', aisle = '', levels = '', openTasks = false } = {}) {
   const id = Number(sessionId);
   const where = ['l.session_id = ?'];
   const args = [id];
@@ -39,20 +71,42 @@ function candidates(sessionId, { strategy = 'oldest', zone = '', aisle = '', lev
     if (list.length) { where.push(`COALESCE(l.level, '') IN (${list.map(() => '?').join(',')})`); args.push(...list); }
   }
   // never pick a bin that already has an open task
-  where.push("NOT EXISTS (SELECT 1 FROM recounts r WHERE r.session_id = l.session_id AND r.bin = l.code AND r.status != 'done')");
+  if (!openTasks) where.push("NOT EXISTS (SELECT 1 FROM recounts r WHERE r.session_id = l.session_id AND r.bin = l.code AND r.status != 'done')");
   if (strategy === 'never') where.push('l.last_counted IS NULL');
 
   const order = strategy === 'random' ? 'RANDOM()'
     : strategy === 'never' ? 'l.code'
     : 'l.last_counted IS NOT NULL, l.last_counted, l.code';   // nulls first, then oldest
 
-  return { sql: `SELECT l.code, l.aisle, l.level, l.last_counted FROM locations l WHERE ${where.join(' AND ')} ORDER BY ${order}`, args };
+  return { sql: `SELECT l.code, l.zone, l.aisle, l.level, l.description, l.last_counted,
+      EXISTS (SELECT 1 FROM recounts r WHERE r.session_id = l.session_id AND r.bin = l.code AND r.status != 'done') AS open_task
+    FROM locations l WHERE ${where.join(' AND ')} ORDER BY ${order}`, args };
+}
+
+/**
+ * Every bin in a scope, on one face if asked - the list a supervisor prints or
+ * hands to a team, not a batch. "The front-placed bins in the freezer" is the
+ * question this answers.
+ */
+export function binList(sessionId, opts = {}) {
+  const { sql, args } = candidates(sessionId, { ...opts, strategy: 'oldest', openTasks: true });
+  const faces = facesFor(sessionId);
+  const rows = onFace(sessionId, db.prepare(sql.replace(/ORDER BY .*$/s, 'ORDER BY l.code')).all(...args), opts.face)
+    .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+  return {
+    face: ['front', 'back'].includes(String(opts.face || '').toLowerCase()) ? String(opts.face).toLowerCase() : '',
+    count: rows.length,
+    bins: rows.map((r) => ({
+      code: r.code, zone: r.zone || '', aisle: r.aisle || '', level: r.level || '',
+      face: faceOf(r.code, r.description, faces), last_counted: r.last_counted || null, open_task: !!r.open_task,
+    })),
+  };
 }
 
 export function previewBatch(sessionId, opts) {
   const { sql, args } = candidates(sessionId, opts);
   const target = Math.max(1, Number(opts.target) || 40);
-  const rows = db.prepare(sql).all(...args);
+  const rows = onFace(sessionId, db.prepare(sql).all(...args), opts.face);
   return { available: rows.length, picked: rows.slice(0, target) };
 }
 
@@ -65,10 +119,10 @@ export function generateBatch(sessionId, opts = {}) {
   const strategy = STRATEGIES[opts.strategy] ? opts.strategy : 'oldest';
   const target = Math.max(1, Math.min(5000, Number(opts.target) || 40));
   const due = String(opts.due || today()).slice(0, 10);
-  const scope = { zone: opts.zone || '', aisle: opts.aisle || '', levels: opts.levels || '' };
+  const scope = { zone: opts.zone || '', aisle: opts.aisle || '', levels: opts.levels || '', face: opts.face || '' };
 
   const { sql, args } = candidates(id, { ...scope, strategy });
-  const picked = db.prepare(sql).all(...args).slice(0, target);
+  const picked = onFace(id, db.prepare(sql).all(...args), scope.face).slice(0, target);
   if (!picked.length) throw Object.assign(new Error('no bins match that scope - they may all have open tasks already'), { status: 400 });
 
   const name = String(opts.name || '').trim() || `${due} · ${picked.length} bins`;

@@ -9,7 +9,7 @@
   'use strict';
 
   const api = window.appApi;
-  const { $, msg, clearMsg } = window.appUi;
+  const { $, msg, clearMsg, table, cell } = window.appUi;
   const frame = () => $('gunFrame');
 
   let data = null;
@@ -186,6 +186,20 @@
     }
   }
 
+  function renderHistory() {
+    const runs = data.history || [];
+    $('historyCard').hidden = !runs.length;
+    if (!runs.length) return;
+    table($('historyTable'),
+      [{ label: 'Started' }, { label: 'Finished' }, { label: 'Things tried' }, { label: 'Bins counted', num: true }, { label: 'Lines', num: true }],
+      runs, (r) => {
+        const tr = document.createElement('tr');
+        tr.append(cell(new Date(r.started).toLocaleString()), cell(r.ended ? new Date(r.ended).toLocaleString() : '—'),
+          cell(`${r.tried} of ${r.of}`), cell(r.bins, 'num'), cell(r.lines, 'num'));
+        return tr;
+      });
+  }
+
   function render(next) {
     data = next;
     const sig = JSON.stringify(next);
@@ -195,6 +209,7 @@
     renderSignon();
     renderChecks();
     renderShelves();
+    renderHistory();
   }
 
   async function refresh() {
@@ -222,7 +237,7 @@
   function wipeGunStorage() {
     return new Promise((res) => {
       try {
-        const r = indexedDB.deleteDatabase('invcount-practice');
+        const r = indexedDB.deleteDatabase(`invcount-practice-${data.device.uid}`);
         r.onsuccess = r.onerror = r.onblocked = () => res();
       } catch { res(); }
       setTimeout(res, 3000);
@@ -249,7 +264,7 @@
   };
 
   $('btnReset').onclick = async () => {
-    if (!confirm('Start the practice count again from nothing?\n\nEverything counted on it goes, and the test gun is wiped. Real counts are not touched.')) return;
+    if (!confirm('Start a new practice run?\n\nThis run is kept under "Your earlier runs", and the test gun starts clean. Real counts are not touched.')) return;
     try {
       const f = frame();
       const gone = waitLoad(f);
@@ -261,7 +276,7 @@
       drawn = '';
       render(next);
       loadGun({ force: true });
-      msg($('rigMsg'), 'ok', 'Started over.', 'A fresh practice count, and a gun that has never seen it. Sign on again.');
+      msg($('rigMsg'), 'ok', 'Started over.', 'A fresh practice run, and a gun that has never seen it. Sign on again — your last run is kept below.');
     } catch (err) { msg($('rigMsg'), 'err', err.message); }
   };
 

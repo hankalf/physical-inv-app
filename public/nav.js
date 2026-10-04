@@ -119,6 +119,18 @@
     },
     /* Excel files are converted to CSV in the browser (SheetJS, shipped with the
        app and loaded on first use), so an ERP export uploads as-is - no internet. */
+    /** SheetJS, shipped with the app and loaded the first time it is needed. */
+    async loadXlsx() {
+      if (window.XLSX) return window.XLSX;
+      await new Promise((res, rej) => {
+        const sc = document.createElement('script');
+        sc.src = '/vendor/xlsx.full.min.js';
+        sc.onload = res;
+        sc.onerror = () => rej(new Error('Could not load the Excel writer.'));
+        document.head.appendChild(sc);
+      });
+      return window.XLSX;
+    },
     async fileToCsv(file) {
       if (!/\.xls[xm]?$/i.test(file.name)) return file.text();
       if (!window.XLSX) {
@@ -519,6 +531,13 @@
     ['Send to the ERP', '/settings', 'erp', 'erp export send file layout columns adjustments posting'],
     ['Backups and the log', '/settings', 'erp', 'backup restore log audit who did what download'],
     ['Try the scanner on test data', '/testing', '', 'testing test practice training try demo scanner gun emulator simulator learn new starter'],
+    ['Export everything to Excel', '/admin', 'reports', 'export everything excel workbook xlsx all data readable download report auditor'],
+    ['Trial run — rehearse, then clear', '/admin', 'progress', 'trial run rehearsal dry run practice clear reset start fresh'],
+    ['Positive and negative adjustments', '/admin', 'adjust', 'adjustments positive negative found more less add take off net variance'],
+    ['Team clocks and stopped scanning', '/admin', 'progress', 'timer clock time on count idle stopped scanning quiet break lunch alert'],
+    ['Stopped-scanning alert setting', '/settings', 'scanners', 'idle stopped scanning minutes alert teams break'],
+    ['1st and 2nd shift teams', '/teams', 'crew', 'shift first second 1st 2nd night day team'],
+    ['Front-placed bins for cycle counts', '/cycle', 'front', 'front back face placed bins list cycle aisle side'],
   ].map(([title, page, sub, words]) => ({ title, page, sub, words }));
 
   const PENDING = 'searchGoto';

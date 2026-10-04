@@ -122,7 +122,7 @@
       return;
     }
     document.title = `${d.pct}% — ${d.session.name}`;
-    $('bSession').textContent = `${d.session.name}${d.session.mode === 'cycle' ? ' · cycle count' : ''}`;
+    $('bSession').textContent = `${d.session.name}${d.session.mode === 'cycle' ? ' · cycle count' : ''}${d.session.trial ? ' · TRIAL RUN' : ''}`;
     /* The note from the office, above everything else: breaks, lunch, a dock
        nobody can get to. Gone entirely when there is nothing to say, rather
        than an empty box taking room from the progress bar. */
