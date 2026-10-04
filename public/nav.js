@@ -7,6 +7,7 @@
      jobs around it, and how the site is set up. */
   const TABS = [
     ['/admin', 'Dashboard', '▤', 'Counting'],
+    ['/full', 'Full Counts', '▦', 'Counting'],
     ['/cycle', 'Cycle counts', '↻', 'Counting'],
     ['/front', 'Front bins', '▥', 'Warehouse jobs'],
     ['/missing', 'Not in Location', '◎', 'Warehouse jobs'],
@@ -20,6 +21,7 @@
      The current page's list comes from its own markup; the others from here. */
   const SUBS = {
     '/admin': [['progress', 'Progress'], ['map', 'Map'], ['teams', 'Team plan'], ['alerts', 'Alerts'], ['second', 'Second counts'], ['adjust', 'Adjustments'], ['reports', 'Reports']],
+    '/full': [['counts', 'Counts'], ['new', 'New count'], ['setup', 'Set-up']],
     '/cycle': [['today', 'Today'], ['open', 'Still open'], ['coverage', 'Coverage'], ['setup', 'Program & data']],
     '/teams': [['crew', 'Crew & teams'], ['rules', 'Equipment rules']],
     '/settings': [['start', 'Getting started'], ['gun', 'Scanner screen'], ['lists', 'Lists & racking'], ['erp', 'ERP & backups'], ['advanced', 'Advanced']],
@@ -154,9 +156,17 @@
       const box = document.getElementById('navSetPassword');
       if (box) { box.hidden = true; box.classList.remove('active'); }
       sessionStorage.removeItem('admToken');
+      // the next person does not start where this one left off
+      forgetPlaces();
       document.dispatchEvent(new CustomEvent('auth', { detail: null }));
     },
   };
+  /** The sub-tabs each page remembered and any pending jump: one person's, not the next's. */
+  function forgetPlaces() {
+    try {
+      for (const k of Object.keys(sessionStorage)) if (k.startsWith('sub:') || k === 'searchGoto' || k === 'guide:journey') sessionStorage.removeItem(k);
+    } catch { /* private window */ }
+  }
   api.embed = EMBED;
   window.appApi = api;
 
@@ -187,10 +197,11 @@
       td.textContent = text ?? '';
       return td;
     },
-    tag(text) {
+    /** A coloured tag: the class names its colour, the words default to the class. */
+    tag(text, label) {
       const s = document.createElement('span');
       s.className = 'tag ' + text;
-      s.textContent = text;
+      s.textContent = label == null ? text : label;
       return s;
     },
     button(label, cls, onclick) {
@@ -270,13 +281,14 @@
   /* What this login may open. Nothing is known before sign-in, so every tab
      shows; once /me has answered, the ones not on the list go. */
   /* The guide has no key: every login may read it. */
-  const PAGE_KEY = { '/admin': 'dashboard', '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/teams': 'teams', '/settings': 'admin', '/testing': 'testing', '/guide': '' };
+  const PAGE_KEY = { '/admin': 'dashboard', '/full': 'full', '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/teams': 'teams', '/settings': 'admin', '/testing': 'testing', '/guide': '' };
   api.can = (key) => {
     const me = api.me;
     if (!me) return true;
     if (me.role === 'admin') return true;
     if (key === 'admin') return false;
     if (!Array.isArray(me.access)) return true;
+    if (key === 'full') return me.access.includes('full') || me.access.includes('dashboard');
     if (key.includes('.')) return me.access.includes(key) || me.access.includes(key.split('.')[0]);
     return me.access.includes(key) || me.access.some((k) => k.startsWith(key + '.'));
   };
@@ -285,7 +297,7 @@
   api.canTab = (href, sub) => {
     const page = PAGE_KEY[href] || '';
     if (!page) return true;
-    if (page === 'admin') return api.can(page);
+    if (page === 'admin' || page === 'full') return api.can(page);    // no tabs of their own in the access list
     const me = api.me;
     if (!me || me.role === 'admin' || !Array.isArray(me.access)) return true;
     return me.access.includes(page) || me.access.includes(`${page}.${sub}`);
@@ -421,6 +433,16 @@
       throw new Error(msg);
     }
     const me = await res.json();
+    /* Somebody else's turn at this computer starts fresh: the pages' remembered
+       sub-tabs and pending jumps go, and the dashboard is where they land. */
+    let last = '';
+    try { last = sessionStorage.getItem('lastUser') || ''; } catch { /* fine */ }
+    const who = String(me.username || '').toUpperCase();
+    if (last && who && last !== who) {
+      forgetPlaces();
+      if (here === '/admin' && location.hash !== '#progress') history.replaceState(null, '', '#progress');
+    }
+    try { sessionStorage.setItem('lastUser', who); } catch { /* fine */ }
     api.token = me.token;
     api.me = me;
     sessionStorage.setItem('admToken', me.token);
@@ -661,8 +683,10 @@
       if (s.practice) {
         const pr = document.createElement('span');
         pr.className = 'tag practice';
-        pr.textContent = 'practice';
-        pr.title = 'The Testing Suite\'s practice count — not a real count';
+        const owner = String(s.practice_owner || '').replace(/^user:/, '').toUpperCase();
+        const whose = owner && api.me && api.me.username && owner !== String(api.me.username).toUpperCase() ? ` · ${owner}` : '';
+        pr.textContent = 'practice' + whose;
+        pr.title = whose ? `${owner}'s practice count in the Testing Suite — not a real count` : 'The Testing Suite\'s practice count — not a real count';
         top.appendChild(pr);
       }
       if (s.show_on_guns === 0 && s.status !== 'closed') {
@@ -817,6 +841,9 @@
     ['Racking blocks', '/settings', 'lists', 'racking block back to back pair aisles conflict'],
     ['Send to the ERP', '/settings', 'erp', 'erp export send file layout columns adjustments posting'],
     ['Backups and the log', '/settings', 'erp', 'backup restore log audit who did what download'],
+    ['Full counts — every wall-to-wall, open and closed', '/full', 'counts', 'full counts physical wall-to-wall list sessions open closed progress scanners land here default'],
+    ['Start a new full count', '/full', 'new', 'new full count create start physical session'],
+    ['What a count still needs — set-up list', '/full', 'setup', 'setup checklist guided needs required wanted bins report scanners plan'],
     ['Testing Suite — try the scanner on test data', '/testing', '', 'testing suite test practice training try demo scanner gun emulator simulator learn new starter'],
     ['User guide — step by step, with what goes wrong and what people ask', '/guide', '', 'guide help manual how to instructions sop new user start learn question error message what does it mean faq'],
     ['Export everything to Excel', '/admin', 'reports', 'export everything excel workbook xlsx all data readable download report auditor'],
@@ -1087,6 +1114,7 @@
       }
     }
     const out = document.getElementById('navLogout');
-    if (out) out.onclick = () => api.logout();
+    // Log out: the next person to sign in on this computer starts on the dashboard
+    if (out) out.onclick = () => { api.logout(); if (here !== '/admin') location.replace('/admin'); else if (location.hash !== '#progress') history.replaceState(null, '', '#progress'); };
   });
 })();

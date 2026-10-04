@@ -17,7 +17,7 @@ const A = { ...hdr, authorization: 'Bearer ' + token };
 // a cycle-count session with the real bin list; some bins carry an ERP last-count date
 const sess = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: '2026 cycle counts', mode: 'cycle' }) }));
 check('Cycle: session created in cycle mode', sess.mode === 'cycle' && sess.guided === 0, `mode=${sess.mode} guided=${sess.guided}`);
-let bins = readFileSync(new URL('../public/templates/front-royal-bins.csv', import.meta.url).pathname, 'utf8').split('\n');
+let bins = readFileSync(new URL('./fixtures/front-royal-bins.csv', import.meta.url).pathname, 'utf8').split('\n');
 // give a quarter of the rack bins an old ERP date, and a handful a recent one
 const header = bins[0] + ',Last Phys. Invt. Date';
 const rows = bins.slice(1).filter(Boolean).map((line, i) => {

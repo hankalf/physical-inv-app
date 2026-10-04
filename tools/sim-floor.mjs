@@ -124,7 +124,7 @@ try {
      The real Front Royal list, and when the count wants more bins than it has,
      more freezer aisles in the same shape - F25 onwards, as if the extension
      were racked. */
-  const template = readFileSync(join(ROOT, 'public', 'templates', 'front-royal-bins.csv'), 'utf8').trim().split(/\r?\n/);
+  const template = readFileSync(join(ROOT, 'tests', 'fixtures', 'front-royal-bins.csv'), 'utf8').trim().split(/\r?\n/);
   const head = template[0];
   let rows = template.slice(1).filter((l) => /^F\d\d/.test(l));          // the freezer - this is a freezer count
   const donors = ['F02', 'F03', 'F04', 'F05', 'F07', 'F09', 'F10', 'F11'];

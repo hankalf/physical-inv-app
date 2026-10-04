@@ -31,7 +31,7 @@ const containers = new Set(withContainer.map((r) => r.container.replace(/^\$/, '
 const open = rows.filter((r) => !r.container).length;
 
 const sess = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'Site report' }) }));
-await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=bins`, { method: 'POST', headers: csv, body: readFileSync(`${S}../public/templates/front-royal-bins.csv`, 'utf8') });
+await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=bins`, { method: 'POST', headers: csv, body: readFileSync(`${S}fixtures/front-royal-bins.csv`, 'utf8') });
 const up = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=pallets`, { method: 'POST', headers: csv, body: sample }));
 
 check(`The file loads as it comes: ${rows.length} rows, headers as the system writes them`, up.rows === rows.length && !up.error, up.error || `${up.pallets} pallets`);

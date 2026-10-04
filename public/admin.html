@@ -369,6 +369,22 @@
       <div class="scroll" style="margin-top:10px"><table id="fixTable"></table></div>
     </div>
 
+    <div class="card" id="archiveCard">
+      <h2>Filed as the count goes <span class="muted">every aisle handed back is written to disk at once; the final report when the count is whole</span></h2>
+      <div class="hint" style="margin-top:0">
+        The moment a team hands an aisle back, the app files that aisle — its count lines, the pallets expected or found in it,
+        its bins, its second counts and fix-list items — as CSV files on the server, beside the backups. A count that stops
+        halfway has every finished aisle on disk. <b>Final report</b> files every sheet of <i>Export everything</i> the same way,
+        and is offered only when every bin has a count and no second count is open.
+      </div>
+      <div class="toolbar" style="margin-top:10px">
+        <button class="primary" id="btnFinalReport" disabled>Final report</button>
+        <span class="muted" id="finalWhy"></span>
+      </div>
+      <div class="feedback" id="archiveMsg"></div>
+      <div class="scroll" style="margin-top:10px"><table id="archiveTable"></table></div>
+    </div>
+
     <div class="card">
       <h2>Find a lot <span class="muted">after a recall notice: where is every case of it</span></h2>
       <div class="hint" style="margin-top:0">

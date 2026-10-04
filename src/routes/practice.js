@@ -125,9 +125,10 @@ const day = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10
 export const usDate = (iso) => (iso && /^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(5, 7)}/${iso.slice(8, 10)}/${iso.slice(0, 4)}` : (iso || ''));
 const now = () => new Date().toISOString();
 
-const TEMPLATE = fileURLToPath(new URL('../../public/templates/front-royal-bins.csv', import.meta.url));
+// the practice count's own 24 bins - not the site's bin list, which a site uploads for itself
+const TEMPLATE = fileURLToPath(new URL('./practice-bins.csv', import.meta.url));
 
-/** The bin list: the real rows from the Front Royal template for the bins used. */
+/** The practice count's bin list: the rows for the bins it uses, shipped with the app. */
 function binCsv(codes = BINS.map((b) => b.bin)) {
   const want = new Set(codes);
   let rows = [];

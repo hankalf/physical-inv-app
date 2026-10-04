@@ -15,7 +15,7 @@ const A = { ...hdr, authorization: 'Bearer ' + tok };
 const csv = { authorization: 'Bearer ' + tok, 'content-type': 'text/csv' };
 
 const sess = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'prompt test' }) }));
-await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=bins`, { method: 'POST', headers: csv, body: readFileSync(`${S}../public/templates/front-royal-bins.csv`, 'utf8') });
+await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=bins`, { method: 'POST', headers: csv, body: readFileSync(`${S}fixtures/front-royal-bins.csv`, 'utf8') });
 await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=pallets`, { method: 'POST', headers: csv, body: readFileSync(`${S}fixtures/pallets.csv`, 'utf8') });
 await fetch(`${BASE}/api/admin/sessions/${sess.id}/settings`, { method: 'POST', headers: A, body: JSON.stringify({ guided: false, askComments: true }) });
 const dev = await j(await fetch(`${BASE}/api/admin/devices`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'PROMPT-01' }) }));
@@ -177,19 +177,53 @@ await page.fill('#fNewComment', 'pallet on its side'); await page.click('#btnAdd
 check('Settings: adding the same one twice is refused', /already there/.test(await page.textContent('#promptMsg')), clean(await page.textContent('#promptMsg')));
 await page.click('#commentList .chip-btn'); await page.waitForTimeout(300);
 check('Settings: clicking one removes it', (await page.$$('#commentList .chip-btn')).length === 2);
-await page.click('#btnSavePrompts'); await page.waitForTimeout(800);
+await page.click('#btnSaveOffers'); await page.waitForTimeout(1200);
 check('Settings: saving says the scanners will pick it up', /Saved/.test(await page.textContent('#promptMsg')), clean(await page.textContent('#promptMsg')).slice(0, 90));
 const after = await j(await fetch(`${BASE}/api/admin/scanner-prompts`, { headers: A }));
 check('Settings: and it really is saved', after.comments.includes('Pallet on its side'), after.comments.join('|'));
-check('Settings: the wait before the comments step moves on is set with the rest of the screen, not here',
-  (await page.$eval('#fCommentTimeout', (el) => el.closest('[data-sub]').dataset.sub)) === 'gun',
-  await page.$eval('#fCommentTimeout', (el) => el.closest('[data-sub]').dataset.sub));
+check('Settings: everything the scanners offer is one section — jobs, comments and their wait, override reasons, the SOS list',
+  await page.$eval('#offersCard', (c) => ['fJobFull', 'fCommentsAsk', 'fCommentsRequired', 'fCommentTimeout', 'commentList', 'overrideList', 'sosList', 'btnSaveOffers'].every((id) => !!c.querySelector('#' + id))));
 await page.screenshot({ path: `${S}screenshots/scanner-prompts.png`, clip: { x: 0, y: 0, width: 1500, height: 620 } });
 const log = await j(await fetch(`${BASE}/api/admin/audit?limit=20`, { headers: A }));
 check('Changing them is recorded in the log', log.some((r) => r.action === 'changed the scanner reasons'));
 await page.click('#btnResetPrompts'); await page.waitForTimeout(400);
 check('Settings: the defaults can be restored', /press Save/.test(await page.textContent('#promptMsg')));
+
+/* ---------------- comments required, from the one Save ---------------- */
+await page.fill('#fNewComment', 'Frozen to the rack'); await page.click('#btnAddComment'); await page.waitForTimeout(200);
+await page.check('#fCommentsRequired');
+await page.fill('#fNewSos', 'Spill in the aisle'); await page.click('#btnAddSos'); await page.waitForTimeout(200);
+await page.click('#btnSaveOffers'); await page.waitForTimeout(1500);
+check('Settings: the section\'s one Save saves the lot, and says so', /Saved: the jobs, the comments/.test(await page.textContent('#offersMsg')), clean(await page.textContent('#offersMsg')));
+const req = await j(await fetch(`${BASE}/api/admin/scanner-prompts`, { headers: A }));
+const sosNow = await j(await fetch(`${BASE}/api/admin/sos-reasons`, { headers: A }));
+check('…comments are now required, and the SOS list took the new line', req.commentsRequired === true && req.commentsAsk === true && sosNow.reasons.includes('Spill in the aisle'), JSON.stringify([req.commentsRequired, req.commentsAsk]));
 await page.close();
+
+/* a fresh gun signs on and takes the requirement with its session */
+const gun2 = await browser.newPage({ viewport: { width: 480, height: 800 } });
+gun2.on('dialog', (d) => d.accept());
+await gun2.goto(`${BASE}/?d=${dev.uid}`); await gun2.waitForSelector('#scrSignon.active'); await gun2.waitForTimeout(600);
+await intoCounting(gun2);
+const scan2 = async (v) => { await gun2.fill('#fScan', v); await gun2.press('#fScan', 'Enter'); await gun2.waitForTimeout(400); };
+const atPallet2 = () => gun2.waitForFunction(() => /PALLET/.test(document.getElementById('prompt').textContent), null, { timeout: 15000 });
+const pReq = pallets.filter((c) => /^F01/.test(c[5] || ''))[5] || pallets[5];
+await atPallet2(); await scan2(pReq[0]); await scan2(String(pReq[4])); await scan2(pReq[5]); await gun2.waitForTimeout(500);
+check('Gun: with comments required there is no Skip on the comments step, and the prompt says so', await gun2.$eval('#btnSkip', (b) => b.hidden) && /comment is needed/i.test(await gun2.getAttribute('#fScan', 'placeholder')) && /required/i.test(await gun2.textContent('#prompt')), clean(await gun2.textContent('#prompt')));
+check('…and nothing counts down', await gun2.$eval('#moveOn', (el) => el.hidden));
+await scan2('');
+check('…Enter with nothing typed is refused', /A comment is needed/.test(await gun2.textContent('#scanMsg')) && /PALLET/.test(await gun2.textContent('#prompt')) === false, clean(await gun2.textContent('#scanMsg')));
+await gun2.click('#commentChips .chip-btn'); await gun2.press('#fScan', 'Enter'); await gun2.waitForTimeout(700);
+check('…a tapped reason and Enter goes through', /PALLET/.test(await gun2.textContent('#prompt')));
+
+/* and switched off for every scanner, the step is gone - picked up on the settings tick, between pallets */
+await fetch(`${BASE}/api/admin/scanner-prompts`, { method: 'POST', headers: A, body: JSON.stringify({ commentsRequired: false, commentsAsk: false }) });
+await gun2.waitForTimeout(22000);
+const pOff = pallets.filter((c) => /^F01/.test(c[5] || ''))[6] || pallets[6];
+await atPallet2(); await scan2(pOff[0]); await scan2(String(pOff[4])); await scan2(pOff[5]); await gun2.waitForTimeout(700);
+check('Gun: with "Ask for comments" unticked the comments step is skipped on every scanner, whatever the count says', /PALLET/.test(await gun2.textContent('#prompt')) && await gun2.$eval('#commentChips', (el) => el.hidden), clean(await gun2.textContent('#prompt')));
+await gun2.close();
+await fetch(`${BASE}/api/admin/scanner-prompts`, { method: 'POST', headers: A, body: JSON.stringify({ commentsAsk: true }) });
 
 console.log('\nerrors:', errors.length ? errors : 'none');
 console.log(`\n${results.filter(Boolean).length}/${results.length} scanner-prompt checks passed`);

@@ -37,13 +37,14 @@
         },
         {
           title: 'Learn the sidebar',
-          do: 'The pages sit in four groups: Counting (Dashboard, Cycle counts), Warehouse jobs (Front bins, Not in Location), The site (Teams & crew, Settings) and Learn (Testing Suite, this guide). Click a page and its sections open out under it. You only see the pages your login may open.',
+          do: 'The pages sit in four groups: Counting (Dashboard, Full Counts, Cycle counts), Warehouse jobs (Front bins, Not in Location), The site (Teams & crew, Settings) and Learn (Testing Suite, this guide). Click a page and its sections open out under it. You only see the pages your login may open, and the count picker at the top only the kinds of count you may work.',
           where: S('/admin', 'progress', 'Dashboard → Progress'),
           watch: [
             { see: 'A page is missing from my sidebar', means: 'Your login was not given it.', fix: 'That is deliberate, not a fault. Ask an admin if you need it.' },
           ],
           ask: [
-            { q: 'Where is the Count session card?', a: 'Under Settings → Getting started. It used to be on the dashboard.', goto: S('/settings', 'start', 'Settings → Getting started') },
+            { q: 'Where is the Count session card?', a: 'Under Settings → Getting started. The list of full counts, with Open on the dashboard, Close and Scanners land here, is the Full Counts page.', goto: S('/full', 'counts', 'Full Counts') },
+            { q: 'Why is a count missing from the picker?', a: 'The picker shows only the kinds of count your login may work: no Cycle counts page, no cycle counts in the picker; a cycle-counter login sees no full count.' },
             { q: 'What is the office board?', a: 'A read-only page at /board for the office TV: progress, teams, alerts and notes. It needs no login.', goto: S('/board', '', 'Open the board') },
           ],
         },
@@ -65,7 +66,7 @@
             { see: 'Nothing on the gun’s screen takes a scan just now', means: 'The gun is on a screen with no scan box, such as a confirmation.', fix: 'Tap through to the next prompt on the gun first, then click the value.' },
           ],
           ask: [
-            { q: 'Will my practice count show up on the dashboard for others?', a: 'No. A practice count is yours alone and never appears in anyone else’s session picker.' },
+            { q: 'Will my practice count show up on the dashboard for others?', a: 'Not for other supervisors. An admin’s picker lists every count on the site, practice ones included, tagged with whose it is.' },
             { q: 'Can I practise with our own pallets?', a: 'Yes. The Testing Suite takes a file of your own pallets in the site’s inventory report format.', goto: S('/testing', '', 'Testing Suite') },
           ],
         },
@@ -150,7 +151,7 @@
         },
         {
           title: 'Choose which jobs the scanners offer',
-          do: 'Settings → Scanner screen → Jobs on the scanners: the full count, the cycle count, Front2Back, Not in Location. Untick a job and no scanner offers it. On count day tick the full count alone; tick the rest back on afterwards. The practice gun always has every job.',
+          do: 'Settings → Scanner screen → What the scanners offer → Jobs: the sign-on screen shows exactly what is ticked — Full count, Cycle count, Front2Back, Not in Location. Day to day tick the last three; on count day untick them and tick the full count alone; swap back afterwards. The practice gun always has every job.',
           where: S('/settings', 'gun', 'Settings → Scanner screen'),
           watch: [
             { see: '"leave at least one job on, or the scanners have nothing to do"', means: 'Every job was unticked.', fix: 'Tick at least one.' },
@@ -158,11 +159,12 @@
           ],
           ask: [
             { q: 'Does unticking a job stop a gun already signed on to it?', a: 'No. It only changes what the sign-on screen offers next time. A gun mid-job finishes or signs off.' },
+            { q: 'A gun offers Front2Back but says nothing is waiting', a: 'The job is ticked and the move list is empty. Build a list under Front bins, or untick the job until there is one.' },
           ],
         },
         {
-          title: 'Set up the counting screen and the one-tap reasons',
-          do: 'Settings → Scanner screen decides what the gun asks: lot and expiry, comments, text size, language, the Keyboard button. Settings → ERP & backups holds the adjustment reasons. Changes reach a running gun within about half a minute, between pallets.',
+          title: 'Set up the counting screen and what the scanners offer',
+          do: 'Settings → Scanner screen decides what the gun asks: the order of the questions, text size, language, the Keyboard button. What the scanners offer is one section: the jobs, the comments (ask or not, required or not, the wait, the one-tap reasons), the override reasons and the SOS list, with one Save. Changes reach a running gun within about half a minute, between pallets.',
           where: S('/settings', 'gun', 'Settings → Scanner screen'),
           watch: [
             { see: 'A change does not appear on the scanners', means: 'The gun is between pallets or still on the old build.', fix: 'Settings land within half a minute between pallets. A new version needs a reload: tap the green Update ready bar.' },
@@ -170,6 +172,8 @@
           ],
           ask: [
             { q: 'Can counters switch to Spanish themselves?', a: 'Yes, the language button is on the sign-on screen, and the choice stays on that scanner.' },
+            { q: 'Can I make comments compulsory?', a: 'Yes. Settings → Scanner screen → What the scanners offer → Comments are required. The counter must tap a reason or type a note; Skip and the countdown go away.' },
+            { q: 'I added an override reason and the gun does not show it', a: 'It lands between pallets, within about half a minute. If a gun never takes it, its sign-on screen build line is behind the server: tap the Update ready bar or reopen the app.' },
           ],
         },
       ],
@@ -180,8 +184,8 @@
       steps: [
         {
           title: 'Create the count',
-          do: 'Settings → Getting started → Count session → New count. Name it after the date. A full count takes the whole bin list; a cycle count takes batches instead.',
-          where: S('/settings', 'start', 'Settings → Getting started'),
+          do: 'Full Counts → New count (or Settings → Getting started → Count session). Name it after the date. Full Counts lists every wall-to-wall with how far it got, which one the scanners land on, and a Set-up tab for what the new one still needs. A cycle count has its own page.',
+          where: S('/full', 'new', 'Full Counts → New count'),
           watch: [
             { see: '"pick a count first"', means: 'The page has no count selected.', fix: 'Pick one in the picker at the top of the page.' },
             { see: 'The picker shows a count I did not make', means: 'Another supervisor created it, or it is the practice count.', fix: 'Practice counts are yours alone; anything else is real.' },
@@ -344,6 +348,18 @@
           ],
         },
         {
+          title: 'Check what was filed, then the final report',
+          do: 'Reports → Filed as the count goes: every aisle handed back was written to disk at once as CSV files, one folder per hand-back. Final report files every sheet of Export everything, and is offered only when every bin has a count and no second count is open; the card says what is still missing until then.',
+          where: S('/admin', 'reports', 'Dashboard → Reports'),
+          watch: [
+            { see: 'Final report is greyed out', means: 'Bins are still uncounted, or second counts are open.', fix: 'The line beside it says which. Finish them; it switches on by itself.' },
+            { see: 'An aisle handed back is not in the list', means: 'The server could not write the folder.', fix: 'Check the disk on the host; the count itself is unaffected, and Export everything still has the lot.' },
+          ],
+          ask: [
+            { q: 'Where are the filed aisles kept?', a: 'In an exports folder beside the backups on the server’s volume, one folder per count. Download them from the card, and copy the final report off the server with the backup.' },
+          ],
+        },
+        {
           title: 'Read the reports',
           do: 'Reports: the pallet report with filters (status, aisle, lot, text, hide missing), variances by aisle, labels to replace, and the exports. Everything can be read on screen without downloading.',
           where: S('/admin', 'reports', 'Dashboard → Reports'),
@@ -487,6 +503,8 @@
           where: S('/testing', '', 'Try it in the Testing Suite'),
           watch: [
             { see: 'Gun: "That is a very large quantity. Type it again to accept it"', means: 'The number is out of the ordinary.', fix: 'Type it again if it is right, or the right one.' },
+            { see: 'Gun: "F01A001 is a bin, not a pallet" or "P-100 is a pallet label, not a bin"', means: 'The wrong label went into that step.', fix: 'Scan what the prompt asks for; nothing was recorded. For an empty bin tap Bin is EMPTY first.' },
+            { see: 'Gun: "That is a bin, not a quantity"', means: 'A label was scanned where the number goes.', fix: 'The quantity is typed, never scanned: type the cases and press Enter.' },
             { see: 'Gun: "That label belongs to another pallet"', means: 'A second label on this pallet is already known under another id.', fix: 'Tell a supervisor; count under the first label.' },
             { see: 'Gun: "That date has passed"', means: 'An expiry in the past.', fix: 'Tell a supervisor; it is recorded.' },
           ],

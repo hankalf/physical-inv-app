@@ -36,7 +36,7 @@ await admin.fill('#fPassword', 'changeme'); await admin.click('#btnLogin');
 await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(500);
 check('Admin: login', true);
 check('Admin: the tab bar links the supervisor pages, the Testing tab and the guide',
-  (await admin.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/cycle,/front,/missing,/teams,/settings,/testing,/guide');
+  (await admin.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/full,/cycle,/front,/missing,/teams,/settings,/testing,/guide');
 
 /* ---- making the count lives under Settings → Getting started ---- */
 const toSettings = async () => { await admin.goto(BASE + '/settings'); await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(700); };
@@ -76,10 +76,12 @@ check('Settings: every scanner can have its link reset without being removed',
 const gone = await fetch(devLink['SCANNER-99'].replace('/?d=', '/api/devices/'));
 check('API: removed scanner link no longer resolves (404)', gone.status === 404);
 
-await admin.click('#btnLoadSiteBins'); await admin.waitForTimeout(6000);
+check('Settings: no bin list ships with the app — a new site uploads its own', (await admin.$('#btnLoadSiteBins')) === null);
+await admin.setInputFiles('#fFile-bins', new URL('./fixtures/front-royal-bins.csv', import.meta.url).pathname);
+await admin.click('#btnUpload-bins'); await admin.waitForTimeout(6000);
 {
   const m = clean(await admin.textContent('#uploadMsg-bins'));
-  check('Settings: one-click Front Royal bin list: 13,673 bins in 28 aisles, 61 staging/door bins left out', /Imported 13,734 rows/.test(m) && /13,673 bins in 28 aisles/.test(m) && /61 bins left out \(counted manually: STAGING, DOORS\)/.test(m), m.slice(0, 200));
+  check('Settings: the site\'s own bin list uploads: 13,673 bins in 28 aisles, 61 staging/door bins left out', /Imported 13,734 rows/.test(m) && /13,673 bins in 28 aisles/.test(m) && /61 bins left out \(counted manually: STAGING, DOORS\)/.test(m), m.slice(0, 200));
 }
 check('Settings: each list gets its own card, not a dropdown (the counting plan lives under Teams & crew now)',
   (await admin.$$('[data-kind]')).length === 2 && (await admin.$('#fKind')) === null && (await admin.$('#fFile-plan')) === null,

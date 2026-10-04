@@ -23,6 +23,7 @@ import { buildMoves, importMoves, listMoves, movesForGun, finishMove, clearOpenM
 import { autoPlan, applyPlan } from './routes/auto-plan.js';
 import { endTrial, setTrial } from './routes/trial.js';
 import { exportEverything } from './routes/export-all.js';
+import { archiveAisle, finalReadiness, finalReport, listArchives, archivePath } from './routes/archive.js';
 import { idleConfig, saveIdleConfig, teamClocks, checkIdle, answerIdle, openIdleAlerts, recentIdleAlerts, tellTeamsIdle, idleTick, recordSignoff } from './routes/idle.js';
 import { practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, practiceReadiness, practiceFromFile, practiceOptions, setPracticeOptions, practiceSandbox, setPracticeSandbox, practiceExport, ownerOf, practiceModes, startPracticeMode, MODE_ACCESS } from './routes/practice.js';
 import { branding, saveLogo, clearLogo, saveName } from './routes/branding.js';
@@ -264,6 +265,7 @@ async function serveStatic(req, res, pathname) {
     : /^\/admin\/?$/.test(pathname) ? '/admin.html'
     : /^\/teams\/?$/.test(pathname) ? '/teams.html'
     : /^\/cycle\/?$/.test(pathname) ? '/cycle.html'
+    : /^\/full\/?$/.test(pathname) ? '/full.html'
     : /^\/settings\/?$/.test(pathname) ? '/settings.html'
     : /^\/board\/?$/.test(pathname) ? '/board.html'
     : /^\/testing\/?$/.test(pathname) ? '/testing.html'
@@ -452,6 +454,9 @@ async function handleHandheld(req, res, url, m) {
     if (row.team !== norm(body.team)) throw httpError(403, 'that aisle belongs to another team');
     setAssignmentStatus(m[1], m[2], 'done');
     autoAfterAisle(m[1], row.aisle, row.levels, row.team);
+    // the aisle is filed the moment it is handed back
+    const filed = archiveAisle(m[1], row.aisle, { team: row.team, by: `team ${row.team}` });
+    if (filed) audit(`team ${row.team}`, 'aisle filed', `${filed.aisle}: ${filed.lines} lines → ${filed.name}`, m[1]);
     return sendJson(req, res, 200, teamStatus(m[1], body.team));
   }
 
@@ -658,9 +663,19 @@ async function handleAdmin(req, res, url, m) {
   }
 
   if (p === '/api/admin/sessions' && method === 'GET') {
-    // a practice count is its owner's alone, and only the one they are on
-    const mine = ownerOf(currentUser(req, url));
-    return sendJson(req, res, 200, listSessions().filter((s) => !s.practice || (s.practice_owner === mine && s.status === 'open')));
+    // a practice count is its owner's alone, and only the one they are on -
+    // except to an admin, who sees every count on the site, practice ones included
+    const who = currentUser(req, url);
+    const mine = ownerOf(who);
+    const admin = who && who.role === 'admin';
+    // and a login sees only the kinds of count it may work: cycle counts need the
+    // Cycle counts page, full counts any of the pages that work a full count
+    const mayCycle = allowed(who, 'cycle');
+    const mayFull = ['dashboard', 'full', 'teams', 'front', 'missing'].some((k) => allowed(who, k));
+    return sendJson(req, res, 200, listSessions().filter((s) => {
+      if (s.practice) { if (!(admin || s.practice_owner === mine) || s.status !== 'open') return false; }
+      return (s.mode || 'full') === 'cycle' ? mayCycle : mayFull;
+    }));
   }
 
   // --- the Testing tab: a practice count and a scanner of this supervisor's own
@@ -916,7 +931,12 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments\/(\d+)$/)) && method === 'POST') {
     const body = await readJson(req);
     audit(actor, `assignment ${body.status}`, `assignment ${m[2]}`, m[1]);
-    return sendJson(req, res, 200, setAssignmentStatus(m[1], m[2], body.status));
+    const out = setAssignmentStatus(m[1], m[2], body.status);
+    if (body.status === 'done') {
+      const filed = archiveAisle(m[1], out.assignment.aisle, { team: out.assignment.team, by: actor });
+      if (filed) audit(actor, 'aisle filed', `${filed.aisle}: ${filed.lines} lines → ${filed.name}`, m[1]);
+    }
+    return sendJson(req, res, 200, out);
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments\/(\d+)$/)) && method === 'DELETE') {
     audit(actor, 'removed an assignment', `assignment ${m[2]}`, m[1]);
@@ -944,8 +964,17 @@ async function handleAdmin(req, res, url, m) {
     audit(actor, 'created an account', `${u.username} (${u.role})`);
     return sendJson(req, res, 200, u);
   }
+  /* The site admin - the login the site started with - is nobody else's to
+     change: another admin cannot reset its password, take its pages or switch
+     it off. It can still change its own. */
+  const guardSuper = (target, me) => {
+    if (SUPERADMIN_USER && norm(target) === norm(SUPERADMIN_USER) && norm(me.username || '') !== norm(SUPERADMIN_USER)) {
+      throw httpError(403, "only the site admin can change the site admin's account");
+    }
+  };
   if ((m = p.match(/^\/api\/admin\/users\/([A-Za-z0-9._-]+)$/)) && method === 'POST') {
-    requireAccountAdmin(req, url);
+    const me = requireAccountAdmin(req, url);
+    guardSuper(m[1], me);
     const body = await readJson(req);
     const u = updateUser(m[1], body);
     // a login taken away, or a password reset, ends every sign-in that login had
@@ -957,7 +986,7 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, u);
   }
   if ((m = p.match(/^\/api\/admin\/users\/([A-Za-z0-9._-]+)$/)) && method === 'DELETE') {
-    requireAccountAdmin(req, url);
+    guardSuper(m[1], requireAccountAdmin(req, url));
     audit(actor, 'deleted an account', m[1]);
     return sendJson(req, res, 200, { deleted: deleteUser(m[1]) });
   }
@@ -1656,6 +1685,21 @@ async function handleAdmin(req, res, url, m) {
     'recounted', 'first_count_qty', 'open_recounts',
     'expected_lot', 'found_lot', 'lot_status', 'expiry', 'expiry_status', 'alias_of', 'also_tagged',
   ];
+  // --- what has been filed as the count went, and the final report at the end
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/archives$/)) && method === 'GET') {
+    return sendJson(req, res, 200, { archives: listArchives(m[1]), readiness: finalReadiness(m[1]) });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/archives\/final$/)) && method === 'POST') {
+    const out = finalReport(m[1], { by: actor });
+    audit(actor, 'filed the final report', `${out.sheets} sheets → ${out.name}`, m[1]);
+    return sendJson(req, res, 200, { ...out, archives: listArchives(m[1]), readiness: finalReadiness(m[1]) });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/archives\/file$/)) && method === 'GET') {
+    const full = archivePath(m[1], url.searchParams.get('folder') || '', url.searchParams.get('file') || '');
+    if (!full) throw httpError(404, 'no such file');
+    const body = await readFile(full);
+    return send(req, res, 200, body, { 'content-type': full.endsWith('.csv') ? 'text/csv; charset=utf-8' : 'text/plain; charset=utf-8', 'content-disposition': `attachment; filename="${full.split('/').slice(-2).join('-')}"` });
+  }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/everything$/)) && method === 'GET') {
     const out = exportEverything(m[1], { by: actor });
     audit(actor, 'exported everything', `${out.sheets.length} sheets`, m[1]);

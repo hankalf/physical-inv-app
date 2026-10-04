@@ -74,6 +74,9 @@ you the next one. You do not wait for a supervisor.
 - **"That is a very large quantity"**: type it again if it is right.
 - **"That date has passed"**: tell a supervisor; it is recorded.
 - **Team N is counting aisle X**: another team holds that racking. Wait, or ask.
+- **"F01A001 is a bin, not a pallet"**, **"P-100 is a pallet label, not a bin"**, **"That is a
+  bin, not a quantity"**: the wrong label went into that step. Nothing was recorded. Scan what
+  the prompt asks for; the quantity is always typed.
 
 ## 6 — Second counts
 

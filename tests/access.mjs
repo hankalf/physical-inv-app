@@ -48,7 +48,7 @@ check('Allowed: reading the site settings the dashboard needs', await st('/api/a
 
 /* the roles: presets of the list */
 const ivy = await j(await fetch(`${BASE}/api/admin/users`, { method: 'POST', headers: A, body: JSON.stringify({ username: 'IVY', name: 'Ivy Chen', password: 'count-desk-11', mustChange: false, profile: 'inventory' }) }));
-check('A login can be made with a role: Inventory control is the count, adjustments and downloads', ivy.profile === 'inventory' && ivy.role === 'supervisor' && ivy.access.join() === 'dashboard,testing,approve,export', JSON.stringify([ivy.profile, ivy.access]));
+check('A login can be made with a role: Inventory control is the count, adjustments and downloads', ivy.profile === 'inventory' && ivy.role === 'supervisor' && ivy.access.join() === 'dashboard,full,testing,approve,export', JSON.stringify([ivy.profile, ivy.access]));
 const ivyIn = await login({ username: 'IVY', password: 'count-desk-11' });
 const I = { ...hdr, authorization: 'Bearer ' + ivyIn.token };
 const stI = async (path, init = {}) => (await fetch(BASE + path, { ...init, headers: { ...I, ...(init.headers || {}) } })).status;
@@ -56,7 +56,7 @@ check('…so Inventory control may read the count and approve', await stI(`/api/
 check('…but nothing on teams, warehouse jobs or cycle counts', await stI('/api/admin/people') === 403 && await stI('/api/admin/missing') === 403 && await stI(`/api/admin/sessions/${sess.id}/cycle/batches`) === 403 && await stI(`/api/admin/sessions/${sess.id}/moves`) === 403);
 check('Who am I lists the roles on offer', ((await j(await fetch(`${BASE}/api/admin/me`, { headers: A }))).profiles || []).some((pr) => pr.key === 'inventory'));
 check('A list ticked by hand reads as Custom', (await j(await fetch(`${BASE}/api/admin/users/IVY`, { method: 'POST', headers: A, body: JSON.stringify({ access: ['dashboard'] }) }))).profile === 'custom');
-check('…and picking the role again puts the preset back', (await j(await fetch(`${BASE}/api/admin/users/IVY`, { method: 'POST', headers: A, body: JSON.stringify({ profile: 'inventory' }) }))).access.join() === 'dashboard,testing,approve,export');
+check('…and picking the role again puts the preset back', (await j(await fetch(`${BASE}/api/admin/users/IVY`, { method: 'POST', headers: A, body: JSON.stringify({ profile: 'inventory' }) }))).access.join() === 'dashboard,full,testing,approve,export');
 check('A role that is not on offer is refused', (await fetch(`${BASE}/api/admin/users/IVY`, { method: 'POST', headers: A, body: JSON.stringify({ profile: 'overlord' }) })).status === 400);
 
 /* down to the tab: a page, or just some of its tabs */
@@ -94,7 +94,7 @@ await page.goto(BASE + '/admin');
 await page.fill('#fUser', 'SUE'); await page.fill('#fPassword', 'dock-side-77'); await page.click('#btnLogin');
 await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(1500);
 const tabs = await page.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')));
-check('The sidebar offers only what she may open, plus the guide everyone gets', tabs.join(',') === '/admin,/teams,/guide', tabs.join(','));
+check('The sidebar offers only what she may open, plus the guide everyone gets', tabs.join(',') === '/admin,/full,/teams,/guide', tabs.join(','));
 check('Message the floor is there to read but not to send', await page.$eval('#btnSendMsg', (b) => b.disabled) && /not able|no access|not allowed/i.test(await page.$eval('#btnSendMsg', (b) => b.title)), await page.$eval('#btnSendMsg', (b) => b.title));
 check('Queueing aisles is switched off for her', await page.$eval('#btnAssign', (b) => b.disabled));
 await page.goto(BASE + '/settings'); await page.waitForTimeout(2500);
@@ -109,15 +109,15 @@ await adm.goto(BASE + '/settings#advanced');
 await adm.fill('#fUser', 'DANA'); await adm.fill('#fPassword', 'freezer-2026'); await adm.click('#btnLogin');
 await adm.waitForSelector('#scrMain.active'); await adm.waitForTimeout(1800);
 const sueRow = adm.locator('#userTable tr', { hasText: 'SUE' });
-check('Logins: each supervisor row sums up what they may use, in one line', /2 of 6 pages · 1 of 5 functions/.test(await sueRow.locator('details.accpick summary').textContent()), clean(await sueRow.locator('details.accpick summary').textContent()));
+check('Logins: each supervisor row sums up what they may use, in one line', /2 of 7 pages · 1 of 5 functions/.test(await sueRow.locator('details.accpick summary').textContent()), clean(await sueRow.locator('details.accpick summary').textContent()));
 check('…an admin row says everything', /everything/i.test(await adm.locator('#userTable tr', { hasText: 'DANA-WHITFIELD' }).textContent()));
 await sueRow.locator('details.accpick summary').click(); await adm.waitForTimeout(300);
-check('…and opens into a checklist', await sueRow.locator('.accpanel').isVisible() && (await sueRow.locator('input[type=checkbox][data-access]').count()) === 11);
+check('…and opens into a checklist', await sueRow.locator('.accpanel').isVisible() && (await sueRow.locator('input[type=checkbox][data-access]').count()) === 12);
 await sueRow.locator('input[data-access="testing"]').check(); await adm.waitForTimeout(900);
-check('…whose summary follows the ticks', /3 of 6 pages/.test(await sueRow.locator('details.accpick summary').textContent()), clean(await sueRow.locator('details.accpick summary').textContent()));
+check('…whose summary follows the ticks', /3 of 7 pages/.test(await sueRow.locator('details.accpick summary').textContent()), clean(await sueRow.locator('details.accpick summary').textContent()));
 check('Logins: the Role column is a picker with the presets', (await sueRow.locator('select.rolepick option').allTextContents()).some((t) => /Inventory control/.test(t)) && await sueRow.locator('select.rolepick').inputValue() === 'custom');
 await sueRow.locator('select.rolepick').selectOption('inventory'); await adm.waitForTimeout(900);
-check('…and picking Inventory control sets the list to the count, adjustments and downloads', (await j(await fetch(`${BASE}/api/admin/users`, { headers: A }))).users.find((u) => u.username === 'SUE').access.join() === 'dashboard,testing,approve,export');
+check('…and picking Inventory control sets the list to the count, adjustments and downloads', (await j(await fetch(`${BASE}/api/admin/users`, { headers: A }))).users.find((u) => u.username === 'SUE').access.join() === 'dashboard,full,testing,approve,export');
 await fetch(`${BASE}/api/admin/users/SUE`, { method: 'POST', headers: A, body: JSON.stringify({ access: ['testing', 'dashboard'] }) });
 check('Ticking a box saves it', (await j(await fetch(`${BASE}/api/admin/users`, { headers: A }))).users.find((u) => u.username === 'SUE').access.includes('testing'));
 check('…and the page itself has the Advanced tab, being an admin', (await adm.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.trim()))).some((t) => /Advanced/.test(t)));
@@ -154,6 +154,19 @@ check('Logins: the checklist shows each page\'s tabs underneath it', (await ivyR
 check('…and says the page is held in part', /in part/.test(await ivyRow.locator('details.accpick summary').textContent()), clean(await ivyRow.locator('details.accpick summary').textContent()));
 await ivyRow.locator('input[data-tab="dashboard.map"]').check(); await adm.waitForTimeout(900);
 check('…ticking a tab grants that tab', (await j(await fetch(`${BASE}/api/admin/users`, { headers: A }))).users.find((u) => u.username === 'IVY').access.includes('dashboard.map'));
+
+/* ---- the site admin's account is nobody else's to change ---- */
+await fetch(`${BASE}/api/admin/users`, { method: 'POST', headers: A, body: JSON.stringify({ username: 'ADM2', name: 'Second Admin', password: 'dock-side-77', mustChange: false, role: 'admin' }) });
+const adm2 = (await j(await fetch(`${BASE}/api/admin/login`, { method: 'POST', headers: hdr, body: JSON.stringify({ username: 'ADM2', password: 'dock-side-77' }) }))).token;
+const A2 = { ...hdr, authorization: 'Bearer ' + adm2 };
+const touch = await fetch(`${BASE}/api/admin/users/DANA-WHITFIELD`, { method: 'POST', headers: A2, body: JSON.stringify({ active: false }) });
+check('Another admin cannot change the site admin\'s account', touch.status === 403 && /only the site admin/.test((await j(touch)).error), String(touch.status));
+const del = await fetch(`${BASE}/api/admin/users/DANA-WHITFIELD`, { method: 'DELETE', headers: A2 });
+check('…nor delete it', del.status === 403);
+const other = await fetch(`${BASE}/api/admin/users/IVY`, { method: 'POST', headers: A2, body: JSON.stringify({ name: 'Ivy Stone' }) });
+check('…while any other account is theirs to manage', other.status === 200, String(other.status));
+const self = await fetch(`${BASE}/api/admin/users/DANA-WHITFIELD`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'Dana Whitfield' }) });
+check('…and the site admin can still change its own', self.status === 200, String(self.status));
 
 check('No script errors', errors.length === 0, errors.join(' | '));
 await browser.close();

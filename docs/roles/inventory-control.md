@@ -1,6 +1,6 @@
 # SOP — Inventory Control
 
-**Role:** Inventory controller  **Login profile:** *Inventory control — the count, adjustments, downloads*  **Pages:** Dashboard (every tab), Testing Suite, User guide  **Functions:** Approve adjustments, Downloads and printouts
+**Role:** Inventory controller  **Login profile:** *Inventory control — the count, adjustments, downloads*  **Pages:** Dashboard (every tab), Full Counts, Testing Suite, User guide  **Functions:** Approve adjustments, Downloads and printouts
 
 This procedure is for the person who owns the numbers: who checks a count before it is
 trusted, signs off the differences, hands the ERP its file, and keeps the records an auditor
@@ -164,6 +164,13 @@ What the app guarantees, so you can rely on it:
 Every download on the Dashboard is a function of your profile (*Downloads and printouts*).
 Each file is for a different reader.
 
+**Filed as the count goes** — Dashboard → Reports. Every aisle a team hands back is written to
+disk at once as CSV files (its count lines, pallets, bins, second counts, fix-list items), one
+folder per hand-back, listed on the card with download links. A count that stops halfway has
+every finished aisle on disk. **Final report** files every sheet of Export everything the same
+way; the button is on only when every bin has a count and no second count is open, and the card
+says what is still missing until then. File it after the close as the record of the count.
+
 **Export everything (Excel)** — Dashboard → Reports. One workbook, every table the app keeps
 for this count, in words a person can read. This is the record: the file for the auditor, the
 finance team and the shared drive. Its sheets:
@@ -278,7 +285,7 @@ After the close:
 - [ ] MISSING pallets have joined the Adjustments list; approve or reject them
 - [ ] Preview of the ERP file shows **0 held back**, per system
 - [ ] ERP file(s) downloaded and imported; import result checked against the file's row count
-- [ ] Export everything, the log export and a backup downloaded and filed
+- [ ] **Final report** filed from Reports (it needs every bin counted and no second count open), its files downloaded with Export everything, the log export and a backup, and filed
 - [ ] The ERP's on-hand after posting agrees with the pallet report's counted quantities on a
       sample of the largest adjustments
 

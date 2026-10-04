@@ -442,6 +442,7 @@
     $('fAutoUpdate').checked = gunCfg.autoUpdate !== false;
     $('fConfirmOver').value = gunCfg.confirmOver;
     if (promptState) $('fCommentTimeout').value = promptState.commentTimeout;
+    if (promptState) { $('fCommentsAsk').checked = promptState.commentsAsk !== false; $('fCommentsRequired').checked = promptState.commentsRequired === true; }
     $('fDevice').value = gunCfg.device;
     const chip = $('gunChip');
     chip.hidden = false;
@@ -575,10 +576,33 @@
       msg($('jobsMsg'), 'ok', on.length === 4 ? 'The scanners offer every job.' : `The scanners offer ${on.map((k) => JOB_NAME[k]).join(' and ')} now.`, 'Each scanner picks it up the next time it is online.');
     } catch (err) { msg($('jobsMsg'), 'err', 'Not saved', err.message); }
   };
+  let promptDefaults = null;
   async function refreshPrompts() {
     promptState = await api.json('/api/admin/scanner-prompts');
+    promptDefaults = promptState.defaults || promptDefaults;
+    $('fCommentsAsk').checked = promptState.commentsAsk !== false;
+    $('fCommentsRequired').checked = promptState.commentsRequired === true;
     renderPrompts();
   }
+  /* one Save for the whole section: the jobs, the reasons and the SOS list each
+     go to their own setting, and the message at the bottom sums it up */
+  $('btnSaveOffers').onclick = async () => {
+    clearMsg($('offersMsg'));
+    $('btnJobsSave').click();
+    $('btnSavePrompts').click();
+    $('btnSaveSos').click();
+    await new Promise((r) => setTimeout(r, 900));
+    const bad = ['jobsMsg', 'promptMsg', 'sosMsg'].filter((id) => $(id).classList.contains('err'));
+    if (bad.length) msg($('offersMsg'), 'err', 'Not everything saved', 'See the message under the part that refused.');
+    else msg($('offersMsg'), 'ok', 'Saved: the jobs, the comments, the override reasons and the SOS list.', 'Scanners pick the reasons up within about half a minute, between pallets; the jobs the next time they are online.');
+  };
+  $('btnSaveIdle').onclick = async () => {
+    try {
+      const idle = await api.post('/api/admin/idle-config', { minutes: Number($('fIdleMinutes').value) || 0, teams: $('fIdleTeams').checked });
+      $('fIdleMinutes').value = idle.minutes;
+      msg($('idleMsg'), 'ok', 'Saved.', idle.minutes ? `A quiet team shows after ${idle.minutes} minutes.` : 'The stopped-scanning alert is off.');
+    } catch (err) { msg($('idleMsg'), 'err', err.message); }
+  };
 
   const addPrompt = (which, inputId, listId) => {
     const v = $(inputId).value.replace(/\s+/g, ' ').trim().slice(0, 48);
@@ -602,6 +626,9 @@
       promptState = await api.post('/api/admin/scanner-prompts', {
         comments: promptState.comments,
         overrides: promptState.overrides,
+        commentsAsk: $('fCommentsAsk').checked,
+        commentsRequired: $('fCommentsRequired').checked,
+        commentTimeout: Math.max(0, Math.min(120, Number($('fCommentTimeout').value) || 0)),
       });
       promptState.defaults = promptState.defaults || null;
       renderPrompts();
@@ -610,7 +637,7 @@
   };
   $('btnResetPrompts').onclick = async () => {
     if (!confirm('Put the comment and override reasons back to the shipped defaults?')) return;
-    const d = promptState.defaults || { comments: [], overrides: [] };
+    const d = promptState.defaults || promptDefaults || { comments: [], overrides: [] };
     promptState = { ...promptState, ...d };
     renderPrompts();
     msg($('promptMsg'), 'warn', 'Defaults loaded — press Save to keep them.');
@@ -856,12 +883,6 @@
       } catch (err) { msg($('uploadMsg-' + kind), 'err', 'Upload failed', err.message); }
     };
   }
-
-  $('btnLoadSiteBins').onclick = async () => {
-    if (!needSession($('uploadMsg-bins'))) return;
-    const res = await fetch('/templates/front-royal-bins.csv');
-    await uploadText('bins', await res.text(), 'the Front Royal bin list');
-  };
 
   /* ------------------------------------------------------------ aisles & blocks */
   function renderAisles(aisles) {

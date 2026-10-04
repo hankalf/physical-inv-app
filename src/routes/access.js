@@ -8,6 +8,7 @@
 export const ACCESS = [
   // the pages
   ['dashboard', 'Dashboard', 'page'],
+  ['full', 'Full Counts', 'page'],
   ['cycle', 'Cycle counts', 'page'],
   ['front', 'Front bins', 'page'],
   ['missing', 'Not in Location', 'page'],
@@ -55,6 +56,8 @@ export const allowed = (who, key) => {
   if (who.role === 'admin') return true;
   if (key === 'admin') return false;
   if (who.access == null) return true;
+  // Full Counts came after the logins did: the whole dashboard carries it with it
+  if (key === 'full') return who.access.includes('full') || who.access.includes('dashboard');
   if (key.includes('.')) return who.access.includes(key) || who.access.includes(key.split('.')[0]);   // a tab: the tab, or its whole page
   return who.access.includes(key) || who.access.some((k) => k.startsWith(key + '.'));                 // a page: whole, or any of its tabs
 };
@@ -75,7 +78,7 @@ function tabOf(p, method) {
     if (/^(alerts|messages)(\/|$)/.test(rest)) return 'dashboard.alerts';
     if (/^recounts(\/|$)/.test(rest) || rest === 'export/recounts.csv') return 'dashboard.second';
     if (/^adjustments(\/|$)/.test(rest) || rest === 'export/adjustments.csv') return 'dashboard.adjust';
-    if (/^(pallets|labels|fixlist|lot|uncounted|issues)(\/|$)/.test(rest) || /^export\//.test(rest) || /^print\//.test(rest)) return rest === 'export/coverage.csv' ? 'cycle.coverage' : 'dashboard.reports';
+    if (/^(pallets|labels|fixlist|lot|uncounted|issues|archives)(\/|$)/.test(rest) || /^export\//.test(rest) || /^print\//.test(rest)) return rest === 'export/coverage.csv' ? 'cycle.coverage' : 'dashboard.reports';
     if (rest === 'cycle/open') return 'cycle.open';
     if (rest === 'cycle/batches' && !w) return 'cycle.today';
     if (/^cycle\//.test(rest)) return w ? 'cycle.setup' : 'cycle.today';
@@ -87,7 +90,7 @@ function tabOf(p, method) {
     if (sub === 'status') return null;
     return 'front.moves';
   }
-  if (p === '/api/admin/pallet-system' && !w) return 'front.desk';
+  if (p === '/api/admin/pallet-system' && !w) return null;     // both desks read it: Front bins and Not in Location
   if (p === '/api/admin/people/equipment') return 'teams.rules';
   if (p.startsWith('/api/admin/people')) return 'teams.crew';
   return null;
@@ -131,8 +134,8 @@ export function routeNeed(p, method) {
 export const PROFILES = [
   ['admin', 'Admin — everything, Settings included', null],
   ['supervisor', 'Supervisor — everything a supervisor can', null],
-  ['inventory', 'Inventory control — the count, adjustments, downloads', ['dashboard', 'testing', 'approve', 'export']],
-  ['floor', 'Count supervisor — runs the floor', ['dashboard', 'teams', 'testing', 'messages', 'alerts', 'assign', 'export']],
+  ['inventory', 'Inventory control — the count, adjustments, downloads', ['dashboard', 'full', 'testing', 'approve', 'export']],
+  ['floor', 'Count supervisor — runs the floor', ['dashboard', 'full', 'teams', 'testing', 'messages', 'alerts', 'assign', 'export']],
   ['jobs', 'Warehouse jobs — front bins, Not in Location, cycle counts', ['front', 'missing', 'cycle', 'testing', 'export']],
   ['cycle', 'Cycle counter — cycle counts only', ['cycle', 'testing']],
   ['custom', 'Custom — ticked by hand', undefined],

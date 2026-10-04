@@ -40,7 +40,7 @@ const csv = { authorization: 'Bearer ' + tok, 'content-type': 'text/csv' };
 
 /* ---------------------------------------------------------------- the floor */
 const sess = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'peak load' }) }));
-const binCsv = readFileSync(`${S}../public/templates/front-royal-bins.csv`, 'utf8');
+const binCsv = readFileSync(`${S}fixtures/front-royal-bins.csv`, 'utf8');
 const t0Bins = performance.now();
 const binImp = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=bins`, { method: 'POST', headers: csv, body: binCsv }));
 const binSecs = (performance.now() - t0Bins) / 1000;

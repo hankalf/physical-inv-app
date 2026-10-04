@@ -113,7 +113,7 @@
     'Scan PALLET ID': 'Escanea la TARIMA', 'Enter QUANTITY': 'Escribe la CANTIDAD',
     'Scan BIN LOCATION': 'Escanea la UBICACIÓN', 'Scan LOT CODE': 'Escanea el LOTE',
     'Enter EXPIRY (YYYY-MM-DD)': 'Escribe el VENCIMIENTO (AAAA-MM-DD)',
-    'Comments (optional)': 'Comentarios (opcional)',
+    'Comments (optional)': 'Comentarios (opcional)', 'Comments (required)': 'Comentarios (obligatorio)',
     'EMPTY bin — scan its LOCATION': 'Ubicación VACÍA — escanea la UBICACIÓN',
     'Keyboard': 'Teclado', 'Keyboard on': 'Teclado activo', 'Back': 'Atrás', 'Skip': 'Saltar',
     'Bin is EMPTY — scan the bin': 'Ubicación VACÍA — escanea la ubicación',

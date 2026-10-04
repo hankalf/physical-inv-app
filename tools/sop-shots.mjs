@@ -52,7 +52,7 @@ try {
   ]) await post('/api/admin/users', u).catch(() => {});
   await post('/api/admin/pallet-system', { url: 'https://wms.example.com/pallets' }).catch(() => {});
   const sess = await post('/api/admin/sessions', { name: 'Q3 2026 wall-to-wall' });
-  const binCsv = readFileSync(join(ROOT, 'public', 'templates', 'front-royal-bins.csv'), 'utf8');
+  const binCsv = readFileSync(join(ROOT, 'tests', 'fixtures', 'front-royal-bins.csv'), 'utf8');
   await post(`/api/admin/sessions/${sess.id}/master?kind=bins`, binCsv, csv);
 
   // a believable frozen-food inventory report over the aisles the teams get
@@ -300,10 +300,10 @@ try {
   await sub('gun');    await saveCard(desk, '#stepOrder', 'settings-scanner-screen');
   await saveCard(desk, '#deviceTable', 'settings-scanners');
   await desk.uncheck('#fJobCycle').catch(() => {}); await desk.uncheck('#fJobMove').catch(() => {}); await desk.uncheck('#fJobMissing').catch(() => {});
-  await desk.click('#btnJobsSave').catch(() => {}); await wait(500);
+  await desk.click('#btnSaveOffers').catch(() => {}); await wait(1200);
   await saveCard(desk, '#fJobFull', 'settings-jobs');
   await desk.check('#fJobCycle').catch(() => {}); await desk.check('#fJobMove').catch(() => {}); await desk.check('#fJobMissing').catch(() => {});
-  await desk.click('#btnJobsSave').catch(() => {}); await wait(400);
+  await desk.click('#btnSaveOffers').catch(() => {}); await wait(1200);
   await saveCard(desk, '#commentList', 'settings-reason-codes');
   await saveCard(desk, '#sosList', 'settings-sos');
   await sub('lists');
@@ -457,6 +457,21 @@ try {
       await saveCard(desk, '#modeList', 'testing-modes', 8);
     }
   }
+  /* ---------- Full Counts ---------- */
+  await desk.goto(BASE + '/full');
+  await desk.waitForSelector('#fcTable tbody tr', { timeout: 15000 }).catch(() => {}); await wait(1500);
+  await saveCard(desk, '#fcTable', 'full-counts', 8);
+
+  /* ---------- filed as the count goes ---------- */
+  {
+    const asg = await (await fetch(`${BASE}/api/admin/sessions/${sess.id}/assignments`, { headers: A })).json();
+    const done = (Array.isArray(asg) ? asg : []).find((a) => a.status === 'active') || (Array.isArray(asg) ? asg[0] : null);
+    if (done) await post(`/api/admin/sessions/${sess.id}/assignments/${done.id}`, { status: 'done' }).catch(() => {});
+    await desk.goto(BASE + '/admin#reports');
+    await desk.waitForSelector('#scrMain.active', { state: 'attached' }); await wait(2500);
+    await saveCard(desk, '#archiveTable', 'dashboard-filed', 6);
+  }
+
   /* ---------- Not in Location: the find desk ---------- */
   await post('/api/admin/missing', { pallet: 'FR10257294', sku: '2301', description: 'Blueberry wild 30lb', qty: 24, last: 'A02C019' }).catch(() => {});
   await post('/api/admin/pallet-system', { url: `${BASE}/board?session=${sess.id}` }).catch(() => {});

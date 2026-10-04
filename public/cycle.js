@@ -188,12 +188,6 @@
     try { await upload($('fKind').value, await fileToCsv(file), file.name); $('fFile').value = ''; }
     catch (err) { msg($('uploadMsg'), 'err', 'Upload failed', err.message); }
   };
-  $('btnLoadSiteBins').onclick = async () => {
-    if (!needSession($('uploadMsg'))) return;
-    const res = await fetch('/templates/front-royal-bins.csv');
-    await upload('bins', await res.text(), 'the Front Royal bin list');
-  };
-
   $('btnCycPreview').onclick = async () => {
     if (!needSession($('cycleMsg'))) return;
     try {

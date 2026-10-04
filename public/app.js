@@ -106,9 +106,11 @@
     const cfg = session.layout_cfg || {};
     const wanted = new Set(['pallet', 'qty', 'bin',
       ...(session.askLot ? ['lot'] : []), ...(session.askExpiry ? ['expiry'] : [])]);
+    // comments: the count asks for them, and the site has not switched them off for every scanner
+    const comments = session.askComments && (session.prompts || {}).commentsAsk !== false;
     return [
       ...(cfg.order || ['pallet', 'qty', 'bin']).filter((k) => wanted.has(k)),
-      ...(session.askComments ? ['comments'] : []),
+      ...(comments ? ['comments'] : []),
     ];
   }
 
@@ -487,17 +489,19 @@
   }
 
   /* ------------------------------------------------------------ sign-on */
-  // Only offer the kinds of work that actually exist, and default to the one
-  // this scanner did last.
+  /* The jobs on the sign-on screen are the ones the office has ticked under
+     Settings → Scanner screen → What the scanners offer - day to day the cycle
+     count, Front2Back and Not in Location; on count day the full count alone.
+     A ticked job with nothing waiting is still offered, and says so when picked.
+     The gun defaults to the job it did last. */
+  const hasWork = (k) => k === 'full' ? state.sessions.some((s) => (s.mode || 'full') === 'full')
+    : k === 'cycle' ? state.sessions.some((s) => s.mode === 'cycle')
+      : k === 'move' ? state.sessions.some((s) => s.movesOpen > 0)
+        : k === 'missing' ? state.missingOpen > 0 && state.sessions.length > 0 : false;
   function renderSessionChoices() {
     const sel = $('fSession');
-    const kinds = new Set(state.sessions.map((s) => s.mode || 'full'));
-    // moving pallets back is a job on a count, not a kind of count: offered while any are waiting
-    if (state.sessions.some((s) => s.movesOpen > 0)) kinds.add('move');
-    // finding the pallets the office has lost is a job too, while any are on the list
-    if (state.missingOpen > 0 && state.sessions.length) kinds.add('missing');
-    // and only the jobs the office has left switched on for the scanners
-    for (const k of [...kinds]) if (state.jobs && state.jobs[k] === false) kinds.delete(k);
+    const jobs = state.jobs || { full: true, cycle: true, move: true, missing: true };
+    const kinds = new Set(['full', 'cycle', 'move', 'missing'].filter((k) => jobs[k] !== false));
     $('btnModeFull').hidden = !kinds.has('full');
     $('btnModeCycle').hidden = !kinds.has('cycle');
     $('btnModeMove').hidden = !kinds.has('move');
@@ -506,7 +510,7 @@
     $('sessionLabel').textContent = kinds.size < 2
       ? (state.mode === 'cycle' ? 'Cycle count' : 'Count session')
       : 'Which one';
-    if (!kinds.has(state.mode)) state.mode = kinds.has('full') ? 'full' : [...kinds][0] || '';
+    if (!kinds.has(state.mode)) state.mode = [...kinds].find((k) => hasWork(k)) || [...kinds][0] || '';
     $('btnModeFull').classList.toggle('selected', state.mode === 'full');
     $('btnModeCycle').classList.toggle('selected', state.mode === 'cycle');
     $('btnModeMove').classList.toggle('selected', state.mode === 'move');
@@ -519,8 +523,9 @@
     const solo = state.mode === 'cycle' || state.mode === 'move' || state.mode === 'missing';
     $('teamBlock').hidden = solo;
     // moving or finding pallets is one job on the warehouse: nothing to choose
-    $('fSession').hidden = state.mode === 'move' || state.mode === 'missing';
-    $('sessionLabel').hidden = state.mode === 'move' || state.mode === 'missing';
+    const hideBox = (state.mode === 'move' || state.mode === 'missing') && hasWork(state.mode);
+    $('fSession').hidden = hideBox;
+    $('sessionLabel').hidden = hideBox;
     $('employeeLabel').textContent = solo ? 'Your clock-in number — scan it, then Enter' : 'Clock In Numbers — scan them, then Enter';
     $('employeeHint').textContent = solo ? 'Just you. Scan your badge and sign on.' : 'Everyone on the crew — tap a number to remove it.';
 
@@ -535,7 +540,7 @@
       o.dataset.session = JSON.stringify(s);
       sel.appendChild(o);
     }
-    if (!shown.length) sel.innerHTML = `<option value="">No ${state.mode === 'cycle' ? 'cycle count' : state.mode === 'move' ? 'pallets to move' : state.mode === 'missing' ? 'count open' : 'full count'} running</option>`;
+    if (!shown.length) sel.innerHTML = `<option value="">${state.mode === 'cycle' ? 'No cycle count running' : state.mode === 'move' ? 'Nothing waiting to move right now' : state.mode === 'missing' ? 'No count open to work from' : 'No full count running'}</option>`;
   }
 
   async function pickMode(mode) {
@@ -1252,10 +1257,10 @@
     const step = state.steps[state.stepIndex];
     $('stepLabel').textContent = `Step ${state.stepIndex + 1} of ${state.steps.length}`;
     $('prompt').textContent = { pallet: 'Scan PALLET ID', qty: 'Enter QUANTITY', bin: 'Scan BIN LOCATION',
-      lot: 'Scan LOT CODE', expiry: 'Enter EXPIRY (YYYY-MM-DD)', comments: 'Comments (optional)' }[step];
+      lot: 'Scan LOT CODE', expiry: 'Enter EXPIRY (YYYY-MM-DD)', comments: prompts().commentsRequired === true ? 'Comments (required)' : 'Comments (optional)' }[step];
     const f = $('fScan');
     f.value = '';
-    f.placeholder = step === 'comments' ? 'Type a note or tap one below'
+    f.placeholder = step === 'comments' ? (prompts().commentsRequired === true ? 'A comment is needed — tap one below or type' : 'Type a note or tap one below')
       : step === 'expiry' ? 'e.g. 2027-03-15' : '';
     /* The scanner is the keyboard. An on-screen keypad is never brought up by
        the app - not for the quantity, not for a date, not for a comment - it
@@ -1263,7 +1268,7 @@
        Keyboard button turns it on for whoever really does need to type. */
     f.inputMode = !state.keyboardOn ? 'none' : (step === 'qty' ? 'decimal' : 'text');
     // lot and expiry can be missing on a real pallet, so they are skippable
-    $('btnSkip').hidden = !['comments', 'lot', 'expiry'].includes(step);
+    $('btnSkip').hidden = !['comments', 'lot', 'expiry'].includes(step) || (step === 'comments' && prompts().commentsRequired === true);
     $('btnEmpty').hidden = step !== 'pallet';
     $('btnEmptyRun').hidden = step !== 'pallet' || !!state.recount;
     // a second label belongs to the pallet just counted, so it is offered at the
@@ -1335,6 +1340,7 @@
   }
   function startMoveOn() {
     stopMoveOn();
+    if (prompts().commentsRequired === true) return;    // nothing moves on until somebody writes something
     const secs = Number(prompts().commentTimeout || 0);
     if (!secs) return;
     moveOnLeft = secs;
@@ -1522,6 +1528,12 @@
       return;
     }
     if (!value && step !== 'comments') return;
+    // a site can insist on a comment: no blank, no skip, no moving on by itself
+    if (!value && step === 'comments' && prompts().commentsRequired === true) {
+      beep('err');
+      feedback($('scanMsg'), 'err', 'A comment is needed on this pallet', 'Tap a reason below or type a note, then Enter.');
+      return;
+    }
     clearFeedback($('scanMsg'));
 
     /* The setup card is taped to the cradle, so its QR gets scanned by mistake.
@@ -1541,6 +1553,14 @@
       const dup = await alreadyCounted(value);
       const pal = await lookupPallet(value);
       const mode = state.session.palletMode || 'warn';
+      /* The wrong thing in the wrong field: a rack label scanned where the pallet
+         goes. Say what it was and what to scan instead; nothing is recorded. */
+      if (!pal && (await lookupLocation(value))) {
+        beep('err');
+        feedback($('scanMsg'), 'err', `${value} is a bin, not a pallet`, 'Scan the label on the pallet. If the bin is empty, tap Bin is EMPTY first and then scan the bin.');
+        $('fScan').value = ''; focusScan();
+        return;
+      }
 
       const applyPallet = () => {
         state.draft.palletId = value;
@@ -1594,7 +1614,10 @@
       // Strict: a stray scan into the quantity field must never become a count.
       const cleaned = value.replace(/[\s,]/g, '');
       if (!/^\d+(\.\d+)?$/.test(cleaned)) {
-        feedback($('scanMsg'), 'err', `"${value}" is not a quantity`, 'Type a number. If you meant to scan something, press Back first.');
+        // say what was scanned, so the counter knows which label went where
+        const kind = (await lookupLocation(value)) ? 'a bin' : (await lookupPallet(value)) || value === state.draft.palletId ? 'a pallet label' : '';
+        beep('err');
+        feedback($('scanMsg'), 'err', kind ? `That is ${kind}, not a quantity` : `"${value}" is not a quantity`, 'The quantity is typed, not scanned: type the number of cases and press Enter.');
         $('fScan').value = '';
         focusScan();
         return;
@@ -1616,6 +1639,13 @@
 
     if (step === 'bin') {
       const loc = await lookupLocation(value);
+      // a pallet label scanned where the bin goes: say so, record nothing
+      if (!loc && (value === state.draft.palletId || (await lookupPallet(value)))) {
+        beep('err');
+        feedback($('scanMsg'), 'err', `${value} is a pallet label, not a bin`, value === state.draft.palletId ? 'That is the pallet you just scanned. Now scan the rack label of the bin it is in.' : 'Scan the rack label of the bin this pallet is in.');
+        $('fScan').value = ''; focusScan();
+        return;
+      }
       const active = state.session.guided ? state.assignment?.active?.aisle : null;
       const applyBin = () => {
         state.draft.location = value;
@@ -1676,6 +1706,13 @@
     }
 
     if (step === 'lot') {
+      // a bin or a pallet scanned where the lot goes
+      if (value && ((await lookupLocation(value)) || value === state.draft.palletId || (await lookupPallet(value)))) {
+        beep('err');
+        feedback($('scanMsg'), 'err', `${value} is ${(await lookupLocation(value)) ? 'a bin' : 'a pallet label'}, not a lot`, 'Scan the lot code on the pallet, or tap Skip if it has none.');
+        $('fScan').value = ''; focusScan();
+        return;
+      }
       // an expected lot from the report is worth checking against, not just recording
       const want = state.draft.expectedLot;
       state.draft.lot = value || null;

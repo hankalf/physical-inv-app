@@ -12,7 +12,7 @@ const csv = { authorization: 'Bearer ' + tok, 'content-type': 'text/csv' };
 
 async function freshSession(name, settings = {}) {
   const s = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name }) }));
-  await fetch(`${BASE}/api/admin/sessions/${s.id}/master?kind=bins`, { method: 'POST', headers: csv, body: readFileSync(`${S}../public/templates/front-royal-bins.csv`, 'utf8') });
+  await fetch(`${BASE}/api/admin/sessions/${s.id}/master?kind=bins`, { method: 'POST', headers: csv, body: readFileSync(`${S}fixtures/front-royal-bins.csv`, 'utf8') });
   await fetch(`${BASE}/api/admin/sessions/${s.id}/master?kind=pallets`, { method: 'POST', headers: csv, body: readFileSync(`${S}fixtures/pallets.csv`, 'utf8') });
   if (Object.keys(settings).length) await fetch(`${BASE}/api/admin/sessions/${s.id}/settings`, { method: 'POST', headers: A, body: JSON.stringify(settings) });
   return s;

@@ -14,7 +14,7 @@ const A = { ...hdr, authorization: 'Bearer ' + tok };
 const csv = { authorization: 'Bearer ' + tok, 'content-type': 'text/csv' };
 
 const full = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'guided walk' }) }));
-await fetch(`${BASE}/api/admin/sessions/${full.id}/master?kind=bins`, { method: 'POST', headers: csv, body: readFileSync(`${S}../public/templates/front-royal-bins.csv`, 'utf8') });
+await fetch(`${BASE}/api/admin/sessions/${full.id}/master?kind=bins`, { method: 'POST', headers: csv, body: readFileSync(`${S}fixtures/front-royal-bins.csv`, 'utf8') });
 await fetch(`${BASE}/api/admin/sessions/${full.id}/master?kind=pallets`, { method: 'POST', headers: csv, body: readFileSync(`${S}fixtures/pallets.csv`, 'utf8') });
 await fetch(`${BASE}/api/admin/sessions/${full.id}/settings`, { method: 'POST', headers: A, body: JSON.stringify({ guided: true, askComments: false }) });
 await fetch(`${BASE}/api/admin/sessions/${full.id}/assignments`, { method: 'POST', headers: A, body: JSON.stringify({ team: '1', aisles: 'F01', levels: 'A', force: true }) });

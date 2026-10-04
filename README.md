@@ -110,14 +110,15 @@ sign-in covers all of them.
 
 | Section | Sub-tabs |
 |---|---|
-| **Dashboard** (`/admin`) | Progress · Map · Team plan · Second counts · Reports |
+| **Dashboard** (`/admin`) | Progress · Map · Team plan · Alerts · Second counts · Adjustments · Reports — the live view of the count in the picker |
+| **Full Counts** (`/full`) | Counts · New count · Set-up — every wall-to-wall, open and closed; which one the scanners land on; start one; what it still needs |
 | **Cycle counts** (`/cycle`) | Today · Still open · Coverage · Program & data |
 | **Teams & crew** (`/teams`) | Crew & teams · Equipment rules |
 | **Settings** (`/settings`) | Getting started · Scanner screen · Lists & racking · ERP & backups · Advanced |
 | **Front bins** (`/front`) | Pallets to move back · Move desk · Front-placed bins. The gun has the same desk: Front2Back at sign-on with a badge alone, pick the aisle, the pallet and its two bins, the pallet system framed under them, Moved — next |
 | **Not in Location** (`/missing`) | the list, and a find desk; on the gun, Not in Location at sign-on with a badge alone, the aisle it was last seen in, the pallet system framed under the strip, Found — next |
 | **Testing Suite** (`/testing`) | the real scanner on a practice count of your own |
-| **Settings → Scanner screen → Jobs on the scanners** | which jobs the sign-on screen offers (full count, cycle count, Front2Back, Not in Location); tick the full count alone on count day |
+| **Settings → Scanner screen → What the scanners offer** | one section, one Save: the jobs on the sign-on screen (tick the full count alone on count day), comments (ask / required / the wait / the one-tap reasons), the override reasons, the SOS list |
 | **Settings → Advanced → Site name** | the app's own name and the location under it, out of the box *Full Harvest Inventory · Front Royal*; a change lands on every page, the guns, the board and the installed app's manifest |
 | **User guide** (`/guide`) | the SOP inside the app: journeys, what goes wrong at each step, an Ask box that answers a question or a pasted message, and a live "Right now" read of the count. Open to every login |
 
@@ -271,8 +272,9 @@ Sample files are in `sample-data/`, and each upload type has a downloadable temp
 with its columns explained on the page. Excel files (`.xlsx`) upload as-is — the
 first sheet is converted in the browser.
 
-**Front Royal:** the full ERP bin list ships in the app — **Load Front Royal bin list**
-in the Settings upload card loads all 13,734 bins: racks `F01`–`F24` and `A01`–`A04`, and the
+**No bin list ships with the app.** A new installation starts empty and the site uploads its
+own. For Front Royal, the ERP's bin export (kept in the repository for the tests as
+`tests/fixtures/front-royal-bins.csv`, not served by the app) is 13,734 bins: racks `F01`–`F24` and `A01`–`A04`, and the
 non-rack bins grouped as `WIP`, `AREAS` and `SYSTEM` (which holds `NIL`, the
 not-in-location bin). Those are *areas*: their bins validate and count like any other,
 but they are not aisles — they don't appear with the racking blocks and can't be
@@ -570,6 +572,15 @@ Supervisor (`Authorization: Bearer <token>` from `POST /api/admin/login`):
 | `GET` | `/api/admin/sessions/:id/export/{pallets,counts,exceptions,uncounted,recounts,coverage}.csv` | Exports |
 
 ---
+
+## Filed as the count goes
+
+Every aisle a team hands back is written to disk at once — its count lines, pallets, bins,
+second counts and fix-list items as CSV files under `exports/session-<id>/aisle-<AISLE>-<stamp>/`
+beside the backups (`EXPORT_DIR` to move it). **Final report** on Dashboard → Reports files every
+sheet of Export everything the same way, and is offered only when every bin has a count and no
+second count is open. `GET /api/admin/sessions/:id/archives` lists them; `…/archives/file?folder=&file=`
+downloads one; `POST …/archives/final` files the report (409 with the reasons until the count is whole).
 
 ## The inventory report, as the site exports it
 

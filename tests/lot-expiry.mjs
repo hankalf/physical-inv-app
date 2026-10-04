@@ -25,7 +25,7 @@ PLT-E,SKU-5,Beans 5lb,18,F01A005,LOT-4471,2027-06-01
 PLT-F,SKU-6,Cod 8lb,30,F01A006,LOT-9000,${past}
 `;
 const sess = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'lot count' }) }));
-await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=bins`, { method: 'POST', headers: csv, body: readFileSync(`${S}../public/templates/front-royal-bins.csv`, 'utf8') });
+await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=bins`, { method: 'POST', headers: csv, body: readFileSync(`${S}fixtures/front-royal-bins.csv`, 'utf8') });
 const imp = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=pallets`, { method: 'POST', headers: csv, body: REPORT }));
 check('The report\'s lot and expiry columns are read, by any of their usual names',
   imp.withLots === 5 && imp.withExpiry === 6, `${imp.withLots} lots, ${imp.withExpiry} dates`);

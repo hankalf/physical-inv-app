@@ -41,7 +41,8 @@ on a PC.
 | Screen | Address | Who uses it | Sign-in |
 |---|---|---|---|
 | **Scanner** | its own link, `/?d=…` | Counters, on the handhelds | Each scanner has its own link; the bare address opens the supervisor sign-in |
-| **Dashboard** | `/admin` | Supervisor running the count | Supervisor login |
+| **Dashboard** | `/admin` | Supervisor running the count — the live view of the count in the picker | Supervisor login |
+| **Full Counts** | `/full` | Every wall-to-wall on the site: open and closed, how far each got, which one the scanners land on; start a new one; what a count still needs | Supervisor login (the Dashboard's access) |
 | **Settings** | `/settings` | Whoever sets the count up | Supervisor login |
 | **Office board** | `/board` | Anyone — put it on the office TV | **None.** Read-only |
 | **Cycle counts** | `/cycle` | Whoever runs the daily programme | Supervisor login |
@@ -187,6 +188,10 @@ own password from **Change my password** at the foot of the sidebar.
 
 *May use, opened on one login: the pages, each page's tabs, and the functions — a tick takes effect on their next click.*
 
+**What an admin sees in the count picker.** An admin's picker lists every count on the site,
+other people's practice counts from the Testing Suite included, each tagged *practice · NAME*; a
+supervisor sees the real counts and only their own practice count.
+
 **A procedure per role.** Each profile has a short SOP of its own under `docs/roles/` (and as a
 PDF beside it): Admin, Supervisor, Inventory control, Count supervisor, Warehouse jobs, Cycle
 counter, and one for the counters on the handhelds. Hand a new login the right one; this manual
@@ -206,10 +211,11 @@ This is every location in the warehouse. It is what a scanned bin is checked aga
 and it is what defines the aisles teams get assigned to. **Upload this before anything
 else.**
 
-- For this site, press **Load the Front Royal bin list** — the ERP bin export ships with
-  the app: racks F01–F24 and A01–A04 plus WIP, the NIL bin and other areas. Staging
-  lanes and dock doors are counted manually and are deliberately left out.
-- Otherwise choose a CSV or Excel file. Column names are matched loosely — see
+- **No bin list ships with the app.** A new installation starts empty, and the site uploads
+  its own: the ERP's bin export, as it comes. For Front Royal that is racks F01–F24 and
+  A01–A04 plus WIP, the NIL bin and other areas; staging lanes and dock doors are counted
+  manually and are left out on upload.
+- Choose the CSV or Excel file. Column names are matched loosely — see
   [Appendix A](#appendix-a--file-column-reference). The only column you must have is the
   bin location.
 - **Replace what is there** wipes the existing list first. Leave it unticked to add to
@@ -299,18 +305,19 @@ scanner is wiped and worth asking about otherwise.
 
 *Print setup cards: one per scanner, each with its own QR code and the three steps to do on the device.*
 
-**Which jobs the scanners offer.** *Settings → Scanner screen → Jobs on the scanners.* A gun's
-sign-on screen offers the jobs that exist: the **full count** when one is open, the **cycle count**
-when the programme has a batch, **Front2Back** while any moves are waiting, **Not in Location**
-while that list has anything on it. Untick a job here and no scanner offers it. On the morning of
-a wall-to-wall, tick the full count alone, so nobody signs on to anything else by mistake; tick
-the others back on when it is over. At least one job has to stay on. Scanners pick the change up
-the next time they are online, and the practice gun in the Testing Suite always has every job,
-whatever is ticked here.
+**Which jobs the scanners offer.** *Settings → Scanner screen → What the scanners offer → Jobs on
+the sign-on screen.* A gun's sign-on screen shows exactly the jobs ticked here — **Full count**,
+**Cycle count**, **Front2Back**, **Not in Location (NIL)** — whether or not there is work waiting
+for each; a ticked job with nothing to do says so when it is picked. Day to day a site ticks the
+cycle count, Front2Back and Not in Location. On the morning of a wall-to-wall, untick those and
+tick the full count alone, so every scanner opens on it and nobody signs on to anything else by
+mistake; tick the others back on when it is over. At least one job has to stay on. Scanners pick
+the change up the next time they are online, and the practice gun in the Testing Suite always
+has every job, whatever is ticked here.
 
 ![](images/settings-jobs.png)
 
-*Settings &rarr; Scanner screen &rarr; Jobs on the scanners: the full count alone, for count day.*
+*Settings &rarr; Scanner screen &rarr; What the scanners offer: the full count alone ticked, for count day.*
 
 ### Step 8a — A barcode test book, to practise on
 
@@ -589,20 +596,26 @@ Press **Save**. Scanners pick the change up within about half a minute, between 
 
 ### Step 10 — Set the one-tap reasons
 
-**Settings → Scanner screen → What the scanners offer.**
+**Settings → Scanner screen → What the scanners offer.** One section for everything a counter
+is offered on the gun, with one **Save everything the scanners offer** button at the bottom:
 
-Counters wearing gloves in a freezer will not type. These are the buttons they tap
-instead, and the reasons a site needs are its own — "Blocked by a trailer" means
-something here and nothing anywhere else.
+- **Jobs on the sign-on screen** — the full count, the cycle count, Front2Back, Not in Location
+  (see step 8).
+- **Comments** — offered on the last step, after the bin is scanned. Two tick boxes: **Ask for
+  comments after the bin** (untick it and no scanner asks, on any count, whatever the count's own
+  setting says) and **Comments are required** (the counter must tap a reason or type a note: no
+  Skip, no blank, nothing moving on by itself). Under them, how many **seconds** the step waits
+  before moving on when comments are optional (0 waits for the counter), and the one-tap reasons.
+- **Override reasons** — offered when a pallet ID is not on the list and the counter is allowed
+  to accept it anyway. Click a chip to remove one, type and **Add** for a new one. **Other** is
+  always offered on the gun as well, whatever you configure.
+- **SOS** — the list a counter picks from when they press SOS.
 
-- **Comments** — offered on the last step, after the bin is scanned.
-- **Override reasons** — offered when a pallet ID is not on the list and the counter is
-  allowed to accept it anyway. **Other** is always offered on the gun as well, whatever
-  you configure.
-The time the comments step waits before moving on is set with the rest of the counting
-screen — see step 9.
-
-Press **Save**; again, scanners pick it up within about half a minute.
+Counters wearing gloves in a freezer will not type. These are the buttons they tap instead, and
+the reasons a site needs are its own — "Blocked by a trailer" means something here and nothing
+anywhere else. A scanner picks a change up within about half a minute, **between pallets**: a
+reason added while a counter is halfway through a line appears after that line is finished.
+The jobs on the sign-on screen change the next time a scanner is online.
 
 ![](images/settings-reason-codes.png)
 
@@ -615,6 +628,22 @@ Press **Save**; again, scanners pick it up within about half a minute.
 > Do this the day before, not on the morning of the count.
 
 ### Step 11 — Create the count
+
+**Full Counts** in the sidebar is the home of the wall-to-walls: a table of every full count,
+open and closed, with bins counted, lines and second counts open, **Open on the dashboard**,
+**Scanners land here** (the count every gun opens on at sign-on) and **Close** / **Reopen**;
+a **New count** tab that creates one; and a **Set-up** tab that lists what the count in the
+picker still needs, each step linking to where it is done. The count's options stay under
+*Settings → Getting started → Count session*, and the Dashboard stays the live view of whichever
+count the picker holds. Cycle counts have their own page, *Cycle counts*, the same way.
+
+![](images/full-counts.png)
+
+*Full Counts: every wall-to-wall, how far it got, and what to do with it.*
+
+**The picker shows what the login may work.** A login without the *Cycle counts* page sees no
+cycle count in the picker at the top of any page, and a cycle-counter login sees no full count.
+
 
 **Settings → Getting started → Count session → Start a new count.**
 
@@ -780,6 +809,11 @@ English, so the office reads one language whoever counted.
 **Counting a pallet**
 
 The gun asks one question per screen, in the order the site configured:
+
+The gun checks that what was scanned is what the step asked for: a rack label at the pallet step,
+a pallet label at the bin or lot step, any label where the quantity is typed, is named for what it
+is and refused, and nothing is recorded (*"F01A001 is a bin, not a pallet — scan the label on the
+pallet"*).
 
 1. **Scan PALLET ID** — the gun says which pallet, and nothing about what is on it. **This is a
    blind count**: the counter counts what is in front of them, not what the system expects.
@@ -1234,6 +1268,18 @@ a note), and **bins blocked** by a trailer or a forklift that a team said it wou
 shows the bin, the pallet, who saw it and when. **Fixed** ticks it off with a word on what was done;
 *Still open* is the walk-round list. It downloads as a CSV and has its own sheet in the export.
 
+**Filed as the count goes.** The moment a team hands an aisle back, the app writes that aisle to
+disk — its count lines, the pallets expected or found in it, its bins, its second counts and
+fix-list items — as CSV files in an `exports` folder beside the backups, one folder per hand-back.
+A count that stops halfway has every finished aisle on disk already. The card lists what has been
+filed, with a download link for each file. **Final report** files every sheet of *Export everything*
+the same way, and the button is on only when the count is whole: every bin has a count and no second
+count is open; until then the card says what is still missing. The log records every filing.
+
+![](images/dashboard-filed.png)
+
+*Filed as the count goes: one row per aisle handed back, the final report once the count is whole.*
+
 **Export everything (Excel)** — one workbook with every table the app keeps for this count, in a
 form a person can read: a **Summary**, every **count line**, the **pallet** report, the
 **adjustments** (positive and negative), the **bins** and the ones **not counted**, the **teams**
@@ -1424,7 +1470,9 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | The app still shows the old name somewhere | The name was changed under Settings → Advanced → Site name | Supervisor pages change at once. A scanner picks it up when it is next online; the board on its next refresh. The name under a home-screen icon comes from the app's install and updates when the app is next reinstalled |
 | The strip on the gun shows the pallet but no system under it | No pallet system address is set, or the system refuses to be framed | Settings → Advanced → Pallet system; a system that refuses a frame has the Open link beside the strip |
 | The site's address opens the supervisor sign-in, not the scanner | That is how it works: the bare address is the office's | A scanner is opened from its own link under Settings → Scanner screen (`/?d=…`); after that its home-screen icon lands on the app. If a handheld lost that (site data cleared), open its link again |
-| A gun does not offer the cycle count, Front2Back or Not in Location | That job is unticked under Settings → Scanner screen → Jobs on the scanners, or there is nothing waiting for it | Deliberate during a wall-to-wall; tick it back on when the count is over |
+| A gun does not offer the cycle count, Front2Back or Not in Location | That job is unticked under Settings → Scanner screen → What the scanners offer | Deliberate during a wall-to-wall; tick it back on when the count is over |
+| A gun offers Front2Back but says *Nothing waiting to move right now* | The job is ticked and the move list is empty | Normal: build a move list under Front bins, or untick the job |
+| A count is missing from the picker | The login may not work that kind of count | A login without the Cycle counts page sees no cycle count; a cycle counter sees no full count. An admin adds the page under Supervisor logins |
 | You do not know what a message means | The gun or the dashboard said something unfamiliar | Paste it into **User guide → Ask the guide**: it knows every message the gun and the server can show, with the fix. A new starter should begin at the guide's *Your first day* |
 | You cannot find where something is set | The app has four pages and twenty-odd cards | Type what you would call it into the search box at the top of the sidebar — *"upload bin list"*, *"keyboard"*, *"approve"* — and the **Go to** hits take you straight there. **/** puts the cursor in it |
 | Not sure whether a gun has the latest version | — | The sign-on screen's bottom line reads *"App build a1b2c3d4e5f6 on the server — this scanner is up to date"*. Compare it across two guns, or against a fresh reload |
@@ -1433,13 +1481,14 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | A team says they never got a message | Look at **Read by** on the dashboard | It shows which scanners have tapped Got it. A scanner that is offline gets it on its next sync |
 | A scan seems to land on a button instead of the box | Something else took the focus | Nothing — the app puts the keystrokes in the box and carries on. Tell us if it still happens |
 | The guide is a bin or two ahead of the team | The bins hold several pallets each | Fixed: the guide now stays on a bin until its tags are counted. Check **Show the next bin in the aisle** is on |
+| Gun: *F01A001 is a bin, not a pallet* / *P-100 is a pallet label, not a bin* / *That is a bin, not a quantity* | The wrong label was scanned into that step | Scan what the prompt asks for: the pallet's label at PALLET, the rack label at BIN, a typed number at QUANTITY, the lot code at LOT. Nothing was recorded. For an empty bin tap **Bin is EMPTY** first |
 | A scan opens the address bar and the text goes into it | The page has lost the keyboard — either the scanner sends a TAB that used to move focus out of the page, or somebody tapped the browser's own bar | Fixed: TAB now ends a scan like ENTER and the focus never leaves the box. If it ever happens again the app shows a red **Tap here to scan** bar — one tap puts it right |
 | A bar with the web address appears on every scan | The app is being run as a page in Chrome rather than installed | Install it: Chrome menu → **Install app**, or the **Install on this scanner** button on the sign-on screen, then open it from the home-screen icon |
 | The browser's address bar is in the way | Same thing — the app is not installed | As above. For a device that should run nothing else, use Zebra's Enterprise Home Screen |
 | Gun: *"Team N is counting aisle X"* | Another team holds that racking block | Wait, or hand the other aisle back first |
 | Second-count list is enormous | Thresholds are at 0 | Set **Recount over** and **or over %**, and a **cap** (Part 3, step 13) |
 | The map is a schematic, not your drawing | No rack drawing on this count | Settings → Getting started → Count session → **Map drawing** |
-| A reason code edit "did not reach" a gun | It takes up to about half a minute, and only lands between pallets | Wait for the counter to finish the pallet they are on |
+| A reason code edit "did not reach" a gun | It takes up to about half a minute, and only lands between pallets; a gun on an old build does not take it at all | Wait for the counter to finish the pallet they are on; check the build line on the sign-on screen matches the server |
 | Can nobody sign in? | All logins lost | The superadmin is made from the Railway variables the first time the app starts; if it was deleted or demoted later, set `SUPERADMIN_USER` to a new username and restart, which makes a fresh admin login |
 | Numbers look wrong after an ERP import | The inventory report moved on | Re-upload it with **Replace what is there**, then re-read the pallet report |
 | A scanner's scan times are hours out | The handheld's clock is wrong | Nothing to do: every line carries the gun's own send time, and the server corrects the scan time by the clock's error. Set the clock when you can, all the same |

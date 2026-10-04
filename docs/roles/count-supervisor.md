@@ -163,6 +163,9 @@ The floor is finished when:
 - every team has **signed off** on its gun, and the guns are back on charge with signal, so
   nothing is left queued on a device.
 
+Each aisle handed back was filed to disk the moment it came in (Dashboard → Reports → *Filed as
+the count goes*), so nothing counted so far depends on the rest of the day going well.
+
 Tell inventory control the floor is done. They read the reports, approve the adjustments and
 say when the count can be **closed**; closing is a Settings action for the admin or
 supervisor. Do not create the next count on top of this one; a closed count stays readable.

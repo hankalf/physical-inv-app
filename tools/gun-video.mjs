@@ -58,7 +58,7 @@ try {
   const post = (p, body, h = A) => fetch(BASE + p, { method: 'POST', headers: h, body: typeof body === 'string' ? body : JSON.stringify(body) }).then(j);
 
   const sess = await post('/api/admin/sessions', { name: 'Q3 2026 wall-to-wall' });
-  const binCsv = readFileSync(join(ROOT, 'public', 'templates', 'front-royal-bins.csv'), 'utf8');
+  const binCsv = readFileSync(join(ROOT, 'tests', 'fixtures', 'front-royal-bins.csv'), 'utf8');
   await post(`/api/admin/sessions/${sess.id}/master?kind=bins`, binCsv, csv);
   const { report, expected, palletAt, binsOf } = buildReport(binCsv);
   await post(`/api/admin/sessions/${sess.id}/master?kind=pallets`, report, csv);

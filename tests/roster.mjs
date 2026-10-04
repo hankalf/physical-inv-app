@@ -13,7 +13,7 @@ const hdr = { 'content-type': 'application/json' }, j = (r) => r.json();
 const { token } = await j(await fetch(`${BASE}/api/admin/login`, { method: 'POST', headers: hdr, body: JSON.stringify({ password: 'changeme' }) }));
 const A = { ...hdr, authorization: 'Bearer ' + token };
 const sess = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'reach test' }) }));
-await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=bins`, { method: 'POST', headers: { authorization: 'Bearer ' + token, 'content-type': 'text/csv' }, body: readFileSync(new URL('../public/templates/front-royal-bins.csv', import.meta.url).pathname, 'utf8') });
+await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=bins`, { method: 'POST', headers: { authorization: 'Bearer ' + token, 'content-type': 'text/csv' }, body: readFileSync(new URL('./fixtures/front-royal-bins.csv', import.meta.url).pathname, 'utf8') });
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 const errors = [];

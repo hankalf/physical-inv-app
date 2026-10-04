@@ -62,9 +62,11 @@ const other = await post('/api/admin/practice', {}, O);
 check('A second supervisor gets a different test scanner, so they cannot sign each other out',
   other.device.name === 'TEST-MARCUS-OBI' && other.device.uid !== made.device.uid);
 check('…and a practice count of their own, starting fresh', other.session.id !== pid && other.checklist.every((c) => !c.done), `#${other.session.id} vs #${pid}`);
-check('Each person sees only their own practice count in the dashboards',
-  (await get('/api/admin/sessions')).filter((s) => s.practice).map((s) => s.id).join(',') === String(pid)
-  && (await get('/api/admin/sessions', O)).filter((s) => s.practice).map((s) => s.id).join(',') === String(other.session.id));
+check('A supervisor sees only their own practice count in the dashboards; an admin sees everyone\'s, tagged with whose it is',
+  (await get('/api/admin/sessions', O)).filter((s) => s.practice).map((s) => s.id).join(',') === String(other.session.id)
+  && (await get('/api/admin/sessions')).filter((s) => s.practice).map((s) => s.id).sort().join(',') === [pid, other.session.id].sort().join(',')
+  && (await get('/api/admin/sessions')).find((s) => s.id === other.session.id).practice_owner === 'user:marcus-obi',
+  JSON.stringify((await get('/api/admin/sessions')).filter((s) => s.practice).map((s) => [s.id, s.practice_owner, s.status])));
 
 /* ---------------- where it must not show ---------------- */
 const floorDev = await post('/api/admin/devices', { name: 'FLOOR-01' });

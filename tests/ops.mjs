@@ -19,7 +19,7 @@ const A = { ...hdr, authorization: 'Bearer ' + token };
 const sess = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'ops session' }) }));
 if (!sess.id) { console.error('could not create the session:', sess); process.exit(1); }
 const csv = (kind, body) => fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=${kind}`, { method: 'POST', headers: { authorization: 'Bearer ' + token, 'content-type': 'text/csv' }, body });
-await csv('bins', readFileSync(new URL('../public/templates/front-royal-bins.csv', import.meta.url).pathname, 'utf8'));
+await csv('bins', readFileSync(new URL('./fixtures/front-royal-bins.csv', import.meta.url).pathname, 'utf8'));
 await csv('pallets', readFileSync(`${S}fixtures/pallets.csv`, 'utf8'));
 await fetch(`${BASE}/api/admin/sessions/${sess.id}/assignments`, { method: 'POST', headers: A, body: JSON.stringify({ team: '1', aisles: 'F03', levels: 'A-C' }) });
 

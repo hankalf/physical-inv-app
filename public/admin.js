@@ -998,6 +998,54 @@
       (r.missing.length ? ` Not on the drawing — ${r.missing.join(' · ')}.` : '');
   }
 
+  /* ------------------------------------------------- filed as the count goes
+     What the server has written to disk for this count: one folder per aisle
+     handed back, and the final report when the count is whole. */
+  let finalReady = null;
+  async function refreshArchives() {
+    if (!sessionId || !$('archiveTable')) return;
+    const d = await apiJson(`/api/admin/sessions/${sessionId}/archives`);
+    finalReady = d.readiness;
+    const btn = $('btnFinalReport');
+    const may = api.can('export');
+    btn.disabled = !may || !d.readiness.ready;
+    $('finalWhy').textContent = !may ? 'This login cannot download exports.'
+      : d.readiness.ready ? `Every bin counted (${d.readiness.binsCounted.toLocaleString()} of ${d.readiness.binsTotal.toLocaleString()}), no second counts open — the count is whole.`
+        : `Not yet: ${d.readiness.reasons.join(', ')}.`;
+    table($('archiveTable'),
+      [{ label: 'Filed' }, { label: 'What' }, { label: 'Files' }],
+      d.archives,
+      (a) => {
+        const tr = document.createElement('tr');
+        const what = document.createElement('td');
+        what.appendChild(tag(a.kind === 'final' ? 'done' : 'ok', a.kind === 'final' ? 'final' : 'aisle'));
+        what.append(' ' + (a.kind === 'final' ? 'Final report — the whole count' : `Aisle ${a.aisle} handed back`));
+        const files = document.createElement('td');
+        files.className = 'wrap';
+        a.files.forEach((f, i) => {
+          const link = document.createElement('a');
+          link.href = '#';
+          link.className = 'tlink';
+          link.textContent = f.name;
+          link.title = `${(f.bytes / 1024).toFixed(1)} KB`;
+          link.onclick = (e) => { e.preventDefault(); api.download(`/api/admin/sessions/${sessionId}/archives/file?folder=${encodeURIComponent(a.name)}&file=${encodeURIComponent(f.name)}`, `${a.name}-${f.name}`); };
+          if (i) files.append(' · ');
+          files.appendChild(link);
+        });
+        tr.append(cell(new Date(a.at).toLocaleString()), what, files);
+        return tr;
+      },
+      'Nothing filed yet — the first aisle handed back starts it.');
+  }
+  $('btnFinalReport').onclick = async () => {
+    if (!sessionId) return;
+    try {
+      const out = await postJson(`/api/admin/sessions/${sessionId}/archives/final`, {});
+      msg($('archiveMsg'), 'ok', `Final report filed: ${out.sheets} sheets in ${out.name}.`, 'Download the files below, or Export everything for the workbook.');
+      await refreshArchives();
+    } catch (err) { msg($('archiveMsg'), 'err', 'Not filed', err.message); }
+  };
+
   /** Re-read the session list so the header picker's progress stays live. */
   async function refreshPicker() {
     sessions = await apiJson('/api/admin/sessions');
@@ -1052,7 +1100,7 @@
   function shown(name) { const pane = document.querySelector(`[data-sub="${name}"]`); return !!pane && (pane.classList.contains('active') || pane.getClientRects().length > 0); }
   function paneJobs() {
     return {
-      progress: [refreshNotes, refreshProgress], teams: [refreshAssignments], reports: [refreshPallets, refreshLabels], map: [refreshMap],
+      progress: [refreshNotes, refreshProgress], teams: [refreshAssignments], reports: [refreshPallets, refreshLabels, refreshArchives], map: [refreshMap],
       second: [refreshRecounts], alerts: [refreshMessages, refreshAlerts], adjust: [refreshAdjustments],
     };
   }
@@ -1678,6 +1726,7 @@
     off('btnReject', 'approve', 'approve adjustments');
     off('btnSaveNote', 'assign', 'change the board note');
     off('btnExportAll', 'export', 'download exports');
+    off('btnFinalReport', 'export', 'file the final report');
   }
   document.addEventListener('auth', (e) => {
     if (!e.detail) return show('login');

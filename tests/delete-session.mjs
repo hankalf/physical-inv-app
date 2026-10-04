@@ -13,7 +13,7 @@ const j = (r) => r.json();
 const tok = (await j(await fetch(`${BASE}/api/admin/login`, { method: 'POST', headers: hdr, body: JSON.stringify({ password: 'changeme', name: 'Dana' }) }))).token;
 const A = { ...hdr, authorization: 'Bearer ' + tok };
 const csv = { authorization: 'Bearer ' + tok, 'content-type': 'text/csv' };
-const BINS = readFileSync(`${S}../public/templates/front-royal-bins.csv`, 'utf8');
+const BINS = readFileSync(`${S}fixtures/front-royal-bins.csv`, 'utf8');
 const PALLETS = readFileSync(`${S}fixtures/pallets.csv`, 'utf8');
 
 const make = async (name, { withCounts = false } = {}) => {

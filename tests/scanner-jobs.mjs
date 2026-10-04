@@ -83,7 +83,7 @@ await page.goto(`${BASE}/settings#gun`);
 await page.fill('#fUser', 'DANA-WHITFIELD'); await page.fill('#fPassword', 'changeme'); await page.click('#btnLogin');
 await page.waitForSelector('#scrMain.active', { state: 'attached' }); await page.waitForTimeout(1500);
 check('Settings → Scanner screen shows the card with the current ticks', await page.$eval('#fJobFull', (b) => b.checked) && !(await page.$eval('#fJobCycle', (b) => b.checked)) && await page.$eval('#fJobMove', (b) => b.checked) && await page.$eval('#fJobMissing', (b) => b.checked) && /only:/.test(await page.textContent('#jobsChip')));
-await page.check('#fJobCycle'); await page.click('#btnJobsSave'); await page.waitForTimeout(500);
+await page.check('#fJobCycle'); await page.click('#btnSaveOffers'); await page.waitForTimeout(1200);
 check('Ticking a job back on saves it, and the chip says every job', /every job/.test(await page.textContent('#jobsMsg')) && /every job/.test(await page.textContent('#jobsChip')) && (await j(await fetch(`${BASE}/api/admin/scanner-jobs`, { headers: A }))).jobs.cycle === true);
 
 await post('/api/admin/scanner-jobs', { full: true, cycle: true, move: true, missing: true });

@@ -73,11 +73,16 @@ admin can delete a count.
 | Custom | ticked by hand, down to a tab | ticked by hand | anything else |
 
    The **User guide** is open to every login whatever else it has.
-3. A login's **tabs** can be narrower than its pages: *Dashboard → Progress and Reports*
+3. Each login's **picker** shows only the kinds of count it may work: no *Cycle counts* page,
+   no cycle counts in it; a cycle counter sees no full count.
+4. Nobody but **the site admin** (the login the site started with) can change the site admin's
+   account: another admin cannot reset its password, take its pages or switch it off.
+5. A login's **tabs** can be narrower than its pages: *Dashboard → Progress and Reports*
    only, say. The checklist under each login shows every tab.
-4. **Untick Active** to stop a login; its sign-ins end at once. **Reset password** gives a
+6. **Untick Active** to stop a login; its sign-ins end at once. **Reset password** gives a
    new starter password. Changing either ends every sign-in that login holds.
-5. Sign-ins last 30 days from last use and survive a restart. **Log out** ends one.
+7. Sign-ins last 30 days from last use and survive a restart. **Log out** ends one, and the next
+   person to sign in on that computer starts fresh on the dashboard, not where the last one left off.
 
 Each role has a procedure of its own in `docs/roles/`; hand a new login the right one.
 
@@ -108,15 +113,19 @@ All under **Settings → Advanced**.
   is a key: **Reset link** issues a new one and kills the old; removing a scanner stops it.
   **Print setup cards** gives one QR card per scanner for the cradles. A link used more than
   once is flagged, which is normal after a wipe and worth a look otherwise.
-- **Jobs on the scanners**: which jobs the sign-on screen offers: full count, cycle count,
-  Front2Back. On the morning of a wall-to-wall tick the full count alone; tick the rest
-  back on after. At least one stays on; the practice gun always has all three.
+- **Jobs on the sign-on screen** (in *What the scanners offer*): the scanners show exactly
+  what is ticked: full count, cycle count, Front2Back, Not in Location (NIL). Day to day tick
+  the last three; on the morning of a wall-to-wall untick them and tick the full count alone;
+  swap back after. At least one stays on; the practice gun always has every job.
+- **Your picker sees everything.** An admin's count picker lists every count on the site,
+  other people's practice counts from the Testing Suite included, tagged *practice · NAME*.
 - **How the counting screen is put together**: the order of the questions (pallet, quantity,
   lot, expiry, bin, comments), text size, language, the Keyboard button, *Keep it upright*,
   *Update itself after a deploy*, *Show the next bin in the aisle*. The preview is the real
   screen size.
-- **What the scanners offer**: the one-tap comments and the override reasons.
-- **SOS from a scanner**: the reasons a counter can pick.
+- **What the scanners offer**: one section with one Save: the jobs, the comments (ask or
+  not, required or not, the wait before the step moves on, the one-tap reasons), the override
+  reasons and the SOS list.
 - **DataWedge** on each Zebra sends ENTER (or TAB) after a scan; without it a scan does
   nothing. The manual's DataWedge section has the profile.
 
@@ -127,8 +136,8 @@ the app needs a reload: with *Update itself after a deploy* on it does that by i
 
 **Settings → Lists & racking.**
 
-1. **Bin list**: one column of bin codes, or the site's own export; *Load the Front Royal
-   bin list* loads the one that ships with the app. The aisles come from it.
+1. **Bin list**: one column of bin codes, or the site's own export, uploaded by you — no bin
+   list ships with the app, so a new installation starts empty. The aisles come from it.
 2. **Aisles & racking blocks**: pair the aisles that share a rack. The guided setup marks
    blocks as wanted; without them two teams can meet on one rack.
 3. **Inventory report**: the site's export as it comes, one upload per system, naming the
@@ -142,7 +151,10 @@ Both uploads are per count. The guided setup card says what the count still lack
 
 **Settings → Getting started → Count session.**
 
-- **New count**: a name, and *full* or *cycle*. Keep one cycle-count session for the year.
+- **New count**: from **Full Counts → New count** (a full count) or *Cycle counts → Program*
+  (the year's cycle session); the Count session card does both too. **Full Counts** also lists
+  every wall-to-wall with its progress, **Scanners land here**, **Close** / **Reopen**, and a
+  **Set-up** tab for what a count still needs.
 - **Options**: pallet check (*off*, *warn*, *strict*), guided bins, comments, the **map
   drawing**, auto second counts with **Recount over N units / or over N %** and a **cap**,
   **Adjustments need approval** with its own threshold, **Show on the scanners**, and the
@@ -180,6 +192,9 @@ say when they will come to you.
   the ERP's own codes.
 - **ERP layouts**: column names and which rows go in; add a layout rather than editing a
   file afterwards.
+- **Filed as the count goes** (Dashboard → Reports) writes every handed-back aisle to an
+  `exports` folder beside the backups, and the **final report** every sheet of Export everything
+  once the count is whole. Copy that folder off the server with the backup.
 - **Back up now** before and after anything large; the app also keeps a daily backup and the
   last fourteen on its volume. **Download** one after every count: a volume is not an archive.
 - **Export the log** for an auditor: every supervisor action, who and when.

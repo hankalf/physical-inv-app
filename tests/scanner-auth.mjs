@@ -13,7 +13,7 @@ const j = (r) => r.json();
 const { token } = await j(await fetch(`${BASE}/api/admin/login`, { method: 'POST', headers: hdr, body: JSON.stringify({ password: 'changeme', name: 'Dana' }) }));
 const A = { ...hdr, authorization: 'Bearer ' + token };
 const sess = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'auth session' }) }));
-await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=bins`, { method: 'POST', headers: { authorization: 'Bearer ' + token, 'content-type': 'text/csv' }, body: readFileSync(new URL('../public/templates/front-royal-bins.csv', import.meta.url).pathname, 'utf8') });
+await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=bins`, { method: 'POST', headers: { authorization: 'Bearer ' + token, 'content-type': 'text/csv' }, body: readFileSync(new URL('./fixtures/front-royal-bins.csv', import.meta.url).pathname, 'utf8') });
 await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=pallets`, { method: 'POST', headers: { authorization: 'Bearer ' + token, 'content-type': 'text/csv' }, body: readFileSync(`${S}fixtures/pallets.csv`, 'utf8') });
 const dev = await j(await fetch(`${BASE}/api/admin/devices`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'SCANNER-01' }) }));
 

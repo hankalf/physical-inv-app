@@ -82,6 +82,9 @@ export function scannerPrompts() {
     commentTimeout: saved.commentTimeout == null
       ? DEFAULT_TIMEOUT
       : Math.max(0, Math.min(120, Number(saved.commentTimeout) || 0)),
+    // offered after the bin at all, and whether a counter may leave it blank
+    commentsAsk: saved.commentsAsk !== false,
+    commentsRequired: saved.commentsRequired === true,
     isDefault: !row,
   };
 }
@@ -94,13 +97,15 @@ export function saveScannerPrompts(body = {}) {
     commentTimeout: body.commentTimeout === undefined
       ? now.commentTimeout
       : Math.max(0, Math.min(120, Number(body.commentTimeout) || 0)),
+    commentsAsk: body.commentsAsk === undefined ? now.commentsAsk : body.commentsAsk !== false,
+    commentsRequired: body.commentsRequired === undefined ? now.commentsRequired : body.commentsRequired === true,
   };
   db.prepare("INSERT INTO settings (key, value) VALUES ('scannerPrompts', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
     .run(JSON.stringify(next));
   return { ...next, isDefault: false };
 }
 
-export const defaultScannerPrompts = () => ({ ...DEFAULTS, commentTimeout: DEFAULT_TIMEOUT });
+export const defaultScannerPrompts = () => ({ ...DEFAULTS, commentTimeout: DEFAULT_TIMEOUT, commentsAsk: true, commentsRequired: false });
 
 /* ------------------------------------------------------------ gun layout
  * How the counting screen is put together: which questions, in what order,

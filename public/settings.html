@@ -270,17 +270,6 @@
             <div class="auto"><label class="cb" title="A scanner left running keeps the version it started with. With this on it notices a new one and reloads itself between pallets — never mid-line, never with counts still queued."><input type="checkbox" id="fAutoUpdate"> Update itself after a deploy</label></div>
           </div>
           <div class="inline" style="margin-top:12px">
-            <div>
-              <label for="fCommentTimeout">Comments step moves on after</label>
-              <div class="row" style="gap:6px;align-items:center">
-                <button class="fit sm" id="btnCommentLess" title="A second less" style="margin:0;width:42px">−</button>
-                <input id="fCommentTimeout" class="sm" type="number" min="0" max="120" style="flex:0 0 74px;width:74px;text-align:center">
-                <button class="fit sm" id="btnCommentMore" title="A second more" style="margin:0;width:42px">+</button>
-                <span class="muted" style="white-space:nowrap">seconds &middot; 0 waits for the counter</span>
-              </div>
-            </div>
-          </div>
-          <div class="inline" style="margin-top:12px">
             <div class="auto">
               <label for="fTextSize">Text size</label>
               <select id="fTextSize">
@@ -342,79 +331,96 @@
         once is flagged, which is normal after a scanner is wiped and worth a look otherwise.
       </div>
     </div>
-    <div class="card">
-      <h2>Jobs on the scanners <span class="chip" id="jobsChip" hidden></span>
-        <span class="muted">which jobs the sign-on screen offers right now</span></h2>
+    <div class="card" id="offersCard">
+      <h2>What the scanners offer <span class="chip" id="promptChip" hidden></span>
+        <span class="muted">everything a counter is offered on the gun, in one place — the jobs, the comments, the override reasons, the SOS list</span></h2>
       <div class="hint" style="margin-top:0">
-        A scanner's sign-on screen offers the jobs that exist: a <b>full count</b> when one is open, a <b>cycle count</b> when the
-        programme has a batch, <b>Front2Back</b> while any moves are waiting, <b>Not in Location</b> while that list has
-        any. Untick a job here and no scanner offers it — during a wall-to-wall, tick the full count alone so nobody signs on
-        to anything else by mistake. Scanners pick the change up the next time they are online; the practice gun in the
-        Testing Suite always has every job.
+        The reasons a site needs are the site's own — "Blocked by a trailer" means something here and nothing anywhere else.
+        A scanner picks up a change within about half a minute, between pallets, without anybody signing out of it; the jobs
+        on the sign-on screen change the next time a scanner is online.
       </div>
-      <div class="inline" style="margin-top:10px" id="jobsRow">
+
+      <h3>Jobs on the sign-on screen <span class="chip" id="jobsChip" hidden></span></h3>
+      <div class="hint" style="margin-top:0">
+        A scanner offers the jobs that exist: a <b>full count</b> when one is open, a <b>cycle count</b> when the programme has a
+        batch, <b>Front2Back</b> while any moves are waiting, <b>Not in Location</b> while that list has any. Untick a job here and no
+        scanner offers it — during a wall-to-wall, tick the full count alone. The practice gun in the Testing Suite always has every job.
+      </div>
+      <div class="inline" style="margin-top:8px" id="jobsRow">
         <label class="cb"><input type="checkbox" id="fJobFull" checked> Full count</label>
         <label class="cb"><input type="checkbox" id="fJobCycle" checked> Cycle count</label>
         <label class="cb"><input type="checkbox" id="fJobMove" checked> Front2Back (move front pallets back)</label>
         <label class="cb"><input type="checkbox" id="fJobMissing" checked> Not in Location (find lost pallets)</label>
-        <div class="auto"><button class="primary fit" id="btnJobsSave">Save</button></div>
+        <button class="primary fit" id="btnJobsSave" hidden>Save</button>
       </div>
       <div class="feedback" id="jobsMsg"></div>
-    </div>
-    <div class="card">
-      <h2>What the scanners offer <span class="chip" id="promptChip" hidden></span>
-        <span class="muted">the one-tap reasons a counter can pick, without typing</span></h2>
-      <div class="hint" style="margin-top:0">
-        The reasons a site needs are the site's own — "Blocked by a trailer" means something here
-        and nothing anywhere else. A scanner picks up a change within about half a minute, without
-        anybody signing out of it.
-      </div>
-      <div class="two" style="margin-top:14px">
-        <div>
-          <h3 style="margin-top:0">Comments</h3>
-          <div class="hint" style="margin-top:0">Offered on the last step, after the bin is scanned.</div>
-          <div class="chips" id="commentList" style="margin-top:10px"></div>
-          <div class="row" style="margin-top:10px">
-            <input id="fNewComment" placeholder="e.g. Frozen to the rack" maxlength="48">
-            <button class="fit" id="btnAddComment">Add</button>
-          </div>
-        </div>
-        <div>
-          <h3 style="margin-top:0">Override reasons</h3>
-          <div class="hint" style="margin-top:0">Offered when a pallet ID is not on the list and the counter is allowed to accept it anyway.</div>
-          <div class="chips" id="overrideList" style="margin-top:10px"></div>
-          <div class="row" style="margin-top:10px">
-            <input id="fNewOverride" placeholder="e.g. Hand-written ID" maxlength="48">
-            <button class="fit" id="btnAddOverride">Add</button>
-          </div>
-        </div>
-      </div>
+
       <hr>
-      <div class="inline">
-        <div class="hint" style="margin:0">How long the comments step waits before moving on by itself is set
-          on the <a href="#" data-goto="gun" style="color:var(--accent)">Scanner screen</a> tab, with the rest
-          of what the counting screen does.</div>
-        <div class="auto"><button class="primary fit" id="btnSavePrompts">Save</button></div>
-        <div class="auto"><button class="fit" id="btnResetPrompts">Restore the defaults</button></div>
+      <h3>Comments</h3>
+      <div class="hint" style="margin-top:0">Offered on the last step, after the bin is scanned. Tick what the scanners do with them; the one-tap reasons are the chips below.</div>
+      <div class="inline" style="margin-top:8px">
+        <div class="auto"><label class="cb" title="Untick and no scanner asks for comments on any count, whatever the count's own setting says."><input type="checkbox" id="fCommentsAsk" checked> Ask for comments after the bin</label></div>
+        <div class="auto"><label class="cb" title="A counter must tap a reason or type a note before the next pallet: no Skip, no blank, no moving on by itself."><input type="checkbox" id="fCommentsRequired"> Comments are required</label></div>
+      </div>
+          <div class="inline" style="margin-top:10px">
+            <div>
+              <label for="fCommentTimeout">Comments step moves on after</label>
+              <div class="row" style="gap:6px;align-items:center">
+                <button class="fit sm" id="btnCommentLess" title="A second less" style="margin:0;width:42px">−</button>
+                <input id="fCommentTimeout" class="sm" type="number" min="0" max="120" style="flex:0 0 74px;width:74px;text-align:center">
+                <button class="fit sm" id="btnCommentMore" title="A second more" style="margin:0;width:42px">+</button>
+                <span class="muted" style="white-space:nowrap">seconds &middot; 0 waits for the counter</span>
+              </div>
+            </div>
+          </div>
+      <div class="chips" id="commentList" style="margin-top:10px"></div>
+      <div class="row" style="margin-top:10px">
+        <input id="fNewComment" placeholder="e.g. Frozen to the rack" maxlength="48">
+        <button class="fit" id="btnAddComment">Add</button>
+      </div>
+
+      <hr>
+      <h3>Override reasons</h3>
+      <div class="hint" style="margin-top:0">Offered when a pallet ID is not on the list and the counter is allowed to accept it anyway. Click a chip to remove it; add one below. <b>Other</b> is always offered on the gun as well.</div>
+      <div class="chips" id="overrideList" style="margin-top:10px"></div>
+      <div class="row" style="margin-top:10px">
+        <input id="fNewOverride" placeholder="e.g. Hand-written ID" maxlength="48">
+        <button class="fit" id="btnAddOverride">Add</button>
+      </div>
+      <div class="inline" style="margin-top:8px">
+        <button class="primary fit" id="btnSavePrompts" hidden>Save</button>
+        <div class="auto"><button class="fit sm" id="btnResetPrompts">Restore the shipped reasons</button></div>
       </div>
       <div class="feedback" id="promptMsg"></div>
-    </div>
 
-    <!-- ============ SOS: the list, and where it goes ============ -->
-    <div class="card">
-      <h2>SOS from a scanner <span class="chip" id="sosChip" hidden></span>
-        <span class="muted">what a counter can raise, and the channel it goes to</span></h2>
+      <hr>
+      <h3>SOS <span class="chip" id="sosChip" hidden></span></h3>
       <div class="hint" style="margin-top:0">
-        Every gun has an <b>SOS</b> button. Pressing it offers this list, and whichever one the counter picks lands on
-        the dashboard within seconds — with their team, aisle and last bin — and in a Teams channel if one is set up
-        under <b>Advanced</b>. Write the list in the words your floor uses; the counter is in a hurry.
+        Every gun has an <b>SOS</b> button. Pressing it offers this list, and whichever one the counter picks lands on the
+        dashboard within seconds — with their team, aisle and last bin — and in a Teams channel if one is set up under
+        <b>Advanced</b>. Write the list in the words your floor uses; the counter is in a hurry.
       </div>
       <div class="chips" id="sosList" style="margin-top:10px"></div>
       <div class="row" style="margin-top:10px">
         <input id="fNewSos" placeholder="e.g. Blast freezer door will not close" maxlength="120">
         <button class="fit" id="btnAddSos">Add</button>
       </div>
-      <h3>When a team stops scanning</h3>
+      <div class="inline" style="margin-top:8px">
+        <button class="primary" id="btnSaveSos" hidden>Save</button>
+        <div class="auto"><button class="fit sm" id="btnResetSos">Restore the shipped SOS list</button></div>
+      </div>
+
+      <hr>
+      <div class="toolbar">
+        <button class="primary" id="btnSaveOffers">Save everything the scanners offer</button>
+        <span class="muted">jobs, comments, override reasons and the SOS list, in one go</span>
+      </div>
+      <div class="feedback" id="sosMsg"></div>
+      <div class="feedback" id="offersMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>When a team stops scanning</h2>
       <div class="hint" style="margin-top:0">
         A team that is signed on and still has an aisle, but has not scanned for this long, gets an amber bar on the
         dashboard — <b>On break</b>, <b>Lunch</b> or <b>Seen</b> quiets it. Signing off on the gun stops a team's clock. 0 turns it off.
@@ -424,11 +430,11 @@
         <div class="auto"><label class="cb"><input type="checkbox" id="fIdleTeams"> Send it to the Teams channel too <span class="muted">(set under Advanced)</span></label></div>
       </div>
       <div class="toolbar">
-        <button class="primary" id="btnSaveSos">Save</button>
-        <button id="btnResetSos">Restore the shipped list</button>
+        <button class="primary" id="btnSaveIdle">Save</button>
       </div>
-      <div class="feedback" id="sosMsg"></div>
+      <div class="feedback" id="idleMsg"></div>
     </div>
+
       </div>
 
       <div data-sub="lists" data-sub-label="Lists &amp; racking">
@@ -444,7 +450,6 @@
       </div>
       <div class="colguide" id="colGuide-bins"></div>
       <div class="inline" style="margin-top:10px">
-        <div class="auto"><button class="fit" id="btnLoadSiteBins">Load the Front Royal bin list</button></div>
         <div class="hint" style="margin:0">The ERP bin export that ships with the app: racks F01–F24 and A01–A04 plus WIP, the NIL bin and other areas. Staging lanes and dock doors are counted manually and are left out.</div>
       </div>
       <div class="feedback" id="uploadMsg-bins"></div>

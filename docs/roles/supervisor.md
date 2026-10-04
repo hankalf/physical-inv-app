@@ -98,6 +98,7 @@ Small sites give one person both. What to keep separate:
 
 | I want to… | Go to |
 |---|---|
+| see every full count, open and closed, and which one the scanners land on | Full Counts |
 | see how the count is going | Dashboard → Progress, Map |
 | see where a team is, move an aisle, message a team | Dashboard → Team plan |
 | answer an SOS, quiet a stopped-scanning alert | Dashboard → Alerts |
