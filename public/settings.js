@@ -593,6 +593,8 @@
     $('btnSaveSos').click();
     await new Promise((r) => setTimeout(r, 900));
     const bad = ['jobsMsg', 'promptMsg', 'sosMsg'].filter((id) => $(id).classList.contains('err'));
+    // one summary at the bottom; a part keeps its own message only when it refused
+    for (const id of ['jobsMsg', 'promptMsg', 'sosMsg']) if (!bad.includes(id)) clearMsg($(id));
     if (bad.length) msg($('offersMsg'), 'err', 'Not everything saved', 'See the message under the part that refused.');
     else msg($('offersMsg'), 'ok', 'Saved: the jobs, the comments, the override reasons and the SOS list.', 'Scanners pick the reasons up within about half a minute, between pallets; the jobs the next time they are online.');
   };

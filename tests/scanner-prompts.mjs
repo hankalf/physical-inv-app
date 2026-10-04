@@ -178,7 +178,7 @@ check('Settings: adding the same one twice is refused', /already there/.test(awa
 await page.click('#commentList .chip-btn'); await page.waitForTimeout(300);
 check('Settings: clicking one removes it', (await page.$$('#commentList .chip-btn')).length === 2);
 await page.click('#btnSaveOffers'); await page.waitForTimeout(1200);
-check('Settings: saving says the scanners will pick it up', /Saved/.test(await page.textContent('#promptMsg')), clean(await page.textContent('#promptMsg')).slice(0, 90));
+check('Settings: saving says the scanners will pick it up', /Saved: the jobs, the comments/.test(await page.textContent('#offersMsg')) && /within about half a minute/.test(await page.textContent('#offersMsg')), clean(await page.textContent('#offersMsg')).slice(0, 120));
 const after = await j(await fetch(`${BASE}/api/admin/scanner-prompts`, { headers: A }));
 check('Settings: and it really is saved', after.comments.includes('Pallet on its side'), after.comments.join('|'));
 check('Settings: everything the scanners offer is one section — jobs, comments and their wait, override reasons, the SOS list',

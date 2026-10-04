@@ -465,10 +465,13 @@ try {
   /* ---------- filed as the count goes ---------- */
   {
     const asg = await (await fetch(`${BASE}/api/admin/sessions/${sess.id}/assignments`, { headers: A })).json();
-    const done = (Array.isArray(asg) ? asg : []).find((a) => a.status === 'active') || (Array.isArray(asg) ? asg[0] : null);
+    // another team's aisle: team 1's is the one the handheld shots count in later
+    const list = Array.isArray(asg) ? asg : [];
+    const done = list.find((a) => a.team !== '1' && a.status === 'active') || list.find((a) => a.team !== '1');
     if (done) await post(`/api/admin/sessions/${sess.id}/assignments/${done.id}`, { status: 'done' }).catch(() => {});
     await desk.goto(BASE + '/admin#reports');
-    await desk.waitForSelector('#scrMain.active', { state: 'attached' }); await wait(2500);
+    await desk.waitForSelector('#scrMain.active', { state: 'attached' }); await wait(1500);
+    await desk.evaluate((id) => window.appApi.pickSession && window.appApi.pickSession(id), sess.id); await wait(2500);
     await saveCard(desk, '#archiveTable', 'dashboard-filed', 6);
   }
 
