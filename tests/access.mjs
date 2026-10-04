@@ -142,7 +142,9 @@ await ivyPage.waitForSelector('#scrMain.active'); await ivyPage.waitForTimeout(2
 const ivyTabs = await ivyPage.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.replace(/\d+$/, '').trim()));
 check('Tabs: the dashboard shows only the tabs she was given', ivyTabs.join(' | ') === 'Progress | Reports', ivyTabs.join(' | '));
 check('…the sidebar lists only those sections too', (await ivyPage.$$eval('#navTabs .sub', (a) => a.map((x) => x.textContent.trim()))).join(' | ') === 'Progress | Reports', (await ivyPage.$$eval('#navTabs .sub', (a) => a.map((x) => x.textContent.trim()))).join(' | '));
-check('…and the page still works on what she has', /Count progress/.test(await ivyPage.textContent('#scrMain')) && (await ivyPage.$$('#palletTable tr')).length >= 1);
+// the pallet report is fetched when its tab is opened, not before
+await ivyPage.click('#subTabs button[data-goto="reports"]'); await ivyPage.waitForTimeout(1500);
+check('…and the page still works on what she has', /Count progress/.test(await ivyPage.textContent('#scrMain')) && (await ivyPage.$$('#palletTable tr')).length >= 1, `${(await ivyPage.$$('#palletTable tr')).length} rows`);
 await ivyPage.close();
 /* the popover offers the tabs under each page */
 await adm.reload(); await adm.waitForSelector('#scrMain.active'); await adm.waitForTimeout(1500);
