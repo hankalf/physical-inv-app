@@ -1680,6 +1680,22 @@ const server = http.createServer(async (req, res) => {
       if (handled === false) throw httpError(404, 'unknown endpoint');
       return handled;
     }
+    // The bare address is the office's: it opens the supervisor sign-in. A
+    // scanner is opened from its own link (/?d=<uid>) and from then on carries
+    // a cookie, so its home-screen icon still lands on the app; so does the
+    // Testing Suite's practice gun. Offline, the service worker answers before
+    // this is reached.
+    if (p === '/' && req.method === 'GET') {
+      const isGun = url.searchParams.has('d') || url.searchParams.has('practice') || /(?:^|;\s*)gun=1(?:;|$)/.test(String(req.headers.cookie || ''));
+      if (!isGun) {
+        res.statusCode = 302;
+        res.setHeader('location', '/admin');
+        res.setHeader('cache-control', 'no-store');
+        return res.end();
+      }
+      // a real scanner's link marks the browser as a scanner; the practice gun inside the Testing Suite must not
+      if (url.searchParams.has('d') && !url.searchParams.has('practice')) res.setHeader('set-cookie', 'gun=1; Path=/; Max-Age=31536000; SameSite=Lax');
+    }
     return await serveStatic(req, res, p);
   } catch (err) {
     const status = err.status || 500;

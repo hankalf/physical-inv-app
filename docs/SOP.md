@@ -40,7 +40,7 @@ on a PC.
 
 | Screen | Address | Who uses it | Sign-in |
 |---|---|---|---|
-| **Scanner** | `/` | Counters, on the handhelds | Each scanner has its own link |
+| **Scanner** | its own link, `/?d=…` | Counters, on the handhelds | Each scanner has its own link; the bare address opens the supervisor sign-in |
 | **Dashboard** | `/admin` | Supervisor running the count | Supervisor login |
 | **Settings** | `/settings` | Whoever sets the count up | Supervisor login |
 | **Office board** | `/board` | Anyone — put it on the office TV | **None.** Read-only |
@@ -1363,6 +1363,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | The printed barcodes will not scan | The page was printed “fit to page”, or on glossy paper | Print again at **100%** on plain white paper. If a gun still refuses them, print with **Per row: 1** — the bars are wider on a bigger label |
 | A code in the spreadsheet will not print | Code 128 carries plain ASCII only — an accented letter or a smart quote cannot be drawn | The book says which character it was; retype that code with plain letters and numbers |
 | The app still shows the old name somewhere | The name was changed under Settings → Advanced → Site name | Supervisor pages change at once. A scanner picks it up when it is next online; the board on its next refresh. The name under a home-screen icon comes from the app's install and updates when the app is next reinstalled |
+| The site's address opens the supervisor sign-in, not the scanner | That is how it works: the bare address is the office's | A scanner is opened from its own link under Settings → Scanner screen (`/?d=…`); after that its home-screen icon lands on the app. If a handheld lost that (site data cleared), open its link again |
 | You do not know what a message means | The gun or the dashboard said something unfamiliar | Paste it into **User guide → Ask the guide**: it knows every message the gun and the server can show, with the fix. A new starter should begin at the guide's *Your first day* |
 | You cannot find where something is set | The app has four pages and twenty-odd cards | Type what you would call it into the search box at the top of the sidebar — *"upload bin list"*, *"keyboard"*, *"approve"* — and the **Go to** hits take you straight there. **/** puts the cursor in it |
 | Not sure whether a gun has the latest version | — | The sign-on screen's bottom line reads *"App build a1b2c3d4e5f6 on the server — this scanner is up to date"*. Compare it across two guns, or against a fresh reload |

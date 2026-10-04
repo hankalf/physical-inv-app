@@ -3111,6 +3111,8 @@
     holdUpright();          // a gun that starts up sideways starts up upright
     idb = await openDb();
     state.deviceToken = (await metaGet('deviceToken')) || '';
+    // the server sends the bare address to the office sign-in; this cookie says "a scanner lives here"
+    if (!PRACTICE) { try { document.cookie = 'gun=1; path=/; max-age=31536000; SameSite=Lax'; } catch { /* a locked-down webview */ } }
     const linked = await identifyFromLink();
     state.deviceId = (await metaGet('deviceId')) || '';
     state.deviceUid = (await metaGet('deviceUid')) || '';

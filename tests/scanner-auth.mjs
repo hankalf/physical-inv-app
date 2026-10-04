@@ -86,6 +86,20 @@ await gun.screenshot({ path: `${S}screenshots/auth-cut-off.png` });
 const csv = await (await fetch(`${BASE}/api/admin/sessions/${sess.id}/export/counts.csv`, { headers: A })).text();
 check('And the server did not take it', !/PLT01005A/.test(csv));
 
+/* ---- the bare address is the office's; a scanner's link, and then its cookie, keep the app ---- */
+const root = await fetch(`${BASE}/`, { redirect: 'manual' });
+check('The bare address sends a browser to the supervisor sign-in', root.status === 302 && root.headers.get('location') === '/admin', `${root.status} → ${root.headers.get('location')}`);
+const linked = await fetch(`${BASE}/?d=${dev.uid}`, { redirect: 'manual' });
+check('A scanner link gets the scanner app, and a cookie that says so', linked.status === 200 && /<title>/.test(await linked.text()) && /gun=1/.test(linked.headers.get('set-cookie') || ''), `${linked.status} ${linked.headers.get('set-cookie')}`);
+const again = await fetch(`${BASE}/`, { redirect: 'manual', headers: { cookie: 'gun=1' } });
+check('…so the home-screen icon, which opens the bare address, still lands on the app', again.status === 200 && /<title>/.test(await again.text()), String(again.status));
+const practice = await fetch(`${BASE}/?practice=1`, { redirect: 'manual' });
+check('The Testing Suite’s practice gun is not redirected either, and does not mark the office browser as a scanner', practice.status === 200 && !(practice.headers.get('set-cookie') || '').includes('gun=1'));
+const fresh = await browser.newPage();
+await fresh.goto(`${BASE}/`); await fresh.waitForTimeout(800);
+check('In a browser: the bare address lands on the supervisor sign-in page', /\/admin(#|$)/.test(fresh.url()) && await fresh.isVisible('#btnLogin'), fresh.url());
+await fresh.close();
+
 console.log('\nerrors:', errors.length ? errors : 'none');
 console.log(`\n${results.filter(Boolean).length}/${results.length} scanner-auth checks passed`);
 await browser.close();

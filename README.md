@@ -426,7 +426,12 @@ if one goes missing, **Reset link** and print a new one.
 
 A scanner with no link can still type an ID on first run; it is marked "not registered".
 
-## Counter — `/` on the handheld
+## Counter — the scanner's own link, on the handheld
+
+The bare address (`/`) opens the supervisor sign-in. A scanner is opened from its
+registered link, `/?d=<uid>`, and from then on carries a cookie so its home-screen icon
+(which opens `/`) still lands on the scanner app; offline, the service worker answers
+before the server is asked.
 
 **First run:** if the scanner was opened from its registered link, nothing to do. Otherwise
 it asks for an ID.

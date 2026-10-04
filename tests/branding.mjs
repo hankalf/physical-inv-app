@@ -27,7 +27,7 @@ let man = await j(await fetch(`${BASE}/manifest.webmanifest`));
 check('…and the installed app is named after it', man.name === 'Full Harvest Inventory' && man.short_name === 'Full Harvest', JSON.stringify([man.name, man.short_name]));
 
 const html = await (await fetch(`${BASE}/admin`)).text();
-check('Nothing on the pages still says Ripe & Ready', !/Ripe/.test(html) && !/Ripe/.test(await (await fetch(`${BASE}/`)).text()) && !/Ripe/.test(await (await fetch(`${BASE}/i18n.js`)).text()));
+check('Nothing on the pages still says Ripe & Ready', !/Ripe/.test(html) && !/Ripe/.test(await (await fetch(`${BASE}/?practice=1`)).text()) && !/Ripe/.test(await (await fetch(`${BASE}/i18n.js`)).text()));
 
 let r = await post('/api/admin/site-name', { name: '  Full  Harvest   Cold Storage ', place: 'Winchester, VA' });
 b = await j(r);
@@ -87,7 +87,7 @@ check('A blank name goes back to the default', (await j(await fetch(`${BASE}/api
 /* the gun and the board */
 await post('/api/admin/site-name', { name: 'Full Harvest Cold Storage', place: 'Winchester, VA' });
 const gun = await browser.newPage({ viewport: { width: 480, height: 800 } });
-await gun.goto(`${BASE}/`);
+await gun.goto(`${BASE}/?practice=1`);     // the bare address is the office's now
 await gun.waitForTimeout(1500);
 check('The scanner app’s header shows the short name', await gun.$eval('#hdrTitle', (n) => n.textContent) === 'Full Harvest Cold Storage' && await gun.title() === 'Full Harvest Cold Storage', await gun.$eval('#hdrTitle', (n) => n.textContent));
 const board = await browser.newPage({ viewport: { width: 1280, height: 720 } });
