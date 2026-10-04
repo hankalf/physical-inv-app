@@ -3279,7 +3279,8 @@
     state.issuesPending = (await metaGet('issuesPending')) || [];
     renderSos();
     state.mode = (await metaGet('mode')) || '';
-    $('fTeam').value = (await metaGet('team')) || '';
+    // the last team, unless somebody has already typed one while the app was starting
+    { const saved = (await metaGet('team')) || ''; if (!$('fTeam').value) $('fTeam').value = saved; }
     renderEmployees();
     await updateChips();
     await loadBranding();

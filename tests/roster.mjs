@@ -146,6 +146,7 @@ async function signon(team, badges) {
       return true;
     } catch { return false; }
   };
+  if ((await gun.inputValue('#fTeam')) !== team) await gun.fill('#fTeam', team);   // a slow start can restore yesterday's team after we typed
   await gun.click('#btnStart');
   if (!(await landed(45000))) {
     await gun.click('#btnStart');
