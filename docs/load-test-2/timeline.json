@@ -170,5 +170,48 @@
    "other": "frames/004-second.jpg",
    "otherLabel": "Second counts"
   }
+ },
+ {
+  "n": 5,
+  "at": "2026-10-05T04:57:07.981Z",
+  "wall": 33,
+  "day": 0,
+  "dayName": "Monday",
+  "sim": "08:19",
+  "label": "Monday 08:19",
+  "event": "",
+  "lines": 1572,
+  "bins": 1452,
+  "binsTotal": 20000,
+  "pallets": 1326,
+  "exceptions": 13,
+  "teams": 13,
+  "sosOpen": 1,
+  "sosTotal": 3,
+  "pending": 2,
+  "approved": 22,
+  "rejected": 0,
+  "secondOpen": 47,
+  "secondDone": 0,
+  "lat": {
+   "count": {
+    "n": 1459,
+    "p50": 5,
+    "p95": 10,
+    "max": 184
+   },
+   "dashboard": {
+    "n": 427,
+    "p50": 52,
+    "p95": 162,
+    "max": 328
+   }
+  },
+  "frames": {
+   "progress": "frames/005-progress.jpg",
+   "board": "frames/005-board.jpg",
+   "other": "frames/005-adjust.jpg",
+   "otherLabel": "Adjustments"
+  }
  }
 ]
