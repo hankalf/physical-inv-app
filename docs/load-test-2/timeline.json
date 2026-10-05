@@ -127,5 +127,177 @@
    "other": "frames/003-alerts.jpg",
    "otherLabel": "Alerts"
   }
+ },
+ {
+  "n": 4,
+  "at": "2026-10-05T09:57:26.514Z",
+  "wall": 32,
+  "day": 0,
+  "dayName": "Monday",
+  "sim": "08:14",
+  "label": "First SOS of the count",
+  "event": "sos",
+  "lines": 1530,
+  "bins": 1408,
+  "binsTotal": 20000,
+  "pallets": 1296,
+  "exceptions": 11,
+  "teams": 13,
+  "sosOpen": 1,
+  "sosTotal": 1,
+  "pending": 1,
+  "approved": 18,
+  "rejected": 1,
+  "secondOpen": 48,
+  "secondDone": 0,
+  "lat": {
+   "count": {
+    "n": 1412,
+    "p50": 5,
+    "p95": 10,
+    "max": 147
+   },
+   "dashboard": {
+    "n": 414,
+    "p50": 42,
+    "p95": 134,
+    "max": 213
+   }
+  },
+  "frames": {
+   "progress": "frames/004-progress.jpg",
+   "board": "frames/004-board.jpg",
+   "other": "frames/004-alerts.jpg",
+   "otherLabel": "Alerts"
+  }
+ },
+ {
+  "n": 5,
+  "at": "2026-10-05T09:58:28.900Z",
+  "wall": 33,
+  "day": 0,
+  "dayName": "Monday",
+  "sim": "08:19",
+  "label": "Monday 08:19",
+  "event": "",
+  "lines": 1577,
+  "bins": 1450,
+  "binsTotal": 20000,
+  "pallets": 1339,
+  "exceptions": 12,
+  "teams": 13,
+  "sosOpen": 1,
+  "sosTotal": 1,
+  "pending": 0,
+  "approved": 21,
+  "rejected": 1,
+  "secondOpen": 50,
+  "secondDone": 0,
+  "lat": {
+   "count": {
+    "n": 1457,
+    "p50": 5,
+    "p95": 10,
+    "max": 156
+   },
+   "dashboard": {
+    "n": 428,
+    "p50": 42,
+    "p95": 135,
+    "max": 213
+   }
+  },
+  "frames": {
+   "progress": "frames/005-progress.jpg",
+   "board": "frames/005-board.jpg",
+   "other": "frames/005-adjust.jpg",
+   "otherLabel": "Adjustments"
+  }
+ },
+ {
+  "n": 6,
+  "at": "2026-10-05T10:08:28.709Z",
+  "wall": 43,
+  "day": 0,
+  "dayName": "Monday",
+  "sim": "09:01",
+  "label": "Monday 09:01",
+  "event": "",
+  "lines": 1915,
+  "bins": 1762,
+  "binsTotal": 20000,
+  "pallets": 1629,
+  "exceptions": 13,
+  "teams": 13,
+  "sosOpen": 0,
+  "sosTotal": 1,
+  "pending": 1,
+  "approved": 22,
+  "rejected": 2,
+  "secondOpen": 60,
+  "secondDone": 0,
+  "lat": {
+   "count": {
+    "n": 1769,
+    "p50": 5,
+    "p95": 10,
+    "max": 191
+   },
+   "dashboard": {
+    "n": 556,
+    "p50": 43,
+    "p95": 135,
+    "max": 213
+   }
+  },
+  "frames": {
+   "progress": "frames/006-progress.jpg",
+   "board": "frames/006-board.jpg",
+   "other": "frames/006-teams.jpg",
+   "otherLabel": "Teams & crew"
+  }
+ },
+ {
+  "n": 7,
+  "at": "2026-10-05T10:18:33.427Z",
+  "wall": 53,
+  "day": 0,
+  "dayName": "Monday",
+  "sim": "09:44",
+  "label": "Monday 09:44",
+  "event": "",
+  "lines": 2422,
+  "bins": 2229,
+  "binsTotal": 20000,
+  "pallets": 2050,
+  "exceptions": 17,
+  "teams": 13,
+  "sosOpen": 0,
+  "sosTotal": 2,
+  "pending": 0,
+  "approved": 28,
+  "rejected": 3,
+  "secondOpen": 72,
+  "secondDone": 0,
+  "lat": {
+   "count": {
+    "n": 2237,
+    "p50": 6,
+    "p95": 10,
+    "max": 213
+   },
+   "dashboard": {
+    "n": 686,
+    "p50": 44,
+    "p95": 141,
+    "max": 239
+   }
+  },
+  "frames": {
+   "progress": "frames/007-progress.jpg",
+   "board": "frames/007-board.jpg",
+   "other": "frames/007-reports.jpg",
+   "otherLabel": "Reports"
+  }
  }
 ]
