@@ -1,16 +1,16 @@
 {
-  "phase": "end of shift",
-  "day": 2,
-  "simTime": "Tuesday 14:15",
-  "lines": 12844,
+  "phase": "counting",
+  "day": 3,
+  "simTime": "Wednesday 06:18",
+  "lines": 13034,
   "startedAt": "2026-10-05T04:24:10.990Z",
-  "snapshots": 26,
+  "snapshots": 28,
   "sos": 22,
-  "approved": 187,
+  "approved": 191,
   "rejected": 20,
-  "secondCounts": 135,
-  "handbacks": 35,
+  "secondCounts": 138,
+  "handbacks": 36,
   "failures": 0,
   "failed": [],
-  "at": "2026-10-05T08:20:49.882Z"
+  "at": "2026-10-05T08:28:34.893Z"
 }
