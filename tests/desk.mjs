@@ -62,7 +62,7 @@ check('Skip leaves it for a look, with the reason', after2.moves.find((m) => m.p
 check('…and the desk says nothing is waiting', await page.isVisible('#deskNone'));
 await fetch(`${BASE}/api/admin/pallet-system`, { method: 'POST', headers: A, body: JSON.stringify({ url: '' }) });
 await page.reload(); await page.waitForSelector('#scrMain.active'); await page.evaluate(() => window.appApi.showSub('desk')); await page.waitForTimeout(1200);
-check('With no address set the desk says where to set it, and the strip still works', /Settings → Advanced/.test(await page.textContent('#deskUrlNote')) && await page.$eval('#deskWrap', (el) => el.classList.contains('none')));
+check('With no address set the desk says where to set it, and the strip still works', /Settings → Integrations/.test(await page.textContent('#deskUrlNote')) && await page.$eval('#deskWrap', (el) => el.classList.contains('none')));
 check('No script errors', errors.length === 0, errors.join(' | '));
 await browser.close();
 console.log(`\n${results.filter(Boolean).length}/${results.length} move desk checks passed`);

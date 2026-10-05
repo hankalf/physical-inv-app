@@ -1,6 +1,6 @@
 import { db, norm } from '../db.js';
 import { parseAccess, cleanAccess, profileOf, applyProfile } from './access.js';
-import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { randomBytes, scryptSync, timingSafeEqual, createHash } from 'node:crypto';
 
 /*
  * Supervisor accounts.
@@ -36,7 +36,54 @@ const shape = (u) => ({
   profile: profileOf(u.role, u.role === 'admin' ? null : parseAccess(u.access)),
   created_at: u.created_at, last_login: u.last_login, created_by: u.created_by,
   mustChange: !!u.must_change,
+  email: u.email || '',
+  invited: !!(u.invite_hash && u.invite_expires && Date.parse(u.invite_expires) > Date.now()),
+  inviteExpires: u.invite_hash ? u.invite_expires : null,
 });
+
+/* An email is optional; when it is there it should at least look like one. */
+function cleanEmail(e) {
+  if (e === undefined) return undefined;
+  const v = String(e || '').trim();
+  if (v && !/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(v)) throw Object.assign(new Error('that email address does not look right'), { status: 400 });
+  return v.slice(0, 120);
+}
+
+/* ------------------------------------------------------------ invites
+   A login added with an email can be sent a link instead of a password: it
+   works once, for three days, and lets its owner choose their own password -
+   so no working password ever goes into an email. Only a hash of the link is
+   kept; a new invite replaces the old one. */
+export const INVITE_DAYS = 3;
+const inviteHash = (t) => createHash('sha256').update(String(t)).digest('hex');
+
+export function makeInvite(username) {
+  const u = getUser(username);
+  if (!u) throw Object.assign(new Error('no such account'), { status: 404 });
+  if (!u.active) throw Object.assign(new Error('that login is switched off - reactivate it first'), { status: 409 });
+  const token = randomBytes(32).toString('base64url');
+  const expires = new Date(Date.now() + INVITE_DAYS * 86400000).toISOString();
+  db.prepare('UPDATE users SET invite_hash = ?, invite_expires = ? WHERE username = ?').run(inviteHash(token), expires, u.username);
+  return { token, expiresAt: expires, username: u.username, name: u.name, email: u.email || '' };
+}
+
+/** Who an invite link is for, if it still works. */
+export function inviteFor(token) {
+  if (!token || String(token).length < 20) return null;
+  const u = db.prepare('SELECT * FROM users WHERE invite_hash = ?').get(inviteHash(token));
+  if (!u || !u.active || !u.invite_expires || Date.parse(u.invite_expires) <= Date.now()) return null;
+  return { username: u.username, name: u.name, expiresAt: u.invite_expires };
+}
+
+/** The invite used: the password is theirs, and the link stops working. */
+export function acceptInvite(token, password) {
+  const who = inviteFor(token);
+  if (!who) throw Object.assign(new Error('this invite has expired or has already been used - ask an admin for a new one'), { status: 410 });
+  if (String(password || '').length < 8) throw Object.assign(new Error('the password must be at least 8 characters'), { status: 400 });
+  db.prepare('UPDATE users SET password_hash = ?, must_change = 0, invite_hash = NULL, invite_expires = NULL WHERE username = ?')
+    .run(hash(password), who.username);
+  return who;
+}
 
 /* A starter password is meant to be said out loud once and then replaced, so it
    is short, unambiguous and never reused. No I/O/0/1 - they are misread. */
@@ -53,24 +100,28 @@ export const getUser = (username) => db.prepare('SELECT * FROM users WHERE usern
  * invent, somebody else's real password. The starter is returned once, here,
  * and is not recoverable afterwards.
  */
-export function createUser({ username, name, password, role = 'supervisor', mustChange, access, profile }, createdBy = '') {
+export function createUser({ username, name, password, role = 'supervisor', mustChange, access, profile, email, invite }, createdBy = '') {
   if (profile) { const p = applyProfile(profile); role = p.role; if (p.access !== undefined) access = p.access; }
   const u = norm(username).replace(/\s+/g, '');
   if (!u) throw Object.assign(new Error('a username is required'), { status: 400 });
   if (!/^[A-Z0-9._-]{2,32}$/.test(u)) throw Object.assign(new Error('usernames are 2-32 characters: letters, digits, . _ -'), { status: 400 });
-  const starter = String(password || '') ? '' : starterPassword();
-  const pw = starter || String(password);
+  const mail = cleanEmail(email) || '';
+  if (invite && !mail) throw Object.assign(new Error('an invite needs an email address to go to'), { status: 400 });
+  // invited: a password nobody knows until its owner picks one from the link
+  const starter = invite || String(password || '') ? '' : starterPassword();
+  const pw = invite ? randomBytes(24).toString('base64url') : (starter || String(password));
   if (pw.length < 8) throw Object.assign(new Error('the password must be at least 8 characters'), { status: 400 });
   if (getUser(u)) throw Object.assign(new Error(`${u} already has an account`), { status: 409 });
-  const force = mustChange === undefined ? !!starter : !!mustChange;
+  const force = invite ? false : mustChange === undefined ? !!starter : !!mustChange;
   const list = cleanAccess(access);
-  db.prepare('INSERT INTO users (username, name, password_hash, role, active, created_at, created_by, must_change, access) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)')
+  db.prepare('INSERT INTO users (username, name, password_hash, role, active, created_at, created_by, must_change, access, email) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?)')
     .run(u, String(name || u).trim(), hash(pw), role === 'admin' ? 'admin' : 'supervisor',
-         new Date().toISOString(), String(createdBy || ''), force ? 1 : 0, list ? JSON.stringify(list) : null);
-  return { ...shape(getUser(u)), starterPassword: starter || undefined };
+         new Date().toISOString(), String(createdBy || ''), force ? 1 : 0, list ? JSON.stringify(list) : null, mail || null);
+  const inv = invite ? makeInvite(u) : null;
+  return { ...shape(getUser(u)), starterPassword: starter || undefined, invite: inv || undefined };
 }
 
-export function updateUser(username, { name, role, active, password, mustChange, access, profile }) {
+export function updateUser(username, { name, role, active, password, mustChange, access, profile, email }) {
   if (profile) { const p = applyProfile(profile); role = p.role; if (p.access !== undefined) access = p.access; }
   const existing = getUser(username);
   if (!existing) throw Object.assign(new Error('no such account'), { status: 404 });
@@ -93,6 +144,10 @@ export function updateUser(username, { name, role, active, password, mustChange,
     list === undefined ? existing.access : (list ? JSON.stringify(list) : null),
     existing.username
   );
+  const mail = cleanEmail(email);
+  if (mail !== undefined) db.prepare('UPDATE users SET email = ? WHERE username = ?').run(mail || null, existing.username);
+  // a password reset or a switched-off login ends any invite still waiting
+  if (pw || active === false) db.prepare('UPDATE users SET invite_hash = NULL, invite_expires = NULL WHERE username = ?').run(existing.username);
   return { ...shape(getUser(existing.username)), starterPassword: starter || undefined };
 }
 
@@ -111,6 +166,13 @@ export function authenticate(username, password) {
   if (!u || !u.active || !verify(password, u.password_hash)) return null;
   db.prepare('UPDATE users SET last_login = ? WHERE username = ?').run(new Date().toISOString(), u.username);
   return shape(u);
+}
+
+/** Whether a login's password is this one - for the count-day check, which
+    looks for a password that was never changed. Records nothing. */
+export function passwordIs(username, password) {
+  const u = getUser(username);
+  return !!(u && u.active && verify(password, u.password_hash));
 }
 
 /** Change your own password, having proved the old one. Clears any starter flag. */

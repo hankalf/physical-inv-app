@@ -215,9 +215,9 @@
     if (devices && Array.isArray(devices.devices)) {
       const n = devices.devices.length;
       const enrolled = devices.devices.filter((d) => d.enrolled_at).length;
-      if (n && !enrolled) { checks.push(['warn', 'No scanner has opened its link yet', `${n} registered, none enrolled. Open each link on its device once.`, { page: '/settings', sub: 'gun', label: 'Scanner screen' }]); topics.add('scanners'); }
+      if (n && !enrolled) { checks.push(['warn', 'No scanner has opened its link yet', `${n} registered, none enrolled. Open each link on its device once.`, { page: '/settings', sub: 'gun', label: 'Scanners' }]); topics.add('scanners'); }
     }
-    if (hook && !hook.configured) { checks.push(['ok', 'No Teams channel', 'SOS alerts stay on the dashboard and the board. A channel is optional.', { page: '/settings', sub: 'advanced', label: 'Advanced' }]); topics.add('teams'); }
+    if (hook && !hook.configured) { checks.push(['ok', 'No Teams channel', 'SOS alerts stay on the dashboard and the board. A channel is optional.', { page: '/settings', sub: 'erp', label: 'Integrations' }]); topics.add('teams'); }
 
     list.innerHTML = '';
     if (!checks.length) list.appendChild(check('ok', 'Nothing to flag', 'The guide sees nothing missing on this count.', null));

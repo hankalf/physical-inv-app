@@ -1,4 +1,4 @@
-/* Settings: scanner setup, list uploads, racking blocks, and under Advanced the logins, Teams channel, look and logo,
+/* Settings: count setup, list uploads, racking blocks, the scanners, integrations, backups, and the logins and the site's look,
    the ERP export, and backups + the audit log. Everything a supervisor sets up
    once and then leaves alone lives here, off the working dashboard. */
 (() => {
@@ -13,7 +13,7 @@
 
   const needSession = (el) => {
     if (sessionId) return true;
-    msg(el, 'err', 'There is no count session yet', 'Make one under Getting started → Count session, then come back here.');
+    msg(el, 'err', 'There is no count session yet', 'Make one under Count setup → Count session, then come back here.');
     return false;
   };
 
@@ -128,7 +128,10 @@
       users,
       (u) => {
         const tr = document.createElement('tr');
-        tr.append(cell(u.username), cell(u.name, 'wrap'));
+        tr.append(cell(u.username));
+        const tdName = cell(u.name, 'wrap');
+        if (u.email) { const em = document.createElement('div'); em.className = 'muted'; em.style.fontSize = '12px'; em.textContent = u.email; tdName.appendChild(em); }
+        tr.appendChild(tdName);
         const tdRole = document.createElement('td');
         /* the role is a picker: a preset of the list, or Admin; ticking by hand shows as Custom */
         const profiles = (api.me && api.me.profiles) || [];
@@ -258,6 +261,12 @@
           w.style.marginLeft = '4px';
           tdSt.appendChild(w);
         }
+        if (u.active && u.invited && !u.last_login) {
+          const w = tag('queued', 'invited');
+          w.title = `Invite sent — the link works until ${new Date(u.inviteExpires).toLocaleString()}.`;
+          w.style.marginLeft = '4px';
+          tdSt.appendChild(w);
+        }
         const lk = lockOf(u.username);
         if (lk) {
           const w = tag('off', 'locked');
@@ -283,6 +292,14 @@
         }));
         act.appendChild(button(u.active ? 'Deactivate' : 'Reactivate', 'sm', () =>
           change({ active: !u.active }, u.active ? `Deactivate ${u.username}? They will not be able to sign in.` : '')));
+        if (u.email && u.active) act.appendChild(button(u.invited ? 'Invite again' : 'Invite', 'sm', async () => {
+          try {
+            const inv = await api.post(`/api/admin/users/${u.username}/invite`, {});
+            clearMsg($('userMsg'));
+            showInvite({ ...inv, email: u.email, name: u.name });
+            await refreshUsers();
+          } catch (err) { msg($('userMsg'), 'err', err.message); }
+        }));
         act.appendChild(button('Reset password', 'sm', async () => {
           const pw = prompt(`New password for ${u.username} — leave blank to generate one.\n\nEither way they choose their own the next time they sign in.`, '');
           if (pw === null) return;
@@ -323,14 +340,52 @@
     box.append(head, code, why);
   }
 
+  /* An invite is a link, not a password: it goes out from the admin's own email
+     (so it comes from someone the person knows), or is copied into a message.
+     It works once, for three days, and asks its owner to choose a password. */
+  function showInvite(inv) {
+    $('starterBox').style.display = 'none';
+    const box = $('inviteBox');
+    box.style.display = 'block';
+    box.className = 'feedback show ok';
+    box.replaceChildren();
+    const until = new Date(inv.expiresAt).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const head = document.createElement('div');
+    head.textContent = `Invite for ${inv.username}${inv.email ? ` (${inv.email})` : ''} — works once, until ${until}.`;
+    const link = document.createElement('input');
+    link.id = 'inviteLink'; link.readOnly = true; link.value = inv.link; link.style.cssText = 'width:100%;margin:8px 0;font-family:ui-monospace,monospace;font-size:12px';
+    link.onclick = () => link.select();
+    const site = (api.brand && api.brand().name) || 'Full Harvest Inventory';
+    const subject = `Your login for ${site}`;
+    const body = `Hi ${inv.name || inv.username},\n\nYou have a login for ${site}. Your username is ${inv.username}.\n\nOpen this link to choose your password and sign in:\n${inv.link}\n\nThe link works once, until ${until}. If it runs out, ask for a new one.\n`;
+    const bar = document.createElement('div');
+    bar.className = 'toolbar';
+    const mail = document.createElement('a');
+    mail.className = 'btn primary'; mail.id = 'btnInviteMail';
+    mail.href = `mailto:${encodeURIComponent(inv.email || '')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    mail.textContent = 'Email the invite';
+    const copy = button('Copy link', '', async () => {
+      try { await navigator.clipboard.writeText(inv.link); copy.textContent = 'Copied'; } catch { link.select(); document.execCommand('copy'); copy.textContent = 'Copied'; }
+    });
+    copy.id = 'btnInviteCopy';
+    const why = document.createElement('div');
+    why.className = 'detail';
+    why.textContent = 'Email the invite opens a new message in your own email, ready to send. The link is shown once; a new invite replaces it.';
+    bar.append(mail, copy);
+    box.append(head, link, bar, why);
+  }
+
+  $('fNewEmail').addEventListener('input', () => { if ($('fNewEmail').value.includes('@') && !$('fNewPass').value) $('fNewInvite').checked = true; });
   $('btnAddUser').onclick = async () => {
     try {
+      const invite = $('fNewInvite').checked;
       const u = await api.post('/api/admin/users', {
-        username: $('fNewUser').value, name: $('fNewFullName').value,
-        password: $('fNewPass').value, profile: $('fNewRole').value,
+        username: $('fNewUser').value, name: $('fNewFullName').value, email: $('fNewEmail').value,
+        password: invite ? '' : $('fNewPass').value, profile: $('fNewRole').value, invite,
       });
-      $('fNewUser').value = ''; $('fNewFullName').value = ''; $('fNewPass').value = '';
-      if (u.starterPassword) { clearMsg($('userMsg')); showStarter(u.username, u.starterPassword); }
+      $('fNewUser').value = ''; $('fNewFullName').value = ''; $('fNewPass').value = ''; $('fNewEmail').value = ''; $('fNewInvite').checked = false;
+      if (u.invite) { clearMsg($('userMsg')); showInvite({ ...u.invite, name: u.name }); }
+      else if (u.starterPassword) { clearMsg($('userMsg')); $('inviteBox').style.display = 'none'; showStarter(u.username, u.starterPassword); }
       else msg($('userMsg'), 'ok', `Added ${u.username}`, 'They will be asked to choose their own password the first time they sign in.');
       await refreshMe();
     } catch (err) { msg($('userMsg'), 'err', err.message); }
@@ -578,7 +633,7 @@
   const renderPrompts = () => {
     renderPromptList('comments', 'commentList');
     renderPromptList('overrides', 'overrideList');
-    // the timer lives on the Scanner screen tab now, but it is the same setting
+    // the timer lives on the Scanners tab now, but it is the same setting
     if (promptState) $('fCommentTimeout').value = promptState.commentTimeout;
     const chip = $('promptChip');
     chip.hidden = false;
@@ -1079,7 +1134,7 @@
     } catch (err) { msg($('sosMsg'), 'err', err.message); }
   };
 
-  /* The Teams channel is its own card under Advanced: set once, left alone. */
+  /* The Teams channel is its own card under Integrations: set once, left alone. */
   $('btnSaveTeams').onclick = async () => {
     try {
       /* An empty box means "leave the address alone" - the page only ever has
@@ -1385,6 +1440,7 @@
     $('fOdClient').title = st.clientIdFromEnv ? 'Set by the ONEDRIVE_CLIENT_ID variable on the server' : '';
     if (document.activeElement !== $('fOdFolder')) $('fOdFolder').value = st.folder || '';
     if (document.activeElement !== $('fOdKeep')) $('fOdKeep').value = st.keep || '';
+    if (document.activeElement !== $('fOdEvery')) $('fOdEvery').value = String(st.every || 24);
     const status = $('odStatus');
     status.replaceChildren();
     let kind = 'warn';
@@ -1392,6 +1448,9 @@
     if (st.connected) {
       kind = st.lastError ? 'err' : 'ok';
       line(`Backups go to ${st.account || 'OneDrive'}, folder "${st.folder}" — the newest ${st.keep} are kept there.`);
+      line(st.every >= 24
+        ? 'A copy goes with each daily backup, and with any backup taken by hand. It is a copy at a moment, not a live sync.'
+        : `A fresh copy every ${st.every === 1 ? 'hour' : `${st.every} hours`}${st.nextAt ? `, the next around ${new Date(st.nextAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}, as well as each daily backup. Those copies go to OneDrive only; this server keeps its dailies.`, 'detail');
       if (st.uploading) line('Sending a backup now…', 'detail');
       if (st.lastUpload) line(`Last copy: ${st.lastUpload.name} (${kb(st.lastUpload.bytes)}), ${new Date(st.lastUpload.at).toLocaleString()}.`, 'detail');
       else line('No copy sent yet — the next backup goes straight there, or press Back up to OneDrive now.', 'detail');
@@ -1444,7 +1503,7 @@
   };
   $('btnOdSave').onclick = () => odDo('/api/admin/onedrive/config', {
     ...($('fOdClient').disabled ? {} : { clientId: $('fOdClient').value }),
-    folder: $('fOdFolder').value, keep: Number($('fOdKeep').value) || undefined,
+    folder: $('fOdFolder').value, keep: Number($('fOdKeep').value) || undefined, every: Number($('fOdEvery').value),
   }, 'Saved.');
   $('btnOdConnect').onclick = () => odDo('/api/admin/onedrive/connect');
   $('btnOdCancel').onclick = () => odDo('/api/admin/onedrive/cancel');
@@ -1473,7 +1532,7 @@
       sel.appendChild(o);
     }
     if (!sessions.length) {
-      sel.innerHTML = '<option value="">No counts yet — make one under Getting started</option>';
+      sel.innerHTML = '<option value="">No counts yet — make one under Count setup</option>';
       sessionId = null;
     } else {
       sessionId = sessions.some((s) => s.id === prior) ? prior : sessions[0].id;
@@ -1598,7 +1657,7 @@
       await loadSessions();
       await refreshSetup().catch(() => {});
       msg($('sessionMsg'), 'ok', `Deleted "${gone.name}".`,
-        gone.backup ? `A copy of the database was taken first as ${gone.backup} — ERP & backups → Backups & log.` : 'It held no counted lines.');
+        gone.backup ? `A copy of the database was taken first as ${gone.backup} — Settings → Backups & log.` : 'It held no counted lines.');
     } catch (err) { msg($('sessionMsg'), 'err', 'Not deleted', err.message); }
   };
 
@@ -1627,9 +1686,9 @@
       if (failed.length) {
         msg($('sessionMsg'), 'warn', what, `${loaded.length ? 'Imported ' + loaded.join(' and ') + '. ' : ''}Could not read ${failed.join('; ')}. Upload it under Lists & racking.`);
       } else if (loaded.length) {
-        msg($('sessionMsg'), 'ok', what, `Imported ${loaded.join(' and ')}. The Getting started checklist above shows anything still needed.`);
+        msg($('sessionMsg'), 'ok', what, `Imported ${loaded.join(' and ')}. The Count setup checklist above shows anything still needed.`);
       } else {
-        msg($('sessionMsg'), 'ok', what, 'Next: upload its bin list and inventory report — the Getting started checklist above walks you through it.');
+        msg($('sessionMsg'), 'ok', what, 'Next: upload its bin list and inventory report — the Count setup checklist above walks you through it.');
       }
       await loadSessions();
       await refreshSetup().catch(() => {});
@@ -1704,7 +1763,10 @@
   // the session bar only means anything to the panes that act on a session
   document.addEventListener('subshow', (e) => {
     $('scopeBar').hidden = !['lists', 'erp', 'start'].includes(e.detail);   // the panes that act on a count
-    if (e.detail === 'start') refreshSetup().catch((err) => msg($('startMsg'), 'err', err.message));
+    if (e.detail === 'start') {
+      refreshSetup().catch((err) => msg($('startMsg'), 'err', err.message));
+      refreshReady().catch(() => {});
+    }
   });
 
   $('fSessionPick').onchange = (e) => {
@@ -1713,7 +1775,52 @@
     applySessionCard();
     refreshAisles().catch(() => {});
     refreshSetup().catch(() => {});
+    refreshReady().catch(() => {});
   };
+
+  /* ------------------------------------------------------------ ready for count day */
+  const READY_WORD = { ready: 'ready', nearly: 'nearly ready', 'not-ready': 'not ready' };
+  const READY_TAG = { ready: 'MATCH', nearly: 'queued', 'not-ready': 'off' };
+  /* Take someone to the card a check is about: the right section, scrolled to,
+     and lit for a moment so the eye finds it. */
+  function goTo(f) {
+    if (!f) return;
+    if (f.page && f.page !== '/settings') { location.href = f.page; return; }
+    api.showSub(f.sub);
+    const card = f.card && document.getElementById(f.card);
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash');
+  }
+  async function refreshReady() {
+    if (!api.me || api.me.role !== 'admin') { $('readyCard').hidden = true; return; }
+    $('readyCard').hidden = false;
+    const r = await api.json('/api/admin/readiness' + (sessionId ? `?session=${sessionId}` : ''));
+    $('readyState').textContent = READY_WORD[r.state];
+    $('readyState').className = 'tag ' + READY_TAG[r.state];
+    const head = r.state === 'ready' ? 'Everything the site needs for a count is in place.'
+      : r.fails ? `${r.fails} thing${r.fails === 1 ? '' : 's'} will stop the count going as planned${r.warns ? `, and ${r.warns} worth a look` : ''}.`
+      : `${r.warns} thing${r.warns === 1 ? '' : 's'} worth a look before count day.`;
+    msg($('readyMsg'), r.state === 'ready' ? 'ok' : r.fails ? 'err' : 'warn', head, r.session ? `Checked against "${r.session.name}" and the site's settings.` : 'There is no full count to check against yet.');
+    const list = $('readyList');
+    list.replaceChildren();
+    for (const c of r.checks) {
+      const li = document.createElement('li');
+      li.className = 'check ' + c.level;
+      const mark = document.createElement('span');
+      mark.className = 'mark';
+      mark.textContent = c.level === 'ok' ? '✓' : c.level === 'warn' ? '!' : '✕';
+      const text = document.createElement('div');
+      text.className = 'what';
+      const b = document.createElement('b'); b.textContent = c.title;
+      const d = document.createElement('span'); d.textContent = c.detail || '';
+      text.append(b, d);
+      li.append(mark, text);
+      if (c.fix && c.level !== 'ok') li.appendChild(button(`${c.fix.label} →`, 'sm ghost', () => goTo(c.fix)));
+      list.appendChild(li);
+    }
+  }
+  $('btnReadyRecheck').onclick = () => refreshReady().catch((err) => msg($('readyMsg'), 'err', err.message));
 
   /* ------------------------------------------------------------ boot */
   function show(which) {
@@ -1729,6 +1836,7 @@
     await refreshDefaultSession().catch(() => {});
     await loadSessions();
     await refreshSetup().catch(() => {});
+    await refreshReady().catch(() => {});
   }
 
   document.addEventListener('auth', (e) => {

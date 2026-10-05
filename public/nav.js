@@ -24,7 +24,7 @@
     '/full': [['counts', 'Counts'], ['new', 'New count'], ['setup', 'Set-up']],
     '/cycle': [['today', 'Today'], ['open', 'Still open'], ['coverage', 'Coverage'], ['setup', 'Program & data']],
     '/teams': [['crew', 'Crew & teams'], ['rules', 'Equipment rules']],
-    '/settings': [['start', 'Getting started'], ['gun', 'Scanner screen'], ['lists', 'Lists & racking'], ['erp', 'ERP & backups'], ['advanced', 'Advanced']],
+    '/settings': [['start', 'Count setup'], ['lists', 'Lists & racking'], ['gun', 'Scanners'], ['erp', 'Integrations'], ['backups', 'Backups & log'], ['advanced', 'Logins & site']],
     '/front': [['moves', 'Pallets to move back'], ['desk', 'Move desk'], ['bins', 'Front-placed bins']],
     '/missing': [],
     '/testing': [],
@@ -76,7 +76,7 @@
   }
   applyLook();
   function mountThemePicker() {
-    const foot = document.getElementById('lookPick');     // Settings → Advanced
+    const foot = document.getElementById('lookPick');     // Settings → Logins & site
     if (!foot || foot.querySelector('.themepick')) return;
     const box = document.createElement('div');
     box.className = 'themepick';
@@ -474,7 +474,7 @@
         box = document.createElement('section');
         box.id = 'noAccess';
         box.className = 'screen active';
-        box.innerHTML = '<div class="card"><h2>Nothing here for this login</h2><div class="hint">This login has not been given any page to use. An admin can give it some under Settings → Advanced → Supervisor logins.</div></div>';
+        box.innerHTML = '<div class="card"><h2>Nothing here for this login</h2><div class="hint">This login has not been given any page to use. An admin can give it some under Settings → Logins & site → Supervisor logins.</div></div>';
         main.appendChild(box);
       }
       box.classList.add('active');
@@ -824,23 +824,26 @@
     ['Crew list and equipment', '/teams', 'crew', 'crew employee badge clock in number people roster equipment forklift scissor reach'],
     ['Teams and who is on them', '/teams', 'teams', 'team member crew drag assign people'],
     ['Level rules for equipment', '/teams', 'rules', 'level rules reach equipment which levels forklift high reach'],
-    ['Getting started checklist', '/settings', 'start', 'getting started checklist setup first time what next'],
+    ['Count setup checklist', '/settings', 'start', 'getting started count setup checklist setup first time what next'],
+    ['Ready for count day check', '/settings', 'start', 'ready count day check readiness before count settings checklist go live'],
     ['Scanner screen layout', '/settings', 'gun', 'scanner screen questions order keyboard text size upright portrait update comments countdown gun handheld'],
     ['Supervisor logins', '/settings', 'advanced', 'login user password account supervisor admin access advanced'],
-    ['Microsoft Teams channel', '/settings', 'advanced', 'teams channel webhook alerts sos notify card advanced'],
+    ['Microsoft Teams channel', '/settings', 'erp', 'teams channel webhook alerts sos notify card integrations'],
     ['Appearance: theme, accent, text size, density', '/settings', 'advanced', 'theme dark light colour color accent look appearance text size density compact corners sidebar contrast advanced'],
-    ['Pallet system address (move desk)', '/settings', 'advanced', 'pallet system url address frame move desk erp wms link advanced'],
+    ['Pallet system address (move desk)', '/settings', 'erp', 'pallet system url address frame move desk erp wms link integrations'],
     ['Site name and location', '/settings', 'advanced', 'site name location place rename title company brand header sidebar advanced'],
     ['Site logo', '/settings', 'advanced', 'logo brand image picture upload company header scanner advanced'],
     ['Scanner setup and links', '/settings', 'gun', 'scanner device link qr register enrol setup card handheld gun'],
     ['One-tap reasons on the gun', '/settings', 'gun', 'reason comment override one tap chips damaged'],
     ['Adjustment reasons', '/settings', 'erp', 'adjustment reason code write off why'],
+    ['Back up to OneDrive', '/settings', 'backups', 'onedrive off site offsite cloud backup microsoft copy restore'],
+    ['Barcode test book', '/settings', 'gun', 'barcode test book practice print code 128 training'],
     ['Upload the bin list', '/settings', 'lists', 'bin list locations upload import csv excel master file racking'],
     ['Upload the inventory report', '/settings', 'lists', 'inventory report pallets upload import csv excel expected quantity erp export'],
     ['Upload a counting plan', '/teams', 'crew', 'plan counting plan teams aisles upload csv'],
     ['Racking blocks', '/settings', 'lists', 'racking block back to back pair aisles conflict'],
     ['Send to the ERP', '/settings', 'erp', 'erp export send file layout columns adjustments posting'],
-    ['Backups and the log', '/settings', 'erp', 'backup restore log audit who did what download'],
+    ['Backups and the log', '/settings', 'backups', 'backup restore log audit who did what download'],
     ['Full counts — every wall-to-wall, open and closed', '/full', 'counts', 'full counts physical wall-to-wall list sessions open closed progress scanners land here default'],
     ['Start a new full count', '/full', 'new', 'new full count create start physical session'],
     ['What a count still needs — set-up list', '/full', 'setup', 'setup checklist guided needs required wanted bins report scanners plan'],
@@ -1068,7 +1071,7 @@
   }
 
   /* ------------------------------------------------- the name and the logo
-     Set under Settings → Advanced. They are drawn from this browser's copy at
+     Set under Settings → Logins & site. They are drawn from this browser's copy at
      once and checked against the server, so the sidebar never flashes. The
      name and the place reach the sidebar, the splash and the window title. */
   const DEFAULT_BRAND = { name: 'Full Harvest Inventory', place: 'Front Royal' };
@@ -1119,7 +1122,54 @@
     api.refreshBranding();
   }
 
+  /* An invite link: /admin?invite=… . The sign-in card becomes "choose your
+     password" for the login it was made for; once chosen, they are signed in
+     and the link stops working. */
+  async function mountInvite(token) {
+    const card = document.querySelector('#scrLogin .card.signin');
+    if (!card) return;
+    const say = (kind, text) => { const m = card.querySelector('#inviteMsg'); m.className = `feedback show ${kind}`; m.textContent = text; };
+    card.innerHTML = '<h2>Welcome</h2><div class="hint" id="inviteWho" style="margin-top:0">Checking your invite…</div>'
+      + '<div id="inviteForm" hidden><label for="fInvitePass">Choose a password</label><input id="fInvitePass" type="password" autocomplete="new-password" placeholder="8 characters or more">'
+      + '<label for="fInvitePass2">Type it again</label><input id="fInvitePass2" type="password" autocomplete="new-password">'
+      + '<button class="primary" id="btnInviteGo" style="width:100%;margin-top:14px">Set my password and sign in</button></div>'
+      + '<div class="feedback" id="inviteMsg"></div>'
+      + '<div class="hint" style="margin-top:12px"><a href="/admin" id="inviteToSignIn">Already have a password? Sign in</a></div>';
+    let who = null;
+    try {
+      const r = await fetch(`/api/invite/${encodeURIComponent(token)}`);
+      const b = await r.json();
+      if (!r.ok) throw new Error(b.error || 'This invite does not work');
+      who = b;
+    } catch (err) { card.querySelector('#inviteWho').textContent = ''; say('err', err.message); return; }
+    card.querySelector('h2').textContent = `Welcome to ${who.site || 'the office'}, ${who.name}`;
+    const line = card.querySelector('#inviteWho');
+    line.textContent = '';
+    line.append('Your username is ');
+    const b = document.createElement('b'); b.textContent = who.username; line.append(b);
+    line.append(`. Choose a password to finish setting up - the link works until ${new Date(who.expiresAt).toLocaleString()}, once.`);
+    card.querySelector('#inviteForm').hidden = false;
+    const go = async () => {
+      const pw = card.querySelector('#fInvitePass').value;
+      if (pw.length < 8) return say('err', 'The password must be at least 8 characters.');
+      if (pw !== card.querySelector('#fInvitePass2').value) return say('err', 'The two passwords are not the same.');
+      try {
+        const r = await fetch('/api/invite/accept', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, password: pw }) });
+        const out = await r.json();
+        if (!r.ok) throw new Error(out.error || 'That did not work');
+        history.replaceState(null, '', '/admin');
+        await signIn(out.username, pw);
+      } catch (err) { say('err', err.message); }
+    };
+    card.querySelector('#btnInviteGo').onclick = go;
+    card.querySelector('#fInvitePass2').addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+    card.querySelector('#fInvitePass').focus();
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
+    const inviteToken = here === '/admin' ? new URLSearchParams(location.search).get('invite') : null;
+    // an invite is somebody new at this computer: whoever was signed in is not them
+    if (inviteToken) { api.token = ''; api.me = null; try { sessionStorage.removeItem('admToken'); } catch { /* fine */ } }
     renderTabs();
     mountLogo();
     mountThemePicker();
@@ -1144,6 +1194,7 @@
         document.getElementById(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
       }
     }
+    if (inviteToken) mountInvite(inviteToken);
     const out = document.getElementById('navLogout');
     // Log out: the next person to sign in on this computer starts on the dashboard
     if (out) out.onclick = () => { api.logout(); if (here !== '/admin') location.replace('/admin'); else if (location.hash !== '#progress') history.replaceState(null, '', '#progress'); };

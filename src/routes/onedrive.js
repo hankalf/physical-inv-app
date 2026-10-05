@@ -16,9 +16,9 @@
  * Nothing here blocks the server: uploads run in the background, a failed one
  * is written down for Settings to show and tried again half an hour later.
  */
-import { open, stat } from 'node:fs/promises';
+import { open, stat, unlink } from 'node:fs/promises';
 import { db } from '../db.js';
-import { listBackups, backupPath, onBackup } from './admin-ops.js';
+import { listBackups, backupPath, onBackup, makeBackup } from './admin-ops.js';
 
 const LOGIN = () => (process.env.ONEDRIVE_LOGIN_BASE || 'https://login.microsoftonline.com').replace(/\/$/, '');
 const GRAPH = () => (process.env.ONEDRIVE_GRAPH_BASE || 'https://graph.microsoft.com/v1.0').replace(/\/$/, '');
@@ -28,6 +28,11 @@ const CHUNK = Number(process.env.ONEDRIVE_CHUNK_BYTES) || 320 * 1024 * 16;
 const DEFAULT_FOLDER = 'Full Harvest Inventory backups';
 const DEFAULT_KEEP = 30;
 const RETRY_MS = 30 * 60 * 1000;
+/* How often a copy goes: with each daily backup, or more often than that. An
+   hour is an hour unless a test says otherwise. */
+const HOUR = () => Number(process.env.ONEDRIVE_HOUR_MS) || 60 * 60 * 1000;
+const TICK = () => Number(process.env.ONEDRIVE_TICK_MS) || 5 * 60 * 1000;
+export const EVERY = [24, 12, 6, 2, 1];
 
 /* ------------------------------------------------------------ what is kept */
 function load() {
@@ -43,6 +48,7 @@ const clientId = (c = load()) => String(process.env.ONEDRIVE_CLIENT_ID || c.clie
 const tenant = (c = load()) => String(process.env.ONEDRIVE_TENANT || c.tenant || 'common').trim() || 'common';
 const folder = (c = load()) => String(c.folder || DEFAULT_FOLDER).trim().replace(/^\/+|\/+$/g, '') || DEFAULT_FOLDER;
 const keep = (c = load()) => Math.max(3, Math.min(365, Number(c.keep) || DEFAULT_KEEP));
+const every = (c = load()) => (EVERY.includes(Number(c.every)) ? Number(c.every) : 24);
 
 let pending = null;      // a sign-in waiting on someone to type the code
 let access = null;       // { token, exp }
@@ -53,7 +59,10 @@ export function onedriveStatus() {
   const c = load();
   return {
     clientId: clientId(c), clientIdFromEnv: !!process.env.ONEDRIVE_CLIENT_ID, tenant: tenant(c),
-    folder: folder(c), keep: keep(c),
+    folder: folder(c), keep: keep(c), every: every(c), everyChoices: EVERY,
+    nextAt: c.refreshToken && every(c) < 24
+      ? new Date(Math.max(Date.now(), (c.lastUpload ? Date.parse(c.lastUpload.at) : Date.now()) + every(c) * HOUR())).toISOString()
+      : null,
     configured: !!clientId(c),
     connected: !!c.refreshToken,
     account: c.account || '', connectedAt: c.connectedAt || '', connectedBy: c.connectedBy || '',
@@ -68,7 +77,7 @@ export function onedriveStatus() {
 }
 
 /** The Application (client) ID, the folder and how many to keep. */
-export function setOnedriveConfig({ clientId: id, tenant: t, folder: f, keep: k } = {}) {
+export function setOnedriveConfig({ clientId: id, tenant: t, folder: f, keep: k, every: ev } = {}) {
   const c = load();
   const next = { ...c };
   if (id !== undefined) {
@@ -87,6 +96,10 @@ export function setOnedriveConfig({ clientId: id, tenant: t, folder: f, keep: k 
     next.folder = v || DEFAULT_FOLDER;
   }
   if (k !== undefined) next.keep = Math.max(3, Math.min(365, Number(k) || DEFAULT_KEEP));
+  if (ev !== undefined) {
+    if (!EVERY.includes(Number(ev))) throw Object.assign(new Error(`how often must be one of ${EVERY.join(', ')} hours`), { status: 400 });
+    next.every = Number(ev);
+  }
   save(next);
   return onedriveStatus();
 }
@@ -270,20 +283,38 @@ export async function uploadNow(name) {
   return busy;
 }
 
-/** If the newest backup is not in OneDrive yet, send it. */
+/** If the newest backup is newer than the last copy in OneDrive, send it. */
 export async function catchUp() {
   const c = load();
   if (!c.refreshToken || busy) return null;
   const newest = listBackups()[0];
-  if (!newest || (c.lastUpload && c.lastUpload.name === newest.name)) return null;
+  if (!newest) return null;
+  if (c.lastUpload && (c.lastUpload.name === newest.name || Date.parse(c.lastUpload.at) >= Date.parse(newest.at))) return null;
   return uploadNow(newest.name);
+}
+
+/* More often than once a day: a fresh copy of the database taken for OneDrive
+   alone, sent, and not kept here - the server keeps its dailies, OneDrive gets
+   the hourly ones, and neither crowds the other out. */
+async function onTheHour() {
+  const c = load();
+  const ev = every(c);
+  if (!c.refreshToken || busy || ev >= 24) return null;
+  const last = c.lastUpload ? Date.parse(c.lastUpload.at) : 0;
+  if (Date.now() - last < ev * HOUR() - TICK() / 2) return null;
+  // a send that just failed is not retried every few minutes: give OneDrive a moment
+  if (c.lastError && Date.now() - Date.parse(c.lastError.at) < Math.min(RETRY_MS, (ev * HOUR()) / 2)) return null;
+  const b = makeBackup('offsite');
+  try { return await uploadNow(b.name); }
+  finally { const full = backupPath(b.name); if (full) await unlink(full).catch(() => {}); }
 }
 
 /** Every backup the app takes goes off-site too; a failure is tried again later. */
 export function startOnedrive() {
-  onBackup(() => { catchUp().catch(() => {}); });
+  onBackup((b) => { if (b.reason !== 'offsite') catchUp().catch(() => {}); });
   const t = setInterval(() => { catchUp().catch(() => {}); }, RETRY_MS);
   t.unref();
+  setInterval(() => { onTheHour().catch(() => {}); }, TICK()).unref();
   setTimeout(() => { catchUp().catch(() => {}); }, 60000).unref();
   return t;
 }

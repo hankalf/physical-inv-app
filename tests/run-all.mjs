@@ -13,7 +13,7 @@ const HERE = new URL('.', import.meta.url).pathname;
 const BASE_PORT = Number(process.env.PORT || 3111);
 const SUITES = process.argv.slice(2).length
   ? process.argv.slice(2).map((n) => (n.endsWith('.mjs') ? n : `${n}.mjs`))
-  : ['full-count.mjs', 'cycle-count.mjs', 'roster.mjs', 'ops.mjs', 'scanner-auth.mjs', 'settings.mjs', 'board.mjs', 'search.mjs', 'barcodes.mjs', 'superadmin.mjs', 'setup-guide.mjs', 'recount-threshold.mjs', 'scanner-prompts.mjs', 'gun-guidance.mjs', 'gun-layout.mjs', 'gun-portrait.mjs', 'self-update.mjs', 'durability.mjs', 'delete-session.mjs', 'lot-expiry.mjs', 'multi-tag-bins.mjs', 'messages.mjs', 'sos.mjs', 'approvals.mjs', 'labels-notes.mjs', 'testing-tab.mjs', 'clocks-shifts.mjs', 'gun-floor.mjs', 'office-batch.mjs', 'auto-plan.mjs', 'moves.mjs', 'fix-list.mjs', 'missing.mjs', 'comment-timeout-upgrade.mjs', 'load-15-teams.mjs', 'access.mjs', 'sources.mjs', 'desk.mjs', 'practice-modes.mjs', 'site-report.mjs', 'guide.mjs', 'branding.mjs', 'scanner-jobs.mjs', 'archive.mjs', 'wrong-field.mjs', 'full-counts.mjs', 'login-limit.mjs', 'phone-app.mjs', 'onedrive.mjs'];
+  : ['full-count.mjs', 'cycle-count.mjs', 'roster.mjs', 'ops.mjs', 'scanner-auth.mjs', 'settings.mjs', 'board.mjs', 'search.mjs', 'barcodes.mjs', 'superadmin.mjs', 'setup-guide.mjs', 'recount-threshold.mjs', 'scanner-prompts.mjs', 'gun-guidance.mjs', 'gun-layout.mjs', 'gun-portrait.mjs', 'self-update.mjs', 'durability.mjs', 'delete-session.mjs', 'lot-expiry.mjs', 'multi-tag-bins.mjs', 'messages.mjs', 'sos.mjs', 'approvals.mjs', 'labels-notes.mjs', 'testing-tab.mjs', 'clocks-shifts.mjs', 'gun-floor.mjs', 'office-batch.mjs', 'auto-plan.mjs', 'moves.mjs', 'fix-list.mjs', 'missing.mjs', 'comment-timeout-upgrade.mjs', 'load-15-teams.mjs', 'access.mjs', 'sources.mjs', 'desk.mjs', 'practice-modes.mjs', 'site-report.mjs', 'guide.mjs', 'branding.mjs', 'scanner-jobs.mjs', 'archive.mjs', 'wrong-field.mjs', 'full-counts.mjs', 'login-limit.mjs', 'phone-app.mjs', 'onedrive.mjs', 'readiness.mjs', 'invites.mjs'];
 
 mkdirSync(join(HERE, 'screenshots'), { recursive: true });
 
@@ -25,6 +25,8 @@ const SUITE_ENV = {
     ONEDRIVE_LOGIN_BASE: `http://127.0.0.1:${ONEDRIVE_MOCK}`,
     ONEDRIVE_GRAPH_BASE: `http://127.0.0.1:${ONEDRIVE_MOCK}/v1.0`,
     ONEDRIVE_CHUNK_BYTES: '65536',
+    ONEDRIVE_HOUR_MS: '4000',          // "every hour" is four seconds in the test
+    ONEDRIVE_TICK_MS: '500',
     ONEDRIVE_MOCK_PORT: String(ONEDRIVE_MOCK),
   },
 };

@@ -295,9 +295,10 @@ try {
   await sub('start');  await saveCard(desk, '#startSteps', 'settings-getting-started-new');
   await pick(sess.id);
   await sub('start');
+  await saveCard(desk, '#readyList', 'settings-ready', 14);
   await saveCard(desk, '#fPalletMode', 'settings-count-session');
-  await saveCard(desk, '#btnBookTemplate', 'settings-barcode-book');
   await sub('gun');    await saveCard(desk, '#stepOrder', 'settings-scanner-screen');
+  await saveCard(desk, '#btnBookTemplate', 'settings-barcode-book');
   await saveCard(desk, '#deviceTable', 'settings-scanners');
   await desk.uncheck('#fJobCycle').catch(() => {}); await desk.uncheck('#fJobMove').catch(() => {}); await desk.uncheck('#fJobMissing').catch(() => {});
   await desk.click('#btnSaveOffers').catch(() => {}); await wait(1200);
@@ -312,8 +313,19 @@ try {
   await sub('erp');
   await saveCard(desk, '#fErpFormat', 'settings-erp');
   await saveCard(desk, '#reasonList', 'settings-adjustment-reasons');
-  await saveCard(desk, '#backupTable', 'settings-backups', 8);
+  await saveCard(desk, '#btnSaveTeams', 'settings-teams-channel');
+  await saveCard(desk, '#fPalletSystemUrl', 'settings-pallet-system');
+  await sub('backups');
+  await saveCard(desk, '#backupTable', 'settings-backups', 6);
+  await saveCard(desk, '#fOdClient', 'settings-onedrive');
   await sub('advanced');
+  /* an invite: a login added with an email gets a link, not a password */
+  await desk.fill('#fNewUser', 'ROSA-D'); await desk.fill('#fNewFullName', 'Rosa Delgado');
+  await desk.fill('#fNewEmail', 'rosa.delgado@example.com');
+  await desk.selectOption('#fNewRole', 'inventory').catch(() => {});
+  await desk.click('#btnAddUser'); await wait(1500);
+  await saveCard(desk, '#inviteBox', 'settings-invite');
+  const inviteLinkUrl = await desk.$eval('#inviteLink', (i) => i.value).catch(() => '');
   await saveCard(desk, '#userTable', 'settings-logins');
   /* the access list, open on one login: what a supervisor may use, down to the tab */
   {
@@ -332,11 +344,17 @@ try {
       await desk.mouse.click(4, 4); await wait(400);
     }
   }
-  await saveCard(desk, '#btnSaveTeams', 'settings-teams-channel');
   await saveCard(desk, '#lookPick', 'settings-appearance');
-  await saveCard(desk, '#fPalletSystemUrl', 'settings-pallet-system');
   await saveCard(desk, '#fSiteName', 'settings-site-name');
   await saveCard(desk, '#fLogo', 'settings-logo');
+
+  /* the invite as Rosa sees it, on her phone */
+  if (inviteLinkUrl) {
+    const rosa = await (await browser.newContext({ viewport: { width: 390, height: 760 }, deviceScaleFactor: 2, isMobile: true })).newPage();
+    await rosa.goto(inviteLinkUrl); await wait(1500);
+    await save(rosa, 'invite-welcome');
+    await rosa.context().close();
+  }
 
   // the printable setup cards, as they come off the printer
   const cards = await browser.newPage({ viewport: { width: 1000, height: 1100 }, deviceScaleFactor: 1 });
@@ -389,6 +407,17 @@ try {
   await desk.check('#fOnlyExceptions').catch(() => {});
   await wait(1800);
   await saveCard(desk, '#palletTable', 'dashboard-pallet-report', 10);
+  /* the office side on a phone: installed from the home screen, the menu folded away */
+  {
+    const phone = await (await browser.newContext({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true })).newPage();
+    await phone.goto(BASE + '/admin'); await wait(800);
+    await phone.fill('#fUser', 'DANA-WHITFIELD'); await phone.fill('#fPassword', 'changeme');
+    await phone.click('#btnLogin'); await phone.waitForSelector('#scrMain.active'); await wait(1800);
+    await save(phone, 'phone-dashboard');
+    await phone.click('#navMenuBtn'); await wait(500);
+    await save(phone, 'phone-menu');
+    await phone.context().close();
+  }
   /* the search box, with the panel open - the one picture that explains it */
   /* a pallet with a variance on it: the search shows the pallet, the second
      count raised for it and the adjustment waiting to be signed, all at once */

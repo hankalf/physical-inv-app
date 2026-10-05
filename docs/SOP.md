@@ -99,7 +99,7 @@ record to add at the registrar. Then at the registrar:
 Railway issues the HTTPS certificate itself within a few minutes. A `.app` name is
 HTTPS-only by design (the whole top-level domain is on the browsers' preload list), which
 the app needs anyway for the scanners' offline mode. Once the new address answers, open
-**Settings → Scanner screen** on it: the scanner links shown there carry the new address,
+**Settings → Scanners** on it: the scanner links shown there carry the new address,
 and each handheld is opened from its new link and installed again — an app installed from
 the old address is a different app to the device. Supervisors just use the new address.
 
@@ -140,9 +140,31 @@ Open `/admin`. The page is a plain sign-in until you are in. Sign in as the supe
 its username and the password you set in Railway (a password typed with no username is
 taken as the superadmin's). There is no shared password.
 
+**Wrong passwords.** Five wrong passwords for one login from one place lock that login out
+*from that place* for 15 minutes — the right password included — and the sign-in says how
+long is left. Twenty wrong from one place, whatever the logins, lock the place. A lock
+never shuts the office out because of somebody guessing from outside: the same login from
+another address still works. An admin sees a lock on the person's row under **Settings →
+Logins & site → Supervisor logins** (a red *locked* tag) and presses **Unlock**; resetting
+the password lifts it too. Every lock is in the log.
+
+**On a phone.** The office side works on a phone and installs like an app: open the site's
+address in the phone's browser, sign in, then **Add to Home Screen** (Safari: Share → *Add to
+Home Screen*; Chrome: ⋮ → *Install app*). It opens on its own, without the browser's bars,
+named after the site (*FH Office*). On a phone the side panel folds into a bar along the top:
+the page's name and a **Menu** button that opens the pages, the search box and *Log out*.
+
+![](images/phone-dashboard.png)
+
+*The dashboard on a phone, installed from the home screen.*
+
+![](images/phone-menu.png)
+
+*Menu opens the pages; picking one folds it away again.*
+
 ### Step 4 — Create a login for each supervisor
 
-**Settings → Advanced → Supervisor logins.**
+**Settings → Logins & site → Supervisor logins.**
 
 1. Type the person's **name**, a **username** and choose their **role**:
    - **Admin** — everything, Settings and logins included.
@@ -155,10 +177,28 @@ taken as the superadmin's). There is no shared password.
    - **Cycle counter** — Cycle counts and the Testing Suite only.
    The role can be changed on the person's row at any time, and **May use** fine-tunes it
    (which shows the role as **Custom**).
-2. Press **Add**. The app shows a **starter password** once — something like
-   `winter-4k2p`. Write it down and hand it to them; it is not shown again.
-3. The first time they sign in they are made to choose their own password before they
-   can do anything. Nobody but them knows it after that.
+2. Either **invite them by email** or give them a **starter password**:
+   - **Invite** — type their **Email** (the *invite* box ticks itself) and press **Add
+     login**. The app makes a link that works **once, for three days**, and shows it with
+     **Email the invite** (a ready-made message in your own email — it names the site, their
+     username and when the link runs out) and **Copy link** (for a text or Teams). They open
+     the link, choose a password, and are signed straight in. No password ever goes into an
+     email. Their row shows *invited* until they do; **Invite again** makes a new link and
+     the old one stops working. A password reset, or switching the login off, ends a
+     waiting invite.
+   - **Starter password** — leave the email blank (or untick *invite*) and press **Add
+     login**. The app shows a **starter password** once — something like `winter-4k2p`.
+     Write it down and hand it to them; it is not shown again. The first time they sign in
+     they are made to choose their own password before they can do anything.
+3. Nobody but them knows their password after that.
+
+![](images/settings-invite.png)
+
+*An invite: the link, shown once, with a ready-made email to send it from your own mail.*
+
+![](images/invite-welcome.png)
+
+*What they see when they open it: their username, and a password to choose.*
 
 If somebody forgets their password, an admin presses **Reset password** on their row and
 gives them the new starter password. The same forced change happens again.
@@ -177,12 +217,12 @@ answer an SOS, queue aisles and raise second counts, downloads and printouts). A
 may use everything a supervisor can until you untick something; a tick takes effect on
 their very next click, with no sign-out needed. The sidebar shows them only the pages on
 their list, and the buttons they may not press are greyed out and say why. **Settings** —
-Advanced included — is for admins only, whatever the list says; supervisors change their
+every section of it — is for admins only, whatever the list says; supervisors change their
 own password from **Change my password** at the foot of the sidebar.
 
 ![](images/settings-logins.png)
 
-*Settings &rarr; Advanced. Each person has their own login, a role and their own password; the starter password is shown once.*
+*Settings &rarr; Logins &amp; site. Each person has their own login, a role and their own password; the starter password is shown once.*
 
 ![](images/settings-access.png)
 
@@ -248,7 +288,7 @@ reliable than counting aisles off by hand.
 
 ### Step 8 — Register the scanners
 
-**Settings → Scanner screen → Scanner setup.**
+**Settings → Scanners → Scanner setup.**
 
 Each handheld gets its own link. Opening that link once is what signs the scanner in;
 after that the server accepts counts from it and stamps its name on every line.
@@ -261,7 +301,7 @@ after that the server accepts counts from it and stamps its name on every line.
 
 ![](images/settings-scanners.png)
 
-*Settings &rarr; Scanner screen. One row per handheld: its link, when it was last seen, Reset link and Remove.*
+*Settings &rarr; Scanners. One row per handheld: its link, when it was last seen, Reset link and Remove.*
 
 **On each handheld, once:**
 
@@ -305,7 +345,7 @@ scanner is wiped and worth asking about otherwise.
 
 *Print setup cards: one per scanner, each with its own QR code and the three steps to do on the device.*
 
-**Which jobs the scanners offer.** *Settings → Scanner screen → What the scanners offer → Jobs on
+**Which jobs the scanners offer.** *Settings → Scanners → What the scanners offer → Jobs on
 the sign-on screen.* A gun's sign-on screen shows exactly the jobs ticked here — **Full count**,
 **Cycle count**, **Front2Back**, **Not in Location (NIL)** — whether or not there is work waiting
 for each; a ticked job with nothing to do says so when it is picked. Day to day a site ticks the
@@ -317,11 +357,11 @@ the change up the next time they are online. The practice gun in the Testing Sui
 
 ![](images/settings-jobs.png)
 
-*Settings &rarr; Scanner screen &rarr; What the scanners offer: the full count alone ticked, for count day.*
+*Settings &rarr; Scanners &rarr; What the scanners offer: the full count alone ticked, for count day.*
 
 ### Step 8a — A barcode test book, to practise on
 
-**Settings → Getting started → Barcode test book.** A page of real **Code 128** labels to print, cut up
+**Settings → Scanners → Barcode test book.** A page of real **Code 128** labels to print, cut up
 and scan — the same symbology the racking uses, so a gun that reads the book reads the rack.
 Use it to train a crew at a desk, to check a new scanner reads properly, or to dry-run a count
 before the real one.
@@ -359,7 +399,7 @@ whatever you want to practise on.*
 
 ### Step 8b — The SOS list, and the Teams channel
 
-**Settings → Scanner screen → SOS from a scanner.**
+**Settings → Scanners → SOS from a scanner.**
 
 Every gun has an SOS button. What it offers when pressed is this list — write it in the words your
 floor uses, because the person pressing it is in a hurry. It ships with what usually goes wrong in a
@@ -367,7 +407,7 @@ cold store, most urgent first: an injury, **equipment broken down**, **needing a
 somebody shut in, racking that looks unsafe, a spill, blocked bins, a scanner problem. Each SOS shows
 on the dashboard (a red bar above every tab, with a chime) and, if the channel is set up, in Teams.
 
-**To send alerts to a Teams channel as well** (Settings → Advanced → Microsoft Teams channel):
+**To send alerts to a Teams channel as well** (Settings → Integrations → Microsoft Teams channel):
 
 1. In Teams, click **⋯** beside the channel → **Workflows** → *Post to a channel when a webhook
    request is received*.
@@ -390,11 +430,11 @@ dashboard — and a card in the Teams channel if **Send it to the Teams channel 
 
 ![](images/settings-sos.png)
 
-*The SOS list, under Scanner screen.*
+*The SOS list, under Scanners.*
 
 ![](images/settings-teams-channel.png)
 
-*The Teams channel it goes to, under Advanced: the address is kept, never shown again in full.*
+*The Teams channel it goes to, under Integrations: the address is kept, never shown again in full.*
 
 ### Step 8c — The Testing Suite: try the scanner on test data
 
@@ -531,7 +571,7 @@ or may not do. It follows this SOP job by job and is the first place to send a n
 
 ### Step 9 — Set up the counting screen
 
-**Settings → Scanner screen.**
+**Settings → Scanners.**
 
 This is what a counter actually sees. The preview on the right is drawn at the real
 pixel size of the device (MC9090 is 240 × 320; MC9200 is 480 × 640) using the scanner's
@@ -592,11 +632,11 @@ Press **Save**. Scanners pick the change up within about half a minute, between 
 
 ![](images/settings-scanner-screen.png)
 
-*Settings &rarr; Scanner screen. Drag the questions into the order your site counts in; the preview is the real MC9090 screen size.*
+*Settings &rarr; Scanners. Drag the questions into the order your site counts in; the preview is the real MC9090 screen size.*
 
 ### Step 10 — Set the one-tap reasons
 
-**Settings → Scanner screen → What the scanners offer.** One section for everything a counter
+**Settings → Scanners → What the scanners offer.** One section for everything a counter
 is offered on the gun, with one **Save everything the scanners offer** button at the bottom:
 
 - **Jobs on the sign-on screen** — the full count, the cycle count, Front2Back, Not in Location
@@ -619,7 +659,7 @@ The jobs on the sign-on screen change the next time a scanner is online.
 
 ![](images/settings-reason-codes.png)
 
-*Settings &rarr; Scanner screen &rarr; What the scanners offer. These are the buttons a counter taps instead of typing.*
+*Settings &rarr; Scanners &rarr; What the scanners offer. These are the buttons a counter taps instead of typing.*
 
 ---
 
@@ -634,7 +674,7 @@ open and closed, with bins counted, lines and second counts open, **Open on the 
 **Scanners land here** (the count every gun opens on at sign-on) and **Close** / **Reopen**;
 a **New count** tab that creates one; and a **Set-up** tab that lists what the count in the
 picker still needs, each step linking to where it is done. The count's options stay under
-*Settings → Getting started → Count session*, and the Dashboard stays the live view of whichever
+*Settings → Count setup → Count session*, and the Dashboard stays the live view of whichever
 count the picker holds. Cycle counts have their own page, *Cycle counts*, the same way.
 
 ![](images/full-counts.png)
@@ -645,7 +685,7 @@ count the picker holds. Cycle counts have their own page, *Cycle counts*, the sa
 cycle count in the picker at the top of any page, and a cycle-counter login sees no full count.
 
 
-**Settings → Getting started → Count session → Start a new count.**
+**Settings → Count setup → Count session → Start a new count.**
 
 1. **Name** it something you will recognise later: `Q3 2026 wall-to-wall`.
 2. **Type**:
@@ -663,9 +703,34 @@ The new count inherits the rack drawing the last one used, so the map works imme
 
 *The count is picked in the header, on every supervisor page. Each row carries its own progress, so two counts are never confused.*
 
+### Step 11a — Ready for count day
+
+**Settings → Count setup → Ready for count day.**
+
+The first card on Settings checks the *site* against what a count day needs, worked out
+fresh every time the page opens — the count's own lists are the checklist below it. Each
+line is green, amber (*works, but you would want to know*) or red (*the count will not go as
+planned*), the worst first, and each amber or red line has a button that opens the card that
+puts it right. It looks at:
+
+- the count the scanners land on — open, not still a trial run, with a bin list and a report;
+- **the jobs the scanners offer** — on count day the full count alone; anything else ticked
+  is amber, the full count unticked is red;
+- the scanners — registered, each one's link opened on its device, seen lately;
+- the crew list — without one any clock-in number can sign on;
+- the stopped-scanning alert, the override reasons, the Teams channel;
+- the backups — taken in the last day, and copied to OneDrive;
+- the site admin's password — still *changeme* is red.
+
+Run it the afternoon before, and again first thing. **Check again** re-reads it after a change.
+
+![](images/settings-ready.png)
+
+*Ready for count day: red first, then amber, then what is already right — each with a way to the fix.*
+
 ### Step 12 — Check the guided setup
 
-**Settings → Getting started.**
+**Settings → Count setup.**
 
 A checklist worked out from what is actually in the database, not from a box somebody
 ticked. It tells you what is still missing and takes you straight to the screen that
@@ -682,7 +747,7 @@ scanners, the scanner screen, racking blocks, a crew roster and a team plan.
 
 ### Step 13 — Set the count's options
 
-**Settings → Getting started → Count session.** These apply to the count picked at the top of the page,
+**Settings → Count setup → Count session.** These apply to the count picked at the top of the page,
 and a scanner that is already counting picks up a change within about half a minute. The
 questions it asks change between pallets, never mid-line.
 
@@ -710,11 +775,11 @@ questions it asks change between pallets, never mid-line.
 
 ![](images/settings-count-session.png)
 
-*Settings &rarr; Getting started &rarr; Count session: every option above, on one card, for the count picked at the top of the page.*
+*Settings &rarr; Count setup &rarr; Count session: every option above, on one card, for the count picked at the top of the page.*
 
 ### Step 13a — A trial run, before the real count
 
-**Settings → Getting started → Count session → Trial run.**
+**Settings → Count setup → Count session → Trial run.**
 
 The way to find out that a crew does not know the empty-bin button, or that an aisle has no
 rack labels, is to run the count for real a shift or a day before it matters. **Make this a
@@ -802,6 +867,12 @@ English, so the office reads one language whoever counted.
    number to remove it.
 5. Press **Sign on & load list**. The handheld downloads the bin and pallet lists for
    that count and can work from then on **with no signal**.
+
+A clock-in number that is not on the crew list is turned away: *"…is not on the crew list — see
+a supervisor"*, who adds the person under Teams & crew. On the jobs one person does alone — a
+**cycle count**, **Front2Back** and **Not in Location** — the bar at the top of the scanner shows
+**the person's name** from the crew list (*GUN-03 · Rosa Delgado*) rather than their number, so
+anyone glancing at the gun knows whose it is.
 <img src="images/gun-sign-on.png" width="300">
 
 *Signing on: the count, the team number, and every clock-in number on the crew.*
@@ -822,7 +893,7 @@ pallet"*).
    disagrees with the report, or a date already past, is called out on the spot.
 4. **Scan BIN LOCATION** — it says where that bin is and which face it is on.
 5. **Comments** — optional. Tap a reason or type a note; leave it and the gun moves on by
-   itself after a couple of seconds (Settings → Scanner screen sets how long). Typing or
+   itself after a couple of seconds (Settings → Scanners sets how long). Typing or
    tapping a reason stops the countdown.
 
 The line is saved on the handheld the moment the last question is answered, and pushed
@@ -1033,7 +1104,7 @@ with an empty bin behind it — or takes one you upload (Pallet, From bin, To bi
 3. The gun opens the **move desk**, the same strip as the office's: the **pallet**, the bin it is
    in (**from**) and the bin it goes to (**to**), **‹ ›** to step through the aisle, and
    underneath, the **pallet system's own screen** (the address the office set under *Settings →
-   Advanced → Pallet system*; the gun shows the screen, never the address). There is nothing to
+   Integrations → Pallet system*; the gun shows the screen, never the address). There is nothing to
    scan in the app: the move is booked, and scanned, in that screen.
 4. Move the pallet, book it in the system, tap **Moved — next**. The next one comes up; when
    the aisle is finished the gun says so and goes back to the aisle list (**Aisles** goes back
@@ -1052,7 +1123,7 @@ top, with **‹ ›** to step through the list, and the pallet system's own scre
 framed at the size of a Zebra's screen — the same slab as the Testing Suite's gun — so it shows
 what the crew see on a handheld; **Full width** opens it out across the page when a system's own
 screens need the room, and the choice is kept on that computer (the address is set once under
-*Settings → Advanced → Pallet system*). Make the move there, press
+*Settings → Integrations → Pallet system*). Make the move there, press
 **Mark moved**, and the next one comes up; **Skip** leaves one for a look, with the reason. A
 system that refuses to be shown inside another page is a click away with **Open the pallet
 system in a new tab**.
@@ -1069,7 +1140,7 @@ system in a new tab**.
 
 ![](images/settings-pallet-system.png)
 
-*Settings &rarr; Advanced &rarr; Pallet system: the address the desk opens, set once.*
+*Settings &rarr; Integrations &rarr; Pallet system: the address the desk opens, set once.*
 
 ### Step 16 — The supervisor's procedure (on the dashboard)
 
@@ -1077,7 +1148,7 @@ system in a new tab**.
 seconds, fetching only the tab on screen (plus the progress figures and the alerts, which are
 light), so three dashboards left open on a big count do not keep rebuilding the pallet report.
 
-> **How it looks** is up to you: **Settings → Advanced → Appearance** offers four themes —
+> **How it looks** is up to you: **Settings → Logins & site → Appearance** offers four themes —
 > *Midnight* (dark blue), *Graphite* (dark grey), *Daylight* and *Frost* (light) — nine accent
 > colours, the text size, how tightly the tables sit, the corners, the sidebar's width and the
 > strength of the lines. It is kept per computer, so the office TV can be dark and a desk can be
@@ -1090,7 +1161,7 @@ light), so three dashboards left open on a big count do not keep rebuilding the 
 
 ![](images/settings-appearance.png)
 
-*Settings &rarr; Advanced &rarr; Appearance: theme, accent, text size, density, corners, sidebar and contrast — per computer.*
+*Settings &rarr; Logins &amp; site &rarr; Appearance: theme, accent, text size, density, corners, sidebar and contrast — per computer.*
 
 ![](images/settings-site-name.png)
 
@@ -1116,7 +1187,7 @@ light), so three dashboards left open on a big count do not keep rebuilding the 
 
 *Pallets found, per source system.*
 - **Stopped scanning** — a team that is signed on and still has an aisle, but has not scanned for
-  the site's limit (Settings → Scanner screen, 10 minutes to start), gets an **amber bar above every
+  the site's limit (Settings → Scanners, 10 minutes to start), gets an **amber bar above every
   tab**, and its last scan turns amber in the table. **On break** (30 minutes) and **Lunch**
   (45) quiet it for that long; **Seen — I am on it** quiets it until the team scans again. If the
   site turned it on, the same alert goes to the Teams channel.
@@ -1329,7 +1400,7 @@ A variance is not an adjustment until somebody owns it. This is where that happe
    says, what was counted, and what the ERP would move.
 2. Tick the ones you have satisfied yourself about. **Select all shown** takes the
    screenful.
-3. Pick a **reason** — your site's list, set in Settings → ERP & backups → Adjustment reasons —
+3. Pick a **reason** — your site's list, set in Settings → Integrations → Adjustment reasons —
    and add a note if it helps.
 4. **Approve selected**, or **Reject selected** if the count is wrong and the system should
    keep its number.
@@ -1358,7 +1429,7 @@ goes through without anybody being asked; APPROVED carries the reason and the na
 
 ### Step 21 — Send it to the ERP
 
-**Settings → ERP & backups → Send to the ERP.**
+**Settings → Integrations → Send to the ERP.**
 
 1. Choose the **layout** that matches your ERP. Column names and which rows are included
    are configuration — add a layout rather than editing the file by hand afterwards.
@@ -1376,11 +1447,11 @@ the file the ERP gets is the same story the log tells.
 
 ![](images/settings-erp.png)
 
-*Settings &rarr; ERP &amp; backups. Preview before you download; the layout decides the column names and which rows are included.*
+*Settings &rarr; Integrations. Preview before you download; the layout decides the column names and which rows are included.*
 
 ### Step 22 — Close the count
 
-**Settings → Getting started → Count session → Close session.** A closed count is read-only:
+**Settings → Count setup → Count session → Close session.** A closed count is read-only:
 scanners can no longer post lines to it, and its reports stay available for ever.
 
 **Delete…** is separate and deliberately harder: the count must be closed first, you have
@@ -1389,7 +1460,7 @@ against it goes with it. Close counts; delete only the ones created by mistake.
 
 ### Step 23 — Backups and the log
 
-**Settings → ERP & backups → Backups & log.**
+**Settings → Backups & log.**
 
 - **Back up now** before and after anything large — an ERP import, a bulk re-upload, a
   deletion. The app also backs itself up daily and keeps the last 14.
@@ -1399,7 +1470,37 @@ against it goes with it. Close counts; delete only the ones created by mistake.
 
 ![](images/settings-backups.png)
 
-*Backups on the left, the log on the right. Both export.*
+*The backups kept on the server, and the log under them. Both export.*
+
+**Off-site copy: OneDrive.** The daily backups live on the same Railway volume as the
+database, so a lost volume takes them with it. Connected once, the app copies every backup to
+a folder in a OneDrive as well and keeps the newest there (30 unless you change it).
+
+*One-time set-up (about five minutes):*
+
+1. At **portal.azure.com**, sign in with any Microsoft account and open **App registrations →
+   New registration**. Name it *Full Harvest backups*; supported account types: **Accounts in
+   any organizational directory and personal Microsoft accounts**; no redirect URI. **Register.**
+2. On the app's **Authentication** page turn on **Allow public client flows**, and save.
+3. Copy the **Application (client) ID** from its **Overview** into the card, choose the folder,
+   and **Save**. (It can instead be set as the `ONEDRIVE_CLIENT_ID` variable in Railway.)
+4. Press **Connect OneDrive**. A code appears: open **microsoft.com/devicelogin** on any
+   computer or phone, type it, and sign in with the account whose OneDrive should hold the
+   backups. The card notices by itself and turns green, naming the account.
+
+**How often.** It is a copy at a moment, not a live sync. **Send a copy** chooses when: *with
+each daily backup* (and any taken by hand), or **every 12, 6, 2 hours or every hour** — those
+extra copies are taken for OneDrive alone and not kept on the server, so the server's dailies
+are not crowded out. During a wall-to-wall, every hour or two is sensible.
+
+**Back up to OneDrive now** takes a fresh backup and sends it while you watch. A failed copy
+shows on the card and is tried again every half hour; a sign-in Microsoft has withdrawn says to
+connect again. **Disconnect** stops the copies (those already in OneDrive stay). No password is
+kept — only a sign-in token that lets the app write to that account's files.
+
+![](images/settings-onedrive.png)
+
+*Off-site copy: OneDrive — connected, how often, and the last copy sent.*
 
 ---
 
@@ -1452,7 +1553,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 
 | What you see | What it means | What to do |
 |---|---|---|
-| Gun: *"this scanner is no longer authorised"* | Its link was reset or the scanner was removed | Settings → Scanner screen → **Reset link**, open the new link on the device |
+| Gun: *"this scanner is no longer authorised"* | Its link was reset or the scanner was removed | Settings → Scanners → **Reset link**, open the new link on the device |
 | Gun: *"Offline and no list cached for this session"* | The handheld has never downloaded this count | Carry it into Wi-Fi once and sign on again |
 | Gun says `OFFLINE` with lines queued | Normal in a dead spot | Nothing. They upload when it gets a signal. Do not wipe the device |
 | A scan does nothing | DataWedge is not sending a suffix | DataWedge → Basic data formatting → send **ENTER** (or TAB) |
@@ -1463,14 +1564,14 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | A line is in a bin called `NO-LABEL-BIN-F01-1` | The rack label would not scan, and the app had nothing to suggest — an unguided count, with the pallet not on the report either | The quantity is safe. Relabel the bay, then correct the bin on the line if it matters; the relabel list says which aisle it was in |
 | The note is not on the board | The board polls every 15 seconds by default, or the note is on a different count | Wait a few seconds; check the board is pinned to the same count (`/board?session=12`) |
 | A change you made does not appear on the scanners | The gun is still running the app it loaded before the change | Site settings (questions, reasons, text size) reach a running gun within about half a minute and need nothing. A new **version of the app** needs the page to reload: with **Update itself after a deploy** on it does that by itself between pallets, within a couple of minutes of somebody picking the gun up. To force it: tap the green **Update ready** bar, or close the app fully (not just the home button) and reopen it. Reinstalling is never necessary |
-| An SOS did not reach Teams | The channel address is wrong, expired, or Teams was down | The alert is still on the dashboard — the row says what Teams answered. Settings → Advanced → **Send a test card** to check the address. Microsoft is retiring the old *Incoming Webhook* connectors; if yours was one, make a **Workflows** one instead |
+| An SOS did not reach Teams | The channel address is wrong, expired, or Teams was down | The alert is still on the dashboard — the row says what Teams answered. Settings → Integrations → **Send a test card** to check the address. Microsoft is retiring the old *Incoming Webhook* connectors; if yours was one, make a **Workflows** one instead |
 | A counter says they pressed SOS and nothing happened | The gun had no signal | The gun tells them: *"No signal — this has NOT been sent."* It sends itself the moment there is signal. In a dead zone, walking ten metres usually fixes it |
 | The printed barcodes will not scan | The page was printed “fit to page”, or on glossy paper | Print again at **100%** on plain white paper. If a gun still refuses them, print with **Per row: 1** — the bars are wider on a bigger label |
 | A code in the spreadsheet will not print | Code 128 carries plain ASCII only — an accented letter or a smart quote cannot be drawn | The book says which character it was; retype that code with plain letters and numbers |
-| The app still shows the old name somewhere | The name was changed under Settings → Advanced → Site name | Supervisor pages change at once. A scanner picks it up when it is next online; the board on its next refresh. The name under a home-screen icon comes from the app's install and updates when the app is next reinstalled |
-| The strip on the gun shows the pallet but no system under it | No pallet system address is set (the gun says so), or the system refuses to be framed | Settings → Advanced → Pallet system. A system that refuses to be framed cannot be shown on the gun — the gun never shows its address; use the office desk's Open in a new tab, or ask the system's owner to allow framing from this site |
-| The site's address opens the supervisor sign-in, not the scanner | That is how it works: the bare address is the office's | A scanner is opened from its own link under Settings → Scanner screen (`/?d=…`); after that its home-screen icon lands on the app. If a handheld lost that (site data cleared), open its link again |
-| A gun does not offer the cycle count, Front2Back or Not in Location | That job is unticked under Settings → Scanner screen → What the scanners offer | Deliberate during a wall-to-wall; tick it back on when the count is over |
+| The app still shows the old name somewhere | The name was changed under Settings → Logins & site → Site name | Supervisor pages change at once. A scanner picks it up when it is next online; the board on its next refresh. The name under a home-screen icon comes from the app's install and updates when the app is next reinstalled |
+| The strip on the gun shows the pallet but no system under it | No pallet system address is set (the gun says so), or the system refuses to be framed | Settings → Integrations → Pallet system. A system that refuses to be framed cannot be shown on the gun — the gun never shows its address; use the office desk's Open in a new tab, or ask the system's owner to allow framing from this site |
+| The site's address opens the supervisor sign-in, not the scanner | That is how it works: the bare address is the office's | A scanner is opened from its own link under Settings → Scanners (`/?d=…`); after that its home-screen icon lands on the app. If a handheld lost that (site data cleared), open its link again |
+| A gun does not offer the cycle count, Front2Back or Not in Location | That job is unticked under Settings → Scanners → What the scanners offer | Deliberate during a wall-to-wall; tick it back on when the count is over |
 | A gun offers Front2Back but says *Nothing waiting to move right now* | The job is ticked and the move list is empty | Normal: build a move list under Front bins, or untick the job |
 | A count is missing from the picker | The login may not work that kind of count | A login without the Cycle counts page sees no cycle count; a cycle counter sees no full count. An admin adds the page under Supervisor logins |
 | Gun: *Not signed on — see a supervisor* (*E9999 is not on the crew list*) | That clock-in number is not on the crew list | Add the person under Teams & crew → Crew & teams, then they sign on again. Once a crew list is loaded, nobody signs on with a number the site does not know (the Testing Suite's practice gun is exempt) |
@@ -1478,7 +1579,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | You cannot find where something is set | The app has four pages and twenty-odd cards | Type what you would call it into the search box at the top of the sidebar — *"upload bin list"*, *"keyboard"*, *"approve"* — and the **Go to** hits take you straight there. **/** puts the cursor in it |
 | Not sure whether a gun has the latest version | — | The sign-on screen's bottom line reads *"App build a1b2c3d4e5f6 on the server — this scanner is up to date"*. Compare it across two guns, or against a fresh reload |
 | A gun keeps saying "update did not take" | It reloaded and is still on the old version — something between it and the server is serving stale files | Close the app fully and reopen it. If it persists, clear the site data for the app on that device (Android → Settings → Apps → the app → Storage), then open its link again |
-| The screen keeps rotating, or reads upside down | Auto-rotate is on, and a browser tab is never allowed to lock the orientation | The app turns itself back upright on its own, sideways or end over end. If it is not, check **Keep it upright** is ticked under Settings → Scanner screen, then read the grey line at the bottom of the sign-on screen — it says the screen size the handheld gave the app, how far the device says it has turned, and what the app did about it. To stop the device turning at all, install the app (it asks for one way up) or turn auto-rotate off on the handheld |
+| The screen keeps rotating, or reads upside down | Auto-rotate is on, and a browser tab is never allowed to lock the orientation | The app turns itself back upright on its own, sideways or end over end. If it is not, check **Keep it upright** is ticked under Settings → Scanners, then read the grey line at the bottom of the sign-on screen — it says the screen size the handheld gave the app, how far the device says it has turned, and what the app did about it. To stop the device turning at all, install the app (it asks for one way up) or turn auto-rotate off on the handheld |
 | A team says they never got a message | Look at **Read by** on the dashboard | It shows which scanners have tapped Got it. A scanner that is offline gets it on its next sync |
 | A scan seems to land on a button instead of the box | Something else took the focus | Nothing — the app puts the keystrokes in the box and carries on. Tell us if it still happens |
 | The guide is a bin or two ahead of the team | The bins hold several pallets each | Fixed: the guide now stays on a bin until its tags are counted. Check **Show the next bin in the aisle** is on |
@@ -1488,7 +1589,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | The browser's address bar is in the way | Same thing — the app is not installed | As above. For a device that should run nothing else, use Zebra's Enterprise Home Screen |
 | Gun: *"Team N is counting aisle X"* | Another team holds that racking block | Wait, or hand the other aisle back first |
 | Second-count list is enormous | Thresholds are at 0 | Set **Recount over** and **or over %**, and a **cap** (Part 3, step 13) |
-| The map is a schematic, not your drawing | No rack drawing on this count | Settings → Getting started → Count session → **Map drawing** |
+| The map is a schematic, not your drawing | No rack drawing on this count | Settings → Count setup → Count session → **Map drawing** |
 | A reason code edit "did not reach" a gun | It takes up to about half a minute, and only lands between pallets; a gun on an old build does not take it at all | Wait for the counter to finish the pallet they are on; check the build line on the sign-on screen matches the server |
 | Can nobody sign in? | All logins lost | The superadmin is made from the Railway variables the first time the app starts; if it was deleted or demoted later, set `SUPERADMIN_USER` to a new username and restart, which makes a fresh admin login |
 | Numbers look wrong after an ERP import | The inventory report moved on | Re-upload it with **Replace what is there**, then re-read the pallet report |

@@ -36,7 +36,8 @@ is short. The rules in bold are the ones that matter.
    it). Cycle count, Front2Back and Not in Location: **your own clock-in number alone**, no
    team.
 4. **Sign on & load list**. The gun downloads the lists once and works with or without signal
-   from then on.
+   from then on. A clock-in number not on the crew list is turned away — *see a supervisor*.
+   On a cycle count, Front2Back or Not in Location the top bar then shows **your name**.
 5. Full count: the gun shows **your aisle** and the bins in it. **Start counting.**
 
 ## 3 — Counting: pallet, quantity, bin

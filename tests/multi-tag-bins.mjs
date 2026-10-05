@@ -135,9 +135,14 @@ await gun.waitForTimeout(900);
 check('Gun: it says the tag is the same pallet, counted once',
   /same pallet as P-6/i.test(clean(await gun.textContent('#scanMsg'))), clean(await gun.textContent('#scanMsg')).slice(0, 110));
 
-await gun.waitForTimeout(3000);       // the line has to reach the server first
-const rows = (await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/pallets?limit=200`, { headers: A }))).rows;
-const by = Object.fromEntries(rows.map((r) => [r.pallet_id, r]));
+/* the line has to reach the server first: the gun sends it on its next sync,
+   which on a busy machine can be a few seconds away */
+let by = {};
+for (let i = 0; i < 30 && !by['P-6-OLD-TAG']; i++) {
+  await gun.waitForTimeout(500);
+  const rows = (await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/pallets?limit=200`, { headers: A }))).rows;
+  by = Object.fromEntries(rows.map((r) => [r.pallet_id, r]));
+}
 check('The second label lands as its own line with no quantity',
   by['P-6-OLD-TAG'] && Number(by['P-6-OLD-TAG'].counted_qty) === 0, JSON.stringify(by['P-6-OLD-TAG']?.counted_qty));
 check('...and is reported as a second label, not as a missing or unknown pallet',

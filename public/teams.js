@@ -329,7 +329,7 @@
     const out = $('uploadMsg-plan');
     const sid = Number($('fPlanSession').value) || 0;
     const file = $('fFile-plan').files[0];
-    if (!sid) return msg(out, 'err', 'Pick the count the plan is for', 'A full count — make one under Settings → Getting started.');
+    if (!sid) return msg(out, 'err', 'Pick the count the plan is for', 'A full count — make one under Settings → Count setup.');
     if (!file) return msg(out, 'err', 'Choose a file first');
     msg(out, 'warn', `Reading ${file.name}…`);
     try {

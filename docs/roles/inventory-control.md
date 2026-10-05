@@ -70,7 +70,7 @@ A count compares the floor with a report. If the report is wrong, every variance
    - **Recount over N units / or over N %**: a difference smaller than both raises no second count. 2 to 5 units and 5 to 10 % is usual; at 0/0 every difference is recounted and the list becomes unworkable;
    - **a cap** on second counts;
    - **Adjustments need approval**, and its own threshold under which a difference goes through as **AUTO** without a signature. Decide this before the count: switching it on afterwards is allowed but means signing everything at once.
-5. **Agree the reason codes** (*Settings → ERP & backups → Adjustment reasons*). They are what
+5. **Agree the reason codes** (*Settings → Integrations → Adjustment reasons*). They are what
    you will pick for every approval and what the ERP file carries. Match them to the ERP's own
    list.
 6. **Ask for a trial run** if the team is new. A trial counts for real on the dashboard and is
@@ -207,7 +207,7 @@ The ERP file names itself that way already.
 
 ## 7 — The ERP file
 
-**Settings → ERP & backups → Send to the ERP.** This card is on the Settings page, which the
+**Settings → Integrations → Send to the ERP.** This card is on the Settings page, which the
 *Inventory control* profile does not open. Two ways to work it:
 
 - sit with the admin or supervisor while they produce it, with you reading the preview; or
@@ -257,9 +257,9 @@ Keep, per count, in the business's document store (not only on the server):
 | The inventory report(s) uploaded | the files you pulled from the systems | what the count was compared against |
 | The upload summaries | screenshot or note from the person who uploaded | merges, duplicates and negatives you accepted |
 | Export everything (Excel) | Dashboard → Reports, after the close | the count itself, every sheet |
-| The ERP file(s) | Settings → ERP & backups | exactly what the ERP was given |
-| The log export | Settings → ERP & backups → Export the log | who did what, incl. every approval |
-| A database backup | Settings → ERP & backups → Back up now, downloaded | the whole thing, re-loadable |
+| The ERP file(s) | Settings → Integrations → Send to the ERP | exactly what the ERP was given |
+| The log export | Settings → Backups & log → Export the log | who did what, incl. every approval |
+| A database backup | Settings → Backups & log → Back up now, downloaded — or the copy in OneDrive, if the admin connected it | the whole thing, re-loadable |
 
 Take the workbook **after** the count is closed and the MISSING pallets have been approved,
 so it is the final state; take it again if anything is changed later. The app keeps a daily
@@ -316,6 +316,6 @@ After the close:
 | Fix list, Labels only | Dashboard → Reports → Fix list | CSV | floor walk-round |
 | Count sheet | Dashboard → Reports | printable page | paper fallback |
 | Coverage | Cycle counts → Coverage (if given) | CSV | auditors |
-| ERP file, per layout and system | Settings → ERP & backups (admin) | CSV in the ERP's columns | the ERP |
-| Log | Settings → ERP & backups (admin) | CSV | auditor |
-| Database backup | Settings → ERP & backups (admin) | `.db` file | disaster recovery |
+| ERP file, per layout and system | Settings → Integrations (admin) | CSV in the ERP's columns | the ERP |
+| Log | Settings → Backups & log (admin) | CSV | auditor |
+| Database backup | Settings → Backups & log (admin) | `.db` file | disaster recovery |

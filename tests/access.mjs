@@ -120,7 +120,7 @@ await sueRow.locator('select.rolepick').selectOption('inventory'); await adm.wai
 check('…and picking Inventory control sets the list to the count, adjustments and downloads', (await j(await fetch(`${BASE}/api/admin/users`, { headers: A }))).users.find((u) => u.username === 'SUE').access.join() === 'dashboard,full,testing,approve,export');
 await fetch(`${BASE}/api/admin/users/SUE`, { method: 'POST', headers: A, body: JSON.stringify({ access: ['testing', 'dashboard'] }) });
 check('Ticking a box saves it', (await j(await fetch(`${BASE}/api/admin/users`, { headers: A }))).users.find((u) => u.username === 'SUE').access.includes('testing'));
-check('…and the page itself has the Advanced tab, being an admin', (await adm.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.trim()))).some((t) => /Advanced/.test(t)));
+check('…and the page itself has the Logins & site tab, being an admin', (await adm.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.trim()))).some((t) => /Logins & site/.test(t)));
 
 /* the Testing Suite follows the list too: Sue now has testing and the dashboard, but no exports and no approvals */
 await page.goto(BASE + '/testing'); await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(2500);

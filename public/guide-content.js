@@ -27,8 +27,8 @@
           do: 'Use the username and starter password an admin gave you. The first sign-in stops at a panel that asks for a real password: pick one you will remember, you will not be asked again on this browser until you log out.',
           where: S('/admin', '', 'Dashboard'),
           watch: [
-            { see: '"that username and password do not match"', means: 'The username is typed differently from how it was created, or the starter password has already been changed.', fix: 'Usernames are not case-sensitive, passwords are. Ask an admin to set a new starter password under Settings → Advanced → Supervisor logins.' },
-            { see: 'Nothing here for this login', means: 'The login exists but has been given no pages.', fix: 'An admin ticks the pages for it under Settings → Advanced → Supervisor logins, or picks a profile such as Inventory control.' },
+            { see: '"that username and password do not match"', means: 'The username is typed differently from how it was created, or the starter password has already been changed.', fix: 'Usernames are not case-sensitive, passwords are. Ask an admin to set a new starter password under Settings → Logins & site → Supervisor logins.' },
+            { see: 'Nothing here for this login', means: 'The login exists but has been given no pages.', fix: 'An admin ticks the pages for it under Settings → Logins & site → Supervisor logins, or picks a profile such as Inventory control.' },
           ],
           ask: [
             { q: 'Do I need to sign in on every page?', a: 'No. One sign-in covers every supervisor page in this browser, and it survives a server restart for 30 days of use. Log out to end it.' },
@@ -43,7 +43,7 @@
             { see: 'A page is missing from my sidebar', means: 'Your login was not given it.', fix: 'That is deliberate, not a fault. Ask an admin if you need it.' },
           ],
           ask: [
-            { q: 'Where is the Count session card?', a: 'Under Settings → Getting started. The list of full counts, with Open on the dashboard, Close and Scanners land here, is the Full Counts page.', goto: S('/full', 'counts', 'Full Counts') },
+            { q: 'Where is the Count session card?', a: 'Under Settings → Count setup. The list of full counts, with Open on the dashboard, Close and Scanners land here, is the Full Counts page.', goto: S('/full', 'counts', 'Full Counts') },
             { q: 'Why is a count missing from the picker?', a: 'The picker shows only the kinds of count your login may work: no Cycle counts page, no cycle counts in the picker; a cycle-counter login sees no full count.' },
             { q: 'What is the office board?', a: 'A read-only page at /board for the office TV: progress, teams, alerts and notes. It needs no login.', goto: S('/board', '', 'Open the board') },
           ],
@@ -78,8 +78,8 @@
       steps: [
         {
           title: 'Create a login for each supervisor',
-          do: 'Settings → Advanced → Supervisor logins. Give each a username, a starter password and either a profile (Supervisor, Inventory control, Read only) or the pages ticked one by one, down to the tab. Settings and Advanced are admin-only.',
-          where: S('/settings', 'advanced', 'Settings → Advanced'),
+          do: 'Settings → Logins & site → Supervisor logins. Give each a username, a starter password and either a profile (Supervisor, Inventory control, Read only) or the pages ticked one by one, down to the tab. Settings is admin-only.',
+          where: S('/settings', 'advanced', 'Settings → Logins & site'),
           watch: [
             { see: '"only an admin can manage accounts"', means: 'Your login is a supervisor, not an admin.', fix: 'Ask an admin. The first admin is the superadmin from the server settings.' },
             { see: 'Can nobody sign in at all?', means: 'The admin logins were deleted or demoted.', fix: 'Set SUPERADMIN_USER to a new username in the server variables and restart. A fresh admin login is made on start.' },
@@ -115,8 +115,8 @@
         },
         {
           title: 'Register the scanners',
-          do: 'Settings → Scanner screen. Add a scanner, give it a name, open its link on the device once, then install the app from Chrome’s menu. Each scanner has its own link; a reset link locks the old one out.',
-          where: S('/settings', 'gun', 'Settings → Scanner screen'),
+          do: 'Settings → Scanners. Add a scanner, give it a name, open its link on the device once, then install the app from Chrome’s menu. Each scanner has its own link; a reset link locks the old one out.',
+          where: S('/settings', 'gun', 'Settings → Scanners'),
           watch: [
             { see: 'Gun: "this scanner is no longer authorised - ask a supervisor for its link"', means: 'Its link was reset or the scanner was removed.', fix: 'Reset link on its row and open the new link on the device.' },
             { see: 'Gun: "this scanner link is not registered - ask a supervisor"', means: 'The device opened a link that was never created here, or the server was reset.', fix: 'Add the scanner again and open the fresh link.' },
@@ -129,8 +129,8 @@
         },
         {
           title: 'Print the barcode test book',
-          do: 'Settings → Getting started → Barcode book: a printable sheet of bin and pallet codes to try the guns on, with the practice data already in it. Print at 100% on plain paper.',
-          where: S('/settings', 'start', 'Settings → Getting started'),
+          do: 'Settings → Scanners → Barcode test book: a printable sheet of bin and pallet codes to try the guns on, with the practice data already in it. Print at 100% on plain paper.',
+          where: S('/settings', 'gun', 'Settings → Scanners'),
           watch: [
             { see: 'The printed barcodes will not scan', means: 'Printed fit-to-page, or on glossy paper.', fix: 'Print again at 100% on plain white paper; set Per row to 1 for wider bars.' },
             { see: 'A code will not print', means: 'Code 128 carries plain ASCII only.', fix: 'Retype that code with plain letters and numbers, the book says which character it was.' },
@@ -139,8 +139,8 @@
         },
         {
           title: 'Set the SOS list and the Teams channel',
-          do: 'Settings → Advanced → SOS reasons and Teams channel. Counters press SOS on the gun and pick a reason; the alert lands on the dashboard and, if a channel is set, as a card in Teams. Send a test card before count day.',
-          where: S('/settings', 'advanced', 'Settings → Advanced'),
+          do: 'Settings → Scanners → What the scanners offer (the SOS list), and Settings → Integrations → Teams channel. Counters press SOS on the gun and pick a reason; the alert lands on the dashboard and, if a channel is set, as a card in Teams. Send a test card before count day.',
+          where: S('/settings', 'erp', 'Settings → Integrations'),
           watch: [
             { see: 'An SOS did not reach Teams', means: 'The address is wrong, expired, or Teams was down.', fix: 'The alert is still on the dashboard, its row says what Teams answered. Send a test card. Old Incoming Webhook connectors are being retired: make a Workflows one.' },
             { see: '"the address has to start with http:// or https://"', means: 'The pasted address is not a web address.', fix: 'Copy the whole address from the Teams workflow, it starts with https://.' },
@@ -151,8 +151,8 @@
         },
         {
           title: 'Choose which jobs the scanners offer',
-          do: 'Settings → Scanner screen → What the scanners offer → Jobs: the sign-on screen shows exactly what is ticked — Full count, Cycle count, Front2Back, Not in Location. Day to day tick the last three; on count day untick them and tick the full count alone; swap back afterwards. The practice gun has its own ticks in the Testing Suite sandbox.',
-          where: S('/settings', 'gun', 'Settings → Scanner screen'),
+          do: 'Settings → Scanners → What the scanners offer → Jobs: the sign-on screen shows exactly what is ticked — Full count, Cycle count, Front2Back, Not in Location. Day to day tick the last three; on count day untick them and tick the full count alone; swap back afterwards. The practice gun has its own ticks in the Testing Suite sandbox.',
+          where: S('/settings', 'gun', 'Settings → Scanners'),
           watch: [
             { see: '"leave at least one job on, or the scanners have nothing to do"', means: 'Every job was unticked.', fix: 'Tick at least one.' },
             { see: 'A gun still offers a job you unticked', means: 'It has not been online since.', fix: 'It picks the change up on its next refresh of the sign-on screen.' },
@@ -164,15 +164,15 @@
         },
         {
           title: 'Set up the counting screen and what the scanners offer',
-          do: 'Settings → Scanner screen decides what the gun asks: the order of the questions, text size, language, the Keyboard button. What the scanners offer is one section: the jobs, the comments (ask or not, required or not, the wait, the one-tap reasons), the override reasons and the SOS list, with one Save. Changes reach a running gun within about half a minute, between pallets.',
-          where: S('/settings', 'gun', 'Settings → Scanner screen'),
+          do: 'Settings → Scanners decides what the gun asks: the order of the questions, text size, language, the Keyboard button. What the scanners offer is one section: the jobs, the comments (ask or not, required or not, the wait, the one-tap reasons), the override reasons and the SOS list, with one Save. Changes reach a running gun within about half a minute, between pallets.',
+          where: S('/settings', 'gun', 'Settings → Scanners'),
           watch: [
             { see: 'A change does not appear on the scanners', means: 'The gun is between pallets or still on the old build.', fix: 'Settings land within half a minute between pallets. A new version needs a reload: tap the green Update ready bar.' },
             { see: 'A keypad covers the screen', means: 'Somebody left the Keyboard button on.', fix: 'Tap Keyboard again. It is off by default and never comes up by itself.' },
           ],
           ask: [
             { q: 'Can counters switch to Spanish themselves?', a: 'Yes, the language button is on the sign-on screen, and the choice stays on that scanner.' },
-            { q: 'Can I make comments compulsory?', a: 'Yes. Settings → Scanner screen → What the scanners offer → Comments are required. The counter must tap a reason or type a note; Skip and the countdown go away.' },
+            { q: 'Can I make comments compulsory?', a: 'Yes. Settings → Scanners → What the scanners offer → Comments are required. The counter must tap a reason or type a note; Skip and the countdown go away.' },
             { q: 'I added an override reason and the gun does not show it', a: 'It lands between pallets, within about half a minute. If a gun never takes it, its sign-on screen build line is behind the server: tap the Update ready bar or reopen the app.' },
           ],
         },
@@ -184,7 +184,7 @@
       steps: [
         {
           title: 'Create the count',
-          do: 'Full Counts → New count (or Settings → Getting started → Count session). Name it after the date. Full Counts lists every wall-to-wall with how far it got, which one the scanners land on, and a Set-up tab for what the new one still needs. A cycle count has its own page.',
+          do: 'Full Counts → New count (or Settings → Count setup → Count session). Name it after the date. Full Counts lists every wall-to-wall with how far it got, which one the scanners land on, and a Set-up tab for what the new one still needs. A cycle count has its own page.',
           where: S('/full', 'new', 'Full Counts → New count'),
           watch: [
             { see: '"pick a count first"', means: 'The page has no count selected.', fix: 'Pick one in the picker at the top of the page.' },
@@ -197,7 +197,7 @@
         {
           title: 'Follow the guided setup',
           do: 'The Guided setup card lists what this count still needs, worked out from the data, not from ticks: bins, the inventory report, scanners, racking blocks, crew, a map drawing, a counting plan. Red is required, amber is wanted.',
-          where: S('/settings', 'start', 'Settings → Getting started'),
+          where: S('/settings', 'start', 'Settings → Count setup'),
           watch: [
             { see: 'A step stays red after I did it', means: 'It did it on a different count.', fix: 'Check the picker: the uploads are per count.' },
           ],
@@ -223,7 +223,7 @@
         {
           title: 'Set the count’s options',
           do: 'Count session card: pallet check (off, warn, strict), guided bins, comments, the map drawing, and the second-count thresholds: Recount over N units, or over N %, and a cap. Adjustments need approval if the office signs off variances.',
-          where: S('/settings', 'start', 'Settings → Getting started'),
+          where: S('/settings', 'start', 'Settings → Count setup'),
           watch: [
             { see: 'The second-count list is enormous', means: 'The thresholds are at 0, so every difference raises one.', fix: 'Set Recount over to 2 to 5 units, a percent, and a cap.' },
             { see: 'The Adjustments tab is empty', means: 'Approvals are off, or nothing differs yet.', fix: 'Turn on Adjustments need approval. An uncounted pallet is not an adjustment until the count is closed.' },
@@ -249,7 +249,7 @@
         {
           title: 'Run a trial first',
           do: 'Count session → Trial run. Every scan counts for real on the dashboard, nothing can be exported to the ERP, and End the trial wipes it clean, so the real count starts from zero on the same setup.',
-          where: S('/settings', 'start', 'Settings → Getting started'),
+          where: S('/settings', 'start', 'Settings → Count setup'),
           watch: [
             { see: '"this count is a trial run - end the trial and count it for real before sending anything to the ERP"', means: 'The ERP export is blocked on a trial.', fix: 'End the trial, then export.' },
           ],
@@ -269,7 +269,7 @@
           where: S('/admin', 'teams', 'Dashboard → Team plan'),
           watch: [
             { see: 'Gun: "Offline and no list cached for this session"', means: 'That handheld never downloaded this count.', fix: 'Carry it into Wi-Fi once and sign on again.' },
-            { see: 'Gun: "this scanner is not signed in - open its link again"', means: 'The scanner lost its token.', fix: 'Open its link from Settings → Scanner screen again.' },
+            { see: 'Gun: "this scanner is not signed in - open its link again"', means: 'The scanner lost its token.', fix: 'Open its link from Settings → Scanners again.' },
             { see: 'Gun: "Add at least one clock in number"', means: 'Sign-on was pressed with no crew.', fix: 'Scan a clock-in number first.' },
           ],
           ask: [
@@ -298,7 +298,7 @@
             { see: 'A counter says they pressed SOS and nothing happened', means: 'The gun had no signal.', fix: 'The gun says "No signal — this has NOT been sent" and sends it the moment it has one. Ten metres usually fixes it.' },
           ],
           ask: [
-            { q: 'What reasons can a counter pick?', a: 'The ones under Settings → Advanced → SOS reasons: equipment breakdown, need a supervisor, blocked, damage, someone trapped, and your own.' },
+            { q: 'What reasons can a counter pick?', a: 'The ones under Settings → Scanners → What the scanners offer → SOS: equipment breakdown, need a supervisor, blocked, damage, someone trapped, and your own.' },
           ],
         },
         {
@@ -392,8 +392,8 @@
         },
         {
           title: 'Close the count, then back it up',
-          do: 'Count session → Close. Closed counts stay readable and exportable; guns can no longer scan to them. Settings → ERP & backups makes a database backup. Download it somewhere other than the server, a volume is not a backup.',
-          where: S('/settings', 'erp', 'Settings → ERP & backups'),
+          do: 'Count session → Close. Closed counts stay readable and exportable; guns can no longer scan to them. Settings → Backups & log makes a database backup. Connect OneDrive there (Off-site copy) and every backup is copied off the server too; otherwise download one after every count, a volume is not a backup.',
+          where: S('/settings', 'backups', 'Settings → Backups & log'),
           watch: [
             { see: '"session is closed"', means: 'A scan or change was tried on a closed count.', fix: 'Reopen it from the Count session card if the work is not finished.' },
           ],
@@ -452,9 +452,9 @@
           do: 'Front2Back at sign-on, with a clock-in number alone. Pick the aisle; the gun shows the office’s desk: the pallet, from → to, and the pallet system framed under it. Move it, book it in that screen, tap Moved — next. Nothing is scanned in the app. Ticks queue offline like counting.',
           where: S('/front', 'moves', 'Front bins → Pallets to move back'),
           watch: [
-            { see: 'The gun does not offer Front2Back', means: 'No moves are waiting, or the job is unticked under Settings → Scanner screen → Jobs on the scanners.', fix: 'Build a move list under Front bins; an admin ticks the job back on.' },
+            { see: 'The gun does not offer Front2Back', means: 'No moves are waiting, or the job is unticked under Settings → Scanners → Jobs on the scanners.', fix: 'Build a move list under Front bins; an admin ticks the job back on.' },
             { see: 'A pallet on the desk cannot be moved', means: 'The bin behind is not empty, or the pallet is not there.', fix: 'Leave it with › on the gun; skip it with the reason from Front bins → Pallets to move back.' },
-            { see: 'No pallet system under the strip on the gun', means: 'No address set, or the system refuses to be framed.', fix: 'Settings → Advanced → Pallet system. The gun shows the screen, never the address; a system that refuses framing is worked from the office desk’s new-tab link.' },
+            { see: 'No pallet system under the strip on the gun', means: 'No address set, or the system refuses to be framed.', fix: 'Settings → Integrations → Pallet system. The gun shows the screen, never the address; a system that refuses framing is worked from the office desk’s new-tab link.' },
           ],
           ask: [],
         },
@@ -463,7 +463,7 @@
           do: 'Move desk puts the pallet and the two bins at the top and frames the site’s pallet system below, so the move can be booked there without switching windows. Set the pallet system address under Settings.',
           where: S('/front', 'desk', 'Front bins → Move desk'),
           watch: [
-            { see: 'The frame below is empty', means: 'No pallet-system address is set, or that site refuses to be framed.', fix: 'Settings → Advanced → Pallet system. If it refuses framing, the desk gives an Open link instead.' },
+            { see: 'The frame below is empty', means: 'No pallet-system address is set, or that site refuses to be framed.', fix: 'Settings → Integrations → Pallet system. If it refuses framing, the desk gives an Open link instead.' },
           ],
           ask: [],
         },
@@ -541,7 +541,7 @@
         },
         {
           title: 'Offline, the keyboard, and rotation',
-          do: 'OFFLINE with a number means lines are queued; they upload with signal, never wipe the device. The Keyboard button is for typing a quantity only. The app keeps itself upright; if not, Keep it upright is under Settings → Scanner screen.',
+          do: 'OFFLINE with a number means lines are queued; they upload with signal, never wipe the device. The Keyboard button is for typing a quantity only. The app keeps itself upright; if not, Keep it upright is under Settings → Scanners.',
           where: S('/testing', '', 'Try it in the Testing Suite'),
           watch: [
             { see: 'Gun: "Cannot reach the server to check this scanner link. Connect to Wi-Fi and reload."', means: 'First open of a link with no signal.', fix: 'Connect once; after that it works offline.' },
@@ -560,21 +560,29 @@
   const questions = [
     { q: 'How many teams and bins can the system take?', a: 'A 20-team, 20,000-bin count was simulated end to end; the dashboard stayed under a second a refresh. Part 8 of the SOP has the figures.' },
     { q: 'Where is the SOP?', a: 'docs/SOP.pdf in the repository, and the same text as docs/SOP.md. This guide follows its steps.' },
-    { q: 'Where is the backup kept?', a: 'On the server’s volume under Settings → ERP & backups. Download it after every count; a volume is not a backup.', goto: S('/settings', 'erp', 'Settings → ERP & backups') },
+    { q: 'Where is the backup kept?', a: 'On the server’s volume, under Settings → Backups & log, and in a OneDrive folder too once Off-site copy is connected there. Without OneDrive, download one after every count; a volume is not a backup.', goto: S('/settings', 'backups', 'Settings → Backups & log') },
+    { q: 'How do I send backups to OneDrive?', a: 'Settings → Backups & log → Off-site copy: OneDrive. Register the app in Microsoft once (the steps are on the card), paste its Application (client) ID, press Connect OneDrive and type the code at microsoft.com/devicelogin. From then on every backup is copied there and the newest 30 are kept.', goto: S('/settings', 'backups', 'Settings → Backups & log') },
     { q: 'What is the practice count?', a: 'A count of your own the Testing Suite makes, with test data, that nobody else sees.', goto: S('/testing', '', 'Testing Suite') },
-    { q: 'How do I change the look?', a: 'The theme and accent picker is at the bottom of the sidebar, and the site logo is under Settings → Advanced.', goto: S('/settings', 'advanced', 'Settings → Advanced') },
-    { q: 'How do I rename the app, or change the location under the name?', a: 'Settings → Advanced → Site name. The name and the location change at once on every page, the sign-in screen, the scanners, the board and the installed app. A blank name goes back to Full Harvest Inventory.', goto: S('/settings', 'advanced', 'Settings → Advanced') },
+    { q: 'How do I change the look?', a: 'Settings → Logins & site → Appearance sets the theme, accent and text size for your computer; the site logo is in the same section.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },
+    { q: 'How do I rename the app, or change the location under the name?', a: 'Settings → Logins & site → Site name. The name and the location change at once on every page, the sign-in screen, the scanners, the board and the installed app. A blank name goes back to Full Harvest Inventory.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },
     { q: 'What time zone are the scan times in?', a: 'The server’s. A scanner with a wrong clock is corrected by its own send time, so the times on the dashboard are right either way.' },
     { q: 'Can I export everything?', a: 'Reports → Export everything gives a workbook with every sheet: counts, pallets, teams, adjustments, alerts, the log.', goto: S('/admin', 'reports', 'Dashboard → Reports') },
-    { q: 'Who did what?', a: 'The log under Settings → ERP & backups records every change with the login that made it.', goto: S('/settings', 'erp', 'Settings → ERP & backups') },
-    { q: 'Why can I not see Settings?', a: 'Settings and Advanced are admin-only. Everything else is per login.' },
+    { q: 'Who did what?', a: 'The log under Settings → Backups & log records every change with the login that made it.', goto: S('/settings', 'backups', 'Settings → Backups & log') },
+    { q: 'How do I invite someone by email?', a: 'Settings → Logins & site → Supervisor logins: type their name, username and email (the invite box ticks itself) and Add login. Email the invite opens a ready-made message in your own email; Copy link is for a text. The link works once, for three days, and they choose their own password on it. Invite again on their row makes a new link.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },
+    { q: 'Somebody is locked out of signing in', a: 'Five wrong passwords from one place lock that login there for 15 minutes. An admin presses Unlock on their row under Settings → Logins & site, or resets the password, which lifts it too.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },
+    { q: 'Can I use the office side on my phone?', a: 'Yes. Open the site on the phone, sign in, and Add to Home Screen (Safari: Share; Chrome: ⋮ → Install app). It opens as its own app; the Menu button at the top holds the pages and the search.' },
+    { q: 'Are we ready for count day?', a: 'Settings → Count setup opens on Ready for count day: the scanners, the jobs they offer, the crew list, alerts, backups and OneDrive, and a default password, checked fresh, worst first, each with a button to the fix.', goto: S('/settings', 'start', 'Settings → Count setup') },
+    { q: 'Why can I not see Settings?', a: 'Settings is admin-only. Everything else is per login.' },
   ];
 
   /* the lookup bank: screen text first, so a pasted message finds its row */
   const errors = [
-    { see: 'this scanner is no longer authorised - ask a supervisor for its link', means: 'Its link was reset or the scanner was removed.', fix: 'Settings → Scanner screen → Reset link, open the new link on the device.', goto: S('/settings', 'gun', 'Scanner screen') },
-    { see: 'this scanner link is not registered - ask a supervisor', means: 'The device opened a link that was never created here.', fix: 'Add the scanner and open the fresh link.', goto: S('/settings', 'gun', 'Scanner screen') },
-    { see: 'this scanner is not signed in - open its link again', means: 'The scanner lost its token.', fix: 'Open its link from Settings → Scanner screen on the device.', goto: S('/settings', 'gun', 'Scanner screen') },
+    { see: 'too many wrong passwords - try again in 15 minutes, or ask an admin to unlock it', means: 'Five wrong passwords for this login from this computer.', fix: 'Wait it out, or an admin presses Unlock on the row under Settings → Logins & site.', goto: S('/settings', 'advanced', 'Logins & site') },
+    { see: 'this invite has expired or has already been used - ask an admin for a new one', means: 'The invite link was used, replaced by a newer one, or is more than three days old.', fix: 'An admin presses Invite again on the row; use the newest link.', goto: S('/settings', 'advanced', 'Logins & site') },
+    { see: 'The last OneDrive copy failed', means: 'OneDrive was unreachable, full, or the sign-in was withdrawn.', fix: 'Settings → Backups & log shows why. It is tried again every half hour; if it says connect again, press Connect OneDrive.', goto: S('/settings', 'backups', 'Backups & log') },
+    { see: 'this scanner is no longer authorised - ask a supervisor for its link', means: 'Its link was reset or the scanner was removed.', fix: 'Settings → Scanners → Reset link, open the new link on the device.', goto: S('/settings', 'gun', 'Scanners') },
+    { see: 'this scanner link is not registered - ask a supervisor', means: 'The device opened a link that was never created here.', fix: 'Add the scanner and open the fresh link.', goto: S('/settings', 'gun', 'Scanners') },
+    { see: 'this scanner is not signed in - open its link again', means: 'The scanner lost its token.', fix: 'Open its link from Settings → Scanners on the device.', goto: S('/settings', 'gun', 'Scanners') },
     { see: 'Offline and no list cached for this session', means: 'The handheld never downloaded this count.', fix: 'Carry it into Wi-Fi once and sign on again.' },
     { see: 'No signal — this has NOT been sent', means: 'An SOS or line is waiting for signal.', fix: 'It sends itself the moment there is signal. Walk ten metres.' },
     { see: 'OFFLINE with lines queued', means: 'Normal in a dead spot.', fix: 'Nothing. They upload when the gun has signal. Do not wipe the device.' },
@@ -601,11 +609,11 @@
     { see: 'A line in a bin called NO-LABEL-BIN-F01-1', means: 'The rack label would not scan and nothing could be suggested.', fix: 'The quantity is safe. Relabel the bay, correct the bin on the line if it matters.' },
     { see: 'The note is not on the board', means: 'The board polls every 15 seconds, or is pinned to another count.', fix: 'Wait; check the count in the board’s address.' },
     { see: 'A change does not appear on the scanners', means: 'The gun is between pallets or on an old build.', fix: 'Settings land within half a minute. A new version: tap Update ready, or close the app fully and reopen.' },
-    { see: 'An SOS did not reach Teams', means: 'Channel address wrong, expired, or Teams down.', fix: 'The alert is on the dashboard. Send a test card under Settings → Advanced.', goto: S('/settings', 'advanced', 'Advanced') },
+    { see: 'An SOS did not reach Teams', means: 'Channel address wrong, expired, or Teams down.', fix: 'The alert is on the dashboard. Send a test card under Settings → Integrations.', goto: S('/settings', 'erp', 'Integrations') },
     { see: 'The printed barcodes will not scan', means: 'Printed fit-to-page or on glossy paper.', fix: 'Print at 100% on plain paper; Per row 1 for wider bars.' },
     { see: 'A code in the spreadsheet will not print', means: 'Code 128 takes plain ASCII only.', fix: 'Retype the code with plain letters and numbers.' },
     { see: 'update did not take', means: 'The gun reloaded and is still on the old version.', fix: 'Close the app fully and reopen. If it persists, clear the app’s site data on the device and open its link again.' },
-    { see: 'The screen keeps rotating, or reads upside down', means: 'Auto-rotate is on.', fix: 'The app turns itself upright. Check Keep it upright under Scanner screen; install the app to lock one way up.', goto: S('/settings', 'gun', 'Scanner screen') },
+    { see: 'The screen keeps rotating, or reads upside down', means: 'Auto-rotate is on.', fix: 'The app turns itself upright. Check Keep it upright under Settings → Scanners; install the app to lock one way up.', goto: S('/settings', 'gun', 'Scanners') },
     { see: 'A scan opens the address bar and the text goes into it', means: 'The page lost the keyboard, usually because the app is not installed.', fix: 'Install the app. The red Tap here to scan bar puts it right meanwhile.' },
     { see: 'A bar with the web address appears on every scan', means: 'The app runs as a page in Chrome, not installed.', fix: 'Chrome menu → Install app, or Install on this scanner on the sign-on screen.' },
     { see: 'Second-count list is enormous', means: 'Thresholds at 0.', fix: 'Set Recount over, or over %, and a cap.', goto: S('/settings', 'start', 'Count session') },
@@ -616,7 +624,7 @@
     { see: 'Everyone was signed out of the dashboards', means: 'The server lost its database volume.', fix: 'Sign-ins survive a normal restart. If it happens, check the volume on the host.' },
     { see: 'The gun is still starting — give it a second', means: 'The Testing Suite’s scanner frame is loading.', fix: 'Wait a moment and click again.' },
     { see: 'Nothing on the gun’s screen takes a scan just now', means: 'The gun is on a screen with no scan box.', fix: 'Tap through to the next prompt on the gun first.' },
-    { see: 'leave at least one job on, or the scanners have nothing to do', means: 'Every job was unticked under Jobs on the scanners.', fix: 'Tick at least one.', goto: S('/settings', 'gun', 'Scanner screen') },
+    { see: 'leave at least one job on, or the scanners have nothing to do', means: 'Every job was unticked under Jobs on the scanners.', fix: 'Tick at least one.', goto: S('/settings', 'gun', 'Scanners') },
     { see: 'That is a very large quantity', means: 'The number is out of the ordinary.', fix: 'Type it again to accept it, or type the right one.' },
     { see: 'That label belongs to another pallet', means: 'A second label already known under another id.', fix: 'Tell a supervisor; count under the first label.' },
     { see: 'That date has passed', means: 'An expiry in the past.', fix: 'Tell a supervisor; it is recorded.' },

@@ -38,7 +38,7 @@ check('Admin: login', true);
 check('Admin: the tab bar links the supervisor pages, the Testing tab and the guide',
   (await admin.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/full,/cycle,/front,/missing,/teams,/settings,/testing,/guide');
 
-/* ---- making the count lives under Settings → Getting started ---- */
+/* ---- making the count lives under Settings → Count setup ---- */
 const toSettings = async () => { await admin.goto(BASE + '/settings'); await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(700); };
 check('Admin: the dashboard no longer carries the Count session card', (await admin.$('#sessionCard')) === null && (await admin.$('#btnCreate')) === null);
 await toSettings();
@@ -47,7 +47,7 @@ check('Settings: the sign-in carried over from the dashboard, no second password
 await admin.fill('#fNewName', 'Front Royal Q3 physical'); await admin.click('#btnCreate'); await admin.waitForTimeout(600);
 check('Settings: create session, and it points at what to upload next',
   /Created full count #\d+/.test(clean(await admin.textContent('#sessionMsg')))
-    && /Getting started|bin list/.test(clean(await admin.textContent('#sessionMsg'))),
+    && /Count setup|bin list/.test(clean(await admin.textContent('#sessionMsg'))),
   clean(await admin.textContent('#sessionMsg')).slice(0, 90));
 await admin.selectOption('#fPalletMode', 'warn'); await admin.selectOption('#fLayout', 'front-royal');
 await admin.click('#btnSaveSettings'); await admin.waitForTimeout(500);

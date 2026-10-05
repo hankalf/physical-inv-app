@@ -23,8 +23,8 @@ control's.
 ## 1 — The day before
 
 1. Open the **Dashboard** and pick the count in the header. If it is not there, it has not
-   been created: ask the admin (*Settings → Getting started → Count session*).
-2. Check **Settings → Getting started → Guided setup** with the admin, or ask them to: it
+   been created: ask the admin (*Settings → Count setup → Count session*).
+2. Check **Settings → Count setup → Guided setup** with the admin, or ask them to: it
    lists what the count still needs, worked out from the data. Red is required, amber is
    wanted. You need at least the **bin list**, the **scanners** and a **counting plan**; the
    **inventory report** is what makes second counts and variances possible; **racking
@@ -175,7 +175,7 @@ supervisor. Do not create the next count on top of this one; a closed count stay
 
 | What you see | What it means | What to do |
 |---|---|---|
-| Gun: *this scanner is no longer authorised* | Its link was reset or it was removed | The admin resets its link under Settings → Scanner screen; open the new link on it |
+| Gun: *this scanner is no longer authorised* | Its link was reset or it was removed | The admin resets its link under Settings → Scanners; open the new link on it |
 | Gun: *Offline and no list cached for this session* | Never downloaded this count | Into Wi-Fi once, sign on again |
 | Gun shows OFFLINE with a number | Lines queued in a dead spot | Nothing. They upload with signal. Never wipe or reinstall |
 | Gun: *Team N is counting aisle X* | That racking block is held | Wait, or have the other team hand back |

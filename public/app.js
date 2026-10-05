@@ -500,7 +500,7 @@
 
   /* ------------------------------------------------------------ sign-on */
   /* The jobs on the sign-on screen are the ones the office has ticked under
-     Settings → Scanner screen → What the scanners offer - day to day the cycle
+     Settings → Scanners → What the scanners offer - day to day the cycle
      count, Front2Back and Not in Location; on count day the full count alone.
      A ticked job with nothing waiting is still offered, and says so when picked.
      The gun defaults to the job it did last. */

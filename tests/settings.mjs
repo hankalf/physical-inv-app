@@ -139,19 +139,25 @@ check('Shell: the sidebar links every page, the guide last, with this one marked
   (await page.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/full,/cycle,/front,/missing,/teams,/settings,/testing,/guide'
     && (await page.$eval('#navTabs .tab.current', (a) => a.getAttribute('href'))) === '/settings');
 check('Shell: Settings is split into sub-tabs',
-  (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.replace(/\d+$/, '').trim()))).join(' | ') === 'Getting started | Scanner screen | Lists & racking | ERP & backups | Advanced',
+  (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.replace(/\d+$/, '').trim()))).join(' | ') === 'Count setup | Lists & racking | Scanners | Integrations | Backups & log | Logins & site',
   (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.trim()))).join(' | '));
 check('Shell: exactly one pane is on screen at a time',
   (await page.$$eval('[data-sub]', (p) => p.filter((x) => x.classList.contains('active')).length)) === 1);
-await page.click('#subTabs button:text-is("Scanner screen")'); await page.waitForTimeout(500);
+await page.click('#subTabs button:text-is("Scanners")'); await page.waitForTimeout(500);
 check('Shell: clicking a sub-tab swaps the pane and marks the tab',
   await page.$eval('[data-sub="gun"]', (el) => el.classList.contains('active'))
     && !(await page.$eval('[data-sub="advanced"]', (el) => el.classList.contains('active')))
-    && await page.$eval('#subTabs button:text-is("Scanner screen")', (b) => b.classList.contains('current')));
-check('Shell: the scanner cards all live under Scanner screen now',
-  await page.$eval('[data-sub="gun"]', (el) => !!el.querySelector('#btnAddDevice') && !!el.querySelector('#fNewSos') && !!el.querySelector('#promptChip')));
-check('Shell: the barcode book is under Getting started, the adjustment reasons under ERP & backups',
-  !!(await page.$('[data-sub="start"] #btnBookPrint')) && !!(await page.$('[data-sub="erp"] #reasonChip')) && !!(await page.$('[data-sub="start"] #sessionCard')));
+    && await page.$eval('#subTabs button:text-is("Scanners")', (b) => b.classList.contains('current')));
+check('Shell: the scanner cards all live under Scanners, the barcode book with them',
+  await page.$eval('[data-sub="gun"]', (el) => !!el.querySelector('#btnAddDevice') && !!el.querySelector('#fNewSos') && !!el.querySelector('#promptChip') && !!el.querySelector('#btnBookPrint')));
+check('Shell: Integrations holds the ERP file, the adjustment reasons, the pallet system and Teams; Backups & log the backups and OneDrive',
+  !!(await page.$('[data-sub="erp"] #reasonChip')) && !!(await page.$('[data-sub="erp"] #btnErpDownload')) && !!(await page.$('[data-sub="erp"] #fPalletSystemUrl')) && !!(await page.$('[data-sub="erp"] #fTeamsUrl'))
+    && !!(await page.$('[data-sub="backups"] #btnBackupNow')) && !!(await page.$('[data-sub="backups"] #onedriveCard')) && !!(await page.$('[data-sub="start"] #sessionCard')) && !!(await page.$('[data-sub="start"] #readyCard')));
+check('Shell: every section opens with a line on what is in it',
+  await page.$$eval('[data-sub]', (ps) => ps.every((p) => { const f = p.querySelector(':scope > .pane-intro'); return f && f.textContent.trim().length > 20; })));
+check('Shell: every card has its name and a line on what it is for',
+  await page.$$eval('[data-sub] > .card > h2', (hs) => hs.every((h) => h.querySelector(':scope > .muted'))),
+  (await page.$$eval('[data-sub] > .card > h2', (hs) => hs.filter((h) => !h.querySelector(':scope > .muted')).map((h) => h.textContent.trim().slice(0, 40)))).join(' | '));
 check('Shell: the session bar hides on a pane that has no session to act on',
   await page.$eval('#scopeBar', (el) => el.hidden));
 await page.click('#subTabs button:has-text("Lists")'); await page.waitForTimeout(500);
@@ -164,7 +170,7 @@ check('Shell: the open sub-tab survives a reload',
     await page.reload(); await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(1200);
     return (await page.evaluate(() => location.hash)) === before && await page.$eval('[data-sub="lists"]', (el) => el.classList.contains('active'));
   })(), await page.evaluate(() => location.hash));
-await page.click('#subTabs button:text-is("Advanced")'); await page.waitForTimeout(600);
+await page.click('#subTabs button:text-is("Logins & site")'); await page.waitForTimeout(600);
 
 const headings = await page.$$eval('#scrMain .card > h2', (h) => h.map((x) => x.firstChild.textContent.trim()));
 check('Settings: every setup card is on this page, each list its own',
@@ -302,8 +308,8 @@ await sup.close();
   await adv.waitForTimeout(900);
   if (await adv.$('#scrLogin.active')) { await adv.fill('#fUser', 'DANA'); await adv.fill('#fPassword', 'freezer-2026'); await adv.click('#btnLogin'); }
   await adv.waitForSelector('#scrMain.active'); await adv.waitForTimeout(1200);
-  check('Advanced: holds the logins, the Teams channel, the look and the logo in one pane',
-    await adv.$eval('[data-sub="advanced"]', (el) => el.classList.contains('active') && !!el.querySelector('#fNewUser') && !!el.querySelector('#fTeamsUrl')
+  check('Logins & site: holds the logins, the site name, the logo and the look in one pane',
+    await adv.$eval('[data-sub="advanced"]', (el) => el.classList.contains('active') && !!el.querySelector('#fNewUser') && !!el.querySelector('#fSiteName')
       && !!el.querySelector('#lookPick .themepick select') && !!el.querySelector('#fLogo')));
   check('Advanced: the theme picker has left the sidebar', (await adv.$$('.side .themepick')).length === 0);
   check('Advanced: the SOS card no longer carries the Teams address', (await adv.$$('[data-sub="gun"] #fTeamsUrl')).length === 0 && !!(await adv.$('[data-sub="gun"] #fIdleTeams')));

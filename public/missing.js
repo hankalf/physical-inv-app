@@ -39,7 +39,7 @@
       $('fdDeskLast').textContent = m.last_location || '—';
       $('fdDeskMeta').textContent = [m.description, m.sku ? `item ${m.sku}` : '', m.qty != null ? `qty ${m.qty}` : '', m.lot ? `lot ${m.lot}` : '', m.note].filter(Boolean).join(' · ') || 'no description';
     }
-    $('fdDeskUrlNote').textContent = deskUrl ? `Pallet system: ${deskUrl}` : 'No pallet system address set — an admin can set it under Settings → Advanced → Pallet system. The strip above works without it.';
+    $('fdDeskUrlNote').textContent = deskUrl ? `Pallet system: ${deskUrl}` : 'No pallet system address set — an admin can set it under Settings → Integrations → Pallet system. The strip above works without it.';
     $('fdDeskOpen').hidden = !deskUrl;
     $('fdDeskOpen').href = deskUrl || '#';
     $('fdDeskWrap').classList.toggle('none', !deskUrl);

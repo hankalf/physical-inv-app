@@ -76,10 +76,10 @@ check('Picker: choosing one switches the whole page to it',
   clean(await page.textContent('#sessionPick .sess-btn')));
 await page.screenshot({ path: `${S}screenshots/session-picker.png`, clip: { x: 0, y: 0, width: 1000, height: 560 } });
 
-/* ---- creating a count with its lists: Settings → Getting started ---- */
+/* ---- creating a count with its lists: Settings → Count setup ---- */
 await page.goto(BASE + '/settings#start');
 await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(1500);
-check('Settings: the Count session card sits under Getting started', await page.$eval('[data-sub="start"]', (el) => el.classList.contains('active') && !!el.querySelector('#sessionCard')));
+check('Settings: the Count session card sits under Count setup', await page.$eval('[data-sub="start"]', (el) => el.classList.contains('active') && !!el.querySelector('#sessionCard')));
 await page.fill('#fNewName', 'count with its lists');
 await page.setInputFiles('#fNewBins', { name: 'bins.csv', mimeType: 'text/csv', buffer: Buffer.from(BINS) });
 await page.setInputFiles('#fNewPallets', { name: 'report.csv', mimeType: 'text/csv', buffer: Buffer.from(PALLETS) });
@@ -98,8 +98,8 @@ check('...and both land on the new count, not on the one that was open before',
 /* ---- the guided setup ---- */
 await page.goto(BASE + '/settings');
 await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(1800);
-check('Settings: Getting started is the first sub-tab',
-  (await page.$eval('#subTabs button', (b) => b.textContent.trim())) === 'Getting started');
+check('Settings: Count setup is the first sub-tab',
+  (await page.$eval('#subTabs button', (b) => b.textContent.trim())) === 'Count setup');
 await page.evaluate(() => window.appApi.showSub('start')); await page.waitForTimeout(1500);
 await pickSession(page, empty.id).catch(() => {});
 await page.selectOption('#fSessionPick', String(empty.id)).catch(() => {});

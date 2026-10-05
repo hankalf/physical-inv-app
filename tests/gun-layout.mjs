@@ -85,7 +85,7 @@ await page.goto(BASE + '/settings');
 await page.fill('#fPassword', 'changeme'); await page.click('#btnLogin');
 await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(1800);
 check('Settings: the scanner screen has its own sub-tab',
-  (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.trim()))).includes('Scanner screen'));
+  (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.trim()))).includes('Scanners'));
 await page.evaluate(() => window.appApi.showSub('gun')); await page.waitForTimeout(1200);
 
 check('Preview: the questions are listed in order, draggable', (await page.$$('#stepOrder li')).length === 5

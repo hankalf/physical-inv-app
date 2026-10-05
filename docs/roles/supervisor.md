@@ -38,15 +38,16 @@ Hand the admin this list a day ahead, filled in:
 
 | Ask | Where the admin does it |
 |---|---|
-| Create the count, name it, make it the scanners' default | Settings → Getting started → Count session |
+| **Ready for count day** has no red lines (the admin's check of the site) | Settings → Count setup |
+| Create the count, name it, make it the scanners' default | Settings → Count setup → Count session |
 | Upload the bin list; pair the racking blocks | Settings → Lists & racking |
 | Upload each system's inventory report, naming the system | Settings → Lists & racking → Inventory report |
 | Thresholds: Recount over __ units / __ %, cap __; approvals on/off, threshold __ | Count session options |
 | Pallet check: off / warn / strict; guided bins on; the map drawing | Count session options |
-| Scanners registered, links opened, app installed, charged | Settings → Scanner screen |
-| Jobs on the scanners: full count only for count day | Settings → Scanner screen → Jobs on the scanners |
+| Scanners registered, links opened, app installed, charged | Settings → Scanners |
+| Jobs on the scanners: full count only for count day | Settings → Scanners → Jobs on the scanners |
 | A trial run, if the crew is new; End the trial before the real start | Count session → Trial run |
-| Teams channel test card sent | Settings → Advanced |
+| Teams channel test card sent | Settings → Integrations |
 
 Then build the **counting plan** yourself (Teams & crew): teams, crew, aisles in order,
 **Stagger**. Check the guided setup card with the admin until nothing is red.

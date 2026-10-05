@@ -50,12 +50,14 @@ import { toCsv, parseRecords, pick } from './util/csv.js';
 import { listLayouts, loadLayout } from './util/layouts.js';
 import { siteTimezone, localDate, localHour } from './util/localtime.js';
 import { changed, memo } from './cache.js';
+import { readiness } from './routes/readiness.js';
 import { onedriveStatus, setOnedriveConfig, startSignIn, cancelSignIn, disconnect, uploadNow, startOnedrive } from './routes/onedrive.js';
 import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, unlockPlace, PER_LOGIN, PER_PLACE } from './routes/login-limit.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards, barcodeBook } from './routes/printing.js';
 import {
   countUsers, countAdmins, listUsers, createUser, updateUser, deleteUser, authenticate, changeOwnPassword, getUser, ensureSuperadmin,
+  makeInvite, inviteFor, acceptInvite,
 } from './routes/users.js';
 import { routeNeeds, allowed, parseAccess, ACCESS, PROFILES, TABS } from './routes/access.js';
 import { listFormats, saveFormat, buildExport, availableFields } from './routes/erp.js';
@@ -143,6 +145,12 @@ const GZIP_CACHE_KEEP = 6;
 /* The name under the icon on a phone's home screen: the site's initials and
    "Office" - "Full Harvest Inventory" is "FH Office" - short enough not to be
    cut off. */
+/* The link an invite is sent as: this site's own address, as the admin reached it. */
+function inviteLink(req, token) {
+  const proto = String(req.headers['x-forwarded-proto'] || 'http').split(',')[0].trim();
+  return `${proto}://${req.headers.host || 'localhost'}/admin?invite=${encodeURIComponent(token)}`;
+}
+
 function officeShortName(name) {
   const words = String(name || '').replace(/\s+inventory$/i, '').split(/\s+/).filter(Boolean);
   const initials = words.map((w) => w[0].toUpperCase()).join('').slice(0, 3);
@@ -658,7 +666,7 @@ async function handleAdmin(req, res, url, m) {
   const whoNow = currentUser(req, url);
   const requireAccess = (key) => {
     if (allowed(whoNow, key)) return;
-    throw httpError(403, key === 'admin' ? 'only an admin can change the site\'s settings' : `this login is not able to do that (${key}) - an admin can give it under Settings → Advanced → Supervisor logins`);
+    throw httpError(403, key === 'admin' ? 'only an admin can change the site\'s settings' : `this login is not able to do that (${key}) - an admin can give it under Settings → Logins & site → Supervisor logins`);
   };
   for (const need of routeNeeds(p, method)) requireAccess(need);
 
@@ -1026,7 +1034,8 @@ async function handleAdmin(req, res, url, m) {
     const me = requireAccountAdmin(req, url);
     const body = await readJson(req);
     const u = createUser(body, me.username || me.name);
-    audit(actor, 'created an account', `${u.username} (${u.role})`);
+    audit(actor, 'created an account', `${u.username} (${u.role})${u.invite ? `, invited at ${u.email}` : ''}`);
+    if (u.invite) u.invite.link = inviteLink(req, u.invite.token);
     return sendJson(req, res, 200, u);
   }
   if ((m = p.match(/^\/api\/admin\/users\/([A-Za-z0-9._-]+)$/)) && method === 'POST') {
@@ -1042,6 +1051,14 @@ async function handleAdmin(req, res, url, m) {
     }
     audit(actor, 'changed an account', `${u.username}: ${Object.keys(body).filter((k) => k !== 'password').join(', ') || 'password'}`);
     return sendJson(req, res, 200, u);
+  }
+  // a fresh invite link for a login: the old one stops working
+  if ((m = p.match(/^\/api\/admin\/users\/([A-Za-z0-9._-]+)\/invite$/)) && method === 'POST') {
+    const me = requireAccountAdmin(req, url);
+    guardSuper(m[1], me);
+    const inv = makeInvite(m[1]);
+    audit(actor, 'sent an invite', `${inv.username}${inv.email ? ` at ${inv.email}` : ''}, until ${inv.expiresAt.slice(0, 10)}`);
+    return sendJson(req, res, 200, { ...inv, link: inviteLink(req, inv.token) });
   }
   if ((m = p.match(/^\/api\/admin\/users\/([A-Za-z0-9._-]+)$/)) && method === 'DELETE') {
     guardSuper(m[1], requireAccountAdmin(req, url));
@@ -1266,6 +1283,11 @@ async function handleAdmin(req, res, url, m) {
     const b = makeBackup('manual');
     audit(actor, 'took a backup', `${b.name} (${Math.round(b.bytes / 1024)} KB)`);
     return sendJson(req, res, 200, b);
+  }
+  // the site's settings, checked against what a count day needs (Settings → Count setup)
+  if (p === '/api/admin/readiness' && method === 'GET') {
+    if (whoNow.role !== 'admin') throw httpError(403, 'only an admin can see the count-day check');
+    return sendJson(req, res, 200, readiness(url.searchParams.get('session')));
   }
   /* --- the off-site copy: OneDrive. Admins only, reads included - the
      status names the Microsoft account the backups go to. */
@@ -1526,7 +1548,7 @@ async function handleAdmin(req, res, url, m) {
   }
 
   /* --- SOS: the list the gun offers, the alerts themselves, and the channel */
-  // --- the logo (Settings → Advanced)
+  // --- the logo (Settings → Logins & site)
   if (p === '/api/admin/logo' && method === 'GET') return sendJson(req, res, 200, branding());
   if (p === '/api/admin/logo' && method === 'POST') {
     const body = await readJson(req);
@@ -1842,6 +1864,20 @@ const server = http.createServer(async (req, res) => {
     }
     // The office board is deliberately open: it goes on a screen nobody signs in,
     // and it carries progress only - no pallet IDs, no clock in numbers, no controls.
+    /* An invite link: who it is for, and taking it up. Open to anyone with the
+       link - the link is the key, it works once, and it runs out. */
+    let m;
+    if ((m = p.match(/^\/api\/invite\/([A-Za-z0-9_-]{20,})$/)) && req.method === 'GET') {
+      const who = inviteFor(m[1]);
+      if (!who) throw Object.assign(httpError(410, 'this invite has expired or has already been used - ask an admin for a new one'), { code: 'invite' });
+      return sendJson(req, res, 200, { ...who, site: branding().name });
+    }
+    if (p === '/api/invite/accept' && req.method === 'POST') {
+      const body = await readJson(req);
+      const who = acceptInvite(body.token, body.password);
+      audit(who.name, 'took up an invite and chose a password', who.username);
+      return sendJson(req, res, 200, { ok: true, username: who.username });
+    }
     if (p === '/api/board' && req.method === 'GET') {
       return sendJson(req, res, 200, memo(`board:${url.searchParams.get('session') || ''}`, () => boardData(url.searchParams.get('session'))));
     }
@@ -1925,7 +1961,7 @@ server.listen(PORT, HOST, () => {
   try {
     const moved = migrateCommentTimeout();
     if (moved.moved) {
-      console.log(`  comments step: moved from ${moved.from}s to ${moved.to}s (the new default) - change it under Settings → Scanner screen`);
+      console.log(`  comments step: moved from ${moved.from}s to ${moved.to}s (the new default) - change it under Settings → Scanners`);
       audit('startup', 'changed the scanner reasons', `comments step moved from ${moved.from}s to ${moved.to}s on upgrade`);
     }
   } catch (err) {

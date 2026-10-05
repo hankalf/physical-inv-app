@@ -60,7 +60,7 @@
   /* ------------------------------------------------------------ the desk
      The next pallet to move, from the open list, and the pallet system's own
      screen framed beneath it: the move is made in the system, then ticked off
-     here. The address comes from Settings → Advanced → Pallet system; a system
+     here. The address comes from Settings → Integrations → Pallet system; a system
      that refuses to be framed is a click away in a new tab instead. */
   let deskList = [];
   let deskAt = 0;
@@ -81,7 +81,7 @@
       $('deskTo').textContent = m.to_bin;
       $('deskMeta').textContent = `aisle ${m.aisle || '—'}${m.level ? ' · level ' + m.level : ''}${m.source === 'upload' ? ' · from the uploaded list' : ' · from the report'}`;
     }
-    $('deskUrlNote').textContent = deskUrl ? `Pallet system: ${deskUrl}` : 'No pallet system address set — an admin can set it under Settings → Advanced → Pallet system. The strip above works without it.';
+    $('deskUrlNote').textContent = deskUrl ? `Pallet system: ${deskUrl}` : 'No pallet system address set — an admin can set it under Settings → Integrations → Pallet system. The strip above works without it.';
     $('deskOpen').hidden = !deskUrl;
     $('deskOpen').href = deskUrl || '#';
     $('deskWrap').classList.toggle('none', !deskUrl);

@@ -1,6 +1,6 @@
 # SOP — Admin
 
-**Role:** Admin (the site's owner of the app)  **Login profile:** *Admin — everything, Settings included*  **Pages:** every page, Settings and Advanced included  **Functions:** all
+**Role:** Admin (the site's owner of the app)  **Login profile:** *Admin — everything, Settings included*  **Pages:** every page, Settings included  **Functions:** all
 
 This procedure is for the one or two people who own the app at the site: who set it up, keep
 it running, make the logins, and are called when nothing else works. It is the only role that
@@ -23,15 +23,20 @@ this one is about everything those roles need to be in place.
 
 ## 1 — What only an admin can do
 
-Everything on the **Settings** page and its **Advanced** tab, which no other profile opens:
+Everything on the **Settings** page, which no other profile opens. It has six sections:
+**Count setup** (the count-day check, the setup checklist, the count session), **Lists & racking**,
+**Scanners**, **Integrations** (ERP file, adjustment reasons, pallet system, Teams), **Backups & log**
+(with the OneDrive copy) and **Logins & site**. From there you:
 
-- create, rename and delete **supervisor logins**, and choose what each may do;
+- create, rename and delete **supervisor logins**, choose what each may do, **invite** a new one by
+  email, and lift a **sign-in lock**;
 - the **site name**, the **logo**, the **Teams channel**, the **pallet system** address;
 - register and reset **scanners**; choose which **jobs** the scanners offer;
 - upload the **bin list**, pair the **racking blocks**, upload the **inventory report**;
 - create the **count session**, set its options and thresholds, run and end a **trial**,
   **close** and **delete** counts;
-- the **ERP layouts** and the ERP file; **backups**; the **adjustment reasons**; **the log**.
+- the **ERP layouts** and the ERP file; **backups** and the **OneDrive** copy; the **adjustment reasons**; **the log**;
+- run the **Ready for count day** check before every wall-to-wall.
 
 A *supervisor* login does everything else. Keep the admin logins to the few who need them: an
 admin can delete a count.
@@ -56,10 +61,13 @@ admin can delete a count.
 
 ## 3 — Logins and profiles
 
-**Settings → Advanced → Supervisor logins.**
+**Settings → Logins & site → Supervisor logins.**
 
-1. **Add a login**: username, full name, a starter password (or leave it blank to have one
-   generated). The first sign-in makes the person choose a real password.
+1. **Add a login**: username, full name and, best, their **email** — then **Email the invite**
+   sends them a one-time link (good for three days) on which they choose their own password,
+   from your own mail, with no password in the message. Without an email, a starter password
+   (typed, or generated if left blank) is shown once; the first sign-in makes them replace it.
+   **Invite again** makes a new link; the old one stops working.
 2. Pick a **profile**, or tick pages and functions by hand:
 
 | Profile | Pages | Functions | For |
@@ -81,14 +89,19 @@ admin can delete a count.
    only, say. The checklist under each login shows every tab.
 6. **Untick Active** to stop a login; its sign-ins end at once. **Reset password** gives a
    new starter password. Changing either ends every sign-in that login holds.
-7. Sign-ins last 30 days from last use and survive a restart. **Log out** ends one, and the next
+7. **Locked out?** Five wrong passwords from one place lock that login there for 15 minutes
+   (twenty from one place lock the place). The row shows *locked*; **Unlock** lifts it, and so
+   does a password reset.
+8. Sign-ins last 30 days from last use and survive a restart. **Log out** ends one, and the next
    person to sign in on that computer starts fresh on the dashboard, not where the last one left off.
 
 Each role has a procedure of its own in `docs/roles/`; hand a new login the right one.
 
 ## 4 — The site: name, logo, look, Teams, pallet system
 
-All under **Settings → Advanced**.
+Site name, logo and look under **Settings → Logins & site**; Teams and the pallet system under
+**Settings → Integrations**. On a phone, *Add to Home Screen* on any office page installs the
+office side as its own app (*FH Office*), with a Menu button in place of the side panel.
 
 - **Site name**: the app's name and the location under it. A change lands at once on every
   sidebar, the sign-in screen, the window titles, the scanner app's header, the office board
@@ -106,7 +119,7 @@ All under **Settings → Advanced**.
 
 ## 5 — Scanners
 
-**Settings → Scanner screen.**
+**Settings → Scanners.**
 
 - **Scanner setup**: add a scanner by name; open its link (`/?d=…`) on the device once,
   then install the app from Chrome's menu or the button on the sign-on screen. The link
@@ -150,7 +163,7 @@ Both uploads are per count. The guided setup card says what the count still lack
 
 ## 7 — The count session and its settings
 
-**Settings → Getting started → Count session.**
+**Settings → Count setup → Count session.**
 
 - **New count**: from **Full Counts → New count** (a full count) or *Cycle counts → Program*
   (the year's cycle session); the Count session card does both too. **Full Counts** also lists
@@ -171,7 +184,12 @@ starts. Their procedure says what they will ask for.
 
 ## 8 — Count day: what the admin does
 
-Usually little. Be reachable for:
+**The afternoon before, and first thing:** open **Settings → Count setup → Ready for count day**
+and clear every red line, and every amber one you can. It checks the jobs on the scanners (the
+full count alone), the scanners, the crew list, the alerts, the backups and the OneDrive copy,
+and a default password. Each line's button opens the card that fixes it.
+
+Then, usually little. Be reachable for:
 
 - a scanner that needs its link reset or re-registered;
 - a setting that turns out wrong: thresholds at 0 flooding the second-count list, approvals
@@ -184,7 +202,7 @@ say when they will come to you.
 
 ## 9 — Closing, the ERP file, backups and the log
 
-**Settings → ERP & backups.**
+**Settings → Integrations** (the ERP file, adjustment reasons) and **Settings → Backups & log**.
 
 - **Send to the ERP**: pick the layout and the system, **Preview**, **Download CSV**. The
   preview says how many adjustments it held back for approval; inventory control reads it
@@ -197,7 +215,10 @@ say when they will come to you.
   `exports` folder beside the backups, and the **final report** every sheet of Export everything
   once the count is whole. Copy that folder off the server with the backup.
 - **Back up now** before and after anything large; the app also keeps a daily backup and the
-  last fourteen on its volume. **Download** one after every count: a volume is not an archive.
+  last fourteen on its volume. A volume is not an archive: connect **Off-site copy: OneDrive**
+  once (the steps are on the card) and every backup is copied there too — with each daily
+  backup, or every 12, 6, 2 hours or every hour during a count. Without it, **Download** one
+  after every count.
 - **Export the log** for an auditor: every supervisor action, who and when.
 
 ## 10 — A year of housekeeping

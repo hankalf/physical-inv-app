@@ -17,7 +17,7 @@
 
   const needSession = (el) => {
     if (sessionId) return true;
-    msg(el, 'err', 'Create a count first', 'Settings → Getting started → Count session makes one.');
+    msg(el, 'err', 'Create a count first', 'Settings → Count setup → Count session makes one.');
     return false;
   };
 
@@ -63,7 +63,7 @@
     await refreshAll();
   }
 
-  // the trial banner above every tab; switching a trial on and off lives under Settings → Getting started
+  // the trial banner above every tab; switching a trial on and off lives under Settings → Count setup
   function renderTrial(s) {
     $('trialBanner').hidden = !(s && s.trial);
   }
@@ -1717,7 +1717,7 @@
       if (!b) return;
       const ok = api.can(key);
       b.disabled = !ok;
-      b.title = ok ? '' : `Not able to: this login may not ${what}. An admin can allow it under Settings → Advanced → Supervisor logins.`;
+      b.title = ok ? '' : `Not able to: this login may not ${what}. An admin can allow it under Settings → Logins & site → Supervisor logins.`;
     };
     off('btnSendMsg', 'messages', 'message the floor');
     off('btnAssign', 'assign', 'queue aisles');

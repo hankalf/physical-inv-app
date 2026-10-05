@@ -80,7 +80,7 @@ Deploy from this repo — `railway.json` builds the Dockerfile. Then:
 3. Optionally a **custom domain** (Service → Settings → Networking → Custom Domain), e.g.
    `fullharvest-inventory.app`: a subdomain takes a CNAME to the target Railway shows; the
    bare name needs a DNS host with CNAME flattening or an ALIAS record. Railway issues the
-   certificate. Re-open each scanner's link from Settings → Scanner screen on the new
+   certificate. Re-open each scanner's link from Settings → Scanners on the new
    address afterwards, since an installed app is tied to the address it came from.
 
 Scanners need internet access for this option, not just warehouse Wi-Fi.
@@ -100,6 +100,8 @@ Scanners need internet access for this option, not just warehouse Wi-Fi.
 | `SUPERADMIN_USER` | `ADMIN` | Username of the admin login created at startup, e.g. `SITEADMIN` |
 | `SUPERADMIN_NAME` | the username | The name shown for it, e.g. `Site Administrator` |
 | `SITE_TIMEZONE` | `America/New_York` | The warehouse's clock — dates a cycle batch is due, and the hour a schedule fires |
+| `ONEDRIVE_CLIENT_ID` | — | The Azure app registration's Application (client) ID for backups to OneDrive; can be set in Settings instead |
+| `ONEDRIVE_TENANT` | `common` | Microsoft tenant for that sign-in; leave as `common` unless IT says otherwise |
 
 ---
 
@@ -114,12 +116,12 @@ sign-in covers all of them.
 | **Full Counts** (`/full`) | Counts · New count · Set-up — every wall-to-wall, open and closed; which one the scanners land on; start one; what it still needs |
 | **Cycle counts** (`/cycle`) | Today · Still open · Coverage · Program & data |
 | **Teams & crew** (`/teams`) | Crew & teams · Equipment rules |
-| **Settings** (`/settings`) | Getting started · Scanner screen · Lists & racking · ERP & backups · Advanced |
+| **Settings** (`/settings`) | Count setup · Lists & racking · Scanners · Integrations · Backups & log · Logins & site |
 | **Front bins** (`/front`) | Pallets to move back · Move desk · Front-placed bins. The gun has the same desk: Front2Back at sign-on with a badge alone, pick the aisle, the pallet and its two bins, the pallet system framed under them, Moved — next |
 | **Not in Location** (`/missing`) | the list, and a find desk; on the gun, Not in Location at sign-on with a badge alone, the aisle it was last seen in, the pallet system framed under the strip, Found — next |
 | **Testing Suite** (`/testing`) | the real scanner on a practice count of your own |
-| **Settings → Scanner screen → What the scanners offer** | one section, one Save: the jobs on the sign-on screen (tick the full count alone on count day), comments (ask / required / the wait / the one-tap reasons), the override reasons, the SOS list |
-| **Settings → Advanced → Site name** | the app's own name and the location under it, out of the box *Full Harvest Inventory · Front Royal*; a change lands on every page, the guns, the board and the installed app's manifest |
+| **Settings → Scanners → What the scanners offer** | one section, one Save: the jobs on the sign-on screen (tick the full count alone on count day), comments (ask / required / the wait / the one-tap reasons), the override reasons, the SOS list |
+| **Settings → Logins & site → Site name** | the app's own name and the location under it, out of the box *Full Harvest Inventory · Front Royal*; a change lands on every page, the guns, the board and the installed app's manifest |
 | **User guide** (`/guide`) | the SOP inside the app: journeys, what goes wrong at each step, an Ask box that answers a question or a pasted message, and a live "Right now" read of the count. Open to every login |
 
 Two splits, both deliberate. **Running a count** is the Dashboard; **setting one up** is
@@ -201,7 +203,7 @@ last scanned — a name alone stops telling two counts apart once a site has a f
 
 **Start a new count** takes the bin list and the inventory report with it, so a new count
 arrives with something to validate against. Both are optional at that moment; whatever is
-missing shows up under **Settings → Getting started**.
+missing shows up under **Settings → Count setup**.
 
 ### Deleting a count
 
@@ -225,7 +227,7 @@ thing in the app that cannot be undone, so:
 A refused delete does none of that work: the guards run before anything expensive, so a
 rejected attempt leaves no backup behind.
 
-### Getting started — Settings
+### Count setup — Settings
 
 A checklist for a count that is not running yet, worked out from the database rather than
 from a box somebody ticked, so it cannot claim something is done that is not. Each step
@@ -625,8 +627,24 @@ is on the dashboard and exports as CSV.
 
 **Backups.** A copy of the database is taken automatically once a day and kept for
 `BACKUP_KEEP` days (14), plus a **Back up now** button. Each one is a consistent snapshot
-taken with `VACUUM INTO`, downloadable from the dashboard — download one if you want a copy
-somewhere other than this machine, because a volume is not a backup.
+taken with `VACUUM INTO`, downloadable from Settings → Backups & log. A volume is not a backup:
+connect **OneDrive** on the same page and every backup is also copied to a OneDrive folder
+(device-code sign-in, no password kept; chunked uploads; the newest 30 kept there), with
+each daily backup or as often as every hour.
+
+**Ready for count day.** Settings → Count setup opens on a check of the site's settings
+against a count day — the jobs on the scanners, scanners enrolled, the crew list, alerts,
+backups and OneDrive, a default password — worst first, each with a button to the card that
+fixes it (`GET /api/admin/readiness`).
+
+**Logins.** Five wrong passwords for one login from one address lock it there for 15 minutes,
+twenty from one address lock the address; admins lift locks from the logins table. A new
+login can be **invited by email**: a one-time link, good for three days, on which its owner
+chooses their own password (`/admin?invite=…`); the admin sends it from their own mail.
+
+**The office on a phone.** The supervisor pages carry their own manifest (`/office.webmanifest`,
+start `/admin`), so *Add to Home Screen* installs the office as an app; under 700px wide the
+side panel folds into a bar with a Menu button.
 
 **Count sheets.** Paper, for a dead battery or an auditor: choose aisles and levels, get a
 printable sheet with one row per bin, pre-printed with level, position and face, and blank
@@ -636,6 +654,15 @@ boxes for the pallet and the count. Blind by default. Optionally only bins with 
 what differs, with a signed adjustment), and *bin lines* (every line with who counted it).
 Column names and the shape of a row are configuration, so a site can add its own layout
 through `POST /api/admin/erp/formats` and export it immediately, without a deploy.
+
+## Tests, and GitHub Actions
+
+`npm test` runs every suite (`tests/run-all.mjs`): each gets a fresh server and database, and
+the browser suites drive the real pages and the scanner app in Chromium. `npm test -- <suite>`
+runs one. `.github/workflows/tests.yml` runs the lot on GitHub for every push to `main` or a
+`claude/` branch, every pull request, and from the **Run workflow** button on the Actions tab;
+a red cross on a commit means a suite failed, and the run's log names the check.
+`node tools/bench-dashboard.mjs` times the office's reads on a 13,700-bin count.
 
 ## Security
 
@@ -660,7 +687,7 @@ change is recorded in the audit log against the person who made it, and password
 stored scrypt-hashed, never in the clear.
 
 There is **no shared password**. Every person signs in as themselves, and the log names who
-did what. What each login may use is ticked per login under **Settings → Advanced**; Settings
+did what. What each login may use is ticked per login under **Settings → Logins & site**; Settings
 itself is for admins only.
 
 ### The superadmin

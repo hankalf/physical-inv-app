@@ -213,7 +213,7 @@
       { key: 'gun', ok: gunUp, label: 'The scanner app is running on the left', fix: gunUp ? '' : 'Give it a few seconds, or press Restart the gun.' },
       { key: 'teams', ok: !!data.teamsChannel, optional: true,
         label: data.teamsChannel ? 'Teams channel set — an SOS from the test gun posts there too' : 'Teams channel — not set (optional)',
-        fix: data.teamsChannel ? '' : 'An SOS still shows on the dashboard. Set the channel under Settings → Advanced to test Teams as well.' }];
+        fix: data.teamsChannel ? '' : 'An SOS still shows on the dashboard. Set the channel under Settings → Integrations to test Teams as well.' }];
     const todo = items.filter((i) => !i.ok && !i.optional).length;
     $('readySum').textContent = todo ? `${todo} thing${todo === 1 ? '' : 's'} to do first` : 'ready to test';
     $('readySum').style.color = todo ? 'var(--warn)' : 'var(--ok)';

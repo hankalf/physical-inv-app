@@ -1,7 +1,7 @@
 /* The site's own name, place and logo, on the supervisor pages and the guns.
    All three live in the settings table so they travel with the database and
    every backup, and are one small answer for a gun to cache. The name and the
-   place start as the site's own and can be changed under Settings → Advanced;
+   place start as the site's own and can be changed under Settings → Logins & site;
    every page, the scanner app, the board and the installed app's manifest
    read them from here, so a change lands everywhere. */
 import { db } from '../db.js';

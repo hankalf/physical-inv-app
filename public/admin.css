@@ -267,6 +267,11 @@ button.ghost.del { color: var(--muted); border-color: var(--line-soft); }
 button.ghost.del:hover { color: #ffb3ae; background: var(--err-ink); border-color: #55282a; }
 button.sm { padding: 4px 9px; font-size: 12px; }
 button.fit, button.sm.fit { width: auto; flex: 0 0 auto; }
+/* a link that does what a button does (Email the invite opens the mail app) */
+a.btn { display: inline-flex; align-items: center; padding: 9px 15px; font-size: 13.5px; font-weight: 650; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--text); text-decoration: none; }
+a.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+a.btn:hover { filter: brightness(1.08); }
 button:active { transform: translateY(1px); }
 button:disabled { opacity: .5; cursor: default; }
 
@@ -792,3 +797,31 @@ html.signed-in .splashbrand { display: none; }
 .deskwrap.wide .glass { border: 1px solid var(--line); border-radius: 10px; box-shadow: none; resize: vertical; overflow: hidden; height: 640px; min-height: 240px; }
 .deskwrap.wide iframe { width: 100%; height: 100%; min-height: 0; }
 .deskwrap.none { display: none; }
+
+/* ------------------------------------------------------------- Settings, set out the same way throughout
+   Each section opens with one line on what is in it; every card has its name
+   (and any status beside it) on the first line and what it is for on the
+   second, so the eye finds the same thing in the same place on every card. */
+.settings-page .pane-intro { margin: 2px 2px 14px; color: var(--muted); font-size: 14px; max-width: 80ch; }
+.settings-page [data-sub] > .card > h2 { align-items: baseline; row-gap: 2px; }
+.settings-page [data-sub] > .card > h2 > .muted {
+  order: 9; flex-basis: 100%; margin: 0; text-align: left; font-size: 13px; font-weight: 400; color: var(--muted); line-height: 1.45;
+}
+.settings-page [data-sub] > .card > h2 + .hint { margin-top: 10px; }
+.settings-page [data-sub] > .card { scroll-margin-top: 16px; }
+.card.flash { animation: cardflash 1.6s ease-out; }
+@keyframes cardflash { 0%, 30% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: var(--shadow); } }
+
+/* the count-day check: one line per thing, the worst first */
+.checks { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; }
+.checks .check { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border: 1px solid var(--line-soft); border-radius: 9px; background: var(--surface-2); }
+.checks .check .mark { flex: 0 0 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 13px; }
+.checks .check.ok .mark { color: var(--ok); background: var(--ok-ink); border: 1px solid var(--ok-line); }
+.checks .check.warn .mark { color: var(--warn-text); background: var(--warn-ink); border: 1px solid var(--warn-line); }
+.checks .check.fail .mark { color: var(--err-text); background: var(--err-ink); border: 1px solid var(--err-line); }
+.checks .check .what { flex: 1 1 auto; min-width: 0; }
+.checks .check .what b { display: block; font-size: 14px; }
+.checks .check .what span { display: block; font-size: 13px; color: var(--muted); }
+.checks .check.ok .what b { font-weight: 600; }
+.checks .check button { flex: 0 0 auto; white-space: nowrap; }
+@media (max-width: 700px) { .checks .check { flex-wrap: wrap; } .checks .check button { margin-left: 36px; } }

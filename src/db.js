@@ -505,6 +505,10 @@ if (!hasCol('pallets', 'abc')) db.exec('ALTER TABLE pallets ADD COLUMN abc TEXT'
 
 // a login can be handed out with a starter password the person must replace
 if (!hasCol('users', 'must_change')) db.exec('ALTER TABLE users ADD COLUMN must_change INTEGER NOT NULL DEFAULT 0');
+// an email to invite a login by, and the invite it is waiting on (a hash: the link itself is never kept)
+if (!hasCol('users', 'email')) db.exec('ALTER TABLE users ADD COLUMN email TEXT');
+if (!hasCol('users', 'invite_hash')) db.exec('ALTER TABLE users ADD COLUMN invite_hash TEXT');
+if (!hasCol('users', 'invite_expires')) db.exec('ALTER TABLE users ADD COLUMN invite_expires TEXT');
 if (!hasCol('assignments', 'levels')) {
   // a team is assigned an aisle AND the levels it has the equipment for
   db.exec("ALTER TABLE assignments ADD COLUMN levels TEXT NOT NULL DEFAULT ''");

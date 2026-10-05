@@ -185,6 +185,28 @@ ms.revoked = false; ms.shortTokens = false;
 const log = await j(await get('/api/admin/audit?limit=100'));
 check('Connecting and sending are in the activity log', log.some((a) => a.action === 'started connecting OneDrive for backups') && log.some((a) => a.action === 'sent a backup to OneDrive'));
 
+/* ------------------------------------------------------------ how often */
+r = await post('/api/admin/onedrive/config', { every: 3 });
+check('"How often" takes only the choices offered', r.status === 400);
+ms.approved = false;
+await post('/api/admin/onedrive/connect');
+ms.approved = true;
+await until(async () => (await status()).connected);
+await until(async () => { const s2 = await status(); return s2.lastUpload && !s2.uploading; });
+st = await j(await post('/api/admin/onedrive/config', { every: 1 }));
+check('Every hour is saved, with when the next copy goes', st.every === 1 && !!st.nextAt, JSON.stringify([st.every, st.nextAt]));
+const before = new Set(ms.files.keys());
+const extra = await until(async () => [...ms.files.keys()].find((k) => !before.has(k) && /-offsite\.db$/.test(k)), 12000);
+check('A fresh copy goes on the hour by itself', !!extra, extra || [...ms.files.keys()].join(' | '));
+const localNames = (await j(await get('/api/admin/backups'))).backups.map((b) => b.name);
+check('…and is not kept on the server, so the dailies are not crowded out', !localNames.some((n) => /-offsite/.test(n)), localNames.join(' | '));
+await post('/api/admin/onedrive/config', { every: 24 });
+const settled = new Set(ms.files.keys());
+await wait(5000);
+check('Back to once a day, no copies go on their own', [...ms.files.keys()].every((k) => settled.has(k)));
+ms.approved = false;
+await post('/api/admin/onedrive/disconnect');
+
 /* ------------------------------------------------------------ the Settings card */
 ms.approved = false;
 await post('/api/admin/onedrive/connect');

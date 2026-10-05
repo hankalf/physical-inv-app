@@ -131,7 +131,7 @@ check('The dashboard shows TRIAL RUN above every tab', await page.isVisible('#tr
   const sp = await browser.newPage({ viewport: { width: 1400, height: 900 } });
   await sp.goto(BASE + '/settings#start'); await signIn(sp);
   await sp.selectOption('#fSessionPick', String(sess.id)); await sp.waitForTimeout(800);
-  check('…and Settings → Getting started offers to end it', await sp.isVisible('#btnTrialEnd') && await sp.isHidden('#btnTrialOn'));
+  check('…and Settings → Count setup offers to end it', await sp.isVisible('#btnTrialEnd') && await sp.isHidden('#btnTrialOn'));
   await sp.close();
 }
 
@@ -163,7 +163,7 @@ const file = await download.path();
 const bytes = readFileSync(file);
 check('The button downloads an Excel workbook', /\.xlsx$/.test(download.suggestedFilename()) && bytes.slice(0, 2).toString() === 'PK', download.suggestedFilename());
 
-/* ---- ending the trial: under Settings → Getting started ---- */
+/* ---- ending the trial: under Settings → Count setup ---- */
 const sp2 = await browser.newPage({ viewport: { width: 1400, height: 900 } });
 sp2.on('dialog', (d) => (d.type() === 'prompt' ? d.accept('CLEAR') : d.accept()).catch(() => {}));
 await sp2.goto(BASE + '/settings#start'); await signIn(sp2);
