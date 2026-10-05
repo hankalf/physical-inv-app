@@ -1372,6 +1372,94 @@
   $('btnAuditExport').onclick = () => api.download('/api/admin/audit/export.csv', 'audit-log.csv')
     .catch((err) => msg($('opsMsg'), 'err', err.message));
 
+  /* ------------------------------------------------------------ the off-site copy: OneDrive */
+  let odTimer = null;
+  const kb = (n) => `${Math.round((n || 0) / 1024).toLocaleString()} KB`;
+  function drawOnedrive(st) {
+    const state = $('odState');
+    const word = st.connected ? 'connected' : st.pending ? 'waiting for sign-in' : st.configured ? 'not connected' : 'not set up';
+    state.textContent = word;
+    state.className = 'tag ' + (st.connected ? (st.lastError ? 'queued' : 'MATCH') : st.pending ? 'queued' : 'off');
+    if (document.activeElement !== $('fOdClient')) $('fOdClient').value = st.clientId || '';
+    $('fOdClient').disabled = !!st.clientIdFromEnv;
+    $('fOdClient').title = st.clientIdFromEnv ? 'Set by the ONEDRIVE_CLIENT_ID variable on the server' : '';
+    if (document.activeElement !== $('fOdFolder')) $('fOdFolder').value = st.folder || '';
+    if (document.activeElement !== $('fOdKeep')) $('fOdKeep').value = st.keep || '';
+    const status = $('odStatus');
+    status.replaceChildren();
+    let kind = 'warn';
+    const line = (t, cls) => { const d = document.createElement('div'); if (cls) d.className = cls; d.textContent = t; status.appendChild(d); };
+    if (st.connected) {
+      kind = st.lastError ? 'err' : 'ok';
+      line(`Backups go to ${st.account || 'OneDrive'}, folder "${st.folder}" — the newest ${st.keep} are kept there.`);
+      if (st.uploading) line('Sending a backup now…', 'detail');
+      if (st.lastUpload) line(`Last copy: ${st.lastUpload.name} (${kb(st.lastUpload.bytes)}), ${new Date(st.lastUpload.at).toLocaleString()}.`, 'detail');
+      else line('No copy sent yet — the next backup goes straight there, or press Back up to OneDrive now.', 'detail');
+      if (st.lastError) line(`The last try failed (${new Date(st.lastError.at).toLocaleString()}): ${st.lastError.message}. It is tried again every half hour.`, 'detail');
+    } else if (st.pending) {
+      line('Waiting for someone to sign in with the code below.');
+    } else if (st.configured) {
+      line('Set up but not connected: press Connect OneDrive and sign in with the account the backups should go to.');
+      if (st.signInError) { kind = 'err'; line(`The last sign-in did not finish: ${st.signInError}.`, 'detail'); }
+    } else {
+      line('Not set up. The backups are only on this server — if it is lost, so are they. The set-up below takes about five minutes, once.');
+    }
+    status.className = `feedback show ${kind}`;
+    const code = $('odCode');
+    if (st.pending) {
+      code.replaceChildren();
+      const big = document.createElement('div');
+      big.style.fontSize = '15px';
+      big.append('On any computer or phone, open ');
+      const a = document.createElement('a'); a.href = st.pending.verificationUri; a.target = '_blank'; a.rel = 'noopener'; a.textContent = st.pending.verificationUri.replace(/^https?:\/\//, '');
+      big.append(a, ' and type ');
+      const b = document.createElement('b'); b.id = 'odUserCode'; b.style.fontSize = '20px'; b.style.letterSpacing = '.08em'; b.textContent = st.pending.userCode;
+      big.append(b);
+      const d = document.createElement('div'); d.className = 'detail';
+      d.textContent = `Then sign in with the Microsoft account whose OneDrive should hold the backups. The code works until ${new Date(st.pending.expiresAt).toLocaleTimeString()}; this page notices by itself when it is done.`;
+      code.append(big, d);
+      code.classList.add('show');
+    } else code.classList.remove('show');
+    $('btnOdConnect').hidden = !!st.pending || st.connected;
+    $('btnOdConnect').disabled = !st.configured;
+    $('btnOdCancel').hidden = !st.pending;
+    $('btnOdUpload').hidden = !st.connected;
+    $('btnOdDisconnect').hidden = !st.connected;
+    // while a sign-in is waiting, or a copy is going, keep an eye on it
+    clearTimeout(odTimer);
+    if (st.pending || st.uploading) odTimer = setTimeout(() => refreshOnedrive().catch(() => {}), 3000);
+  }
+  async function refreshOnedrive() {
+    if (!api.me || api.me.role !== 'admin') { $('onedriveCard').hidden = true; return; }
+    $('onedriveCard').hidden = false;
+    drawOnedrive(await api.json('/api/admin/onedrive'));
+  }
+  const odDo = async (path, body, okText) => {
+    try {
+      const st = await api.post(path, body || {});
+      drawOnedrive(st);
+      if (okText) msg($('odMsg'), 'ok', typeof okText === 'function' ? okText(st) : okText); else clearMsg($('odMsg'));
+      return st;
+    } catch (err) { msg($('odMsg'), 'err', err.message); await refreshOnedrive().catch(() => {}); return null; }
+  };
+  $('btnOdSave').onclick = () => odDo('/api/admin/onedrive/config', {
+    ...($('fOdClient').disabled ? {} : { clientId: $('fOdClient').value }),
+    folder: $('fOdFolder').value, keep: Number($('fOdKeep').value) || undefined,
+  }, 'Saved.');
+  $('btnOdConnect').onclick = () => odDo('/api/admin/onedrive/connect');
+  $('btnOdCancel').onclick = () => odDo('/api/admin/onedrive/cancel');
+  $('btnOdUpload').onclick = async () => {
+    $('btnOdUpload').disabled = true;
+    msg($('odMsg'), 'warn', 'Taking a backup and sending it…');
+    await odDo('/api/admin/onedrive/upload', {}, (st) => `Sent — ${st.sent.name} (${kb(st.sent.bytes)}) is in OneDrive.`);
+    $('btnOdUpload').disabled = false;
+    refreshOps().catch(() => {});
+  };
+  $('btnOdDisconnect').onclick = () => {
+    if (!confirm('Stop sending backups to OneDrive? The copies already there stay where they are.')) return;
+    odDo('/api/admin/onedrive/disconnect', {}, 'Disconnected — backups stay on this server only until it is connected again.');
+  };
+
   /* ------------------------------------------------------------ session scope */
   async function loadSessions() {
     sessions = await api.json('/api/admin/sessions');
@@ -1635,7 +1723,7 @@
 
   async function load() {
     await refreshMe();
-    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshJobs().catch(() => {}), refreshReasons(), refreshSosSettings(), refreshLogo(), refreshPalletSystem().catch(() => {})]);
+    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshJobs().catch(() => {}), refreshReasons(), refreshSosSettings(), refreshLogo(), refreshPalletSystem().catch(() => {}), refreshOnedrive().catch(() => {})]);
     await refreshGun().catch(() => {});
     await loadLayouts().catch(() => {});
     await refreshDefaultSession().catch(() => {});

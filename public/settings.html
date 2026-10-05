@@ -533,6 +533,47 @@
       </div>
     </div>
 
+    <!-- ============ off-site copy: OneDrive ============ -->
+    <div class="card" id="onedriveCard">
+      <h2>Off-site copy: OneDrive <span class="tag" id="odState">not set up</span>
+        <span class="muted">every backup also goes to a OneDrive folder, so a lost server does not take the backups with it</span></h2>
+      <div class="feedback show" id="odStatus"></div>
+      <div class="feedback warn" id="odCode"></div>
+      <div class="row" style="margin-top:12px">
+        <div>
+          <label for="fOdClient">Application (client) ID</label>
+          <input id="fOdClient" autocomplete="off" spellcheck="false" placeholder="1a2b3c4d-1234-5678-9abc-1234567890ab">
+        </div>
+        <div>
+          <label for="fOdFolder">OneDrive folder</label>
+          <input id="fOdFolder" autocomplete="off" placeholder="Full Harvest Inventory backups">
+        </div>
+        <div style="max-width:150px">
+          <label for="fOdKeep">Keep the newest</label>
+          <input id="fOdKeep" type="number" min="3" max="365" step="1" placeholder="30">
+        </div>
+        <div class="auto"><button class="fit" id="btnOdSave">Save</button></div>
+      </div>
+      <div class="inline" style="margin-top:12px">
+        <div class="auto"><button class="primary fit" id="btnOdConnect">Connect OneDrive</button></div>
+        <div class="auto"><button class="fit" id="btnOdUpload" hidden>Back up to OneDrive now</button></div>
+        <div class="auto"><button class="ghost fit" id="btnOdCancel" hidden>Cancel sign-in</button></div>
+        <div class="auto"><button class="ghost danger fit" id="btnOdDisconnect" hidden>Disconnect</button></div>
+      </div>
+      <div class="feedback" id="odMsg"></div>
+      <details class="hint" style="margin-top:12px">
+        <summary><b>One-time set-up in Microsoft (about five minutes)</b></summary>
+        <ol style="margin:8px 0 0 18px; padding:0">
+          <li>Sign in at <b>portal.azure.com</b> with any Microsoft account (the one the backups will go to is fine) and open <b>App registrations → New registration</b>.</li>
+          <li>Name it <i>Full Harvest backups</i>. Under <b>Supported account types</b> pick <b>Accounts in any organizational directory and personal Microsoft accounts</b>. Leave the redirect URI empty and press <b>Register</b>.</li>
+          <li>On the new app's <b>Authentication</b> page, turn on <b>Allow public client flows</b> and save.</li>
+          <li>Copy the <b>Application (client) ID</b> from its <b>Overview</b> page into the box above and press <b>Save</b>.</li>
+          <li>Press <b>Connect OneDrive</b>. A code appears here: open the link on any computer or phone, type the code and sign in with the Microsoft account whose OneDrive should hold the backups.</li>
+        </ol>
+        <div style="margin-top:8px">No password is stored here. The app keeps a sign-in token that only allows it to work with that account's files, and it only ever writes to the one folder. <b>Disconnect</b> removes the token, and the account can also remove it on its Microsoft account page (Privacy → Apps and services).</div>
+      </details>
+    </div>
+
     <div class="card">
       <h2>Adjustment reasons <span class="chip" id="reasonChip" hidden></span>
         <span class="muted">why a count differs from the system — picked when an adjustment is approved</span></h2>

@@ -44,6 +44,11 @@ export const backupPath = (name) => {
   return full.startsWith(BACKUP_DIR) ? full : null;
 };
 
+/* Whoever wants to hear about a new backup (the OneDrive copy). Told after
+   the file is written, outside the request that asked for it. */
+const listeners = [];
+export function onBackup(fn) { listeners.push(fn); }
+
 /**
  * VACUUM INTO writes a consistent copy while the app keeps running - copying
  * the file by hand mid-write would not be safe.
@@ -64,7 +69,9 @@ export function makeBackup(reason = 'manual') {
   db.exec(`VACUUM INTO '${target.replace(/'/g, "''")}'`);
   prune();
   const s = statSync(target);
-  return { name, bytes: s.size, at: s.mtime.toISOString(), reason };
+  const made = { name, bytes: s.size, at: s.mtime.toISOString(), reason };
+  for (const fn of listeners) setImmediate(() => { try { fn(made); } catch { /* a listener's trouble is its own */ } });
+  return made;
 }
 
 function prune() {

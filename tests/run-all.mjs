@@ -13,14 +13,26 @@ const HERE = new URL('.', import.meta.url).pathname;
 const BASE_PORT = Number(process.env.PORT || 3111);
 const SUITES = process.argv.slice(2).length
   ? process.argv.slice(2).map((n) => (n.endsWith('.mjs') ? n : `${n}.mjs`))
-  : ['full-count.mjs', 'cycle-count.mjs', 'roster.mjs', 'ops.mjs', 'scanner-auth.mjs', 'settings.mjs', 'board.mjs', 'search.mjs', 'barcodes.mjs', 'superadmin.mjs', 'setup-guide.mjs', 'recount-threshold.mjs', 'scanner-prompts.mjs', 'gun-guidance.mjs', 'gun-layout.mjs', 'gun-portrait.mjs', 'self-update.mjs', 'durability.mjs', 'delete-session.mjs', 'lot-expiry.mjs', 'multi-tag-bins.mjs', 'messages.mjs', 'sos.mjs', 'approvals.mjs', 'labels-notes.mjs', 'testing-tab.mjs', 'clocks-shifts.mjs', 'gun-floor.mjs', 'office-batch.mjs', 'auto-plan.mjs', 'moves.mjs', 'fix-list.mjs', 'missing.mjs', 'comment-timeout-upgrade.mjs', 'load-15-teams.mjs', 'access.mjs', 'sources.mjs', 'desk.mjs', 'practice-modes.mjs', 'site-report.mjs', 'guide.mjs', 'branding.mjs', 'scanner-jobs.mjs', 'archive.mjs', 'wrong-field.mjs', 'full-counts.mjs', 'login-limit.mjs', 'phone-app.mjs'];
+  : ['full-count.mjs', 'cycle-count.mjs', 'roster.mjs', 'ops.mjs', 'scanner-auth.mjs', 'settings.mjs', 'board.mjs', 'search.mjs', 'barcodes.mjs', 'superadmin.mjs', 'setup-guide.mjs', 'recount-threshold.mjs', 'scanner-prompts.mjs', 'gun-guidance.mjs', 'gun-layout.mjs', 'gun-portrait.mjs', 'self-update.mjs', 'durability.mjs', 'delete-session.mjs', 'lot-expiry.mjs', 'multi-tag-bins.mjs', 'messages.mjs', 'sos.mjs', 'approvals.mjs', 'labels-notes.mjs', 'testing-tab.mjs', 'clocks-shifts.mjs', 'gun-floor.mjs', 'office-batch.mjs', 'auto-plan.mjs', 'moves.mjs', 'fix-list.mjs', 'missing.mjs', 'comment-timeout-upgrade.mjs', 'load-15-teams.mjs', 'access.mjs', 'sources.mjs', 'desk.mjs', 'practice-modes.mjs', 'site-report.mjs', 'guide.mjs', 'branding.mjs', 'scanner-jobs.mjs', 'archive.mjs', 'wrong-field.mjs', 'full-counts.mjs', 'login-limit.mjs', 'phone-app.mjs', 'onedrive.mjs'];
 
 mkdirSync(join(HERE, 'screenshots'), { recursive: true });
 
-async function withServer(port, fn) {
+/* A suite that needs the server started differently says so here: the
+   OneDrive suite points the app at a stand-in for Microsoft it runs itself. */
+const ONEDRIVE_MOCK = Number(process.env.ONEDRIVE_MOCK_PORT || 3989);
+const SUITE_ENV = {
+  'onedrive.mjs': {
+    ONEDRIVE_LOGIN_BASE: `http://127.0.0.1:${ONEDRIVE_MOCK}`,
+    ONEDRIVE_GRAPH_BASE: `http://127.0.0.1:${ONEDRIVE_MOCK}/v1.0`,
+    ONEDRIVE_CHUNK_BYTES: '65536',
+    ONEDRIVE_MOCK_PORT: String(ONEDRIVE_MOCK),
+  },
+};
+
+async function withServer(port, fn, extra = {}) {
   const dataDir = mkdtempSync(join(tmpdir(), 'invtest-'));
   const server = spawn(process.execPath, ['--no-warnings=ExperimentalWarning', join(HERE, '..', 'src', 'server.js')], {
-    env: { ...process.env, PORT: String(port), DB_PATH: join(dataDir, 'test.db'), SUPERADMIN_USER: 'DANA-WHITFIELD', SUPERADMIN_NAME: 'Dana Whitfield', SUPERADMIN_PASSWORD: 'changeme', SITE_TIMEZONE: 'America/New_York' },
+    env: { ...process.env, ...extra, PORT: String(port), DB_PATH: join(dataDir, 'test.db'), SUPERADMIN_USER: 'DANA-WHITFIELD', SUPERADMIN_NAME: 'Dana Whitfield', SUPERADMIN_PASSWORD: 'changeme', SITE_TIMEZONE: 'America/New_York' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let log = '';
@@ -44,9 +56,9 @@ async function withServer(port, fn) {
   }
 }
 
-const run = (file, base) =>
+const run = (file, base, extra = {}) =>
   new Promise((resolve) => {
-    const p = spawn(process.execPath, [join(HERE, file)], { env: { ...process.env, BASE_URL: base }, stdio: 'inherit' });
+    const p = spawn(process.execPath, [join(HERE, file)], { env: { ...process.env, ...extra, BASE_URL: base }, stdio: 'inherit' });
     p.on('exit', (code) => resolve(code === 0));
   });
 
@@ -55,7 +67,7 @@ let port = BASE_PORT;
 for (const suite of SUITES) {
   console.log(`\n──────── ${suite} ────────`);
   try {
-    const ok = await withServer(port++, (base) => run(suite, base));
+    const ok = await withServer(port++, (base) => run(suite, base, SUITE_ENV[suite]), SUITE_ENV[suite]);
     if (!ok) failed.push(suite);
   } catch (err) {
     console.error(err.message);

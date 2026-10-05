@@ -50,6 +50,7 @@ import { toCsv, parseRecords, pick } from './util/csv.js';
 import { listLayouts, loadLayout } from './util/layouts.js';
 import { siteTimezone, localDate, localHour } from './util/localtime.js';
 import { changed, memo } from './cache.js';
+import { onedriveStatus, setOnedriveConfig, startSignIn, cancelSignIn, disconnect, uploadNow, startOnedrive } from './routes/onedrive.js';
 import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, unlockPlace, PER_LOGIN, PER_PLACE } from './routes/login-limit.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards, barcodeBook } from './routes/printing.js';
@@ -1266,6 +1267,36 @@ async function handleAdmin(req, res, url, m) {
     audit(actor, 'took a backup', `${b.name} (${Math.round(b.bytes / 1024)} KB)`);
     return sendJson(req, res, 200, b);
   }
+  /* --- the off-site copy: OneDrive. Admins only, reads included - the
+     status names the Microsoft account the backups go to. */
+  if (p === '/api/admin/onedrive' || p.startsWith('/api/admin/onedrive/')) {
+    if (whoNow.role !== 'admin') throw httpError(403, 'only an admin can see or change where the backups go');
+    if (p === '/api/admin/onedrive' && method === 'GET') return sendJson(req, res, 200, onedriveStatus());
+    if (p === '/api/admin/onedrive/config' && method === 'POST') {
+      const st = setOnedriveConfig(await readJson(req));
+      audit(actor, 'changed the OneDrive backup settings', `folder "${st.folder}", keeping ${st.keep}`);
+      return sendJson(req, res, 200, st);
+    }
+    if (p === '/api/admin/onedrive/connect' && method === 'POST') {
+      const st = await startSignIn(actor);
+      audit(actor, 'started connecting OneDrive for backups', '');
+      return sendJson(req, res, 200, st);
+    }
+    if (p === '/api/admin/onedrive/cancel' && method === 'POST') return sendJson(req, res, 200, cancelSignIn());
+    if (p === '/api/admin/onedrive/disconnect' && method === 'POST') {
+      audit(actor, 'disconnected OneDrive backups', onedriveStatus().account);
+      return sendJson(req, res, 200, disconnect());
+    }
+    if (p === '/api/admin/onedrive/upload' && method === 'POST') {
+      // a fresh backup, sent now: what someone pressing the button wants to see arrive
+      const b = makeBackup('manual');
+      audit(actor, 'took a backup', `${b.name} (${Math.round(b.bytes / 1024)} KB)`);
+      const sent = await uploadNow(b.name);
+      audit(actor, 'sent a backup to OneDrive', `${sent.name} (${Math.round(sent.bytes / 1024)} KB)`);
+      return sendJson(req, res, 200, { ...onedriveStatus(), sent });
+    }
+    throw httpError(404, 'unknown OneDrive endpoint');
+  }
   if ((m = p.match(/^\/api\/admin\/backups\/([A-Za-z0-9_.-]+\.db)$/)) && method === 'GET') {
     const full = backupPath(m[1]);
     if (!full) throw httpError(400, 'bad backup name');
@@ -1858,6 +1889,8 @@ setInterval(() => {
 
 // a copy of the database, once a day, kept for BACKUP_KEEP days
 startBackupSchedule().unref();
+// and each one copied to OneDrive, once an admin has connected it
+startOnedrive();
 
 server.listen(PORT, HOST, () => {
   console.log(`physical-inv-app listening on http://${HOST}:${PORT}`);
