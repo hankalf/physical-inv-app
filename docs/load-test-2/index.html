@@ -42,7 +42,7 @@
   <h1>Floor simulation <span>— 20 teams · 40 scanners · 20,000 bins · 3 shifts played in 6 hours</span></h1>
   <div class="scrub">
     <button id="play">▶ Play</button>
-    <input type="range" id="scrub" min="1" max="1" value="1" step="1">
+    <input type="range" id="scrub" min="1" max="3" value="3" step="1">
     <span class="when" id="when"></span>
   </div>
   <div class="figs" id="figs"></div>
@@ -54,7 +54,7 @@
   <div class="timeline" id="timeline"></div>
 </main>
 <div class="lightbox" id="lightbox"><img id="lightimg" alt=""></div>
-<script id="data" type="application/json">{"meta":{"teams":20,"guns":40,"bins":20000,"pallets":18752,"days":3,"hours":6,"scale":4.25,"planted":{"short":487,"over":198,"missing":245,"unlisted":171,"moved":117,"label":63,"expired":320},"startedAt":"2026-10-05T09:25:34.242Z"},"timeline":[{"n":1,"at":"2026-10-05T09:28:10.250Z","wall":3,"day":0,"dayName":"Monday","sim":"06:10","label":"The sign-on rush is over, counting has begun","event":"start","lines":29,"bins":26,"binsTotal":20000,"pallets":26,"exceptions":1,"teams":13,"sosOpen":0,"sosTotal":0,"pending":1,"approved":0,"rejected":0,"secondOpen":2,"secondDone":0,"lat":{"count":{"n":26,"p50":5,"p95":12,"max":14},"dashboard":{"n":35,"p50":36,"p95":174,"max":213}},"frames":{"progress":"frames/001-progress.jpg","board":"frames/001-board.jpg","other":"frames/001-teams.jpg","otherLabel":"Team plan"}}],"summary":null}</script>
+<script id="data" type="application/json">{"meta":{"teams":20,"guns":40,"bins":20000,"pallets":18752,"days":3,"hours":6,"scale":4.25,"planted":{"short":487,"over":198,"missing":245,"unlisted":171,"moved":117,"label":63,"expired":320},"startedAt":"2026-10-05T09:25:34.242Z"},"timeline":[{"n":1,"at":"2026-10-05T09:28:10.250Z","wall":3,"day":0,"dayName":"Monday","sim":"06:10","label":"The sign-on rush is over, counting has begun","event":"start","lines":29,"bins":26,"binsTotal":20000,"pallets":26,"exceptions":1,"teams":13,"sosOpen":0,"sosTotal":0,"pending":1,"approved":0,"rejected":0,"secondOpen":2,"secondDone":0,"lat":{"count":{"n":26,"p50":5,"p95":12,"max":14},"dashboard":{"n":35,"p50":36,"p95":174,"max":213}},"frames":{"progress":"frames/001-progress.jpg","board":"frames/001-board.jpg","other":"frames/001-teams.jpg","otherLabel":"Team plan"}},{"n":2,"at":"2026-10-05T09:38:19.884Z","wall":13,"day":0,"dayName":"Monday","sim":"06:53","label":"Monday 06:53","event":"","lines":554,"bins":503,"binsTotal":20000,"pallets":465,"exceptions":4,"teams":13,"sosOpen":0,"sosTotal":0,"pending":0,"approved":4,"rejected":1,"secondOpen":19,"secondDone":0,"lat":{"count":{"n":509,"p50":5,"p95":10,"max":108},"dashboard":{"n":167,"p50":39,"p95":120,"max":213}},"frames":{"progress":"frames/002-progress.jpg","board":"frames/002-board.jpg","other":"frames/002-teams.jpg","otherLabel":"Team plan"}},{"n":3,"at":"2026-10-05T09:48:23.679Z","wall":23,"day":0,"dayName":"Monday","sim":"07:36","label":"Monday 07:36","event":"","lines":1075,"bins":987,"binsTotal":20000,"pallets":905,"exceptions":10,"teams":13,"sosOpen":0,"sosTotal":0,"pending":0,"approved":16,"rejected":1,"secondOpen":40,"secondDone":0,"lat":{"count":{"n":991,"p50":5,"p95":9,"max":108},"dashboard":{"n":297,"p50":41,"p95":122,"max":213}},"frames":{"progress":"frames/003-progress.jpg","board":"frames/003-board.jpg","other":"frames/003-alerts.jpg","otherLabel":"Alerts"}}],"summary":null}</script>
 <script>
 (() => {
   const D = JSON.parse(document.getElementById('data').textContent);
