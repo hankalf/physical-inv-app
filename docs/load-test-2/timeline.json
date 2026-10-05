@@ -342,5 +342,134 @@
    "other": "frames/008-map.jpg",
    "otherLabel": "Map"
   }
+ },
+ {
+  "n": 9,
+  "at": "2026-10-05T05:37:20.989Z",
+  "wall": 73,
+  "day": 0,
+  "dayName": "Monday",
+  "sim": "11:10",
+  "label": "Monday 11:10",
+  "event": "",
+  "lines": 3461,
+  "bins": 3186,
+  "binsTotal": 20000,
+  "pallets": 2957,
+  "exceptions": 26,
+  "teams": 13,
+  "sosOpen": 1,
+  "sosTotal": 6,
+  "pending": 0,
+  "approved": 52,
+  "rejected": 3,
+  "secondOpen": 109,
+  "secondDone": 0,
+  "lat": {
+   "count": {
+    "n": 3195,
+    "p50": 5,
+    "p95": 12,
+    "max": 507
+   },
+   "dashboard": {
+    "n": 946,
+    "p50": 64,
+    "p95": 189,
+    "max": 328
+   }
+  },
+  "frames": {
+   "progress": "frames/009-progress.jpg",
+   "board": "frames/009-board.jpg",
+   "other": "frames/009-teams.jpg",
+   "otherLabel": "Team plan"
+  }
+ },
+ {
+  "n": 10,
+  "at": "2026-10-05T05:47:25.778Z",
+  "wall": 83,
+  "day": 0,
+  "dayName": "Monday",
+  "sim": "11:52",
+  "label": "Lunch: the floor stops, the clocks notice",
+  "event": "lunch",
+  "lines": 3697,
+  "bins": 3400,
+  "binsTotal": 20000,
+  "pallets": 3155,
+  "exceptions": 30,
+  "teams": 13,
+  "sosOpen": 0,
+  "sosTotal": 6,
+  "pending": 0,
+  "approved": 57,
+  "rejected": 3,
+  "secondOpen": 119,
+  "secondDone": 0,
+  "lat": {
+   "count": {
+    "n": 3400,
+    "p50": 5,
+    "p95": 12,
+    "max": 507
+   },
+   "dashboard": {
+    "n": 1076,
+    "p50": 66,
+    "p95": 192,
+    "max": 328
+   }
+  },
+  "frames": {
+   "progress": "frames/010-progress.jpg",
+   "board": "frames/010-board.jpg",
+   "other": "frames/010-teams.jpg",
+   "otherLabel": "Team plan"
+  }
+ },
+ {
+  "n": 11,
+  "at": "2026-10-05T05:57:30.625Z",
+  "wall": 93,
+  "day": 0,
+  "dayName": "Monday",
+  "sim": "12:35",
+  "label": "Monday 12:35",
+  "event": "",
+  "lines": 4161,
+  "bins": 3820,
+  "binsTotal": 20000,
+  "pallets": 3548,
+  "exceptions": 35,
+  "teams": 14,
+  "sosOpen": 0,
+  "sosTotal": 6,
+  "pending": 0,
+  "approved": 63,
+  "rejected": 4,
+  "secondOpen": 132,
+  "secondDone": 6,
+  "lat": {
+   "count": {
+    "n": 3835,
+    "p50": 5,
+    "p95": 12,
+    "max": 961
+   },
+   "dashboard": {
+    "n": 1206,
+    "p50": 68,
+    "p95": 193,
+    "max": 381
+   }
+  },
+  "frames": {
+   "progress": "frames/011-progress.jpg",
+   "board": "frames/011-board.jpg",
+   "other": "frames/011-second.jpg",
+   "otherLabel": "Second counts"
+  }
  }
 ]
