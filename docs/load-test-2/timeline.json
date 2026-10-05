@@ -729,5 +729,134 @@
    "other": "frames/017-alerts.jpg",
    "otherLabel": "Alerts"
   }
+ },
+ {
+  "n": 18,
+  "at": "2026-10-05T11:59:08.382Z",
+  "wall": 154,
+  "day": 1,
+  "dayName": "Tuesday",
+  "sim": "08:22",
+  "label": "Tuesday 08:22",
+  "event": "",
+  "lines": 8307,
+  "bins": 7506,
+  "binsTotal": 20000,
+  "pallets": 6976,
+  "exceptions": 73,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 9,
+  "pending": 0,
+  "approved": 112,
+  "rejected": 14,
+  "secondOpen": 249,
+  "secondDone": 66,
+  "lat": {
+   "count": {
+    "n": 7587,
+    "p50": 7,
+    "p95": 13,
+    "max": 1088
+   },
+   "dashboard": {
+    "n": 1984,
+    "p50": 63,
+    "p95": 195,
+    "max": 1042
+   }
+  },
+  "frames": {
+   "progress": "frames/018-progress.jpg",
+   "board": "frames/018-board.jpg",
+   "other": "frames/018-second.jpg",
+   "otherLabel": "Second counts"
+  }
+ },
+ {
+  "n": 19,
+  "at": "2026-10-05T12:09:12.492Z",
+  "wall": 164,
+  "day": 1,
+  "dayName": "Tuesday",
+  "sim": "09:04",
+  "label": "Tuesday 09:04",
+  "event": "",
+  "lines": 8869,
+  "bins": 8010,
+  "binsTotal": 20000,
+  "pallets": 7448,
+  "exceptions": 82,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 10,
+  "pending": 2,
+  "approved": 119,
+  "rejected": 16,
+  "secondOpen": 266,
+  "secondDone": 72,
+  "lat": {
+   "count": {
+    "n": 8092,
+    "p50": 7,
+    "p95": 14,
+    "max": 1088
+   },
+   "dashboard": {
+    "n": 2114,
+    "p50": 64,
+    "p95": 204,
+    "max": 1042
+   }
+  },
+  "frames": {
+   "progress": "frames/019-progress.jpg",
+   "board": "frames/019-board.jpg",
+   "other": "frames/019-adjust.jpg",
+   "otherLabel": "Adjustments"
+  }
+ },
+ {
+  "n": 20,
+  "at": "2026-10-05T12:19:16.865Z",
+  "wall": 174,
+  "day": 1,
+  "dayName": "Tuesday",
+  "sim": "09:47",
+  "label": "Tuesday 09:47",
+  "event": "",
+  "lines": 9657,
+  "bins": 8723,
+  "binsTotal": 20000,
+  "pallets": 8122,
+  "exceptions": 93,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 10,
+  "pending": 1,
+  "approved": 134,
+  "rejected": 17,
+  "secondOpen": 303,
+  "secondDone": 78,
+  "lat": {
+   "count": {
+    "n": 8812,
+    "p50": 7,
+    "p95": 14,
+    "max": 1196
+   },
+   "dashboard": {
+    "n": 2244,
+    "p50": 66,
+    "p95": 207,
+    "max": 1042
+   }
+  },
+  "frames": {
+   "progress": "frames/020-progress.jpg",
+   "board": "frames/020-board.jpg",
+   "other": "frames/020-teams.jpg",
+   "otherLabel": "Teams & crew"
+  }
  }
 ]
