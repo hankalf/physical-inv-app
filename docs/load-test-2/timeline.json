@@ -901,5 +901,91 @@
    "other": "frames/021-reports.jpg",
    "otherLabel": "Reports"
   }
+ },
+ {
+  "n": 22,
+  "at": "2026-10-05T07:38:07.701Z",
+  "wall": 194,
+  "day": 1,
+  "dayName": "Tuesday",
+  "sim": "11:13",
+  "label": "Tuesday 11:13",
+  "event": "",
+  "lines": 10904,
+  "bins": 9914,
+  "binsTotal": 20000,
+  "pallets": 9178,
+  "exceptions": 100,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 17,
+  "pending": 0,
+  "approved": 154,
+  "rejected": 16,
+  "secondOpen": 336,
+  "secondDone": 105,
+  "lat": {
+   "count": {
+    "n": 10029,
+    "p50": 7,
+    "p95": 19,
+    "max": 1886
+   },
+   "dashboard": {
+    "n": 2500,
+    "p50": 85,
+    "p95": 248,
+    "max": 1358
+   }
+  },
+  "frames": {
+   "progress": "frames/022-progress.jpg",
+   "board": "frames/022-board.jpg",
+   "other": "frames/022-map.jpg",
+   "otherLabel": "Map"
+  }
+ },
+ {
+  "n": 23,
+  "at": "2026-10-05T07:48:07.208Z",
+  "wall": 204,
+  "day": 1,
+  "dayName": "Tuesday",
+  "sim": "11:55",
+  "label": "Lunch: the floor stops, the clocks notice",
+  "event": "lunch",
+  "lines": 11167,
+  "bins": 10158,
+  "binsTotal": 20000,
+  "pallets": 9401,
+  "exceptions": 104,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 17,
+  "pending": 0,
+  "approved": 158,
+  "rejected": 17,
+  "secondOpen": 344,
+  "secondDone": 105,
+  "lat": {
+   "count": {
+    "n": 10263,
+    "p50": 7,
+    "p95": 19,
+    "max": 1886
+   },
+   "dashboard": {
+    "n": 2629,
+    "p50": 86,
+    "p95": 259,
+    "max": 1358
+   }
+  },
+  "frames": {
+   "progress": "frames/023-progress.jpg",
+   "board": "frames/023-board.jpg",
+   "other": "frames/023-teams.jpg",
+   "otherLabel": "Team plan"
+  }
  }
 ]
