@@ -1,16 +1,16 @@
 {
   "phase": "counting",
   "day": 3,
-  "simTime": "Wednesday 10:22",
-  "lines": 17702,
+  "simTime": "Wednesday 12:22",
+  "lines": 19044,
   "startedAt": "2026-10-05T09:25:27.228Z",
-  "snapshots": 33,
-  "sos": 16,
-  "approved": 254,
-  "rejected": 39,
-  "secondCounts": 168,
-  "handbacks": 49,
+  "snapshots": 36,
+  "sos": 18,
+  "approved": 283,
+  "rejected": 44,
+  "secondCounts": 174,
+  "handbacks": 51,
   "failures": 0,
   "failed": [],
-  "at": "2026-10-05T14:27:25.761Z"
+  "at": "2026-10-05T14:55:40.790Z"
 }
