@@ -1,0 +1,801 @@
+pallet_id,sku,location,kind,expected_qty,counted_qty,variance_qty,status,reason,note,decided_by,decided_at
+F13375-536,,F28E082,NOT IN MASTER,,49,49,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T13:55:13.146Z
+F93936-598,,F35D097,NOT IN MASTER,,49,49,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T13:54:13.302Z
+FR31023208,,F25B107,NOT IN MASTER,,49,49,approved,Unknown — investigate,,Marcus Obi,2026-10-05T12:42:13.140Z
+FR63546433,,F14E077,NOT IN MASTER,,49,49,approved,System / interface error,,Marcus Obi,2026-10-05T13:05:51.530Z
+FR72798010,,F08A103,NOT IN MASTER,,49,49,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T11:36:50.084Z
+FR99188517,,F30F302,NOT IN MASTER,,49,49,approved,Unknown — investigate,,Marcus Obi,2026-10-05T14:21:12.587Z
+F97622-681,,F31C054,NOT IN MASTER,,48,48,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T15:00:35.245Z
+FR46710940,,F01D053,NOT IN MASTER,,48,48,approved,System / interface error,,Marcus Obi,2026-10-05T09:42:17.057Z
+FR49547988,,F34D068,NOT IN MASTER,,48,48,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T13:46:02.618Z
+FR24757565,,F01A026,NOT IN MASTER,,47,47,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T09:33:22.744Z
+FR82565208,,F02B039,NOT IN MASTER,,47,47,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T11:35:22.714Z
+FR13440333,,F34F083,NOT IN MASTER,,46,46,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T15:06:33.522Z
+FR33843607,,F12B045,NOT IN MASTER,,46,46,approved,System / interface error,,Marcus Obi,2026-10-05T13:05:51.530Z
+FR35700173,,F09F044,NOT IN MASTER,,46,46,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T10:41:49.130Z
+FR53037040,,F15F076,NOT IN MASTER,,46,46,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T13:18:00.614Z
+FR53957403,,F23C035,NOT IN MASTER,,46,46,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T15:03:13.890Z
+FR59928137,,F14B049,NOT IN MASTER,,46,46,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T11:53:27.208Z
+FR76488854,,F17E087,NOT IN MASTER,,46,46,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T14:37:50.650Z
+FR81379045,,F02C030,NOT IN MASTER,,46,46,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T11:51:17.679Z
+FR97259734,,F11A085,NOT IN MASTER,,46,46,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T09:49:58.765Z
+F31285-412,,F01D068,NOT IN MASTER,,45,45,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T09:46:48.444Z
+F72277-128,,F02C111,NOT IN MASTER,,45,45,approved,System / interface error,,Marcus Obi,2026-10-05T12:09:17.423Z
+F99975-995,,F29C039,NOT IN MASTER,,45,45,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T14:52:48.200Z
+FR12859869,,F35C073,NOT IN MASTER,,45,45,approved,System / interface error,,Marcus Obi,2026-10-05T15:05:21.615Z
+FR27411237,,F12D019,NOT IN MASTER,,45,45,approved,Unknown — investigate,,Marcus Obi,2026-10-05T11:14:54.801Z
+FR72965773,,F19E109,NOT IN MASTER,,45,45,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T12:16:02.428Z
+FR98967285,,F10D025,NOT IN MASTER,,45,45,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T11:14:54.806Z
+F86527-825,,F10B109,NOT IN MASTER,,44,44,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T11:57:34.615Z
+FR20867163,,F01D002,NOT IN MASTER,,44,44,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T09:29:19.028Z
+FR39014236,,F09C029,NOT IN MASTER,,44,44,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T10:38:15.254Z
+FR60434962,,F17C002,NOT IN MASTER,,44,44,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T13:31:57.185Z
+FR70221559,,F11D035,NOT IN MASTER,,44,44,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T09:36:49.748Z
+FR75453933,,F30E103,NOT IN MASTER,,44,44,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T13:59:49.256Z
+F15247-658,,F04E060,NOT IN MASTER,,43,43,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T12:01:00.046Z
+F19942-664,,F19E083,NOT IN MASTER,,43,43,approved,System / interface error,,Marcus Obi,2026-10-05T12:09:17.423Z
+F88115-146,,F19B086,NOT IN MASTER,,43,43,approved,Unknown — investigate,,Marcus Obi,2026-10-05T14:54:44.797Z
+F96499-384,,F32D044,NOT IN MASTER,,43,43,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T13:31:05.850Z
+F97471-957,,F31D095,NOT IN MASTER,,43,43,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T11:46:35.011Z
+FR19036011,,F10E024,NOT IN MASTER,,43,43,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T11:45:07.348Z
+FR29691661,,F04F005,NOT IN MASTER,,43,43,approved,System / interface error,,Marcus Obi,2026-10-05T12:17:54.813Z
+FR41237645,,F28E111,NOT IN MASTER,,43,43,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T13:59:49.256Z
+FR49254552,,F14B086,NOT IN MASTER,,43,43,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T12:01:00.049Z
+FR83901611,,F02F094,NOT IN MASTER,,43,43,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T12:16:02.428Z
+FR98658931,,F31F112,NOT IN MASTER,,43,43,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T13:14:39.955Z
+FR12242828,,F09D075,NOT IN MASTER,,42,42,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T09:47:45.781Z
+FR53693129,,F10B072,NOT IN MASTER,,42,42,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T11:51:17.679Z
+FR72154146,,F26B028,NOT IN MASTER,,42,42,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T14:33:46.164Z
+FR74111058,,F23A072,NOT IN MASTER,,42,42,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T14:27:51.526Z
+F31339-523,,F07E039,NOT IN MASTER,,41,41,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T10:11:09.560Z
+FR15734312,,F31D098,NOT IN MASTER,,41,41,approved,System / interface error,,Marcus Obi,2026-10-05T11:47:56.049Z
+FR54052624,,F30D015,NOT IN MASTER,,41,41,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T13:29:14.646Z
+FR66543119,,F27C064,NOT IN MASTER,,41,41,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T15:04:02.767Z
+F31617-455,,F20C014,NOT IN MASTER,,40,40,approved,System / interface error,,Marcus Obi,2026-10-05T13:47:19.075Z
+F48585-976,,F17D042,NOT IN MASTER,,40,40,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T14:16:28.801Z
+F88955-568,,F31E089,NOT IN MASTER,,40,40,approved,Unknown — investigate,,Marcus Obi,2026-10-05T12:24:26.827Z
+F98727-129,,F31F005,NOT IN MASTER,,40,40,approved,System / interface error,,Marcus Obi,2026-10-05T12:33:18.926Z
+FR22953797,,F28F103,NOT IN MASTER,,40,40,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T14:18:18.339Z
+FR35244635,,F08B030,NOT IN MASTER,,40,40,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T11:45:07.348Z
+FR69153102,,F03C078,NOT IN MASTER,,40,40,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T10:39:15.384Z
+F18155-661,,F12E084,NOT IN MASTER,,39,39,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T12:10:46.386Z
+F53995-267,,F29F069,NOT IN MASTER,,39,39,approved,System / interface error,,Marcus Obi,2026-10-05T13:02:24.788Z
+FR38913364,,F07E005,NOT IN MASTER,,39,39,approved,System / interface error,,Marcus Obi,2026-10-05T09:58:13.152Z
+FR73553679,,F05C067,NOT IN MASTER,,39,39,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T10:53:52.574Z
+FR92697363,,F02B038,NOT IN MASTER,,39,39,approved,System / interface error,,Marcus Obi,2026-10-05T11:35:22.707Z
+FR92913510,,F24B057,NOT IN MASTER,,39,39,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T11:08:02.467Z
+FR39246288,,F09F010,NOT IN MASTER,,38,38,approved,System / interface error,,Marcus Obi,2026-10-05T10:32:24.500Z
+FR47820429,,F15D028,NOT IN MASTER,,38,38,approved,System / interface error,,Marcus Obi,2026-10-05T12:14:49.492Z
+FR58022089,,F10B049,NOT IN MASTER,,38,38,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T11:46:35.011Z
+FR63546637,,F35C032,NOT IN MASTER,,38,38,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T14:51:26.485Z
+FR92039217,,F29F296,NOT IN MASTER,,38,38,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T13:19:27.386Z
+F18436-316,,F16C017,NOT IN MASTER,,37,37,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T14:53:49.478Z
+F45231-883,,F26D014,NOT IN MASTER,,37,37,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T13:42:49.910Z
+FR81277650,,F11F017,NOT IN MASTER,,37,37,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T10:34:56.942Z
+FR88567463,,F12B053,NOT IN MASTER,,37,37,approved,Unknown — investigate,,Marcus Obi,2026-10-05T13:07:59.977Z
+F17183-589,,F31B108,NOT IN MASTER,,36,36,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T14:33:46.164Z
+F24923-443,,F17E062,NOT IN MASTER,,36,36,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T14:33:46.164Z
+F35913-173,,F06B020,NOT IN MASTER,,36,36,approved,System / interface error,,Marcus Obi,2026-10-05T11:38:04.147Z
+F37624-468,,F30F035,NOT IN MASTER,,36,36,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T14:10:12.614Z
+F38455-639,,F32D013,NOT IN MASTER,,36,36,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T13:20:53.561Z
+F97357-819,,F06B088,NOT IN MASTER,,36,36,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T11:51:17.679Z
+FR20376331,,F04E018,NOT IN MASTER,,36,36,approved,Unknown — investigate,,Marcus Obi,2026-10-05T11:48:59.181Z
+FR59505876,,F15E042,NOT IN MASTER,,36,36,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T12:39:37.930Z
+FR66047928,,F15B010,NOT IN MASTER,,36,36,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T13:03:23.860Z
+FR54156347,,F19A068,NOT IN MASTER,,35,35,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T14:28:52.120Z
+FR57383493,,F18C111,NOT IN MASTER,,35,35,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T15:22:27.620Z
+FR81902983,,F33F060,NOT IN MASTER,,35,35,approved,Unknown — investigate,,Marcus Obi,2026-10-05T12:55:54.236Z
+FR96989307,,F11B075,NOT IN MASTER,,35,35,approved,System / interface error,,Marcus Obi,2026-10-05T10:20:52.511Z
+F76144-774,,F05C084,NOT IN MASTER,,34,34,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T10:57:48.150Z
+F98754-669,,F25A050,NOT IN MASTER,,34,34,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T11:59:57.351Z
+FR11884807,,F27C063,NOT IN MASTER,,34,34,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T15:03:13.890Z
+FR82271044,,F20B069,NOT IN MASTER,,34,34,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T13:33:19.318Z
+FR94399033,,F19D013,NOT IN MASTER,,34,34,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T11:11:56.510Z
+F57443-454,,F15E047,NOT IN MASTER,,33,33,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T12:41:04.980Z
+F71116-813,,F27A068,NOT IN MASTER,,33,33,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T13:55:13.151Z
+FR25155878,,F06C040,NOT IN MASTER,,33,33,approved,Unknown — investigate,,Marcus Obi,2026-10-05T12:04:11.833Z
+FR76377398,,F21A065,NOT IN MASTER,,33,33,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T09:40:49.274Z
+F76798-157,,F18E080,NOT IN MASTER,,32,32,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T14:02:05.575Z
+FR70048294,,F24D045,NOT IN MASTER,,32,32,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T14:19:43.711Z
+FR70396794,,F04D002,NOT IN MASTER,,32,32,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T11:06:37.002Z
+FR11105531,,F33E024,NOT IN MASTER,,31,31,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T12:01:00.046Z
+FR35441353,,F02D067,NOT IN MASTER,,31,31,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T11:21:38.279Z
+FR64762948,,F31B062,NOT IN MASTER,,31,31,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T14:19:43.696Z
+FR97398336,,F05E041,NOT IN MASTER,,31,31,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T10:10:15.250Z
+F62159-141,,F31F071,NOT IN MASTER,,30,30,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T13:01:37.717Z
+F85846-714,,F09E040,NOT IN MASTER,,30,30,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T10:10:15.250Z
+FR79366934,,F06F095,NOT IN MASTER,,30,30,approved,Unknown — investigate,,Marcus Obi,2026-10-05T12:50:23.254Z
+F58328-173,,F33A053,NOT IN MASTER,,29,29,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T13:38:45.663Z
+FR89647393,,F20C097,NOT IN MASTER,,29,29,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T14:14:29.545Z
+F69449-551,,F21E041,NOT IN MASTER,,28,28,approved,Unknown — investigate,,Marcus Obi,2026-10-05T12:55:54.236Z
+FR19878401,,F08D070,NOT IN MASTER,,28,28,approved,System / interface error,,Marcus Obi,2026-10-05T12:33:18.926Z
+FR38740266,,F09F069,NOT IN MASTER,,28,28,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T10:54:53.355Z
+FR45015759,,F04F036,NOT IN MASTER,,28,28,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T12:26:35.481Z
+FR69982158,,F09F070,NOT IN MASTER,,28,28,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T10:54:53.355Z
+FR71605299,,F35D027,NOT IN MASTER,,28,28,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T13:34:12.883Z
+FR85376017,,F33C066,NOT IN MASTER,,28,28,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T14:59:47.074Z
+FR90000694,,F34F022,NOT IN MASTER,,28,28,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T14:42:31.994Z
+FR96171753,,F22B027,NOT IN MASTER,,28,28,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T14:22:27.729Z
+FR45369833,,F21D097,NOT IN MASTER,,27,27,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T12:39:37.927Z
+FR63545426,,F35C043,NOT IN MASTER,,27,27,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T14:57:18.084Z
+FR86719071,,F12D058,NOT IN MASTER,,27,27,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T11:31:20.060Z
+F84366-992,,F01A066,NOT IN MASTER,,26,26,approved,System / interface error,,Marcus Obi,2026-10-05T09:42:17.057Z
+F89971-941,,F21A004,NOT IN MASTER,,26,26,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T09:29:19.028Z
+FR11954587,,F19D094,NOT IN MASTER,,26,26,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T11:39:06.782Z
+FR28989708,,F10A091,NOT IN MASTER,,26,26,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T11:32:44.078Z
+FR45326486,,F25D055,NOT IN MASTER,,26,26,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T11:59:57.351Z
+FR97505194,,F22B076,NOT IN MASTER,,26,26,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T14:35:59.556Z
+FR99816093,,F08E045,NOT IN MASTER,,26,26,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T12:57:24.002Z
+F39117-495,,F08E100,NOT IN MASTER,,25,25,approved,Unknown — investigate,,Marcus Obi,2026-10-05T13:06:58.553Z
+F54961-752,,F24A089,NOT IN MASTER,,25,25,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T10:59:16.569Z
+F92569-143,,F14A038,NOT IN MASTER,,25,25,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T11:19:33.771Z
+FR29320238,,F11E028,NOT IN MASTER,,25,25,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T10:03:29.366Z
+FR31306596,,F19E099,NOT IN MASTER,,25,25,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T12:13:31.688Z
+FR34288694,,F07A054,NOT IN MASTER,,25,25,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T09:43:05.560Z
+FR99736050,,F07B033,NOT IN MASTER,,25,25,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T10:11:09.560Z
+F34432-578,,F18E035,NOT IN MASTER,,24,24,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T13:51:59.455Z
+F54324-578,,F29F053,NOT IN MASTER,,24,24,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T12:57:24.002Z
+F67915-611,,F03C088,NOT IN MASTER,,24,24,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T10:41:49.130Z
+FR36399347,,F16D056,NOT IN MASTER,,24,24,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T13:44:01.454Z
+F55761-139,,F19B065,NOT IN MASTER,,23,23,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T14:51:26.485Z
+FR18342699,,F04D042,NOT IN MASTER,,23,23,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T11:20:23.199Z
+FR65137443,,F06D045,NOT IN MASTER,,23,23,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T11:21:38.283Z
+FR66029982,,F22E055,NOT IN MASTER,,23,23,approved,System / interface error,,Marcus Obi,2026-10-05T13:56:36.646Z
+FR76422063,,F33E088,NOT IN MASTER,,23,23,approved,Unknown — investigate,,Marcus Obi,2026-10-05T12:25:32.871Z
+F84622-176,,F26B025,NOT IN MASTER,,22,22,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T14:33:46.164Z
+F87859-785,,F30F305,NOT IN MASTER,,22,22,approved,System / interface error,,Marcus Obi,2026-10-05T14:22:27.726Z
+FR18644502,,F01C093,NOT IN MASTER,,22,22,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T10:55:50.131Z
+FR24448706,,F30F103,NOT IN MASTER,,22,22,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T14:19:43.711Z
+FR36764370,,F28D100,NOT IN MASTER,,22,22,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T13:39:34.810Z
+FR38792607,,F22A065,NOT IN MASTER,,22,22,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T14:08:46.986Z
+FR40516049,,F33E012,NOT IN MASTER,,22,22,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T11:57:34.615Z
+FR74123103,,F10A096,NOT IN MASTER,,22,22,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T11:33:55.427Z
+FR77117005,,F32F038,NOT IN MASTER,,22,22,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T14:08:46.991Z
+F95686-463,,F16E089,NOT IN MASTER,,21,21,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T14:19:43.696Z
+F97551-486,,F35A108,NOT IN MASTER,,21,21,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T13:58:34.689Z
+FR17110705,,F15E078,NOT IN MASTER,,21,21,approved,Unknown — investigate,,Marcus Obi,2026-10-05T12:52:41.365Z
+FR30758864,,F04F049,NOT IN MASTER,,21,21,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T12:30:23.854Z
+FR58012578,,F33A032,NOT IN MASTER,,21,21,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T13:31:57.181Z
+FR59688465,,F30F017,NOT IN MASTER,,21,21,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T14:03:29.514Z
+F15174-485,,F02F101,NOT IN MASTER,,20,20,approved,System / interface error,,Marcus Obi,2026-10-05T12:17:54.813Z
+FR37510959,,F05B089,NOT IN MASTER,,20,20,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T10:24:26.150Z
+FR45231365,,F19D103,NOT IN MASTER,,20,20,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T11:41:48.473Z
+FR49346234,,F13C036,NOT IN MASTER,,20,20,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T13:29:14.646Z
+F18154-414,SCC1742001,F11F025,QTY VARIANCE,43,37,-6,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T10:35:47.893Z
+F24527-263,SCC1742018,F32D102,QTY VARIANCE,41,35,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T13:40:45.211Z
+F28613-691,MMC1742964,F27C002,QTY VARIANCE,37,31,-6,approved,System / interface error,,Marcus Obi,2026-10-05T14:41:12.786Z
+F34641-152,WFO1203391,F15F067,QTY VARIANCE,30,24,-6,approved,System / interface error,,Marcus Obi,2026-10-05T13:16:57.104Z
+F37728-452,WFO1203344,F03B037,QTY VARIANCE,54,48,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T10:01:39.226Z
+F39692-894,MMC1742964,F27A025,QTY VARIANCE,41,35,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T13:45:15.524Z
+F39842-395,WFC1085402,F35F354,QTY VARIANCE,50,44,-6,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T15:21:01.498Z
+F39915-511,BLKCWHCL,F31C005,QTY VARIANCE,38,32,-6,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T14:36:57.615Z
+F48194-554,WFC1085316,F10E089,QTY VARIANCE,81,75,-6,auto,,,,
+F54583-937,BLKCWHCL,F27D079,QTY VARIANCE,46,40,-6,approved,System / interface error,,Marcus Obi,2026-10-05T11:38:04.147Z
+F57424-859,SCC1742018,F09E110,QTY VARIANCE,33,27,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T10:29:26.331Z
+F58861-781,BLUCWHCL,F04C073,QTY VARIANCE,52,46,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T11:59:57.351Z
+F61182-289,WFC1085402,F06D071,QTY VARIANCE,44,38,-6,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T11:33:55.427Z
+F61731-442,BLKCWHCL,F18C049,QTY VARIANCE,41,35,-6,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T15:03:13.890Z
+F64597-498,WFO1203391,F13E095,QTY VARIANCE,35,29,-6,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T12:12:13.932Z
+F69147-568,1140-GTV,F04F064,QTY VARIANCE,45,39,-6,approved,System / interface error,,Marcus Obi,2026-10-05T12:33:18.926Z
+F75929-417,SCC1742077,F31A107,QTY VARIANCE,34,28,-6,approved,System / interface error,,Marcus Obi,2026-10-05T13:56:36.646Z
+F78822-322,SCC1742001,F21C103,QTY VARIANCE,40,34,-6,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T10:44:16.447Z
+F85417-862,WFO1203344,F17C103,QTY VARIANCE,54,48,-6,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T14:00:43.735Z
+F95267-294,SCC1742077,F17D100,QTY VARIANCE,42,36,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T14:24:31.424Z
+F95273-942,WFC1085316,F02C095,QTY VARIANCE,75,69,-6,auto,,,,
+FR10361400,SCC1742001,F05E060,QTY VARIANCE,41,35,-6,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T10:14:25.845Z
+FR10817216,SCC1742018,F35F052,QTY VARIANCE,38,32,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T14:56:12.483Z
+FR16385503,WFC1085316,F12E079,QTY VARIANCE,80,74,-6,auto,,,,
+FR17919638,WFO1203391,F33D098,QTY VARIANCE,34,28,-6,approved,Unknown — investigate,,Marcus Obi,2026-10-05T11:48:59.181Z
+FR19573050,MMC1742964,F26C026,QTY VARIANCE,34,28,-6,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T15:01:59.447Z
+FR19978013,BLUCWHCL,F08E027,QTY VARIANCE,50,44,-6,approved,Unknown — investigate,,Marcus Obi,2026-10-05T12:52:41.365Z
+FR21835604,WFO1203391,F21E093,QTY VARIANCE,27,21,-6,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T13:15:29.376Z
+FR22500823,SCC1742001,F35A009,QTY VARIANCE,38,32,-6,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T13:30:19.037Z
+FR26536139,BLUCWHCL,F02A051,QTY VARIANCE,45,39,-6,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T11:12:59.869Z
+FR26674323,WFO1203391,F18B033,QTY VARIANCE,26,20,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T14:31:36.683Z
+FR26971049,BLUCWHCL,F28D026,QTY VARIANCE,51,45,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T13:22:17.792Z
+FR32940527,BLKCWHCL,F11B111,QTY VARIANCE,41,35,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T10:29:26.331Z
+FR33061636,WFC1085402,F06C093,QTY VARIANCE,50,44,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T12:17:54.818Z
+FR37923646,1140-GTV,F28D071,QTY VARIANCE,46,40,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T13:35:02.731Z
+FR39611155,MMC1742964,F31C053,QTY VARIANCE,37,31,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T14:59:47.074Z
+FR40355101,WFC1085402,F17B029,QTY VARIANCE,56,50,-6,approved,System / interface error,,Marcus Obi,2026-10-05T13:02:24.788Z
+FR40653478,SCC1742001,F25E107,QTY VARIANCE,44,38,-6,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T12:57:24.002Z
+FR43124778,BLUCWHCL,F05F025,QTY VARIANCE,54,48,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T10:34:56.942Z
+FR44372377,WFC1085316,F12E103,QTY VARIANCE,73,67,-6,auto,,,,
+FR48170631,1177-GTV,F19B027,QTY VARIANCE,31,25,-6,approved,Unknown — investigate,,Marcus Obi,2026-10-05T14:38:43.041Z
+FR49064109,WFC1085316,F07D035,QTY VARIANCE,69,63,-6,auto,,,,
+FR50076909,SCC1742077,F20E065,QTY VARIANCE,44,38,-6,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T15:15:04.724Z
+FR51313805,SCC1742018,F13B027,QTY VARIANCE,38,32,-6,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T12:54:01.298Z
+FR53822862,BLKCWHCL,F18B110,QTY VARIANCE,38,32,-6,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T14:52:48.200Z
+FR54540752,MMC1742964,F05E034,QTY VARIANCE,46,40,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T10:09:16.013Z
+FR55345556,SCC1742018,F29F004,QTY VARIANCE,41,35,-6,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T12:34:41.725Z
+FR55377686,WFO1203391,F02D021,QTY VARIANCE,29,23,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T11:12:59.873Z
+FR57875589,BLKCWHCL,F34F101,QTY VARIANCE,39,33,-6,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T15:15:04.724Z
+FR60983170,WFC1085316,F19A022,QTY VARIANCE,73,67,-6,auto,,,,
+FR61689659,WFO1203391,F01F007,QTY VARIANCE,27,21,-6,approved,System / interface error,,Marcus Obi,2026-10-05T10:32:24.500Z
+FR62309458,SCC1742077,F03E104,QTY VARIANCE,37,31,-6,approved,System / interface error,,Marcus Obi,2026-10-05T10:28:03.811Z
+FR63993001,BLKCWHCL,F34F017,QTY VARIANCE,35,29,-6,approved,System / interface error,,Marcus Obi,2026-10-05T14:41:12.786Z
+FR66307639,BLKCWHCL,F23B047,QTY VARIANCE,45,39,-6,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T14:39:43.652Z
+FR66994237,WFO1203391,F20C105,QTY VARIANCE,29,23,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T14:16:28.801Z
+FR67513007,1140-GTV,F16B092,QTY VARIANCE,51,45,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T14:38:43.045Z
+FR69492749,WFO1203391,F21D077,QTY VARIANCE,36,30,-6,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T12:34:41.725Z
+FR70195476,BLUCWHCL,F11E106,QTY VARIANCE,48,42,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T10:28:03.815Z
+FR70693544,WFO1203391,F11E076,QTY VARIANCE,25,19,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T10:19:45.387Z
+FR70990341,BLUCWHCL,F09F006,QTY VARIANCE,46,40,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T10:31:23.752Z
+FR73833785,WFC1085402,F14C086,QTY VARIANCE,54,48,-6,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T12:30:23.854Z
+FR78278576,MMC1742964,F16A074,QTY VARIANCE,44,38,-6,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T14:12:04.797Z
+FR80124888,WFC1085402,F31B096,QTY VARIANCE,53,47,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T14:31:36.683Z
+FR80894346,MMC1742964,F35D097,QTY VARIANCE,39,33,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T13:54:13.302Z
+FR80899782,SCC1742001,F04C011,QTY VARIANCE,38,32,-6,approved,Unknown — investigate,,Marcus Obi,2026-10-05T11:48:59.181Z
+FR83965621,1140-GTV,F33C075,QTY VARIANCE,53,47,-6,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T15:04:02.767Z
+FR88385357,SCC1742077,F35B025,QTY VARIANCE,43,37,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T14:10:12.609Z
+FR89424871,SCC1742001,F06E042,QTY VARIANCE,44,38,-6,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T11:56:19.914Z
+FR91394102,WFO1203344,F12D087,QTY VARIANCE,66,60,-6,auto,,,,
+FR91431241,SCC1742077,F22C093,QTY VARIANCE,38,32,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T15:22:27.402Z
+FR92666359,1140-GTV,F06C073,QTY VARIANCE,43,37,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T12:13:31.688Z
+FR92823069,1140-GTV,F07C041,QTY VARIANCE,52,46,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T10:50:25.804Z
+FR92939733,WFC1085402,F03E097,QTY VARIANCE,47,41,-6,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T10:26:37.356Z
+FR93134588,MMC1742964,F18A010,QTY VARIANCE,44,38,-6,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T14:08:46.986Z
+FR95547217,1140-GTV,F20C036,QTY VARIANCE,53,47,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T13:52:52.135Z
+FR97643014,WFO1203391,F15E047,QTY VARIANCE,33,27,-6,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T12:41:04.977Z
+FR98461185,BLUCWHCL,F20D070,QTY VARIANCE,44,38,-6,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T14:57:18.084Z
+F13633-548,WFC1085402,F29F092,QTY VARIANCE,44,39,-5,approved,Unknown — investigate,,Marcus Obi,2026-10-05T13:06:58.553Z
+F14355-294,BLUCWHCL,F15C007,QTY VARIANCE,47,42,-5,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T13:33:19.318Z
+F15994-329,1140-GTV,F04D084,QTY VARIANCE,46,41,-5,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T11:36:50.078Z
+F25726-663,WFO1203344,F11A052,QTY VARIANCE,63,58,-5,auto,,,,
+F25771-616,SCC1742018,F11B002,QTY VARIANCE,37,32,-5,approved,System / interface error,,Marcus Obi,2026-10-05T09:58:13.152Z
+F28529-824,WFC1085316,F27D066,QTY VARIANCE,77,72,-5,auto,,,,
+F29464-337,SCC1742077,F29D047,QTY VARIANCE,37,32,-5,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T11:33:55.427Z
+F38869-367,WFC1085316,F23E055,QTY VARIANCE,74,69,-5,auto,,,,
+F41437-944,WFO1203344,F26B042,QTY VARIANCE,58,53,-5,auto,,,,
+F42564-498,WFC1085316,F28D060,QTY VARIANCE,75,70,-5,auto,,,,
+F42945-631,MMC1742964,F35C029,QTY VARIANCE,43,38,-5,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T14:51:26.485Z
+F46952-437,SCC1742001,F25C043,QTY VARIANCE,46,41,-5,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T13:00:43.393Z
+F49832-432,WFC1085402,F32F002,QTY VARIANCE,51,46,-5,auto,,,,
+F53259-619,1177-GTV,F17C018,QTY VARIANCE,31,26,-5,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T13:36:24.404Z
+F57838-735,WFO1203391,F29D002,QTY VARIANCE,25,20,-5,approved,Unknown — investigate,,Marcus Obi,2026-10-05T11:14:54.801Z
+F58138-667,SCC1742077,F21A065,QTY VARIANCE,38,33,-5,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T09:40:49.274Z
+F58543-879,WFO1203344,F01B079,QTY VARIANCE,54,49,-5,auto,,,,
+F62346-158,BLUCWHCL,F31C048,QTY VARIANCE,49,44,-5,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T14:58:39.501Z
+F64619-672,WFO1203344,F25F098,QTY VARIANCE,59,54,-5,auto,,,,
+F81195-777,1177-GTV,F12C066,QTY VARIANCE,31,26,-5,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T13:47:19.078Z
+F82157-572,SCC1742001,F27E083,QTY VARIANCE,45,40,-5,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T12:18:48.107Z
+F89413-234,SCC1742018,F10E032,QTY VARIANCE,42,37,-5,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T11:46:35.011Z
+F97158-425,WFO1203391,F09E007,QTY VARIANCE,26,21,-5,approved,System / interface error,,Marcus Obi,2026-10-05T09:58:13.152Z
+FR14412279,SCC1742077,F18B030,QTY VARIANCE,44,39,-5,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T14:31:36.683Z
+FR15766966,1177-GTV,F33B035,QTY VARIANCE,31,26,-5,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T14:08:46.991Z
+FR16164793,SCC1742077,F23C021,QTY VARIANCE,42,37,-5,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T14:59:47.074Z
+FR16993928,WFC1085402,F10D028,QTY VARIANCE,45,40,-5,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T11:16:21.741Z
+FR17350832,1177-GTV,F33B077,QTY VARIANCE,30,25,-5,approved,System / interface error,,Marcus Obi,2026-10-05T14:22:27.726Z
+FR17631885,WFO1203391,F26A020,QTY VARIANCE,27,22,-5,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T14:13:02.434Z
+FR18245469,BLKCWHCL,F25A001,QTY VARIANCE,38,33,-5,approved,System / interface error,,Marcus Obi,2026-10-05T11:47:56.049Z
+FR18578972,WFO1203391,F23D031,QTY VARIANCE,36,31,-5,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T10:56:59.159Z
+FR20123910,MMC1742964,F28E111,QTY VARIANCE,42,37,-5,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T13:59:49.256Z
+FR20425970,WFC1085402,F35E060,QTY VARIANCE,55,50,-5,auto,,,,
+FR20592660,SCC1742018,F19B054,QTY VARIANCE,40,35,-5,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T14:43:53.182Z
+FR23351721,1177-GTV,F08D032,QTY VARIANCE,29,24,-5,approved,Unknown — investigate,,Marcus Obi,2026-10-05T12:25:32.871Z
+FR23585157,MMC1742964,F09D055,QTY VARIANCE,42,37,-5,approved,System / interface error,,Marcus Obi,2026-10-05T09:42:17.057Z
+FR25844766,1140-GTV,F35B031,QTY VARIANCE,53,48,-5,auto,,,,
+FR27787766,BLUCWHCL,F25C066,QTY VARIANCE,49,44,-5,approved,System / interface error,,Marcus Obi,2026-10-05T13:05:51.530Z
+FR28174168,1177-GTV,F08F109,QTY VARIANCE,36,31,-5,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T13:39:34.810Z
+FR34727371,WFO1203391,F26C066,QTY VARIANCE,35,30,-5,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T15:12:39.314Z
+FR37314036,1140-GTV,F13B002,QTY VARIANCE,48,43,-5,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T12:41:04.977Z
+FR41020511,SCC1742001,F29E023,QTY VARIANCE,45,40,-5,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T12:01:00.049Z
+FR45622150,SCC1742018,F03D049,QTY VARIANCE,30,25,-5,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T09:40:49.274Z
+FR46949084,BLUCWHCL,F30F018,QTY VARIANCE,50,45,-5,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T14:03:29.514Z
+FR47631659,WFO1203344,F04F009,QTY VARIANCE,54,49,-5,auto,,,,
+FR48640656,WFO1203344,F35D010,QTY VARIANCE,61,56,-5,auto,,,,
+FR49523406,MMC1742964,F07C046,QTY VARIANCE,39,34,-5,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T10:52:25.729Z
+FR50635221,SCC1742077,F04E098,QTY VARIANCE,37,32,-5,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T12:13:31.688Z
+FR50645068,WFC1085316,F33B020,QTY VARIANCE,69,64,-5,auto,,,,
+FR54273388,1177-GTV,F17C006,QTY VARIANCE,38,33,-5,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T13:33:19.318Z
+FR56705524,1177-GTV,F27F085,QTY VARIANCE,29,24,-5,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T13:01:37.717Z
+FR56934420,WFO1203391,F35E022,QTY VARIANCE,26,21,-5,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T14:04:59.168Z
+FR57247269,1140-GTV,F22A064,QTY VARIANCE,51,46,-5,auto,,,,
+FR58128751,BLUCWHCL,F21C002,QTY VARIANCE,45,40,-5,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T10:19:45.387Z
+FR60651058,WFC1085316,F26A048,QTY VARIANCE,77,72,-5,auto,,,,
+FR62710358,WFC1085316,F15E099,QTY VARIANCE,74,69,-5,auto,,,,
+FR64944049,SCC1742018,F04F095,QTY VARIANCE,40,35,-5,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T12:41:04.977Z
+FR64969781,SCC1742077,F25B112,QTY VARIANCE,37,32,-5,approved,Unknown — investigate,,Marcus Obi,2026-10-05T12:43:08.116Z
+FR66660109,WFO1203391,F06F097,QTY VARIANCE,28,23,-5,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T12:51:46.186Z
+FR67681687,WFC1085316,F17C051,QTY VARIANCE,70,65,-5,auto,,,,
+FR70131917,BLKCWHCL,F27A043,QTY VARIANCE,38,33,-5,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T13:50:37.213Z
+FR71594870,SCC1742077,F01F076,QTY VARIANCE,35,30,-5,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T10:55:50.131Z
+FR72362809,WFO1203344,F02A095,QTY VARIANCE,62,57,-5,auto,,,,
+FR73919360,SCC1742018,F14E108,QTY VARIANCE,42,37,-5,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T13:14:39.955Z
+FR75178219,MMC1742964,F01F042,QTY VARIANCE,46,41,-5,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T10:40:23.964Z
+FR75431504,MMC1742964,F12C022,QTY VARIANCE,37,32,-5,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T13:35:02.731Z
+FR76213836,SCC1742077,F09D077,QTY VARIANCE,39,34,-5,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T09:47:45.781Z
+FR80835380,MMC1742964,F35B111,QTY VARIANCE,35,30,-5,approved,System / interface error,,Marcus Obi,2026-10-05T14:34:36.845Z
+FR81340940,WFO1203344,F13C051,QTY VARIANCE,59,54,-5,auto,,,,
+FR81455021,1140-GTV,F05B104,QTY VARIANCE,53,48,-5,auto,,,,
+FR84666430,1177-GTV,F07C054,QTY VARIANCE,35,30,-5,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T10:54:53.355Z
+FR85416636,WFO1203344,F22C004,QTY VARIANCE,59,54,-5,auto,,,,
+FR89004206,BLUCWHCL,F09C072,QTY VARIANCE,48,43,-5,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T10:55:50.131Z
+FR93382442,SCC1742077,F16C091,QTY VARIANCE,42,37,-5,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T15:17:11.721Z
+FR93600428,WFC1085402,F19E082,QTY VARIANCE,47,42,-5,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T12:08:02.540Z
+FR93858143,BLUCWHCL,F27C024,QTY VARIANCE,47,42,-5,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T14:53:49.475Z
+FR95701113,SCC1742077,F11C105,QTY VARIANCE,45,40,-5,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T11:04:48.710Z
+FR96899768,WFO1203391,F08B027,QTY VARIANCE,30,25,-5,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T11:43:43.107Z
+FR99308633,BLKCWHCL,F33C077,QTY VARIANCE,41,36,-5,approved,System / interface error,,Marcus Obi,2026-10-05T15:05:21.615Z
+FR99494964,WFO1203391,F07F107,QTY VARIANCE,24,19,-5,approved,System / interface error,,Marcus Obi,2026-10-05T11:03:52.127Z
+F11255-699,SCC1742001,F22B067,QTY VARIANCE,39,43,4,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T14:32:39.268Z
+F11581-567,WFO1203344,F33E066,QTY VARIANCE,60,64,4,auto,,,,
+F13276-154,BLKCWHCL,F23B023,QTY VARIANCE,43,39,-4,auto,,,,
+F13776-345,SCC1742001,F03B084,QTY VARIANCE,39,43,4,approved,Unknown — investigate,,Marcus Obi,2026-10-05T10:16:17.440Z
+F18967-577,BLKCWHCL,F26F065,QTY VARIANCE,40,36,-4,approved,Unknown — investigate,,Marcus Obi,2026-10-05T14:21:12.587Z
+F28573-581,WFO1203344,F32D112,QTY VARIANCE,54,58,4,auto,,,,
+F31887-547,WFO1203344,F27C092,QTY VARIANCE,59,55,-4,auto,,,,
+F33233-997,1140-GTV,F35F105,QTY VARIANCE,54,50,-4,auto,,,,
+F34274-185,SCC1742077,F04C076,QTY VARIANCE,41,37,-4,auto,,,,
+F36188-464,WFO1203391,F25A110,QTY VARIANCE,30,26,-4,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T12:16:02.428Z
+F37457-484,SCC1742077,F05B080,QTY VARIANCE,37,33,-4,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T10:21:45.062Z
+F38894-559,1177-GTV,F20B037,QTY VARIANCE,31,27,-4,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T13:20:53.557Z
+F39366-359,SCC1742077,F34F093,QTY VARIANCE,34,30,-4,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T15:12:39.314Z
+F44688-317,WFO1203344,F22E075,QTY VARIANCE,63,67,4,auto,,,,
+F45428-218,SCC1742077,F11F069,QTY VARIANCE,35,39,4,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T10:55:50.131Z
+F46366-578,WFO1203344,F29E078,QTY VARIANCE,64,60,-4,auto,,,,
+F47137-249,1140-GTV,F27C021,QTY VARIANCE,53,49,-4,auto,,,,
+F48113-529,SCC1742018,F23B008,QTY VARIANCE,39,43,4,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T14:33:46.164Z
+F48785-333,MMC1742964,F30F047,QTY VARIANCE,43,47,4,auto,,,,
+F52531-813,WFO1203391,F15A083,QTY VARIANCE,25,21,-4,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T12:57:24.002Z
+F54351-144,WFC1085402,F25F068,QTY VARIANCE,55,51,-4,auto,,,,
+F54947-682,BLKCWHCL,F19A005,QTY VARIANCE,36,40,4,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T14:19:43.696Z
+F59455-765,BLKCWHCL,F22C053,QTY VARIANCE,40,36,-4,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T15:04:02.771Z
+F61944-616,SCC1742001,F18B106,QTY VARIANCE,38,42,4,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T14:51:26.488Z
+F61991-626,SCC1742077,F06E014,QTY VARIANCE,38,34,-4,approved,Unknown — investigate,,Marcus Obi,2026-10-05T11:48:59.181Z
+F62776-332,WFC1085316,F08A071,QTY VARIANCE,74,70,-4,auto,,,,
+F62925-458,SCC1742077,F01E107,QTY VARIANCE,35,31,-4,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T10:29:26.331Z
+F64792-485,WFO1203344,F09B012,QTY VARIANCE,61,57,-4,auto,,,,
+F66523-271,MMC1742964,F30D079,QTY VARIANCE,34,38,4,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T13:37:52.125Z
+F67472-137,MMC1742964,F28D055,QTY VARIANCE,37,41,4,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T13:33:19.318Z
+F67671-425,MMC1742964,F03E046,QTY VARIANCE,44,40,-4,auto,,,,
+F68825-362,BLUCWHCL,F10C108,QTY VARIANCE,45,49,4,auto,,,,
+F69524-716,MMC1742964,F03F078,QTY VARIANCE,42,38,-4,auto,,,,
+F71245-145,MMC1742964,F17B080,QTY VARIANCE,43,39,-4,auto,,,,
+F72291-172,WFC1085316,F26F040,QTY VARIANCE,70,74,4,auto,,,,
+F75177-721,SCC1742077,F26E013,QTY VARIANCE,40,36,-4,approved,System / interface error,,Marcus Obi,2026-10-05T13:57:27.883Z
+F77445-125,1140-GTV,F12C074,QTY VARIANCE,44,40,-4,auto,,,,
+F78134-351,WFO1203391,F18D064,QTY VARIANCE,25,29,4,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T13:37:52.125Z
+F79171-318,1177-GTV,F25E053,QTY VARIANCE,37,33,-4,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T12:34:41.725Z
+F79325-423,WFC1085316,F35C064,QTY VARIANCE,75,79,4,auto,,,,
+F82233-163,SCC1742018,F30D090,QTY VARIANCE,41,37,-4,auto,,,,
+F84112-368,SCC1742077,F11A071,QTY VARIANCE,34,38,4,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T09:45:42.715Z
+F85387-825,WFO1203391,F08D025,QTY VARIANCE,27,23,-4,approved,Unknown — investigate,,Marcus Obi,2026-10-05T12:24:26.827Z
+F91472-371,BLKCWHCL,F09D097,QTY VARIANCE,37,41,4,approved,System / interface error,,Marcus Obi,2026-10-05T09:52:25.864Z
+F92996-553,SCC1742001,F10F091,QTY VARIANCE,48,52,4,auto,,,,
+F94259-882,SCC1742077,F29C111,QTY VARIANCE,37,33,-4,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T15:21:01.498Z
+F96324-437,WFO1203391,F28F036,QTY VARIANCE,29,25,-4,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T14:08:46.986Z
+F97928-796,WFO1203344,F13B067,QTY VARIANCE,61,57,-4,auto,,,,
+FR12526512,MMC1742964,F26D055,QTY VARIANCE,46,50,4,auto,,,,
+FR14111911,1177-GTV,F27B023,QTY VARIANCE,37,33,-4,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T14:15:25.876Z
+FR15513936,BLKCWHCL,F13B064,QTY VARIANCE,36,40,4,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T13:00:43.388Z
+FR15851291,WFO1203391,F25C012,QTY VARIANCE,28,24,-4,approved,Unknown — investigate,,Marcus Obi,2026-10-05T12:52:41.365Z
+FR15917779,BLUCWHCL,F03F016,QTY VARIANCE,43,39,-4,auto,,,,
+FR16181911,WFO1203391,F14D028,QTY VARIANCE,36,32,-4,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T12:30:23.854Z
+FR16454899,MMC1742964,F10D061,QTY VARIANCE,43,39,-4,auto,,,,
+FR16529781,WFC1085316,F22B052,QTY VARIANCE,69,65,-4,auto,,,,
+FR18510199,SCC1742077,F20E029,QTY VARIANCE,44,48,4,auto,,,,
+FR19767865,1140-GTV,F06A039,QTY VARIANCE,53,57,4,auto,,,,
+FR23370604,SCC1742018,F19E042,QTY VARIANCE,38,34,-4,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T11:54:56.671Z
+FR24223729,1177-GTV,F29F064,QTY VARIANCE,37,33,-4,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T13:00:43.388Z
+FR25049512,WFO1203391,F25E106,QTY VARIANCE,34,38,4,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T12:57:24.002Z
+FR25077874,WFC1085402,F33F083,QTY VARIANCE,51,55,4,auto,,,,
+FR26939345,BLKCWHCL,F10A004,QTY VARIANCE,40,44,4,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T11:08:02.467Z
+FR27395376,WFO1203391,F27E010,QTY VARIANCE,31,27,-4,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T11:51:17.682Z
+FR31779283,WFC1085316,F11C094,QTY VARIANCE,77,73,-4,auto,,,,
+FR33946233,WFO1203344,F27D034,QTY VARIANCE,64,60,-4,auto,,,,
+FR35782764,BLKCWHCL,F27A061,QTY VARIANCE,42,38,-4,auto,,,,
+FR36312668,SCC1742018,F13D109,QTY VARIANCE,33,37,4,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T11:42:47.053Z
+FR36560181,WFO1203344,F33F086,QTY VARIANCE,60,64,4,auto,,,,
+FR37942452,WFO1203344,F03D011,QTY VARIANCE,66,70,4,auto,,,,
+FR38551306,MMC1742964,F33E033,QTY VARIANCE,45,49,4,auto,,,,
+FR39942055,BLUCWHCL,F21C048,QTY VARIANCE,54,58,4,auto,,,,
+FR42009396,SCC1742018,F33C028,QTY VARIANCE,38,34,-4,approved,System / interface error,,Marcus Obi,2026-10-05T14:41:12.786Z
+FR42749307,WFO1203344,F06C087,QTY VARIANCE,54,50,-4,auto,,,,
+FR43165609,BLKCWHCL,F27F023,QTY VARIANCE,39,43,4,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T12:36:42.833Z
+FR43307762,SCC1742018,F25B110,QTY VARIANCE,41,37,-4,auto,,,,
+FR46647120,1140-GTV,F15C064,QTY VARIANCE,51,47,-4,auto,,,,
+FR49017119,WFC1085316,F14E033,QTY VARIANCE,70,74,4,auto,,,,
+FR49254092,1177-GTV,F12D062,QTY VARIANCE,31,27,-4,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T11:32:44.078Z
+FR51098466,SCC1742018,F21C103,QTY VARIANCE,30,26,-4,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T10:44:16.447Z
+FR52427364,MMC1742964,F14C011,QTY VARIANCE,36,32,-4,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T12:12:13.932Z
+FR52864429,1140-GTV,F22B051,QTY VARIANCE,45,41,-4,auto,,,,
+FR53052913,SCC1742001,F29D087,QTY VARIANCE,46,42,-4,auto,,,,
+FR54496967,WFC1085316,F28E092,QTY VARIANCE,72,76,4,auto,,,,
+FR54611970,MMC1742964,F35E057,QTY VARIANCE,38,42,4,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T14:19:43.696Z
+FR54843712,SCC1742077,F15D060,QTY VARIANCE,43,47,4,auto,,,,
+FR55382703,WFC1085316,F08D017,QTY VARIANCE,80,76,-4,auto,,,,
+FR56974209,WFC1085402,F19B037,QTY VARIANCE,45,49,4,auto,,,,
+FR58345722,1177-GTV,F22C031,QTY VARIANCE,32,28,-4,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T14:57:18.084Z
+FR59079634,WFC1085402,F05F009,QTY VARIANCE,55,51,-4,auto,,,,
+FR61612500,SCC1742077,F28E025,QTY VARIANCE,36,32,-4,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T13:45:15.528Z
+FR61750935,BLKCWHCL,F11C029,QTY VARIANCE,43,39,-4,auto,,,,
+FR64379195,SCC1742018,F28E026,QTY VARIANCE,30,26,-4,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T13:46:02.618Z
+FR67432850,WFC1085316,F33A096,QTY VARIANCE,80,84,4,auto,,,,
+FR67554468,BLUCWHCL,F25F096,QTY VARIANCE,51,47,-4,auto,,,,
+FR67776679,SCC1742001,F20C046,QTY VARIANCE,44,48,4,auto,,,,
+FR68720194,WFO1203344,F25E066,QTY VARIANCE,56,52,-4,auto,,,,
+FR69857416,WFC1085316,F01F095,QTY VARIANCE,78,74,-4,auto,,,,
+FR70513568,SCC1742077,F08A004,QTY VARIANCE,42,46,4,auto,,,,
+FR70697460,1177-GTV,F33C109,QTY VARIANCE,33,29,-4,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T15:21:01.513Z
+FR71862099,BLKCWHCL,F11B069,QTY VARIANCE,43,39,-4,auto,,,,
+FR74051336,BLUCWHCL,F09E046,QTY VARIANCE,53,49,-4,auto,,,,
+FR74592633,BLUCWHCL,F04B041,QTY VARIANCE,43,39,-4,auto,,,,
+FR75170274,SCC1742001,F25E110,QTY VARIANCE,37,33,-4,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T12:57:24.002Z
+FR77704801,SCC1742018,F26F058,QTY VARIANCE,33,29,-4,approved,Unknown — investigate,,Marcus Obi,2026-10-05T14:21:12.587Z
+FR79474330,WFO1203391,F03C085,QTY VARIANCE,30,34,4,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T10:41:49.130Z
+FR79883469,BLUCWHCL,F02F019,QTY VARIANCE,42,38,-4,auto,,,,
+FR80596838,WFO1203344,F09D076,QTY VARIANCE,66,70,4,auto,,,,
+FR81381101,1140-GTV,F13D033,QTY VARIANCE,43,39,-4,auto,,,,
+FR82194457,BLUCWHCL,F25B046,QTY VARIANCE,45,49,4,auto,,,,
+FR83090247,SCC1742018,F04F011,QTY VARIANCE,34,30,-4,approved,Put away to the wrong bin,,Marcus Obi,2026-10-05T12:19:51.907Z
+FR83151135,SCC1742077,F09C003,QTY VARIANCE,37,41,4,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T10:31:23.741Z
+FR83597299,BLUCWHCL,F30D110,QTY VARIANCE,44,48,4,auto,,,,
+FR84895590,MMC1742964,F05C096,QTY VARIANCE,44,40,-4,auto,,,,
+FR86059430,WFC1085316,F14B084,QTY VARIANCE,72,68,-4,auto,,,,
+FR86856734,WFO1203344,F26D100,QTY VARIANCE,66,70,4,auto,,,,
+FR87110233,SCC1742001,F11E101,QTY VARIANCE,47,43,-4,auto,,,,
+FR87691244,1140-GTV,F29E109,QTY VARIANCE,53,57,4,auto,,,,
+FR88806156,WFC1085402,F31C074,QTY VARIANCE,48,52,4,auto,,,,
+FR89803607,1177-GTV,F34E011,QTY VARIANCE,27,23,-4,approved,Unknown — investigate,,Marcus Obi,2026-10-05T14:02:05.571Z
+FR90738049,BLKCWHCL,F08D030,QTY VARIANCE,36,40,4,approved,Unknown — investigate,,Marcus Obi,2026-10-05T12:25:32.871Z
+FR91414469,MMC1742964,F08B041,QTY VARIANCE,45,41,-4,auto,,,,
+FR92260461,1140-GTV,F24A085,QTY VARIANCE,48,44,-4,auto,,,,
+FR92473613,WFC1085402,F11F086,QTY VARIANCE,48,44,-4,auto,,,,
+FR93374678,SCC1742077,F29B079,QTY VARIANCE,45,41,-4,auto,,,,
+FR93809880,SCC1742001,F07A020,QTY VARIANCE,39,35,-4,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T09:32:26.834Z
+FR93929972,BLKCWHCL,F26D097,QTY VARIANCE,37,33,-4,approved,"Damaged / dumped, not reported",,Marcus Obi,2026-10-05T13:52:52.135Z
+FR94339445,SCC1742077,F19D009,QTY VARIANCE,45,49,4,auto,,,,
+FR94608963,SCC1742001,F35D027,QTY VARIANCE,41,37,-4,auto,,,,
+FR97401623,WFO1203344,F11B012,QTY VARIANCE,66,70,4,auto,,,,
+FR99362600,SCC1742077,F24B071,QTY VARIANCE,41,37,-4,auto,,,,
+F11442-536,WFC1085316,F25F058,QTY VARIANCE,78,81,3,auto,,,,
+F25231-828,WFC1085402,F01F009,QTY VARIANCE,45,42,-3,auto,,,,
+F26535-887,SCC1742018,F23D089,QTY VARIANCE,39,42,3,auto,,,,
+F27743-864,SCC1742001,F12B082,QTY VARIANCE,44,41,-3,auto,,,,
+F28485-693,SCC1742018,F35E008,QTY VARIANCE,42,39,-3,auto,,,,
+F33322-671,BLUCWHCL,F18C013,QTY VARIANCE,53,50,-3,auto,,,,
+F35796-452,1140-GTV,F20B045,QTY VARIANCE,45,42,-3,auto,,,,
+F38626-292,MMC1742964,F01D026,QTY VARIANCE,46,49,3,auto,,,,
+F38949-324,MMC1742964,F21A079,QTY VARIANCE,37,34,-3,auto,,,,
+F39349-669,MMC1742964,F23C026,QTY VARIANCE,44,47,3,auto,,,,
+F41614-135,1177-GTV,F07D005,QTY VARIANCE,36,33,-3,auto,,,,
+F41823-624,BLKCWHCL,F31F011,QTY VARIANCE,34,37,3,auto,,,,
+F44228-497,SCC1742001,F10B002,QTY VARIANCE,43,40,-3,auto,,,,
+F44233-883,WFC1085402,F07A063,QTY VARIANCE,51,48,-3,auto,,,,
+F48726-664,SCC1742018,F11D090,QTY VARIANCE,38,35,-3,auto,,,,
+F53545-156,BLUCWHCL,F30F102,QTY VARIANCE,42,39,-3,auto,,,,
+F61815-935,WFO1203344,F11C005,QTY VARIANCE,64,61,-3,auto,,,,
+F62566-193,SCC1742077,F31D035,QTY VARIANCE,40,37,-3,auto,,,,
+F65537-293,MMC1742964,F11F107,QTY VARIANCE,34,37,3,auto,,,,
+F67834-958,WFC1085402,F02F075,QTY VARIANCE,47,44,-3,auto,,,,
+F69744-858,SCC1742001,F17A110,QTY VARIANCE,39,42,3,auto,,,,
+F74445-125,BLKCWHCL,F35B003,QTY VARIANCE,36,39,3,auto,,,,
+F76665-414,BLKCWHCL,F16E064,QTY VARIANCE,40,37,-3,auto,,,,
+F78883-718,SCC1742018,F19D022,QTY VARIANCE,31,28,-3,auto,,,,
+F81953-535,MMC1742964,F30E111,QTY VARIANCE,40,37,-3,auto,,,,
+F82666-384,WFC1085316,F09D024,QTY VARIANCE,79,76,-3,auto,,,,
+F84486-577,WFC1085402,F22D086,QTY VARIANCE,48,45,-3,auto,,,,
+F86179-571,SCC1742001,F27B071,QTY VARIANCE,36,33,-3,auto,,,,
+F88394-275,WFO1203344,F27C038,QTY VARIANCE,65,68,3,auto,,,,
+F88655-848,WFO1203391,F03E107,QTY VARIANCE,29,26,-3,approved,System / interface error,,Marcus Obi,2026-10-05T10:28:03.811Z
+F91751-314,1177-GTV,F09A027,QTY VARIANCE,33,30,-3,auto,,,,
+F91832-864,1140-GTV,F09A089,QTY VARIANCE,49,52,3,auto,,,,
+F92396-189,WFO1203344,F06D005,QTY VARIANCE,58,55,-3,auto,,,,
+F93763-188,WFC1085402,F08F019,QTY VARIANCE,52,49,-3,auto,,,,
+F95595-957,WFC1085316,F29B086,QTY VARIANCE,77,74,-3,auto,,,,
+F96878-758,SCC1742018,F29F296,QTY VARIANCE,36,33,-3,auto,,,,
+F98138-684,SCC1742077,F32F009,QTY VARIANCE,42,45,3,auto,,,,
+FR10955142,SCC1742018,F16C017,QTY VARIANCE,30,27,-3,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T14:53:49.478Z
+FR11060138,WFC1085316,F03B063,QTY VARIANCE,79,82,3,auto,,,,
+FR11305738,WFO1203344,F35C068,QTY VARIANCE,58,55,-3,auto,,,,
+FR11632570,WFC1085316,F29C049,QTY VARIANCE,80,83,3,auto,,,,
+FR11636155,SCC1742001,F11E104,QTY VARIANCE,46,43,-3,auto,,,,
+FR11764210,1140-GTV,F02D084,QTY VARIANCE,42,45,3,auto,,,,
+FR12339963,SCC1742001,F23B019,QTY VARIANCE,47,44,-3,auto,,,,
+FR12744568,BLKCWHCL,F25D103,QTY VARIANCE,40,43,3,auto,,,,
+FR13121221,SCC1742018,F23B031,QTY VARIANCE,30,33,3,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T14:36:57.619Z
+FR13822695,MMC1742964,F23E074,QTY VARIANCE,42,39,-3,auto,,,,
+FR14917592,WFO1203391,F20A052,QTY VARIANCE,25,28,3,rejected,Recount it first,Second count requested,Marcus Obi,2026-10-05T12:55:54.240Z
+FR15237474,WFO1203391,F33F066,QTY VARIANCE,28,31,3,approved,System / interface error,,Marcus Obi,2026-10-05T12:58:44.590Z
+FR16095268,1177-GTV,F22D043,QTY VARIANCE,31,28,-3,auto,,,,
+FR17168945,WFO1203344,F31B090,QTY VARIANCE,59,56,-3,auto,,,,
+FR17600375,1140-GTV,F22E094,QTY VARIANCE,42,45,3,auto,,,,
+FR20034051,BLKCWHCL,F33B033,QTY VARIANCE,42,45,3,auto,,,,
+FR20138693,BLUCWHCL,F27D068,QTY VARIANCE,50,47,-3,auto,,,,
+FR23830481,1140-GTV,F12F098,QTY VARIANCE,53,50,-3,auto,,,,
+FR24383789,1177-GTV,F07C096,QTY VARIANCE,28,25,-3,approved,"Received, not entered in the system",,Marcus Obi,2026-10-05T11:08:02.467Z
+FR26891182,WFO1203344,F13C081,QTY VARIANCE,66,63,-3,auto,,,,
+FR27522653,BLKCWHCL,F12C052,QTY VARIANCE,36,39,3,auto,,,,
+FR28022899,1140-GTV,F05B020,QTY VARIANCE,42,39,-3,auto,,,,
+FR28955104,BLUCWHCL,F19D054,QTY VARIANCE,42,45,3,auto,,,,
+FR29883129,SCC1742001,F02F074,QTY VARIANCE,42,45,3,auto,,,,
+FR37257616,SCC1742001,F25D027,QTY VARIANCE,43,40,-3,auto,,,,
+FR38746288,1140-GTV,F14A025,QTY VARIANCE,52,55,3,auto,,,,
+FR42576232,WFO1203391,F20D112,QTY VARIANCE,31,28,-3,auto,,,,
+FR42804319,WFO1203344,F27A046,QTY VARIANCE,60,63,3,auto,,,,
+FR44104766,SCC1742001,F19D073,QTY VARIANCE,43,40,-3,auto,,,,
+FR44146219,WFC1085402,F17E029,QTY VARIANCE,56,53,-3,auto,,,,
+FR44332258,WFO1203344,F02E013,QTY VARIANCE,58,55,-3,auto,,,,
+FR44562309,WFC1085316,F02E081,QTY VARIANCE,71,68,-3,auto,,,,
+FR44779313,SCC1742001,F34E077,QTY VARIANCE,43,46,3,auto,,,,
+FR45604302,1140-GTV,F13A024,QTY VARIANCE,52,49,-3,auto,,,,
+FR46036960,SCC1742077,F02A012,QTY VARIANCE,42,45,3,auto,,,,
+FR46153608,MMC1742964,F08A090,QTY VARIANCE,42,39,-3,auto,,,,
+FR47489616,SCC1742001,F02E102,QTY VARIANCE,42,39,-3,auto,,,,
+FR48858423,SCC1742077,F02A096,QTY VARIANCE,43,46,3,auto,,,,
+FR48995881,1140-GTV,F12A112,QTY VARIANCE,51,48,-3,auto,,,,
+FR52684785,SCC1742077,F20A046,QTY VARIANCE,39,36,-3,auto,,,,
+FR53371042,WFO1203344,F21B012,QTY VARIANCE,66,63,-3,auto,,,,
+FR54240715,BLKCWHCL,F11D037,QTY VARIANCE,35,32,-3,auto,,,,
+FR54509693,WFO1203344,F26C062,QTY VARIANCE,60,57,-3,auto,,,,
+FR57047397,SCC1742001,F03A085,QTY VARIANCE,44,41,-3,auto,,,,
+FR57790854,1177-GTV,F09D018,QTY VARIANCE,37,40,3,auto,,,,
+FR57804875,BLUCWHCL,F17A031,QTY VARIANCE,45,48,3,auto,,,,
+FR58792059,SCC1742018,F12D017,QTY VARIANCE,35,38,3,auto,,,,
+FR59194842,SCC1742018,F13C041,QTY VARIANCE,41,44,3,auto,,,,
+FR63037539,SCC1742018,F10B110,QTY VARIANCE,40,43,3,auto,,,,
+FR63048119,WFO1203391,F06D069,QTY VARIANCE,35,38,3,auto,,,,
+FR63212669,SCC1742018,F06C089,QTY VARIANCE,36,39,3,auto,,,,
+FR63487781,SCC1742018,F34D042,QTY VARIANCE,42,39,-3,auto,,,,
+FR63905495,SCC1742077,F04B002,QTY VARIANCE,36,33,-3,auto,,,,
+FR63965165,SCC1742018,F09A030,QTY VARIANCE,34,37,3,auto,,,,
+FR64524458,MMC1742964,F33E012,QTY VARIANCE,38,41,3,auto,,,,
+FR64927760,SCC1742018,F32F046,QTY VARIANCE,31,28,-3,auto,,,,
+FR65078471,WFC1085316,F10D078,QTY VARIANCE,77,80,3,auto,,,,
+FR66004272,WFC1085402,F16E109,QTY VARIANCE,50,47,-3,auto,,,,
+FR67706458,SCC1742001,F07A107,QTY VARIANCE,36,33,-3,auto,,,,
+FR68889721,WFO1203391,F29A038,QTY VARIANCE,27,24,-3,approved,Pallet ID or label error,,Marcus Obi,2026-10-05T13:36:24.404Z
+FR69313577,WFO1203391,F16B089,QTY VARIANCE,31,28,-3,auto,,,,
+FR73298637,WFO1203391,F14A022,QTY VARIANCE,31,28,-3,auto,,,,
+FR74967022,WFO1203391,F06A045,QTY VARIANCE,26,23,-3,approved,System / interface error,,Marcus Obi,2026-10-05T11:17:36.166Z
+FR75119762,1177-GTV,F06C062,QTY VARIANCE,37,34,-3,auto,,,,
+FR77047677,WFO1203391,F35D014,QTY VARIANCE,29,26,-3,approved,Miscount — first count was wrong,,Marcus Obi,2026-10-05T13:31:05.850Z
+FR77702699,SCC1742001,F13B084,QTY VARIANCE,40,37,-3,auto,,,,
+FR78059148,BLUCWHCL,F25B022,QTY VARIANCE,48,45,-3,auto,,,,
+FR80655802,WFO1203344,F33C008,QTY VARIANCE,54,51,-3,auto,,,,
+FR84203417,MMC1742964,F08D048,QTY VARIANCE,35,32,-3,auto,,,,
+FR89129380,SCC1742077,F18D049,QTY VARIANCE,34,31,-3,auto,,,,
+FR89560099,SCC1742001,F25A111,QTY VARIANCE,44,41,-3,auto,,,,
+FR89570788,1140-GTV,F11B025,QTY VARIANCE,53,56,3,auto,,,,
+FR89779957,SCC1742077,F01A006,QTY VARIANCE,38,35,-3,auto,,,,
+FR91685400,SCC1742001,F11F049,QTY VARIANCE,40,37,-3,auto,,,,
+FR92303398,MMC1742964,F06B004,QTY VARIANCE,34,37,3,auto,,,,
+FR92635930,1140-GTV,F29F084,QTY VARIANCE,49,46,-3,auto,,,,
+FR93636053,WFO1203391,F01A069,QTY VARIANCE,29,32,3,approved,System / interface error,,Marcus Obi,2026-10-05T09:42:17.057Z
+FR93853209,SCC1742018,F21C052,QTY VARIANCE,35,38,3,auto,,,,
+FR94098939,BLKCWHCL,F34D085,QTY VARIANCE,37,34,-3,auto,,,,
+FR94447825,SCC1742077,F03A024,QTY VARIANCE,35,32,-3,auto,,,,
+FR94900720,WFO1203391,F04B005,QTY VARIANCE,26,23,-3,approved,"Shipped, not relieved from the system",,Marcus Obi,2026-10-05T11:20:23.195Z
+FR96556535,SCC1742018,F03B027,QTY VARIANCE,40,37,-3,auto,,,,
+FR97096414,1140-GTV,F33B043,QTY VARIANCE,46,49,3,auto,,,,
+FR97486320,MMC1742964,F19D083,QTY VARIANCE,36,33,-3,auto,,,,
+FR97705498,SCC1742077,F19A081,QTY VARIANCE,41,44,3,auto,,,,
+F11427-781,1140-GTV,F29C021,QTY VARIANCE,48,50,2,auto,,,,
+F14394-659,SCC1742001,F31F091,QTY VARIANCE,41,43,2,auto,,,,
+F18665-879,SCC1742077,F30D005,QTY VARIANCE,40,38,-2,auto,,,,
+F23863-158,WFO1203344,F28F286,QTY VARIANCE,58,60,2,auto,,,,
+F26322-737,WFO1203344,F18C016,QTY VARIANCE,61,59,-2,auto,,,,
+F28544-268,WFO1203344,F32F071,QTY VARIANCE,59,61,2,auto,,,,
+F31715-594,1177-GTV,F14A095,QTY VARIANCE,36,34,-2,auto,,,,
+F32896-712,SCC1742018,F27A066,QTY VARIANCE,42,44,2,auto,,,,
+F33799-571,SCC1742001,F04A004,QTY VARIANCE,48,46,-2,auto,,,,
+F36637-568,WFO1203391,F07F083,QTY VARIANCE,35,37,2,auto,,,,
+F37278-859,BLKCWHCL,F21A073,QTY VARIANCE,39,37,-2,auto,,,,
+F39686-441,SCC1742077,F27F087,QTY VARIANCE,43,41,-2,auto,,,,
+F41979-784,WFC1085402,F01B001,QTY VARIANCE,47,45,-2,auto,,,,
+F43499-255,WFO1203391,F04C010,QTY VARIANCE,26,24,-2,auto,,,,
+F45625-757,SCC1742077,F20B111,QTY VARIANCE,41,43,2,auto,,,,
+F46568-115,1177-GTV,F27E017,QTY VARIANCE,35,33,-2,auto,,,,
+F47163-851,BLKCWHCL,F04C072,QTY VARIANCE,38,36,-2,auto,,,,
+F52935-764,SCC1742018,F23B070,QTY VARIANCE,34,36,2,auto,,,,
+F55338-143,SCC1742077,F04E002,QTY VARIANCE,37,35,-2,auto,,,,
+F59886-252,SCC1742001,F24A068,QTY VARIANCE,42,40,-2,auto,,,,
+F64443-411,WFO1203391,F11A002,QTY VARIANCE,31,33,2,auto,,,,
+F68691-526,WFC1085402,F16D041,QTY VARIANCE,51,49,-2,auto,,,,
+F69393-422,SCC1742001,F34E041,QTY VARIANCE,46,44,-2,auto,,,,
+F69833-919,MMC1742964,F22E066,QTY VARIANCE,34,36,2,auto,,,,
+F71725-523,BLKCWHCL,F22E084,QTY VARIANCE,41,43,2,auto,,,,
+F75527-751,SCC1742077,F02A105,QTY VARIANCE,34,32,-2,auto,,,,
+F83777-532,MMC1742964,F28F083,QTY VARIANCE,40,38,-2,auto,,,,
+F88139-288,WFO1203344,F12C043,QTY VARIANCE,57,55,-2,auto,,,,
+F91556-995,WFO1203391,F05B041,QTY VARIANCE,35,33,-2,auto,,,,
+F93923-284,SCC1742077,F04C004,QTY VARIANCE,46,48,2,auto,,,,
+F94324-339,MMC1742964,F17E002,QTY VARIANCE,44,46,2,auto,,,,
+F95385-216,1140-GTV,F05A054,QTY VARIANCE,54,52,-2,auto,,,,
+F98342-649,WFO1203391,F14C054,QTY VARIANCE,35,37,2,auto,,,,
+F98929-846,BLKCWHCL,F31F083,QTY VARIANCE,42,40,-2,auto,,,,
+FR11107960,WFO1203391,F30F060,QTY VARIANCE,24,22,-2,auto,,,,
+FR11608870,BLKCWHCL,F06B028,QTY VARIANCE,38,36,-2,auto,,,,
+FR12048472,WFO1203391,F29A008,QTY VARIANCE,30,28,-2,auto,,,,
+FR12325747,SCC1742001,F33F034,QTY VARIANCE,45,47,2,auto,,,,
+FR19239595,SCC1742077,F21E090,QTY VARIANCE,35,37,2,auto,,,,
+FR19310425,MMC1742964,F19E103,QTY VARIANCE,38,40,2,auto,,,,
+FR19419234,SCC1742018,F16B090,QTY VARIANCE,31,33,2,auto,,,,
+FR20901424,WFO1203391,F16B065,QTY VARIANCE,35,33,-2,auto,,,,
+FR21066873,WFO1203391,F23A079,QTY VARIANCE,35,33,-2,auto,,,,
+FR23003854,WFC1085402,F21B067,QTY VARIANCE,44,42,-2,auto,,,,
+FR27892208,WFC1085316,F18C036,QTY VARIANCE,80,78,-2,auto,,,,
+FR30418751,BLKCWHCL,F29B003,QTY VARIANCE,41,39,-2,auto,,,,
+FR31071944,SCC1742001,F20B106,QTY VARIANCE,36,38,2,auto,,,,
+FR31466300,SCC1742077,F03D060,QTY VARIANCE,42,44,2,auto,,,,
+FR33719107,SCC1742001,F16B036,QTY VARIANCE,38,36,-2,auto,,,,
+FR34428790,SCC1742077,F02B104,QTY VARIANCE,37,35,-2,auto,,,,
+FR35750149,BLKCWHCL,F04C042,QTY VARIANCE,46,48,2,auto,,,,
+FR36272879,WFC1085402,F27D052,QTY VARIANCE,49,51,2,auto,,,,
+FR36280442,WFO1203391,F26A044,QTY VARIANCE,31,29,-2,auto,,,,
+FR38132406,1140-GTV,F09D023,QTY VARIANCE,47,45,-2,auto,,,,
+FR38412423,BLUCWHCL,F32E106,QTY VARIANCE,52,50,-2,auto,,,,
+FR42419759,WFO1203344,F23B026,QTY VARIANCE,58,56,-2,auto,,,,
+FR43517274,BLUCWHCL,F22C078,QTY VARIANCE,48,50,2,auto,,,,
+FR45703023,SCC1742001,F31C073,QTY VARIANCE,45,43,-2,auto,,,,
+FR47689460,SCC1742018,F29E008,QTY VARIANCE,38,36,-2,auto,,,,
+FR48683222,1140-GTV,F02B068,QTY VARIANCE,47,45,-2,auto,,,,
+FR48720752,SCC1742001,F04D070,QTY VARIANCE,42,44,2,auto,,,,
+FR50990426,1177-GTV,F21A075,QTY VARIANCE,37,39,2,auto,,,,
+FR51279750,BLKCWHCL,F15D032,QTY VARIANCE,38,36,-2,auto,,,,
+FR51735085,WFO1203344,F31C095,QTY VARIANCE,66,64,-2,auto,,,,
+FR57012976,1177-GTV,F15B066,QTY VARIANCE,31,33,2,auto,,,,
+FR60411567,WFC1085402,F18A001,QTY VARIANCE,46,48,2,auto,,,,
+FR62112639,MMC1742964,F10C053,QTY VARIANCE,34,32,-2,auto,,,,
+FR62222658,BLKCWHCL,F34F053,QTY VARIANCE,42,44,2,auto,,,,
+FR62991783,SCC1742001,F14B051,QTY VARIANCE,46,44,-2,auto,,,,
+FR63309780,WFO1203391,F32F108,QTY VARIANCE,29,27,-2,auto,,,,
+FR65344948,MMC1742964,F32D007,QTY VARIANCE,38,40,2,auto,,,,
+FR65757504,SCC1742018,F05F077,QTY VARIANCE,42,40,-2,auto,,,,
+FR67129292,BLKCWHCL,F19D089,QTY VARIANCE,34,32,-2,auto,,,,
+FR68132047,BLUCWHCL,F13B035,QTY VARIANCE,51,49,-2,auto,,,,
+FR70950279,WFO1203391,F34E076,QTY VARIANCE,34,32,-2,auto,,,,
+FR72728583,SCC1742018,F04D103,QTY VARIANCE,33,35,2,auto,,,,
+FR73855662,SCC1742077,F17A106,QTY VARIANCE,39,41,2,auto,,,,
+FR74165080,SCC1742018,F30D054,QTY VARIANCE,37,35,-2,auto,,,,
+FR74199904,SCC1742018,F24B072,QTY VARIANCE,34,32,-2,auto,,,,
+FR74327636,BLKCWHCL,F21E026,QTY VARIANCE,36,34,-2,auto,,,,
+FR75387669,SCC1742018,F15B027,QTY VARIANCE,36,34,-2,auto,,,,
+FR76051513,BLKCWHCL,F27B045,QTY VARIANCE,46,44,-2,auto,,,,
+FR78280236,SCC1742018,F35D108,QTY VARIANCE,38,36,-2,auto,,,,
+FR81917496,1177-GTV,F12D074,QTY VARIANCE,32,30,-2,auto,,,,
+FR83724220,WFO1203391,F18C080,QTY VARIANCE,36,34,-2,auto,,,,
+FR84186356,SCC1742077,F31F111,QTY VARIANCE,35,33,-2,auto,,,,
+FR85282702,WFO1203344,F06F021,QTY VARIANCE,62,64,2,auto,,,,
+FR86146495,SCC1742018,F05E093,QTY VARIANCE,35,37,2,auto,,,,
+FR86367780,WFO1203344,F23B095,QTY VARIANCE,57,59,2,auto,,,,
+FR87710181,BLKCWHCL,F15C006,QTY VARIANCE,38,36,-2,auto,,,,
+FR89283196,BLUCWHCL,F22B072,QTY VARIANCE,46,44,-2,auto,,,,
+FR89867020,BLUCWHCL,F23E081,QTY VARIANCE,45,43,-2,auto,,,,
+FR91570155,BLUCWHCL,F33B025,QTY VARIANCE,53,51,-2,auto,,,,
+FR92071659,WFO1203391,F18D088,QTY VARIANCE,32,30,-2,auto,,,,
+FR93479345,SCC1742077,F27B079,QTY VARIANCE,35,37,2,auto,,,,
+FR94171415,WFC1085402,F09E066,QTY VARIANCE,54,56,2,auto,,,,
+FR94286727,BLKCWHCL,F07D084,QTY VARIANCE,45,43,-2,auto,,,,
+FR94817552,1140-GTV,F32D047,QTY VARIANCE,49,51,2,auto,,,,
+FR96224071,WFC1085402,F11F038,QTY VARIANCE,54,52,-2,auto,,,,
+FR96830594,WFO1203344,F24F084,QTY VARIANCE,54,56,2,auto,,,,
+FR98987250,WFC1085316,F31E074,QTY VARIANCE,73,75,2,auto,,,,
+FR99065773,MMC1742964,F32F059,QTY VARIANCE,35,37,2,auto,,,,
+FR99399328,BLKCWHCL,F26A109,QTY VARIANCE,45,47,2,auto,,,,
+FR99911584,BLUCWHCL,F13E101,QTY VARIANCE,42,44,2,auto,,,,
+F14335-847,SCC1742077,F02B062,QTY VARIANCE,42,41,-1,auto,,,,
+F14965-854,SCC1742018,F01E069,QTY VARIANCE,40,39,-1,auto,,,,
+F16164-895,WFO1203391,F07E042,QTY VARIANCE,31,32,1,auto,,,,
+F18185-521,WFO1203344,F13E019,QTY VARIANCE,64,63,-1,auto,,,,
+F21757-175,WFO1203344,F05B049,QTY VARIANCE,60,61,1,auto,,,,
+F22612-678,1177-GTV,F14A041,QTY VARIANCE,29,28,-1,auto,,,,
+F28179-441,SCC1742077,F15E092,QTY VARIANCE,45,46,1,auto,,,,
+F28432-372,WFO1203391,F06D057,QTY VARIANCE,28,29,1,auto,,,,
+F33631-867,MMC1742964,F09E063,QTY VARIANCE,38,37,-1,auto,,,,
+F34298-198,WFC1085316,F26E008,QTY VARIANCE,69,68,-1,auto,,,,
+F35714-225,SCC1742077,F31E019,QTY VARIANCE,46,47,1,auto,,,,
+F36554-455,1140-GTV,F31A083,QTY VARIANCE,48,47,-1,auto,,,,
+F39796-428,WFC1085402,F18D066,QTY VARIANCE,54,55,1,auto,,,,
+F43673-657,WFO1203391,F12E087,QTY VARIANCE,34,33,-1,auto,,,,
+F44958-621,WFC1085402,F18C061,QTY VARIANCE,44,45,1,auto,,,,
+F49273-654,MMC1742964,F05B010,QTY VARIANCE,39,38,-1,auto,,,,
+F49294-167,BLUCWHCL,F19B050,QTY VARIANCE,49,50,1,auto,,,,
+F53252-476,SCC1742018,F19B012,QTY VARIANCE,38,37,-1,auto,,,,
+F57983-235,1177-GTV,F01F062,QTY VARIANCE,28,27,-1,auto,,,,
+F71234-573,MMC1742964,F08D096,QTY VARIANCE,42,43,1,auto,,,,
+F72533-514,1177-GTV,F16A010,QTY VARIANCE,33,32,-1,auto,,,,
+F75923-565,SCC1742018,F26C064,QTY VARIANCE,42,41,-1,auto,,,,
+F76519-223,SCC1742018,F19E006,QTY VARIANCE,35,34,-1,auto,,,,
+F77334-128,1177-GTV,F11D015,QTY VARIANCE,36,37,1,auto,,,,
+F79328-251,SCC1742001,F12E016,QTY VARIANCE,42,41,-1,auto,,,,
+F82483-325,BLKCWHCL,F08A042,QTY VARIANCE,36,35,-1,auto,,,,
+F84561-432,SCC1742001,F09C091,QTY VARIANCE,38,39,1,auto,,,,
+F85433-651,1140-GTV,F22D027,QTY VARIANCE,43,42,-1,auto,,,,
+F86368-287,SCC1742077,F03D012,QTY VARIANCE,44,43,-1,auto,,,,
+F86998-898,WFC1085402,F08E059,QTY VARIANCE,47,48,1,auto,,,,
+F87813-781,MMC1742964,F08E020,QTY VARIANCE,43,42,-1,auto,,,,
+F88211-197,SCC1742018,F17B067,QTY VARIANCE,31,30,-1,auto,,,,
+F94198-788,BLKCWHCL,F10A061,QTY VARIANCE,41,42,1,auto,,,,
+F96999-336,1177-GTV,F25E068,QTY VARIANCE,36,35,-1,auto,,,,
+F98564-595,BLUCWHCL,F04F055,QTY VARIANCE,50,49,-1,auto,,,,
+F99176-593,SCC1742077,F28D077,QTY VARIANCE,46,47,1,auto,,,,
+FR10228896,BLKCWHCL,F17E080,QTY VARIANCE,35,34,-1,auto,,,,
+FR10468371,BLKCWHCL,F16A050,QTY VARIANCE,35,36,1,auto,,,,
+FR10897797,WFO1203344,F06C045,QTY VARIANCE,55,56,1,auto,,,,
+FR10927391,BLKCWHCL,F32E093,QTY VARIANCE,43,44,1,auto,,,,
+FR12756413,1177-GTV,F18E045,QTY VARIANCE,36,37,1,auto,,,,
+FR13020731,MMC1742964,F16E034,QTY VARIANCE,34,33,-1,auto,,,,
+FR13920239,WFO1203391,F07D031,QTY VARIANCE,36,35,-1,auto,,,,
+FR15052039,1140-GTV,F10C087,QTY VARIANCE,53,54,1,auto,,,,
+FR15603498,WFO1203391,F05E071,QTY VARIANCE,25,24,-1,auto,,,,
+FR16562464,SCC1742018,F16A085,QTY VARIANCE,38,37,-1,auto,,,,
+FR18074956,SCC1742077,F17E108,QTY VARIANCE,35,34,-1,auto,,,,
+FR21365044,WFC1085402,F04F039,QTY VARIANCE,46,45,-1,auto,,,,
+FR21941446,SCC1742077,F34E061,QTY VARIANCE,39,38,-1,auto,,,,
+FR22377088,1177-GTV,F10D081,QTY VARIANCE,26,25,-1,auto,,,,
+FR23727525,WFO1203344,F11F011,QTY VARIANCE,55,54,-1,auto,,,,
+FR24167668,BLKCWHCL,F27C077,QTY VARIANCE,37,36,-1,auto,,,,
+FR27130646,BLKCWHCL,F34D037,QTY VARIANCE,37,36,-1,auto,,,,
+FR27163572,1177-GTV,F05D058,QTY VARIANCE,33,32,-1,auto,,,,
+FR27864260,WFC1085402,F17C073,QTY VARIANCE,50,51,1,auto,,,,
+FR28016807,WFC1085316,F31B062,QTY VARIANCE,71,70,-1,auto,,,,
+FR28276103,WFC1085316,F16B093,QTY VARIANCE,70,69,-1,auto,,,,
+FR28631445,WFO1203391,F19D084,QTY VARIANCE,35,36,1,auto,,,,
+FR30357654,BLUCWHCL,F27E052,QTY VARIANCE,52,53,1,auto,,,,
+FR31017469,1140-GTV,F15A032,QTY VARIANCE,47,46,-1,auto,,,,
+FR31017596,BLKCWHCL,F32F065,QTY VARIANCE,34,35,1,auto,,,,
+FR31534995,MMC1742964,F09F035,QTY VARIANCE,41,42,1,auto,,,,
+FR32383541,MMC1742964,F32E039,QTY VARIANCE,37,36,-1,auto,,,,
+FR34760822,WFC1085316,F11F016,QTY VARIANCE,74,75,1,auto,,,,
+FR35019137,MMC1742964,F35A007,QTY VARIANCE,35,36,1,auto,,,,
+FR35213960,1140-GTV,F13B065,QTY VARIANCE,51,50,-1,auto,,,,
+FR38791873,1140-GTV,F33E061,QTY VARIANCE,47,46,-1,auto,,,,
+FR39393746,SCC1742077,F11E025,QTY VARIANCE,46,45,-1,auto,,,,
+FR39427563,1177-GTV,F23C043,QTY VARIANCE,38,39,1,auto,,,,
+FR39441589,1177-GTV,F08B022,QTY VARIANCE,36,37,1,auto,,,,
+FR39711382,SCC1742018,F33B068,QTY VARIANCE,38,37,-1,auto,,,,
+FR39775067,MMC1742964,F13C042,QTY VARIANCE,39,38,-1,auto,,,,
+FR40743516,1140-GTV,F11F027,QTY VARIANCE,49,50,1,auto,,,,
+FR41808925,BLUCWHCL,F11C030,QTY VARIANCE,49,48,-1,auto,,,,
+FR43682710,WFC1085402,F27E111,QTY VARIANCE,55,56,1,auto,,,,
+FR45510098,BLUCWHCL,F19A006,QTY VARIANCE,43,42,-1,auto,,,,
+FR46000144,MMC1742964,F17D054,QTY VARIANCE,36,35,-1,auto,,,,
+FR48438842,BLKCWHCL,F19D077,QTY VARIANCE,46,45,-1,auto,,,,
+FR53213361,SCC1742001,F32F073,QTY VARIANCE,44,45,1,auto,,,,
+FR54860050,1177-GTV,F25F049,QTY VARIANCE,37,38,1,auto,,,,
+FR55407695,WFC1085316,F01E027,QTY VARIANCE,70,71,1,auto,,,,
+FR55756708,SCC1742018,F10B008,QTY VARIANCE,31,30,-1,auto,,,,
+FR56566314,SCC1742018,F30E086,QTY VARIANCE,32,33,1,auto,,,,
+FR58042099,BLUCWHCL,F19C034,QTY VARIANCE,44,43,-1,auto,,,,
+FR58797498,WFO1203344,F03A026,QTY VARIANCE,57,56,-1,auto,,,,
+FR62659286,BLKCWHCL,F03C036,QTY VARIANCE,36,35,-1,auto,,,,
+FR63012555,1177-GTV,F15B093,QTY VARIANCE,29,28,-1,auto,,,,
+FR67769393,1177-GTV,F25C109,QTY VARIANCE,32,31,-1,auto,,,,
+FR68967939,BLKCWHCL,F19B025,QTY VARIANCE,35,34,-1,auto,,,,
+FR69760902,MMC1742964,F13D077,QTY VARIANCE,34,33,-1,auto,,,,
+FR70373232,SCC1742001,F21A069,QTY VARIANCE,46,45,-1,auto,,,,
+FR70492238,SCC1742001,F05E012,QTY VARIANCE,48,47,-1,auto,,,,
+FR70985593,SCC1742077,F01C040,QTY VARIANCE,36,37,1,auto,,,,
+FR73743831,SCC1742018,F35C010,QTY VARIANCE,42,41,-1,auto,,,,
+FR73949606,WFC1085402,F28E102,QTY VARIANCE,52,51,-1,auto,,,,
+FR75604240,MMC1742964,F05F006,QTY VARIANCE,35,34,-1,auto,,,,
+FR76349337,SCC1742077,F18D052,QTY VARIANCE,39,38,-1,auto,,,,
+FR76772673,BLUCWHCL,F10D104,QTY VARIANCE,45,44,-1,auto,,,,
+FR77165934,WFO1203391,F03A093,QTY VARIANCE,35,36,1,auto,,,,
+FR77819316,WFC1085316,F15D019,QTY VARIANCE,75,74,-1,auto,,,,
+FR78380982,WFO1203391,F27E034,QTY VARIANCE,34,33,-1,auto,,,,
+FR78519604,WFO1203391,F33A041,QTY VARIANCE,34,33,-1,auto,,,,
+FR79573016,WFO1203344,F01F063,QTY VARIANCE,58,57,-1,auto,,,,
+FR79939234,WFO1203344,F33D046,QTY VARIANCE,66,65,-1,auto,,,,
+FR80236164,WFO1203391,F06F061,QTY VARIANCE,35,36,1,auto,,,,
+FR80912254,1140-GTV,F05C076,QTY VARIANCE,53,54,1,auto,,,,
+FR80943061,BLUCWHCL,F09A110,QTY VARIANCE,50,51,1,auto,,,,
+FR82324972,MMC1742964,F04E007,QTY VARIANCE,45,44,-1,auto,,,,
+FR83486590,WFO1203391,F08B069,QTY VARIANCE,25,26,1,auto,,,,
+FR84091667,BLKCWHCL,F16A038,QTY VARIANCE,36,35,-1,auto,,,,
+FR84803129,1140-GTV,F12C101,QTY VARIANCE,48,49,1,auto,,,,
+FR85942072,SCC1742077,F04E014,QTY VARIANCE,36,37,1,auto,,,,
+FR86875440,1140-GTV,F08C032,QTY VARIANCE,47,46,-1,auto,,,,
+FR87936723,WFO1203344,F29F110,QTY VARIANCE,55,54,-1,auto,,,,
+FR88088216,BLUCWHCL,F09D098,QTY VARIANCE,44,43,-1,auto,,,,
+FR88242958,BLKCWHCL,F15A064,QTY VARIANCE,39,40,1,auto,,,,
+FR89889036,WFC1085316,F06D097,QTY VARIANCE,76,75,-1,auto,,,,
+FR92659773,WFC1085316,F21A054,QTY VARIANCE,79,80,1,auto,,,,
+FR94439140,1177-GTV,F31A075,QTY VARIANCE,34,35,1,auto,,,,
+FR96277012,MMC1742964,F27B009,QTY VARIANCE,38,37,-1,auto,,,,
+FR96290078,SCC1742001,F24F077,QTY VARIANCE,46,45,-1,auto,,,,
+FR97778572,SCC1742001,F03B072,QTY VARIANCE,48,49,1,auto,,,,
+FR98178759,WFC1085316,F25E038,QTY VARIANCE,75,76,1,auto,,,,
+FR98197417,BLUCWHCL,F12D073,QTY VARIANCE,51,50,-1,auto,,,,
