@@ -557,5 +557,48 @@
    "other": "frames/013-teams.jpg",
    "otherLabel": "Teams & crew"
   }
+ },
+ {
+  "n": 14,
+  "at": "2026-10-05T11:25:44.930Z",
+  "wall": 120,
+  "day": 1,
+  "dayName": "Tuesday",
+  "sim": "06:00",
+  "label": "Tuesday morning: the teams sign back on",
+  "event": "day",
+  "lines": 5712,
+  "bins": 5149,
+  "binsTotal": 20000,
+  "pallets": 4795,
+  "exceptions": 50,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 6,
+  "pending": 0,
+  "approved": 79,
+  "rejected": 11,
+  "secondOpen": 172,
+  "secondDone": 54,
+  "lat": {
+   "count": {
+    "n": 5203,
+    "p50": 6,
+    "p95": 12,
+    "max": 983
+   },
+   "dashboard": {
+    "n": 1554,
+    "p50": 59,
+    "p95": 184,
+    "max": 1042
+   }
+  },
+  "frames": {
+   "progress": "frames/014-progress.jpg",
+   "board": "frames/014-board.jpg",
+   "other": "frames/014-teams.jpg",
+   "otherLabel": "Team plan"
+  }
  }
 ]
