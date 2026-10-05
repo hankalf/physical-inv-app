@@ -1159,5 +1159,134 @@
    "other": "frames/027-teams.jpg",
    "otherLabel": "Team plan"
   }
+ },
+ {
+  "n": 28,
+  "at": "2026-10-05T13:29:43.621Z",
+  "wall": 244,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "06:16",
+  "label": "Wednesday 06:16",
+  "event": "",
+  "lines": 13320,
+  "bins": 12014,
+  "binsTotal": 20000,
+  "pallets": 11156,
+  "exceptions": 131,
+  "teams": 20,
+  "sosOpen": 1,
+  "sosTotal": 14,
+  "pending": 1,
+  "approved": 192,
+  "rejected": 25,
+  "secondOpen": 405,
+  "secondDone": 129,
+  "lat": {
+   "count": {
+    "n": 12152,
+    "p50": 7,
+    "p95": 18,
+    "max": 1711
+   },
+   "dashboard": {
+    "n": 3150,
+    "p50": 76,
+    "p95": 249,
+    "max": 1249
+   }
+  },
+  "frames": {
+   "progress": "frames/028-progress.jpg",
+   "board": "frames/028-board.jpg",
+   "other": "frames/028-reports.jpg",
+   "otherLabel": "Reports"
+  }
+ },
+ {
+  "n": 29,
+  "at": "2026-10-05T13:39:50.141Z",
+  "wall": 254,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "06:59",
+  "label": "Wednesday 06:59",
+  "event": "",
+  "lines": 14177,
+  "bins": 12804,
+  "binsTotal": 20000,
+  "pallets": 11870,
+  "exceptions": 138,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 14,
+  "pending": 0,
+  "approved": 210,
+  "rejected": 26,
+  "secondOpen": 411,
+  "secondDone": 131,
+  "lat": {
+   "count": {
+    "n": 12956,
+    "p50": 8,
+    "p95": 19,
+    "max": 2047
+   },
+   "dashboard": {
+    "n": 3280,
+    "p50": 78,
+    "p95": 252,
+    "max": 1559
+   }
+  },
+  "frames": {
+   "progress": "frames/029-progress.jpg",
+   "board": "frames/029-board.jpg",
+   "other": "frames/029-map.jpg",
+   "otherLabel": "Map"
+  }
+ },
+ {
+  "n": 30,
+  "at": "2026-10-05T13:49:50.117Z",
+  "wall": 264,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "07:42",
+  "label": "Wednesday 07:42",
+  "event": "",
+  "lines": 15072,
+  "bins": 13609,
+  "binsTotal": 20000,
+  "pallets": 12617,
+  "exceptions": 143,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 14,
+  "pending": 0,
+  "approved": 216,
+  "rejected": 29,
+  "secondOpen": 415,
+  "secondDone": 141,
+  "lat": {
+   "count": {
+    "n": 13757,
+    "p50": 8,
+    "p95": 20,
+    "max": 2047
+   },
+   "dashboard": {
+    "n": 3408,
+    "p50": 80,
+    "p95": 256,
+    "max": 1559
+   }
+  },
+  "frames": {
+   "progress": "frames/030-progress.jpg",
+   "board": "frames/030-board.jpg",
+   "other": "frames/030-teams.jpg",
+   "otherLabel": "Team plan"
+  }
  }
 ]
