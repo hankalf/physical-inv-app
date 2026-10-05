@@ -41,5 +41,48 @@
    "other": "frames/001-teams.jpg",
    "otherLabel": "Team plan"
   }
+ },
+ {
+  "n": 2,
+  "at": "2026-10-05T04:27:47.488Z",
+  "wall": 4,
+  "day": 0,
+  "dayName": "Monday",
+  "sim": "06:14",
+  "label": "First SOS of the count",
+  "event": "sos",
+  "lines": 68,
+  "bins": 65,
+  "binsTotal": 20000,
+  "pallets": 57,
+  "exceptions": 0,
+  "teams": 13,
+  "sosOpen": 1,
+  "sosTotal": 1,
+  "pending": 0,
+  "approved": 1,
+  "rejected": 0,
+  "secondOpen": 1,
+  "secondDone": 0,
+  "lat": {
+   "count": {
+    "n": 73,
+    "p50": 4,
+    "p95": 12,
+    "max": 28
+   },
+   "dashboard": {
+    "n": 48,
+    "p50": 45,
+    "p95": 138,
+    "max": 164
+   }
+  },
+  "frames": {
+   "progress": "frames/002-progress.jpg",
+   "board": "frames/002-board.jpg",
+   "other": "frames/002-alerts.jpg",
+   "otherLabel": "Alerts"
+  }
  }
 ]
