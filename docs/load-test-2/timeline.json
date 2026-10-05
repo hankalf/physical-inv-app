@@ -84,5 +84,48 @@
    "other": "frames/002-alerts.jpg",
    "otherLabel": "Alerts"
   }
+ },
+ {
+  "n": 3,
+  "at": "2026-10-05T04:36:59.362Z",
+  "wall": 13,
+  "day": 0,
+  "dayName": "Monday",
+  "sim": "06:53",
+  "label": "Monday 06:53",
+  "event": "",
+  "lines": 537,
+  "bins": 497,
+  "binsTotal": 20000,
+  "pallets": 446,
+  "exceptions": 5,
+  "teams": 13,
+  "sosOpen": 0,
+  "sosTotal": 1,
+  "pending": 0,
+  "approved": 6,
+  "rejected": 0,
+  "secondOpen": 18,
+  "secondDone": 0,
+  "lat": {
+   "count": {
+    "n": 510,
+    "p50": 4,
+    "p95": 10,
+    "max": 184
+   },
+   "dashboard": {
+    "n": 167,
+    "p50": 51,
+    "p95": 152,
+    "max": 197
+   }
+  },
+  "frames": {
+   "progress": "frames/003-progress.jpg",
+   "board": "frames/003-board.jpg",
+   "other": "frames/003-alerts.jpg",
+   "otherLabel": "Alerts"
+  }
  }
 ]
