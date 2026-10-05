@@ -59,6 +59,8 @@ const gun = await ctx.newPage();
 const errors = [];
 gun.on('pageerror', (e) => errors.push('gun: ' + e.message));
 gun.on('dialog', (d) => d.accept().catch(() => {}));
+// the person on the gun is on the crew list, so the header can name them
+await post('/api/admin/people/employees', { badge: 'E4', name: 'Rosa Delgado', dept: 'Freezer' });
 await gun.goto(`${BASE}/?d=${dev.uid}`);
 await gun.waitForTimeout(1500);
 check('Sign-on offers "Front2Back" while any moves are waiting', await gun.isVisible('#btnModeMove') && clean(await gun.textContent('#btnModeMove')) === 'Front2Back');
@@ -69,6 +71,7 @@ await gun.fill('#fEmployee', 'E4'); await gun.press('#fEmployee', 'Enter');
 await gun.click('#btnStart');
 await gun.waitForSelector('#scrMove.active', { timeout: 8000 });
 const aisleBtns = await gun.$$eval('#moveAisles button', (bs) => bs.map((b) => b.textContent));
+check('The header names who is on the gun, not their clock-in number', /Rosa Delgado/.test(await gun.textContent('#chipDevice')) && !/E4\b/.test(await gun.textContent('#chipDevice')), clean(await gun.textContent('#chipDevice')));
 check('The header reads Front2Back, not the count', clean(await gun.textContent('#hdrTitle')) === 'Front2Back', clean(await gun.textContent('#hdrTitle')));
 check('The gun asks which aisle to work, with how many are waiting in each', aisleBtns.length === 2 && /F01.*3$/.test(aisleBtns[0]) && /F02.*1$/.test(aisleBtns[1]), aisleBtns.join(' | '));
 await gun.click('#moveAisles button >> nth=0');

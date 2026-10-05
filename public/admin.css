@@ -166,6 +166,28 @@ html.embed main { padding: 14px 16px 24px; }
   main { padding: 14px; }
 }
 
+/* The phone: a slim bar with the name and a Menu button; the pages, search
+   and sign-out open under it. Installed from the home screen, the bar clears
+   the phone's own status bar. */
+.menubtn { display: none; }
+@media (max-width: 700px) {
+  .side {
+    position: sticky; top: 0; z-index: 40; flex-wrap: nowrap; flex-direction: row; align-items: center;
+    padding: max(10px, env(safe-area-inset-top)) 14px 10px; background: var(--side-bg);
+    box-shadow: 0 1px 0 var(--line);
+  }
+  .side .brand { font-size: 15px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .menubtn { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; margin-left: auto; font-weight: 700; }
+  .side .navsearch, .side nav, .side .side-foot { display: none; }
+  body.menu-open .side { flex-wrap: wrap; max-height: 100vh; overflow-y: auto; }
+  body.menu-open .side .navsearch { display: block; flex-basis: 100%; order: 3; padding: 10px 0 6px; }
+  body.menu-open .side nav { display: flex; flex-direction: column; flex-basis: 100%; order: 4; gap: 2px; }
+  body.menu-open .side nav .tab { padding: 12px 10px; font-size: 15px; }
+  body.menu-open .side .side-foot { display: flex; flex-wrap: wrap; flex-basis: 100%; order: 5; gap: 8px; padding: 10px 0 4px; border-top: 1px solid var(--line-soft); }
+  .topbar { padding: 12px 14px 0; }
+  .topbar h1 { font-size: 22px; }
+}
+
 /* ----------------------------------------------------------------- surfaces */
 .card {
   min-width: 0;

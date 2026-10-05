@@ -380,6 +380,8 @@ if (!hasCol('sessions', 'mode')) db.exec("ALTER TABLE sessions ADD COLUMN mode T
 if (!hasCol('sessions', 'cycle_schedule')) db.exec('ALTER TABLE sessions ADD COLUMN cycle_schedule TEXT');
 if (!hasCol('recounts', 'batch_id')) db.exec('ALTER TABLE recounts ADD COLUMN batch_id INTEGER');
 if (!hasCol('counts', 'pass')) db.exec('ALTER TABLE counts ADD COLUMN pass INTEGER NOT NULL DEFAULT 1');
+// a second count supersedes the first in its bin: the reports ask that of every line
+db.exec('CREATE INDEX IF NOT EXISTS idx_counts_loc_pass ON counts(session_id, location_code, pass, voided)');
 if (!hasCol('counts', 'recount_id')) db.exec('ALTER TABLE counts ADD COLUMN recount_id INTEGER');
 if (!hasCol('sessions', 'auto_recount')) db.exec('ALTER TABLE sessions ADD COLUMN auto_recount INTEGER NOT NULL DEFAULT 1');
 /* Lot codes and expiry dates. Off unless a count asks for them: a frozen-food

@@ -313,7 +313,17 @@
     $('chipNet').textContent = online() ? 'online' : 'OFFLINE';
     $('chipNet').className = 'chip ' + (online() ? 'online' : 'offline');
     $('chipDevice').hidden = !state.deviceId;
-    $('chipDevice').textContent = state.deviceId + (state.team ? (state.team === state.employees[0] ? ' · ' + state.team : ' · T' + state.team) : '');
+    $('chipDevice').textContent = state.deviceId + (state.team ? (state.team === state.employees[0] ? ' · ' + (soloName() || state.team) : ' · T' + state.team) : '');
+  }
+
+  /* On a job one person does alone - a cycle count, Front2Back, Not in
+     Location - the person is the team: the header shows who they are, from
+     the crew list, not their clock-in number. Offline before the first
+     sign-on there is no name yet, so the number stands in. */
+  function soloName() {
+    if (!state.team || state.team !== state.employees[0]) return '';
+    const hit = state.crew && (state.crew.crew || []).find((c) => norm(c.badge) === norm(state.team));
+    return hit && hit.name ? hit.name : '';
   }
 
   /*
@@ -725,7 +735,7 @@
             body: JSON.stringify({ deviceId: state.deviceId, deviceUid: state.deviceUid || null, team, employees: state.employees }),
           });
           await metaSet('assignment', state.assignment);
-          if (state.assignment.crew) { state.crew = state.assignment.crew; await metaSet('crew', state.crew); }
+          if (state.assignment.crew) { state.crew = state.assignment.crew; await metaSet('crew', state.crew); updateChips(); }
           await refreshRecounts();
         } catch (err) {
           // a clock-in number the site does not know: no sign-on at all
@@ -742,6 +752,7 @@
         state.assignment = (await metaGet('assignment')) || null;
         state.recounts = (await metaGet('recounts')) || [];
         state.crew = (await metaGet('crew')) || null;
+        updateChips();
       }
       state.recountsDoneLocal = (await metaGet('recountsDoneLocal')) || [];
 
@@ -777,7 +788,7 @@
     try {
       const q = `team=${encodeURIComponent(state.team)}&employees=${encodeURIComponent(state.employees.join(','))}`;
       state.assignment = await api(`/api/sessions/${state.session.id}/team-status?${q}`);
-      if (state.assignment.crew) { state.crew = state.assignment.crew; await metaSet('crew', state.crew); }
+      if (state.assignment.crew) { state.crew = state.assignment.crew; await metaSet('crew', state.crew); updateChips(); }
       await metaSet('assignment', state.assignment);
       await refreshRecounts();
       // what the aisle looks like now, including tags the team's other gun counted

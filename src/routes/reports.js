@@ -30,22 +30,24 @@ export function progress(sessionId) {
     )
     .get(id).n;
 
+  /* One pass for the figures; the scanners and the aisle each team is on come
+     from their own small reads rather than a lookup per team inside the pass. */
   const byTeam = db
     .prepare(
       `SELECT c.team,
               COUNT(*) AS lines,
               COUNT(DISTINCT c.location_code) AS bins,
               MAX(c.scanned_at) AS last_scan,
-              (SELECT GROUP_CONCAT(DISTINCT device_id) FROM counts d
-                WHERE d.session_id = c.session_id AND d.team = c.team AND d.voided = 0) AS devices,
-              (SELECT aisle FROM assignments s
-                WHERE s.session_id = c.session_id AND s.team = c.team AND s.status = 'active') AS active_aisle
+              GROUP_CONCAT(DISTINCT c.device_id) AS devices
          FROM counts c
         WHERE c.session_id = ? AND c.voided = 0
         GROUP BY c.team
         ORDER BY lines DESC`
     )
     .all(id);
+  const activeAisle = new Map();
+  for (const r of db.prepare("SELECT team, aisle FROM assignments WHERE session_id = ? AND status = 'active' ORDER BY id").all(id)) if (!activeAisle.has(r.team)) activeAisle.set(r.team, r.aisle);
+  for (const t of byTeam) t.active_aisle = activeAisle.get(t.team) ?? null;
 
   // Teams that have signed on but not yet counted anything still belong here.
   const signedOn = db
@@ -127,87 +129,75 @@ export function palletReport(sessionId, { only = null } = {}) {
   for (const k of counted.keys()) if (!seen.has(k)) keys.push(k);
   keys.sort();
   const byId = new Map(master.map((p) => [p.pallet_id, p]));
-  const rows = keys.map((k) => {
+  // the dates the expiry column is judged against: once, not once a pallet
+  const today = new Date().toISOString().slice(0, 10);
+  const soon = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+
+  /* One pass: each pallet's master line, what was counted and the first count
+     side by side, straight into the row the report shows. */
+  return keys.map((k) => {
     const p = byId.get(k) || null;
     const c = counted.get(k) || null;
     const f = firstpass.get(k) || null;
-    return {
-      pallet_id: k,
-      sku: p ? p.sku : null, description: p ? p.description : null, uom: p ? p.uom : null, source: p ? p.source : '',
-      variant: p ? p.variant : '', entry_no: p ? p.entry_no : '',
-      expected_qty: p ? p.expected_qty : null, expected_location: p ? p.expected_location : null,
-      expected_lot: p ? p.expected_lot : null, expected_expiry: p ? p.expected_expiry : null,
-      times_counted: c ? c.times_counted : null, counted_qty: c ? c.counted_qty : null, found_locations: c ? c.found_locations : null,
-      teams: c ? c.teams : null, last_scan: c ? c.last_scan : null, comments: c ? c.comments : null, max_pass: c ? c.max_pass : null,
-      counted_lots: c ? c.counted_lots : null, counted_expiry: c ? c.counted_expiry : null, alias_lines: c ? c.alias_lines : null, alias_of: c ? c.alias_of : null,
-      also_tagged: tagged.get(k) || null,
-      first_qty: f ? f.first_qty : null, first_locations: f ? f.first_locations : null,
-      open_recounts: openRecounts.get(k) || 0,
-      not_in_master: p ? 0 : 1,
-    };
-  });
-
-  return rows.map((r) => {
-    const counted = r.times_counted > 0;
-    const expectedQty = r.expected_qty;
-    const variance = counted && expectedQty != null ? r.counted_qty - expectedQty : null;
-    const misplaced =
-      counted && r.expected_location && r.found_locations && r.found_locations !== r.expected_location;
+    const timesCounted = c ? c.times_counted : 0;
+    const isCounted = timesCounted > 0;
+    const expectedQty = p ? p.expected_qty : null;
+    const expectedLocation = p ? p.expected_location : null;
+    const expectedLot = p ? p.expected_lot : null;
+    const foundLocations = c ? c.found_locations : null;
+    const variance = isCounted && expectedQty != null ? c.counted_qty - expectedQty : null;
+    const misplaced = isCounted && expectedLocation && foundLocations && foundLocations !== expectedLocation;
 
     /* Lot and expiry are orthogonal to quantity: a pallet can be the right
        count of the wrong lot, so they get their own columns rather than
        competing for the one status. Blank when the site does not track them. */
-    const foundLot = r.counted_lots || '';
+    const foundLot = (c && c.counted_lots) || '';
     let lotStatus = '';
-    if (foundLot && r.expected_lot) lotStatus = foundLot === r.expected_lot ? 'LOT MATCH' : 'WRONG LOT';
-    else if (foundLot && !r.expected_lot) lotStatus = 'LOT NOT ON REPORT';
-    else if (!foundLot && r.expected_lot && counted) lotStatus = 'NO LOT SCANNED';
+    if (foundLot && expectedLot) lotStatus = foundLot === expectedLot ? 'LOT MATCH' : 'WRONG LOT';
+    else if (foundLot && !expectedLot) lotStatus = 'LOT NOT ON REPORT';
+    else if (!foundLot && expectedLot && isCounted) lotStatus = 'NO LOT SCANNED';
 
-    const expiry = r.counted_expiry || r.expected_expiry || '';
-    const today = new Date().toISOString().slice(0, 10);
-    let expiryStatus = '';
-    if (expiry) {
-      const soon = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
-      expiryStatus = expiry < today ? 'EXPIRED' : expiry <= soon ? 'EXPIRES SOON' : 'IN DATE';
-    }
+    const expiry = (c && c.counted_expiry) || (p && p.expected_expiry) || '';
+    const expiryStatus = !expiry ? '' : expiry < today ? 'EXPIRED' : expiry <= soon ? 'EXPIRES SOON' : 'IN DATE';
 
     /* A pallet whose every line is a second label is not a pallet that was
        counted: it is a tag on one that was. Saying so beats MISSING, which
        would send somebody back to look for a pallet that is right there. */
-    const aliasOnly = counted && r.alias_lines > 0 && r.alias_lines === r.times_counted;
+    const aliasOnly = isCounted && c.alias_lines > 0 && c.alias_lines === timesCounted;
 
     let status;
     if (aliasOnly) status = 'SECOND LABEL';
-    else if (!counted) status = 'MISSING';
-    else if (r.not_in_master) status = 'NOT IN MASTER';
-    else if (r.times_counted > 1) status = 'COUNTED TWICE';
+    else if (!isCounted) status = 'MISSING';
+    else if (!p) status = 'NOT IN MASTER';
+    else if (timesCounted > 1) status = 'COUNTED TWICE';
     else if (misplaced) status = 'WRONG BIN';
     else if (variance != null && variance !== 0) status = 'QTY VARIANCE';
     else status = 'MATCH';
 
+    const maxPass = c ? c.max_pass : null;
     return {
-      pallet_id: r.pallet_id,
-      source: r.source || '',
-      variant: r.variant || '',
-      entry_no: r.entry_no || '',
-      sku: r.sku || '',
-      description: r.description || '',
-      uom: r.uom || '',
+      pallet_id: k,
+      source: (p && p.source) || '',
+      variant: (p && p.variant) || '',
+      entry_no: (p && p.entry_no) || '',
+      sku: (p && p.sku) || '',
+      description: (p && p.description) || '',
+      uom: (p && p.uom) || '',
       expected_qty: expectedQty ?? '',
-      counted_qty: counted ? r.counted_qty : '',
+      counted_qty: isCounted ? c.counted_qty : '',
       variance_qty: aliasOnly ? '' : (variance ?? ''),
-      expected_location: r.expected_location || '',
-      found_location: r.found_locations || '',
-      times_counted: r.times_counted || 0,
-      teams: r.teams || '',
-      comments: r.comments || '',
-      last_scan: r.last_scan || '',
-      recounted: r.max_pass === 2 ? 1 : 0,
-      first_count_qty: r.max_pass === 2 ? (r.first_qty ?? '') : '',
-      open_recounts: r.open_recounts || 0,
-      alias_of: r.alias_of || '',
-      also_tagged: r.also_tagged || '',
-      expected_lot: r.expected_lot || '',
+      expected_location: expectedLocation || '',
+      found_location: foundLocations || '',
+      times_counted: timesCounted || 0,
+      teams: (c && c.teams) || '',
+      comments: (c && c.comments) || '',
+      last_scan: (c && c.last_scan) || '',
+      recounted: maxPass === 2 ? 1 : 0,
+      first_count_qty: maxPass === 2 ? ((f ? f.first_qty : null) ?? '') : '',
+      open_recounts: openRecounts.get(k) || 0,
+      alias_of: (c && c.alias_of) || '',
+      also_tagged: tagged.get(k) || '',
+      expected_lot: expectedLot || '',
       found_lot: foundLot,
       lot_status: lotStatus,
       expiry: expiry,

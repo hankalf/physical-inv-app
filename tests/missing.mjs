@@ -118,6 +118,7 @@ await gun.waitForSelector('#scrFind.active', { timeout: 8000 });
 await gun.waitForTimeout(500);
 const findAisles = await gun.$$eval('#findAisles button', (bs) => bs.map((b) => b.textContent));
 check('The header reads Not in Location', clean(await gun.textContent('#hdrTitle')) === 'Not in Location', clean(await gun.textContent('#hdrTitle')));
+check('With no crew list to name them from, the header falls back to the clock-in number', /\bE9\b/.test(await gun.textContent('#chipDevice')), clean(await gun.textContent('#chipDevice')));
 await gun.click('#btnFindSos'); await gun.waitForTimeout(300);
 check('SOS from the find desk names the way back after it', await gun.isVisible('#scrSos') && clean(await gun.textContent('#btnSosBack')) === 'Back to Not in Location', clean(await gun.textContent('#btnSosBack')));
 await gun.click('#btnSosBack'); await gun.waitForTimeout(300);

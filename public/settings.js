@@ -100,8 +100,28 @@
     if (isAdmin) await refreshUsers();
   }
 
+  /* Addresses locked for trying too many logins at once - rare, so only shown when there is one. */
+  function drawPlaceLocks(list) {
+    const box = $('placeLocks');
+    if (!box) return;
+    box.hidden = !list.length;
+    box.replaceChildren();
+    for (const l of list) {
+      const row = document.createElement('div');
+      row.className = 'feedback warn show';
+      row.append(`Address ${l.ip} is locked for another ${l.minutes} min after too many wrong passwords. `);
+      row.appendChild(button('Unlock', 'sm', async () => {
+        try { await api.post('/api/admin/login-locks/unlock', { ip: l.ip }); await refreshUsers(); }
+        catch (err) { msg($('userMsg'), 'err', err.message); }
+      }));
+      box.appendChild(row);
+    }
+  }
+
   async function refreshUsers() {
-    const { users } = await api.json('/api/admin/users');
+    const { users, locks = [] } = await api.json('/api/admin/users');
+    const lockOf = (name) => locks.find((l) => l.username === name);
+    drawPlaceLocks(locks.filter((l) => !l.username));
     const keys = (api.me && api.me.accessKeys) || [];
     table($('userTable'),
       [{ label: 'Username' }, { label: 'Name' }, { label: 'Role' }, { label: 'May use' }, { label: 'Status' }, { label: 'Last signed in' }, { label: 'Added' }, { label: '' }],
@@ -238,6 +258,13 @@
           w.style.marginLeft = '4px';
           tdSt.appendChild(w);
         }
+        const lk = lockOf(u.username);
+        if (lk) {
+          const w = tag('off', 'locked');
+          w.title = `Too many wrong passwords from ${lk.ip} — locked for another ${lk.minutes} min.`;
+          w.style.marginLeft = '4px';
+          tdSt.appendChild(w);
+        }
         tr.appendChild(tdSt);
         tr.append(
           cell(u.last_login ? new Date(u.last_login).toLocaleString() : 'never'),
@@ -250,6 +277,10 @@
           try { await api.post(`/api/admin/users/${u.username}`, body); clearMsg($('userMsg')); await refreshUsers(); }
           catch (err) { msg($('userMsg'), 'err', err.message); }
         };
+        if (lk) act.appendChild(button('Unlock', 'sm', async () => {
+          try { await api.post('/api/admin/login-locks/unlock', { username: u.username }); msg($('userMsg'), 'ok', `${u.username} can sign in again`); await refreshUsers(); }
+          catch (err) { msg($('userMsg'), 'err', err.message); }
+        }));
         act.appendChild(button(u.active ? 'Deactivate' : 'Reactivate', 'sm', () =>
           change({ active: !u.active }, u.active ? `Deactivate ${u.username}? They will not be able to sign in.` : '')));
         act.appendChild(button('Reset password', 'sm', async () => {

@@ -108,7 +108,7 @@ export function routeNeeds(p, method) {
 export function routeNeed(p, method) {
   const w = method !== 'GET';
   // Settings - Advanced included - is admin-only: the site's setup and every change to a count
-  if (w && /^\/api\/admin\/(devices|scanner-layout|scanner-prompts|default-session|sos-reasons|teams-webhook|idle-config|logo|pallet-system|erp\/formats|backups|adjustment-reasons|users)(\/|$)/.test(p)) return 'admin';
+  if (w && /^\/api\/admin\/(devices|scanner-layout|scanner-prompts|default-session|sos-reasons|teams-webhook|idle-config|logo|pallet-system|erp\/formats|backups|adjustment-reasons|users|login-locks)(\/|$)/.test(p)) return 'admin';
   if (w && p === '/api/admin/sessions') return 'admin';
   if (method === 'DELETE' && /^\/api\/admin\/sessions\/\d+$/.test(p)) return 'admin';
   if (w && /^\/api\/admin\/sessions\/\d+\/(master|status|trial|aisles\/block|aisles\/auto-block)$/.test(p)) return 'admin';

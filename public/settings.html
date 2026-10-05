@@ -2,9 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Settings</title>
 <link rel="icon" href="/icon.svg">
+<!-- on a phone, "Add to Home Screen" makes the office side an app of its own -->
+<link rel="manifest" href="/office.webmanifest">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="theme-color" content="#0b0e14">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FH Office">
 <link rel="stylesheet" href="/admin.css">
 <style>
   .scope {
@@ -582,6 +590,7 @@
           so nobody but its owner ever knows a working password.
         </div>
         <div class="feedback" id="userMsg"></div>
+        <div id="placeLocks" hidden></div>
         <div class="scroll" style="margin-top:10px"><table id="userTable"></table></div>
       </div>
       <div class="feedback" id="starterBox" style="display:none"></div>

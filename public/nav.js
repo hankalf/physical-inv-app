@@ -894,6 +894,30 @@
     });
   }
 
+  /* On a phone the side panel is a bar along the top: the name and a Menu
+     button, with the pages, the search box and the sign-out behind it - so
+     the page itself starts on the first screen, not under a wall of tabs. */
+  function mountPhoneMenu() {
+    const side = document.querySelector('aside.side');
+    if (!side || document.getElementById('navMenuBtn')) return;
+    const btn = document.createElement('button');
+    btn.id = 'navMenuBtn';
+    btn.type = 'button';
+    btn.className = 'menubtn ghost sm';
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-controls', 'navTabs');
+    const here = TABS.find(([path]) => path === location.pathname);
+    btn.innerHTML = '<span aria-hidden="true">☰</span> ';
+    btn.appendChild(document.createTextNode(here ? here[1] : 'Menu'));
+    const set = (open) => { document.body.classList.toggle('menu-open', open); btn.setAttribute('aria-expanded', String(open)); };
+    btn.addEventListener('click', (e) => { e.stopPropagation(); set(!document.body.classList.contains('menu-open')); });
+    // a page picked, or a tap back on the page, puts the menu away
+    side.addEventListener('click', (e) => { if (e.target.closest('a.tab')) set(false); });
+    document.addEventListener('click', (e) => { if (!side.contains(e.target)) set(false); });
+    const brand = side.querySelector('.brand');
+    side.insertBefore(btn, brand ? brand.nextSibling : side.firstChild);
+  }
+
   function closeSearch() {
     const r = document.getElementById('navResults');
     if (r) r.hidden = true;
@@ -1061,6 +1085,12 @@
   function drawLogo(b) {
     if (b && typeof b.name === 'string' && b.name.trim()) brandNow = { name: b.name.trim(), place: typeof b.place === 'string' ? b.place.trim() : brandNow.place };
     document.title = pageTitle ? `${brandNow.name} — ${pageTitle}` : brandNow.name;
+    // the name under the icon when the office side is added to a phone's home screen
+    const appTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+    if (appTitle) {
+      const initials = brandNow.name.replace(/\s+inventory$/i, '').split(/\s+/).filter(Boolean).map((w) => w[0].toUpperCase()).join('').slice(0, 3);
+      appTitle.content = initials ? `${initials} Office` : 'Office';
+    }
     const brand = document.querySelector('.side .brand');
     if (!brand) return;
     nameInto(brand);
@@ -1094,6 +1124,7 @@
     mountLogo();
     mountThemePicker();
     mountSearch();
+    mountPhoneMenu();
     renderSubTabs();
     applyPendingGoto();
     const btn = document.getElementById('btnLogin');

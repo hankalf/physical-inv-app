@@ -40,6 +40,8 @@ header .chip {
   background: var(--panel-2); border: 1px solid var(--line); color: var(--muted);
   white-space: nowrap;
 }
+/* the device and who is on it: a long name trails off rather than pushing the header apart */
+header #chipDevice { max-width: 46vw; overflow: hidden; text-overflow: ellipsis; }
 header .chip.online { color: var(--ok); border-color: #1d572a; }
 header .chip.offline { color: var(--warn); border-color: #5c4813; }
 header .chip.queued { color: var(--accent); border-color: #1f4d8f; }

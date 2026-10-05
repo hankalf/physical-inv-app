@@ -49,6 +49,8 @@ import {
 import { toCsv, parseRecords, pick } from './util/csv.js';
 import { listLayouts, loadLayout } from './util/layouts.js';
 import { siteTimezone, localDate, localHour } from './util/localtime.js';
+import { changed, memo } from './cache.js';
+import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, unlockPlace, PER_LOGIN, PER_PLACE } from './routes/login-limit.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards, barcodeBook } from './routes/printing.js';
 import {
@@ -136,6 +138,15 @@ const GZIP_CACHE = new Map();
 const GZIP_CACHE_MIN = 64 * 1024;   // below this, compressing is cheaper than remembering
 const GZIP_CACHE_MAX = 4 * 1024 * 1024;
 const GZIP_CACHE_KEEP = 6;
+
+/* The name under the icon on a phone's home screen: the site's initials and
+   "Office" - "Full Harvest Inventory" is "FH Office" - short enough not to be
+   cut off. */
+function officeShortName(name) {
+  const words = String(name || '').replace(/\s+inventory$/i, '').split(/\s+/).filter(Boolean);
+  const initials = words.map((w) => w[0].toUpperCase()).join('').slice(0, 3);
+  return initials ? `${initials} Office` : 'Office';
+}
 
 function gzipMaybeCached(payload) {
   if (payload.length < GZIP_CACHE_MIN || payload.length > GZIP_CACHE_MAX) return gzipSync(payload);
@@ -286,6 +297,14 @@ async function serveStatic(req, res, pathname) {
       const m = JSON.parse(body.toString('utf8'));
       m.name = b.name;
       m.short_name = b.name.replace(/\s+inventory$/i, '').slice(0, 12) || b.name.slice(0, 12);
+      body = Buffer.from(JSON.stringify(m, null, 2));
+    }
+    // and so does the office side, installed on a phone: "<name> Office"
+    if (rel === '/office.webmanifest') {
+      const b = branding();
+      const m = JSON.parse(body.toString('utf8'));
+      m.name = `${b.name} Office`;
+      m.short_name = officeShortName(b.name);
       body = Buffer.from(JSON.stringify(m, null, 2));
     }
     // The service worker must never be served from a stale cache.
@@ -597,8 +616,21 @@ async function handleAdmin(req, res, url, m) {
     const token = randomUUID();
     // a password with no username is the superadmin's: the one login the site started with
     const username = String(body.username || '').trim() || SUPERADMIN_USER;
+    // too many wrong passwords from here: wait it out, whatever is typed now
+    const ip = clientIp(req);
+    const wait = waitFor(username, ip);
+    if (wait) {
+      res.setHeader('retry-after', String(Math.ceil(wait / 1000)));
+      throw Object.assign(httpError(429, `too many wrong passwords - try again in ${Math.ceil(wait / 60000)} minute${Math.ceil(wait / 60000) === 1 ? '' : 's'}, or ask an admin to unlock it`), { code: 'locked' });
+    }
     const user = username ? authenticate(username, body.password) : null;
-    if (!user) throw httpError(401, 'that username and password do not match');
+    if (!user) {
+      const locked = noteFailure(username, ip);
+      if (locked) audit('sign-in', locked === 'login' ? 'locked a login for 15 minutes' : 'locked an address for 15 minutes',
+        locked === 'login' ? `${String(username).toUpperCase()}: ${PER_LOGIN} wrong passwords from ${ip}` : `${PER_PLACE} wrong passwords from ${ip}`);
+      throw httpError(401, 'that username and password do not match');
+    }
+    noteSuccess(username, ip);
     adminTokens.set(token, { name: user.name, username: user.username, role: user.role });
     saveAdminToken(token, { username: user.username, name: user.name });
     audit(user.name, 'signed in', `as ${user.username} (${user.role})`);
@@ -902,7 +934,7 @@ async function handleAdmin(req, res, url, m) {
   }
 
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/progress$/)) && method === 'GET') {
-    return sendJson(req, res, 200, progress(m[1]));
+    return sendJson(req, res, 200, memo(`progress:${m[1]}`, () => progress(m[1])));
   }
 
   // --- aisles & blocks
@@ -968,17 +1000,6 @@ async function handleAdmin(req, res, url, m) {
       accounts: countUsers(), admins: countAdmins(),
     });
   }
-  if (p === '/api/admin/users' && method === 'GET') {
-    requireAccountAdmin(req, url);
-    return sendJson(req, res, 200, { users: listUsers() });
-  }
-  if (p === '/api/admin/users' && method === 'POST') {
-    const me = requireAccountAdmin(req, url);
-    const body = await readJson(req);
-    const u = createUser(body, me.username || me.name);
-    audit(actor, 'created an account', `${u.username} (${u.role})`);
-    return sendJson(req, res, 200, u);
-  }
   /* The site admin - the login the site started with - is nobody else's to
      change: another admin cannot reset its password, take its pages or switch
      it off. It can still change its own. */
@@ -987,12 +1008,33 @@ async function handleAdmin(req, res, url, m) {
       throw httpError(403, "only the site admin can change the site admin's account");
     }
   };
+  if (p === '/api/admin/users' && method === 'GET') {
+    requireAccountAdmin(req, url);
+    return sendJson(req, res, 200, { users: listUsers(), locks: listLocks() });
+  }
+  // lift a lock that wrong passwords put on a login or an address
+  if (p === '/api/admin/login-locks/unlock' && method === 'POST') {
+    const me = requireAccountAdmin(req, url);
+    const body = await readJson(req);
+    if (body.username) guardSuper(body.username, me);
+    const n = body.username ? unlockLogin(body.username) : body.ip ? unlockPlace(String(body.ip)) : 0;
+    audit(actor, 'lifted a sign-in lock', body.username ? String(body.username).toUpperCase() : String(body.ip || ''));
+    return sendJson(req, res, 200, { unlocked: n, locks: listLocks() });
+  }
+  if (p === '/api/admin/users' && method === 'POST') {
+    const me = requireAccountAdmin(req, url);
+    const body = await readJson(req);
+    const u = createUser(body, me.username || me.name);
+    audit(actor, 'created an account', `${u.username} (${u.role})`);
+    return sendJson(req, res, 200, u);
+  }
   if ((m = p.match(/^\/api\/admin\/users\/([A-Za-z0-9._-]+)$/)) && method === 'POST') {
     const me = requireAccountAdmin(req, url);
     guardSuper(m[1], me);
     const body = await readJson(req);
     const u = updateUser(m[1], body);
     // a login taken away, or a password reset, ends every sign-in that login had
+    if (body.password !== undefined) unlockLogin(u.username);
     if (body.active === false || body.password !== undefined) {
       dropAdminTokensFor(u.username);
       for (const [tok, info] of adminTokens) if (info.username === u.username) adminTokens.delete(tok);
@@ -1653,21 +1695,27 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, { sources: sourcesOf(m[1]) });
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/pallets$/)) && method === 'GET') {
-    let rows = palletReport(m[1]);
-    // one system at a time, when three share the warehouse
-    if (url.searchParams.has('source')) { const src = url.searchParams.get('source'); rows = rows.filter((r) => (r.source || '') === src); }
-    /* A pallet with the right count of the wrong lot, or one that is out of
-       date, is an exception too - the quantity being right does not make it
-       something a supervisor can ignore. */
-    if (url.searchParams.get('only') === 'exceptions') {
-      rows = rows.filter(
-        (r) => r.status !== 'MATCH' ||
-          (r.lot_status && r.lot_status !== 'LOT MATCH') ||
-          r.expiry_status === 'EXPIRED' || r.expiry_status === 'EXPIRES SOON'
-      );
-    }
-    const limit = Number(url.searchParams.get('limit') || 500);
-    return sendJson(req, res, 200, { total: rows.length, rows: rows.slice(0, limit) });
+    /* The Reports tab takes the whole report and filters it on the page; kept
+       ready to send, so every screen on the same count between two scans
+       shares the one answer - worked out, written out and zipped once. */
+    const body = memo(`pallets-out:${m[1]}:${url.search}`, () => {
+      let rows = memo(`pallets:${m[1]}`, () => palletReport(m[1]));
+      // one system at a time, when three share the warehouse
+      if (url.searchParams.has('source')) { const src = url.searchParams.get('source'); rows = rows.filter((r) => (r.source || '') === src); }
+      /* A pallet with the right count of the wrong lot, or one that is out of
+         date, is an exception too - the quantity being right does not make it
+         something a supervisor can ignore. */
+      if (url.searchParams.get('only') === 'exceptions') {
+        rows = rows.filter(
+          (r) => r.status !== 'MATCH' ||
+            (r.lot_status && r.lot_status !== 'LOT MATCH') ||
+            r.expiry_status === 'EXPIRED' || r.expiry_status === 'EXPIRES SOON'
+        );
+      }
+      const limit = Number(url.searchParams.get('limit') || 500);
+      return JSON.stringify({ total: rows.length, rows: rows.slice(0, limit) });
+    });
+    return send(req, res, 200, body, { 'content-type': 'application/json; charset=utf-8' });
   }
   if (p === '/api/admin/layouts' && method === 'GET') return sendJson(req, res, 200, listLayouts());
 
@@ -1683,7 +1731,7 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/map$/)) && method === 'GET') {
     const s = getSession(m[1]);
     if (!s) throw httpError(404, 'session not found');
-    return sendJson(req, res, 200, { ...mapData(m[1]), layout: loadLayout(s.layout) });
+    return sendJson(req, res, 200, { ...memo(`map:${m[1]}`, () => mapData(m[1])), layout: loadLayout(s.layout) });
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/uncounted$/)) && method === 'GET') {
     return sendJson(req, res, 200, uncountedBins(m[1]));
@@ -1739,6 +1787,14 @@ async function handleAdmin(req, res, url, m) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const p = url.pathname;
+  /* a request that can change something makes every kept answer out of date,
+     as it starts and again once its writes are done (see cache.js) */
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    changed();
+    const end = res.end;
+    res.end = function (...a) { changed(); return end.apply(this, a); };   // before the answer goes out, so the next read is fresh
+    res.once('close', changed);
+  }
   try {
     if (p === '/api/health') {
       return sendJson(req, res, 200, {
@@ -1756,7 +1812,7 @@ const server = http.createServer(async (req, res) => {
     // The office board is deliberately open: it goes on a screen nobody signs in,
     // and it carries progress only - no pallet IDs, no clock in numbers, no controls.
     if (p === '/api/board' && req.method === 'GET') {
-      return sendJson(req, res, 200, boardData(url.searchParams.get('session')));
+      return sendJson(req, res, 200, memo(`board:${url.searchParams.get('session') || ''}`, () => boardData(url.searchParams.get('session'))));
     }
     if (p.startsWith('/api/admin/')) return await handleAdmin(req, res, url, null);
     if (p.startsWith('/api/')) {
