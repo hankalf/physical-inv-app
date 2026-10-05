@@ -987,5 +987,48 @@
    "other": "frames/023-teams.jpg",
    "otherLabel": "Team plan"
   }
+ },
+ {
+  "n": 24,
+  "at": "2026-10-05T07:58:10.989Z",
+  "wall": 214,
+  "day": 1,
+  "dayName": "Tuesday",
+  "sim": "12:38",
+  "label": "Tuesday 12:38",
+  "event": "",
+  "lines": 11771,
+  "bins": 10712,
+  "binsTotal": 20000,
+  "pallets": 9911,
+  "exceptions": 110,
+  "teams": 20,
+  "sosOpen": 1,
+  "sosTotal": 18,
+  "pending": 0,
+  "approved": 168,
+  "rejected": 20,
+  "secondOpen": 369,
+  "secondDone": 108,
+  "lat": {
+   "count": {
+    "n": 10828,
+    "p50": 7,
+    "p95": 21,
+    "max": 1886
+   },
+   "dashboard": {
+    "n": 2758,
+    "p50": 89,
+    "p95": 269,
+    "max": 1358
+   }
+  },
+  "frames": {
+   "progress": "frames/024-progress.jpg",
+   "board": "frames/024-board.jpg",
+   "other": "frames/024-alerts.jpg",
+   "otherLabel": "Alerts"
+  }
  }
 ]
