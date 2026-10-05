@@ -1,0 +1,45 @@
+[
+ {
+  "n": 1,
+  "at": "2026-10-05T09:28:10.250Z",
+  "wall": 3,
+  "day": 0,
+  "dayName": "Monday",
+  "sim": "06:10",
+  "label": "The sign-on rush is over, counting has begun",
+  "event": "start",
+  "lines": 29,
+  "bins": 26,
+  "binsTotal": 20000,
+  "pallets": 26,
+  "exceptions": 1,
+  "teams": 13,
+  "sosOpen": 0,
+  "sosTotal": 0,
+  "pending": 1,
+  "approved": 0,
+  "rejected": 0,
+  "secondOpen": 2,
+  "secondDone": 0,
+  "lat": {
+   "count": {
+    "n": 26,
+    "p50": 5,
+    "p95": 12,
+    "max": 14
+   },
+   "dashboard": {
+    "n": 35,
+    "p50": 36,
+    "p95": 174,
+    "max": 213
+   }
+  },
+  "frames": {
+   "progress": "frames/001-progress.jpg",
+   "board": "frames/001-board.jpg",
+   "other": "frames/001-teams.jpg",
+   "otherLabel": "Team plan"
+  }
+ }
+]
