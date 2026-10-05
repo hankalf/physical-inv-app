@@ -1116,5 +1116,48 @@
    "other": "frames/026-adjust.jpg",
    "otherLabel": "Adjustments"
   }
+ },
+ {
+  "n": 27,
+  "at": "2026-10-05T13:25:48.923Z",
+  "wall": 240,
+  "day": 2,
+  "dayName": "Wednesday",
+  "sim": "06:00",
+  "label": "Wednesday morning: the teams sign back on",
+  "event": "day",
+  "lines": 13169,
+  "bins": 11875,
+  "binsTotal": 20000,
+  "pallets": 11035,
+  "exceptions": 129,
+  "teams": 20,
+  "sosOpen": 0,
+  "sosTotal": 13,
+  "pending": 0,
+  "approved": 190,
+  "rejected": 25,
+  "secondOpen": 405,
+  "secondDone": 129,
+  "lat": {
+   "count": {
+    "n": 12004,
+    "p50": 7,
+    "p95": 18,
+    "max": 1711
+   },
+   "dashboard": {
+    "n": 3099,
+    "p50": 76,
+    "p95": 246,
+    "max": 1249
+   }
+  },
+  "frames": {
+   "progress": "frames/027-progress.jpg",
+   "board": "frames/027-board.jpg",
+   "other": "frames/027-teams.jpg",
+   "otherLabel": "Team plan"
+  }
  }
 ]
