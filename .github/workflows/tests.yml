@@ -6,7 +6,7 @@ name: Tests
 
 on:
   push:
-    branches: ['main', 'claude/**']
+    branches: ['main', 'version-*', 'claude/**']
   pull_request:
   workflow_dispatch:        # the "Run workflow" button on the Actions tab
 
