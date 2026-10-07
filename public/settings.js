@@ -1160,12 +1160,32 @@
   };
 
   /* ------------------------------------------------- the pallet system's address */
-  async function refreshPalletSystem() { $('fPalletSystemUrl').value = (await api.json('/api/admin/pallet-system')).url || ''; }
+  async function refreshPalletSystem() {
+    const ps = await api.json('/api/admin/pallet-system');
+    $('fPalletSystemUrl').value = ps.url || '';
+    $(ps.mode === 'window' ? 'fPsWindow' : 'fPsFrame').checked = true;
+  }
+  const psMode = () => ($('fPsWindow').checked ? 'window' : 'frame');
   $('btnPalletSystemSave').onclick = async () => {
     try {
-      const r = await api.post('/api/admin/pallet-system', { url: $('fPalletSystemUrl').value });
-      msg($('palletSystemMsg'), 'ok', r.url ? 'Saved.' : 'Cleared.', r.url ? 'Front bins → Move desk frames it now.' : 'The move desk shows the strip alone.');
+      const r = await api.post('/api/admin/pallet-system', { url: $('fPalletSystemUrl').value, mode: psMode() });
+      msg($('palletSystemMsg'), 'ok', r.url ? 'Saved.' : 'Cleared.', !r.url ? 'The desks show the strip alone.' : r.mode === 'window' ? 'The desks and the scanners open it in its own window now.' : 'The desks and the scanners frame it now.');
     } catch (err) { msg($('palletSystemMsg'), 'err', err.message); }
+  };
+  /* What the system's own headers say: whether a frame will show it, and
+     whether a sign-in made in a frame would stick. Read from the server, which
+     may not reach a system on the warehouse's own network. */
+  $('btnPalletSystemCheck').onclick = async () => {
+    const url = $('fPalletSystemUrl').value.trim();
+    if (!url) return msg($('palletSystemCheck'), 'err', 'Type the address first.');
+    msg($('palletSystemCheck'), 'warn', 'Asking the system…');
+    try {
+      const r = await api.post('/api/admin/pallet-system/check', { url });
+      const kind = r.verdict === 'frame' ? 'ok' : r.verdict === 'unreachable' ? 'warn' : 'err';
+      const head = r.verdict === 'frame' ? 'It can be framed under the desk.' : r.verdict === 'unreachable' ? 'Could not be checked from the server.' : 'Open it in its own window.';
+      msg($('palletSystemCheck'), kind, head, r.findings.join(' '));
+      if (r.verdict === 'window') $('fPsWindow').checked = true;
+    } catch (err) { msg($('palletSystemCheck'), 'err', err.message); }
   };
 
   /* ------------------------------------------------------------- the logo

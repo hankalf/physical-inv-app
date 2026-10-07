@@ -113,9 +113,12 @@ office side as its own app (*FH Office*), with a Menu button in place of the sid
 - **Microsoft Teams channel**: a Workflows webhook address. SOS and stopped-scanning
   alerts post a card there as well as on the dashboard. **Send a test card** before count
   day; Microsoft is retiring the old *Incoming Webhook* connectors.
-- **Pallet system**: the web address of the system the pallets live in. It is framed under the
-  move desk on the Front bins page and on the gun's Front2Back screen. A system that
-  refuses to be framed gets an *Open in a new tab* link instead.
+- **Pallet system**: the web address of the system the pallets live in, with `{pallet}`,
+  `{from}`, `{to}` in it so each pallet opens on its own record, and **how it opens**: framed
+  under the desks, or in its own window. **Check the address** reads the system's headers and
+  says which: an ASP.NET (`.aspx`) or other system whose sign-in cookies lack `SameSite=None`
+  never stays signed in inside a frame, and many refuse to be framed at all — set those to
+  **In its own window**, and the desks and the guns open the system as its own page.
 
 ## 5 — Scanners
 

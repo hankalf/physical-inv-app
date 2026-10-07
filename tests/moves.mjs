@@ -78,6 +78,25 @@ await gun.click('#moveAisles button >> nth=0');
 await gun.waitForTimeout(300);
 check('Picking an aisle opens the desk: the pallet, the bin it is in and the bin it goes to', clean(await gun.textContent('#mvPallet')) === 'M-1' && clean(await gun.textContent('#mvFrom')) === 'F01A001' && clean(await gun.textContent('#mvTo')) === 'F01A002' && /1 of 3 to move/.test(await gun.textContent('#mvLeft')), clean(await gun.textContent('#mvLeft')));
 check('…with the pallet system framed under it, from the address the office set', await gun.isVisible('#moveSys') && (await gun.getAttribute('#moveFrame', 'src')) === `${BASE}/board`);
+/* the office switches it to open in its own window, with the pallet in the address: the
+   gun shows one big button and no frame, and the address is still nowhere on its screen */
+await post('/api/admin/pallet-system', { url: `${BASE}/board?pallet={pallet}&to={to}`, mode: 'window' });
+await gun.reload(); await gun.waitForTimeout(1500);
+await gun.click('#btnModeMove'); await gun.waitForTimeout(300);
+await gun.fill('#fEmployee', 'E4'); await gun.press('#fEmployee', 'Enter');
+await gun.click('#btnStart'); await gun.waitForSelector('#scrMove.active', { timeout: 8000 }); await gun.waitForTimeout(500);
+await gun.click('#moveAisles button >> nth=0'); await gun.waitForTimeout(400);
+check('Set to open in its own window, the gun offers a button for this pallet and no frame', await gun.isVisible('#moveSys .gopen') && /Open the pallet system for M-1/.test(await gun.textContent('#moveSys .gopen')) && (await gun.$('#moveFrame')) === null && !(await gun.textContent('#scrMove')).includes('/board'), clean(await gun.textContent('#moveSys')));
+const [gunPopup] = await Promise.all([gun.waitForEvent('popup', { timeout: 5000 }).catch(() => null), gun.click('#moveSys .gopen')]);
+check('…which opens the system on its own screen, on that pallet', !!gunPopup && gunPopup.url() === `${BASE}/board?pallet=M-1&to=F01A002`, gunPopup && gunPopup.url());
+if (gunPopup) await gunPopup.close();
+await post('/api/admin/pallet-system', { url: `${BASE}/board`, mode: 'frame' });
+await gun.reload(); await gun.waitForTimeout(1500);
+await gun.click('#btnModeMove'); await gun.waitForTimeout(300);
+await gun.fill('#fEmployee', 'E4'); await gun.press('#fEmployee', 'Enter');
+await gun.click('#btnStart'); await gun.waitForSelector('#scrMove.active', { timeout: 8000 }); await gun.waitForTimeout(500);
+await gun.click('#moveAisles button >> nth=0'); await gun.waitForTimeout(400);
+check('Back to framed, the frame is back', (await gun.getAttribute('#moveFrame', 'src')) === `${BASE}/board`);
 check('…and no address or link to it anywhere on the gun\'s screen', !(await gun.textContent('#scrMove')).includes('/board') && (await gun.$$('#scrMove a[href]')).length === 0, clean(await gun.textContent('#scrMove')).slice(0, 160));
 check('…and no scan box and no skip: the scanning happens in that screen', (await gun.$('#fMoveScan')) === null && (await gun.$('#btnMoveSkip')) === null);
 await gun.click('#btnMoveNext'); await gun.waitForTimeout(200);

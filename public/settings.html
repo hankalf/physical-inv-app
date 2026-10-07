@@ -533,16 +533,24 @@
     </div>
 
     <div class="card" id="palletSystemCard">
-      <h2>Pallet system <span class="muted">the web address of the system the pallets live in, framed under the Front bins move desk</span></h2>
+      <h2>Pallet system <span class="muted">the web address of the system the pallets live in, and how the move and find desks open it</span></h2>
       <div class="hint" style="margin-top:0">
-        On <b>Front bins → Move desk</b> the pallet and bins to move sit at the top and this address opens underneath, so the move
-        is made in that system without leaving the page. Some systems refuse to be shown inside another page (their
-        <i>X-Frame-Options</i> or content-security policy); the desk then offers <b>Open in a new tab</b> instead.
+        On the <b>Front bins</b> and <b>Not in Location</b> desks, and on the scanners, the pallet and bins sit at the top and this
+        system opens with them, so the move is booked there and ticked off here. Put the pallet's own values into the address with
+        <b>{pallet}</b>, <b>{from}</b>, <b>{to}</b> (or <b>{bin}</b>, <b>{last}</b> for Not in Location) and the system opens straight on
+        that record: <code>https://wms.example.com/Move.aspx?pallet={pallet}&amp;to={to}</code>.
       </div>
       <div class="inline" style="margin-top:10px">
-        <div><label for="fPalletSystemUrl">Address</label><input id="fPalletSystemUrl" placeholder="https://…" autocomplete="off"></div>
+        <div><label for="fPalletSystemUrl">Address</label><input id="fPalletSystemUrl" placeholder="https://… — {pallet}, {from}, {to} are filled in" autocomplete="off"></div>
+        <div class="auto"><button class="fit" id="btnPalletSystemCheck" title="Reads the system's own headers and says whether it can be framed and signed in to">Check the address</button></div>
         <div class="auto"><button class="primary fit" id="btnPalletSystemSave">Save</button></div>
       </div>
+      <div style="margin-top:10px">
+        <label>How it opens</label>
+        <label class="cb"><input type="radio" name="fPalletSystemMode" value="frame" id="fPsFrame" checked> <b>Framed under the desk</b> <span class="muted">— handiest, when the system allows it</span></label>
+        <label class="cb"><input type="radio" name="fPalletSystemMode" value="window" id="fPsWindow"> <b>In its own window</b> <span class="muted">— the one to use when sign-in does not stick in the frame (ASP.NET sites, most in-house systems) or the frame stays blank. One window stays open beside the desk and moves to each pallet; on a scanner it opens on its own screen.</span></label>
+      </div>
+      <div class="feedback" id="palletSystemCheck"></div>
       <div class="feedback" id="palletSystemMsg"></div>
     </div>
 

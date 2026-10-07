@@ -2404,9 +2404,21 @@
   const moveState = { aisle: '', at: 0, task: null };
 
   async function loadPalletSystem() {
-    if (online()) { try { state.palletSystem = (await api('/api/pallet-system')).url || ''; await metaSet('palletSystem', state.palletSystem); return; } catch { /* cached */ } }
+    if (online()) {
+      try {
+        const ps = await api('/api/pallet-system');
+        state.palletSystem = ps.url || '';
+        state.palletSystemMode = ps.mode === 'window' ? 'window' : 'frame';
+        await metaSet('palletSystem', state.palletSystem);
+        await metaSet('palletSystemMode', state.palletSystemMode);
+        return;
+      } catch { /* cached */ }
+    }
     state.palletSystem = (await metaGet('palletSystem')) || '';
+    state.palletSystemMode = (await metaGet('palletSystemMode')) || 'frame';
   }
+  /** The address with this pallet's own values in it. */
+  const fillUrl = (url, vars) => String(url || '').replace(/\{([a-z]+)\}/gi, (whole, k) => { const v = vars[k.toLowerCase()]; return v == null ? '' : encodeURIComponent(String(v)); });
   async function loadMoves() {
     state.movesDoneLocal = (await metaGet('movesDoneLocal')) || [];
     await loadPalletSystem();
@@ -2430,18 +2442,39 @@
   /** The pallet system under a desk: the frame when there is an address, the bar
       either way. The frame is made the first time it is needed, so a gun that
       never opens a desk never carries an empty one. */
-  function deskSystem(sysId, frameId, noteId) {
+  function deskSystem(sysId, frameId, noteId, vars = {}) {
     // the counter sees the system's screen, never its address
-    const url = state.palletSystem || '';
+    const url = fillUrl(state.palletSystem || '', vars);
     $(sysId).hidden = !url;
     $(noteId).hidden = !!url;
     if (!url) return;
+    const box = $(sysId);
+    if (state.palletSystemMode === 'window') {
+      /* its own page in the browser, where the system's sign-in works: the
+         counter signs in there once, makes the move, and comes back here */
+      let btn = box.querySelector('.gopen');
+      if (!btn) {
+        box.innerHTML = '';
+        btn = document.createElement('button');
+        btn.className = 'gopen';
+        btn.type = 'button';
+        box.appendChild(btn);
+        const why = document.createElement('div');
+        why.className = 'gnote';
+        why.textContent = 'It opens on its own screen. Sign in there, make the move, then come back here and tap next.';
+        box.appendChild(why);
+      }
+      btn.textContent = `Open the pallet system${vars.pallet ? ` for ${vars.pallet}` : ''} ↗`;
+      btn.onclick = () => { window.open(url, '_blank', 'noopener'); };
+      return;
+    }
     let frame = $(frameId);
     if (!frame) {
+      box.innerHTML = '';
       frame = document.createElement('iframe');
       frame.id = frameId;
       frame.title = 'The pallet system';
-      $(sysId).appendChild(frame);
+      box.appendChild(frame);
     }
     if (frame.getAttribute('src') !== url) frame.src = url;
   }
@@ -2491,7 +2524,7 @@
     $('mvLeft').textContent = `${aisleLabel(moveState.aisle, zoneFor(moveState.aisle))}${task.level ? ' · level ' + task.level : ''} · ${moveState.at + 1} of ${open.length} to move`;
     $('btnMovePrev').disabled = moveState.at <= 0;
     $('btnMoveNext').disabled = moveState.at >= open.length - 1;
-    deskSystem('moveSys', 'moveFrame', 'mvNoSys');
+    deskSystem('moveSys', 'moveFrame', 'mvNoSys', { pallet: task.pallet, from: task.from, to: task.to, bin: task.to, last: task.from });
   }
 
   async function finishMoveLocal(status, extra = {}) {
@@ -2561,7 +2594,7 @@
     $('fdLeft').textContent = `${t.aisle === '—' ? 'No known location' : aisleLabel(t.aisle, zoneFor(t.aisle))} · ${findState.at + 1} of ${open.length} to find`;
     $('btnFindPrev').disabled = findState.at <= 0;
     $('btnFindNext').disabled = findState.at >= open.length - 1;
-    deskSystem('findSys', 'findFrame', 'fdNoSys');
+    deskSystem('findSys', 'findFrame', 'fdNoSys', { pallet: t.pallet, last: t.last || '', bin: t.last || '', from: t.last || '', to: '' });
   }
   async function finishFindLocal() {
     const t = findState.task;

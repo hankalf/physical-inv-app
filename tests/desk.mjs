@@ -1,5 +1,6 @@
 /* The move desk on Front bins: the pallet and bins to move at the top, the
    pallet system's own screen underneath, and a move ticked off from the desk. */
+import http from 'node:http';
 import { chromium } from 'playwright-core';
 import { signIn, expandSubTabs } from './helpers.mjs';
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
@@ -60,6 +61,38 @@ await page.click('#deskSkip'); await page.waitForTimeout(1200);
 const after2 = await j(await fetch(`${BASE}/api/admin/front/moves`, { headers: A }));
 check('Skip leaves it for a look, with the reason', after2.moves.find((m) => m.pallet_id === 'F12312-111').status === 'skipped' && /needs a look/.test(after2.moves.find((m) => m.pallet_id === 'F12312-111').reason || ''));
 check('…and the desk says nothing is waiting', await page.isVisible('#deskNone'));
+/* ---- placeholders: the address opens on the pallet in hand ---- */
+await fetch(`${BASE}/api/admin/front/moves/import`, { method: 'POST', headers: csv, body: 'Pallet,From bin,To bin\nF12313-111,F01A001,F01A002\n' });
+let r = await fetch(`${BASE}/api/admin/pallet-system`, { method: 'POST', headers: A, body: JSON.stringify({ url: `${BASE}/board?pallet={pallet}&from={from}&to={to}&x={nope}` }) });
+check('A placeholder the desk cannot fill is refused, naming the ones it can', r.status === 400 && /\{pallet\}/.test((await j(r)).error));
+await fetch(`${BASE}/api/admin/pallet-system`, { method: 'POST', headers: A, body: JSON.stringify({ url: `${BASE}/board?pallet={pallet}&from={from}&to={to}`, mode: 'frame' }) });
+await page.reload(); await page.waitForSelector('#scrMain.active'); await page.evaluate(() => window.appApi.showSub('desk')); await page.waitForTimeout(1200);
+check('With placeholders, the frame opens the system on the pallet in hand', (await page.getAttribute('#deskFrame', 'src')) === `${BASE}/board?pallet=F12313-111&from=F01A001&to=F01A002`, await page.getAttribute('#deskFrame', 'src'));
+
+/* ---- the check: what the system's headers say ---- */
+r = await fetch(`${BASE}/api/admin/pallet-system/check`, { method: 'POST', headers: A, body: JSON.stringify({ url: `${BASE}/board` }) });
+let chk = await j(r);
+check('Checking the app\'s own board: reachable, frameable', r.status === 200 && chk.reachable && chk.frames === 'yes' && chk.verdict === 'frame', JSON.stringify(chk).slice(0, 200));
+// a stand-in for an in-house ASP.NET system: refuses frames, signs in with cookies that have no SameSite
+const aspx = http.createServer((q, s) => { s.setHeader('X-Frame-Options', 'SAMEORIGIN'); s.setHeader('Set-Cookie', ['ASP.NET_SessionId=abc; path=/; HttpOnly', '.ASPXAUTH=xyz; path=/; HttpOnly']); s.setHeader('X-Powered-By', 'ASP.NET'); s.end('<html>login</html>'); });
+await new Promise((ok) => aspx.listen(0, '127.0.0.1', ok));
+const aspxUrl = `http://127.0.0.1:${aspx.address().port}/Login.aspx?ReturnUrl=Move.aspx&pallet={pallet}`;
+chk = await j(await fetch(`${BASE}/api/admin/pallet-system/check`, { method: 'POST', headers: A, body: JSON.stringify({ url: aspxUrl }) }));
+check('An ASP.NET-style site is read right: will not frame, cookies will not stick, so open it in its own window', chk.frames === 'no' && chk.cookies === 'lax' && chk.verdict === 'window' && /X-Frame-Options/.test(chk.findings.join(' ')) && /SameSite=None/.test(chk.findings.join(' ')), JSON.stringify(chk.findings));
+aspx.close();
+chk = await j(await fetch(`${BASE}/api/admin/pallet-system/check`, { method: 'POST', headers: A, body: JSON.stringify({ url: 'http://127.0.0.1:1/Nothing.aspx' }) }));
+check('A system the server cannot reach says so rather than guessing', chk.verdict === 'unreachable' && !chk.reachable && /could not reach/.test(chk.findings[0]), chk.findings[0]);
+check('A supervisor cannot run the check', (await fetch(`${BASE}/api/admin/pallet-system/check`, { method: 'POST', headers: jo, body: JSON.stringify({ url: `${BASE}/board` }) })).status === 403);
+
+/* ---- its own window: where an ASP.NET sign-in works ---- */
+const setW = await j(await fetch(`${BASE}/api/admin/pallet-system`, { method: 'POST', headers: A, body: JSON.stringify({ url: `${BASE}/board?pallet={pallet}&to={to}`, mode: 'window' }) }));
+check('An admin switches it to open in its own window', setW.mode === 'window' && (await j(await fetch(`${BASE}/api/admin/pallet-system`, { headers: jo }))).mode === 'window');
+await page.reload(); await page.waitForSelector('#scrMain.active'); await page.evaluate(() => window.appApi.showSub('desk')); await page.waitForTimeout(1200);
+check('The desk shows no frame then: a button to open this pallet in the system, and why', await page.$eval('#deskWrap', (el) => el.classList.contains('none')) && await page.isVisible('#deskWindow') && /Open F12313-111 in the pallet system/.test(await page.textContent('#deskWindow')) && await page.isVisible('#deskWindowNote') && await page.isHidden('#deskWide'));
+const [popup] = await Promise.all([page.waitForEvent('popup', { timeout: 5000 }).catch(() => null), page.click('#deskWindow')]);
+check('…which opens the system in a window of its own, on that pallet', !!popup && popup.url() === `${BASE}/board?pallet=F12313-111&to=F01A002`, popup && popup.url());
+if (popup) await popup.close();
+
 await fetch(`${BASE}/api/admin/pallet-system`, { method: 'POST', headers: A, body: JSON.stringify({ url: '' }) });
 await page.reload(); await page.waitForSelector('#scrMain.active'); await page.evaluate(() => window.appApi.showSub('desk')); await page.waitForTimeout(1200);
 check('With no address set the desk says where to set it, and the strip still works', /Settings → Integrations/.test(await page.textContent('#deskUrlNote')) && await page.$eval('#deskWrap', (el) => el.classList.contains('none')));

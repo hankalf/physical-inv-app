@@ -51,6 +51,7 @@ import { listLayouts, loadLayout } from './util/layouts.js';
 import { siteTimezone, localDate, localHour } from './util/localtime.js';
 import { changed, memo } from './cache.js';
 import { readiness } from './routes/readiness.js';
+import { palletSystem, savePalletSystem, probePalletSystem } from './routes/pallet-system.js';
 import { onedriveStatus, setOnedriveConfig, startSignIn, cancelSignIn, disconnect, uploadNow, startOnedrive } from './routes/onedrive.js';
 import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, unlockPlace, PER_LOGIN, PER_PLACE } from './routes/login-limit.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
@@ -414,10 +415,7 @@ async function handleHandheld(req, res, url, m) {
     return sendJson(req, res, 200, { jobs: ps ? practiceJobs(ps) : Object.fromEntries(JOBS.map(([k]) => [k, true])) });
   }
   // --- the pallet system's address, for the move desk on the gun
-  if (p === '/api/pallet-system' && method === 'GET') {
-    const row = db.prepare("SELECT value FROM settings WHERE key = 'palletSystemUrl'").get();
-    return sendJson(req, res, 200, { url: row ? row.value : '' });
-  }
+  if (p === '/api/pallet-system' && method === 'GET') return sendJson(req, res, 200, palletSystem());
 
   // --- the fix list: a problem seen on the floor, reported from the gun
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/issues$/)) && method === 'GET') {
@@ -1377,18 +1375,17 @@ async function handleAdmin(req, res, url, m) {
   //     is the newest real count's; the page never asks which.
   /* The pallet system's own web UI, framed under the move desk on Front bins.
      Its address is a site setting; the office side alone sees it. */
-  if (p === '/api/admin/pallet-system' && method === 'GET') {
-    const row = db.prepare("SELECT value FROM settings WHERE key = 'palletSystemUrl'").get();
-    return sendJson(req, res, 200, { url: row ? row.value : '' });
-  }
+  if (p === '/api/admin/pallet-system' && method === 'GET') return sendJson(req, res, 200, palletSystem());
   if (p === '/api/admin/pallet-system' && method === 'POST') {
     const body = await readJson(req);
-    const u = String(body.url || '').trim().slice(0, 500);
-    if (u && !/^https?:\/\//i.test(u)) throw httpError(400, 'the address has to start with http:// or https://');
-    if (u) db.prepare("INSERT INTO settings (key, value) VALUES ('palletSystemUrl', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(u);
-    else db.prepare("DELETE FROM settings WHERE key = 'palletSystemUrl'").run();
-    audit(actor, u ? 'set the pallet system address' : 'cleared the pallet system address', u);
-    return sendJson(req, res, 200, { url: u });
+    const saved = savePalletSystem(body);
+    audit(actor, saved.url ? 'set the pallet system address' : 'cleared the pallet system address', saved.url ? `${saved.url} (opens in its own ${saved.mode})` : '');
+    return sendJson(req, res, 200, saved);
+  }
+  // what the system's own headers say about framing and signing in
+  if (p === '/api/admin/pallet-system/check' && method === 'POST') {
+    const body = await readJson(req);
+    return sendJson(req, res, 200, await probePalletSystem(body.url || palletSystem().url));
   }
   if (p.startsWith('/api/admin/front/')) {
     const ref = referenceSession();

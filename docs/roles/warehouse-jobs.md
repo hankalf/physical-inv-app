@@ -129,11 +129,16 @@ on a full count, on the cycle session, for inventory control to read.
 
 ## 7 — The pallet system under the desks
 
-Both desks frame the web address an admin sets under *Settings → Integrations → Pallet system*.
-The office desks show the address and an **Open the pallet system in a new tab** link for a
-system that refuses to be shown inside another page; the scanners never show the address or a
-link, only the screen. With no address set the desks say so
-and the strip still works. Scanners pick the address up when they are next online.
+Both desks open the web address an admin sets under *Settings → Integrations → Pallet system*,
+either **framed** under the strip or **in its own window**. Framed is handiest; its own window is
+the one for a system whose sign-in does not stick inside a frame (ASP.NET sites, most in-house
+systems) or that refuses to be framed. In its own window: the office desk has **Open this pallet in
+the pallet system**, one window that stays open beside the page and moves to each pallet; the gun
+has one big button that opens the system on its own screen, with the pallet already in the address
+when the admin put `{pallet}`, `{from}`, `{to}` into it. Sign in there once; come back with the
+recent-apps key. The scanners never show the address, only the screen or the button. With no
+address set the desks say so and the strip still works. Scanners pick a change up when they are
+next online.
 
 ## 8 — When something goes wrong
 

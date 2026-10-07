@@ -23,7 +23,9 @@
   let deskList = [];
   let deskAt = 0;
   let deskUrl = '';
+  let deskMode = 'frame';
   let deskUrlLoaded = '';
+  const deskLink = (m) => api.fillUrl(deskUrl, m ? { pallet: m.pallet_id, last: m.last_location || '', bin: m.last_location || '', from: m.last_location || '', to: '' } : {});
   function renderDesk() {
     const m = deskList[deskAt] || null;
     $('fdDeskNone').hidden = !!m;
@@ -39,14 +41,22 @@
       $('fdDeskLast').textContent = m.last_location || '—';
       $('fdDeskMeta').textContent = [m.description, m.sku ? `item ${m.sku}` : '', m.qty != null ? `qty ${m.qty}` : '', m.lot ? `lot ${m.lot}` : '', m.note].filter(Boolean).join(' · ') || 'no description';
     }
-    $('fdDeskUrlNote').textContent = deskUrl ? `Pallet system: ${deskUrl}` : 'No pallet system address set — an admin can set it under Settings → Integrations → Pallet system. The strip above works without it.';
-    $('fdDeskOpen').hidden = !deskUrl;
-    $('fdDeskOpen').href = deskUrl || '#';
-    $('fdDeskWrap').classList.toggle('none', !deskUrl);
-    if (deskUrl && deskUrl !== deskUrlLoaded) { deskUrlLoaded = deskUrl; $('fdDeskFrame').src = deskUrl; }
+    const link = deskLink(m);
+    const asWindow = deskMode === 'window';
+    $('fdDeskUrlNote').textContent = deskUrl ? `Pallet system: ${deskUrl}${asWindow ? ' · opens in its own window' : ''}` : 'No pallet system address set — an admin can set it under Settings → Integrations → Pallet system. The strip above works without it.';
+    $('fdDeskOpen').hidden = !deskUrl || asWindow;
+    $('fdDeskOpen').href = link || '#';
+    $('fdDeskWindow').hidden = !deskUrl || !asWindow;
+    $('fdDeskWindow').disabled = !m;
+    $('fdDeskWindow').textContent = m ? `Open ${m.pallet_id} in the pallet system ↗` : 'Open the pallet system ↗';
+    $('fdDeskWindowNote').hidden = !deskUrl || !asWindow;
+    $('fdDeskWide').hidden = !deskUrl || asWindow;
+    $('fdDeskWrap').classList.toggle('none', !deskUrl || asWindow);
+    if (deskUrl && !asWindow && link !== deskUrlLoaded) { deskUrlLoaded = link; $('fdDeskFrame').src = link; }
   }
+  $('fdDeskWindow').onclick = () => { const m = deskList[deskAt]; if (m && !api.openPalletSystem(deskLink(m))) msg($('fdDeskMsg'), 'err', 'The browser blocked the window', 'Allow pop-ups for this site and try again.'); };
   async function refreshDesk() {
-    try { deskUrl = (await apiJson('/api/admin/pallet-system')).url || ''; } catch { deskUrl = ''; }
+    try { const ps = await apiJson('/api/admin/pallet-system'); deskUrl = ps.url || ''; deskMode = ps.mode === 'window' ? 'window' : 'frame'; } catch { deskUrl = ''; }
     const d = await apiJson('/api/admin/missing?status=missing');
     deskList = d.rows || [];
     if (deskAt >= deskList.length) deskAt = Math.max(0, deskList.length - 1);

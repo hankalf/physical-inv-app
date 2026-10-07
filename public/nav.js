@@ -1122,6 +1122,16 @@
     api.refreshBranding();
   }
 
+  /* The pallet system's address with a pallet's own values in it, and one
+     window for it that every desk reuses - so the person signs in there once
+     and the window moves from pallet to pallet beside the page. */
+  api.fillUrl = (url, vars = {}) => String(url || '').replace(/\{([a-z]+)\}/gi, (whole, k) => { const v = vars[k.toLowerCase()]; return v == null ? '' : encodeURIComponent(String(v)); });
+  api.openPalletSystem = (url) => {
+    const w = window.open(url, 'fh-pallet-system', 'popup=1,width=1100,height=820');
+    if (w) { try { w.focus(); } catch { /* another site's window */ } }
+    return !!w;
+  };
+
   /* An invite link: /admin?invite=… . The sign-in card becomes "choose your
      password" for the login it was made for; once chosen, they are signed in
      and the link stops working. */

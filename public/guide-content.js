@@ -454,7 +454,8 @@
           watch: [
             { see: 'The gun does not offer Front2Back', means: 'No moves are waiting, or the job is unticked under Settings → Scanners → Jobs on the scanners.', fix: 'Build a move list under Front bins; an admin ticks the job back on.' },
             { see: 'A pallet on the desk cannot be moved', means: 'The bin behind is not empty, or the pallet is not there.', fix: 'Leave it with › on the gun; skip it with the reason from Front bins → Pallets to move back.' },
-            { see: 'No pallet system under the strip on the gun', means: 'No address set, or the system refuses to be framed.', fix: 'Settings → Integrations → Pallet system. The gun shows the screen, never the address; a system that refuses framing is worked from the office desk’s new-tab link.' },
+            { see: 'No pallet system under the strip on the gun', means: 'No address set, or the system refuses to be framed.', fix: 'Settings → Integrations → Pallet system: Check the address, then How it opens → In its own window. The gun then shows one button that opens the system on its own screen, with the pallet in it.' },
+            { see: 'The pallet system under the strip shows its login, and signing in brings the login back', means: 'An ASP.NET or other site whose sign-in cookies lack SameSite=None: the browser drops them inside a frame.', fix: 'Settings → Integrations → Pallet system → In its own window. Sign in there once; it stays signed in.' },
           ],
           ask: [],
         },
@@ -463,7 +464,7 @@
           do: 'Move desk puts the pallet and the two bins at the top and frames the site’s pallet system below, so the move can be booked there without switching windows. Set the pallet system address under Settings.',
           where: S('/front', 'desk', 'Front bins → Move desk'),
           watch: [
-            { see: 'The frame below is empty', means: 'No pallet-system address is set, or that site refuses to be framed.', fix: 'Settings → Integrations → Pallet system. If it refuses framing, the desk gives an Open link instead.' },
+            { see: 'The frame below is empty, or shows a login that will not stick', means: 'No pallet-system address is set, that site refuses to be framed, or its sign-in cookies lack SameSite=None (ASP.NET sites).', fix: 'Settings → Integrations → Pallet system: Check the address says which; In its own window opens one window beside the desk that moves to each pallet.' },
           ],
           ask: [],
         },

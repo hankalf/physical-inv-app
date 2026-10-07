@@ -65,7 +65,9 @@
   let deskList = [];
   let deskAt = 0;
   let deskUrl = '';
+  let deskMode = 'frame';
   let deskUrlLoaded = '';
+  const deskLink = (m) => api.fillUrl(deskUrl, m ? { pallet: m.pallet_id, from: m.from_bin, to: m.to_bin, bin: m.to_bin, last: m.from_bin } : {});
   function renderDesk() {
     const m = deskList[deskAt] || null;
     $('deskNone').hidden = !!m || !ready;
@@ -81,14 +83,23 @@
       $('deskTo').textContent = m.to_bin;
       $('deskMeta').textContent = `aisle ${m.aisle || '—'}${m.level ? ' · level ' + m.level : ''}${m.source === 'upload' ? ' · from the uploaded list' : ' · from the report'}`;
     }
-    $('deskUrlNote').textContent = deskUrl ? `Pallet system: ${deskUrl}` : 'No pallet system address set — an admin can set it under Settings → Integrations → Pallet system. The strip above works without it.';
-    $('deskOpen').hidden = !deskUrl;
-    $('deskOpen').href = deskUrl || '#';
-    $('deskWrap').classList.toggle('none', !deskUrl);
-    if (deskUrl && deskUrl !== deskUrlLoaded) { deskUrlLoaded = deskUrl; $('deskFrame').src = deskUrl; }
+    const link = deskLink(m);
+    const asWindow = deskMode === 'window';
+    $('deskUrlNote').textContent = deskUrl ? `Pallet system: ${deskUrl}${asWindow ? ' · opens in its own window' : ''}` : 'No pallet system address set — an admin can set it under Settings → Integrations → Pallet system. The strip above works without it.';
+    $('deskOpen').hidden = !deskUrl || asWindow;
+    $('deskOpen').href = link || '#';
+    $('deskWindow').hidden = !deskUrl || !asWindow;
+    $('deskWindow').disabled = !m;
+    $('deskWindow').textContent = m ? `Open ${m.pallet_id} in the pallet system ↗` : 'Open the pallet system ↗';
+    $('deskWindowNote').hidden = !deskUrl || !asWindow;
+    $('deskWide').hidden = !deskUrl || asWindow;
+    $('deskWrap').classList.toggle('none', !deskUrl || asWindow);
+    // framed: the frame follows the pallet when the address carries placeholders
+    if (deskUrl && !asWindow && link !== deskUrlLoaded) { deskUrlLoaded = link; $('deskFrame').src = link; }
   }
+  $('deskWindow').onclick = () => { const m = deskList[deskAt]; if (m && !api.openPalletSystem(deskLink(m))) msg($('deskMsg'), 'err', 'The browser blocked the window', 'Allow pop-ups for this site and try again.'); };
   async function refreshDesk() {
-    try { deskUrl = (await apiJson('/api/admin/pallet-system')).url || ''; } catch { deskUrl = ''; }
+    try { const ps = await apiJson('/api/admin/pallet-system'); deskUrl = ps.url || ''; deskMode = ps.mode === 'window' ? 'window' : 'frame'; } catch { deskUrl = ''; }
     if (ready) {
       const d = await apiJson(`${F}/moves?status=open`);
       deskList = d.moves || [];
