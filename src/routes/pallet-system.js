@@ -13,7 +13,7 @@
  */
 import { db } from '../db.js';
 
-export const MODES = ['frame', 'window'];
+export const MODES = ['frame', 'proxy', 'window'];
 export const PLACEHOLDERS = ['pallet', 'from', 'to', 'bin', 'last'];
 
 export function palletSystem() {
@@ -33,7 +33,7 @@ export function savePalletSystem({ url, mode } = {}) {
   const unknown = [...u.matchAll(/\{([a-z]+)\}/gi)].map((m) => m[1].toLowerCase()).filter((k) => !PLACEHOLDERS.includes(k));
   if (unknown.length) throw Object.assign(new Error(`not a placeholder the desk fills in: {${unknown[0]}} - use ${PLACEHOLDERS.map((p) => `{${p}}`).join(', ')}`), { status: 400 });
   const m = mode === undefined ? now.mode : String(mode);
-  if (!MODES.includes(m)) throw Object.assign(new Error('how it opens is "frame" or "window"'), { status: 400 });
+  if (!MODES.includes(m)) throw Object.assign(new Error('how it opens is "frame", "proxy" or "window"'), { status: 400 });
   if (!u) {
     db.prepare("DELETE FROM settings WHERE key IN ('palletSystem', 'palletSystemUrl')").run();
     return { url: '', mode: m };
@@ -89,7 +89,8 @@ export async function probePalletSystem(url) {
   const aspx = /\.aspx(\?|$)/i.test(target) || /asp\.net/i.test(h('x-powered-by')) || /ASP\.NET_SessionId|\.ASPXAUTH/i.test(raw.join(';'));
   if (aspx && out.cookies === 'unknown') { out.cookies = 'lax'; out.findings.push('It is an ASP.NET site: its sign-in cookies (.ASPXAUTH, ASP.NET_SessionId) are set without SameSite=None unless its web.config says otherwise, so a sign-in made inside a frame does not stick.'); }
   if (res.status >= 400) out.findings.push(`It answered ${res.status} to the server’s request${res.status === 401 || res.status === 403 ? ' (a sign-in is wanted, which is normal)' : ''}.`);
-  out.verdict = out.frames === 'no' ? 'window' : out.cookies === 'lax' ? 'window' : 'frame';
+  out.verdict = out.frames === 'no' ? 'proxy' : out.cookies === 'lax' ? 'proxy' : 'frame';
   if (!out.findings.length) out.findings.push('Nothing in its headers stops it being framed or signed in to from the frame.');
+  else if (out.verdict === 'proxy') out.findings.push('Shown through this app it works under the desk anyway: the server can reach it, so it can fetch its pages and keep its sign-in.');
   return out;
 }

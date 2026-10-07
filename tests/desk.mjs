@@ -2,7 +2,7 @@
    pallet system's own screen underneath, and a move ticked off from the desk. */
 import http from 'node:http';
 import { chromium } from 'playwright-core';
-import { signIn, expandSubTabs } from './helpers.mjs';
+import { signIn, expandSubTabs, fakeAspx } from './helpers.mjs';
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
 const results = [];
 const check = (s, ok, d = '') => { results.push(!!ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${s}${d ? ' — ' + d : ''}`); };
@@ -78,7 +78,7 @@ const aspx = http.createServer((q, s) => { s.setHeader('X-Frame-Options', 'SAMEO
 await new Promise((ok) => aspx.listen(0, '127.0.0.1', ok));
 const aspxUrl = `http://127.0.0.1:${aspx.address().port}/Login.aspx?ReturnUrl=Move.aspx&pallet={pallet}`;
 chk = await j(await fetch(`${BASE}/api/admin/pallet-system/check`, { method: 'POST', headers: A, body: JSON.stringify({ url: aspxUrl }) }));
-check('An ASP.NET-style site is read right: will not frame, cookies will not stick, so open it in its own window', chk.frames === 'no' && chk.cookies === 'lax' && chk.verdict === 'window' && /X-Frame-Options/.test(chk.findings.join(' ')) && /SameSite=None/.test(chk.findings.join(' ')), JSON.stringify(chk.findings));
+check('An ASP.NET-style site is read right: will not frame, cookies will not stick, so show it through this app', chk.frames === 'no' && chk.cookies === 'lax' && chk.verdict === 'proxy' && /X-Frame-Options/.test(chk.findings.join(' ')) && /SameSite=None/.test(chk.findings.join(' ')), JSON.stringify(chk.findings));
 aspx.close();
 chk = await j(await fetch(`${BASE}/api/admin/pallet-system/check`, { method: 'POST', headers: A, body: JSON.stringify({ url: 'http://127.0.0.1:1/Nothing.aspx' }) }));
 check('A system the server cannot reach says so rather than guessing', chk.verdict === 'unreachable' && !chk.reachable && /could not reach/.test(chk.findings[0]), chk.findings[0]);
@@ -92,6 +92,26 @@ check('The desk shows no frame then: a button to open this pallet in the system,
 const [popup] = await Promise.all([page.waitForEvent('popup', { timeout: 5000 }).catch(() => null), page.click('#deskWindow')]);
 check('…which opens the system in a window of its own, on that pallet', !!popup && popup.url() === `${BASE}/board?pallet=F12313-111&to=F01A002`, popup && popup.url());
 if (popup) await popup.close();
+
+/* ---- through this app: the frame stays under the strip, and the ASP.NET sign-in sticks ---- */
+const wms = await fakeAspx();
+await fetch(`${BASE}/api/admin/pallet-system`, { method: 'POST', headers: A, body: JSON.stringify({ url: `${wms.origin}/Move.aspx?pallet={pallet}&to={to}`, mode: 'proxy' }) });
+check('Without a ticket nobody reaches the system through the app', (await fetch(`${BASE}/ps/Move.aspx?pallet=X`)).status === 403);
+await page.reload(); await page.waitForSelector('#scrMain.active'); await page.evaluate(() => window.appApi.showSub('desk')); await page.waitForTimeout(1500);
+check('Through this app, the frame is back under the strip, on this site, on the pallet in hand', (await page.getAttribute('#deskFrame', 'src')) === '/ps/Move.aspx?pallet=F12313-111&to=F01A002' && !(await page.$eval('#deskWrap', (el) => el.classList.contains('none'))) && await page.isHidden('#deskWindow'), await page.getAttribute('#deskFrame', 'src'));
+const viaApp = await page.evaluate(async () => { const r = await fetch('/ps/Login.aspx'); return { status: r.status, xfo: r.headers.get('x-frame-options'), html: await r.text() }; });
+check('The system\'s page comes through with its "do not frame me" header gone and its links turned towards this site', viaApp.status === 200 && !viaApp.xfo && /href="\/ps\/WebResource\.axd/.test(viaApp.html) && /action="\/ps\/Login\.aspx/.test(viaApp.html) && /href="\/ps\/Help\.aspx"/.test(viaApp.html), viaApp.html.slice(0, 200));
+const wmsFrame = async () => page.frames().find((f) => f.url().includes('/ps/'));
+await page.waitForFunction(() => { const f = document.getElementById('deskFrame'); try { return !!(f.contentDocument && f.contentDocument.querySelector('#go')); } catch { return false; } }, null, { timeout: 8000 }).catch(() => {});
+let fr = await wmsFrame();
+check('The frame shows the system\'s sign-in (it sent the desk there, and the redirect was turned round)', !!fr && /Sign in to the WMS/.test(await fr.textContent('body')) && fr.url().includes('/ps/Login.aspx'), fr && fr.url());
+await fr.fill('#user', 'dana'); await fr.fill('#pw', 'secret'); await fr.click('#go');
+await page.waitForFunction(() => { const f = document.getElementById('deskFrame'); try { return !!(f.contentDocument && f.contentDocument.querySelector('#welcome')); } catch { return false; } }, null, { timeout: 8000 }).catch(() => {});
+fr = await wmsFrame();
+check('Signing in inside the frame sticks: the system lands on the pallet, signed in, under the strip', !!fr && /Welcome dana - move F12313-111 to F01A002/.test(await fr.textContent('body')), fr && (await fr.textContent('body')).slice(0, 120));
+const jar = (await page.context().cookies(`${BASE}/ps/Move.aspx`)).filter((c) => /ASPXAUTH|ASP\.NET_SessionId|psTicket/.test(c.name));
+check('The system\'s cookies live under this site, on the /ps path only', jar.length === 3 && jar.every((c) => c.path === '/ps'), JSON.stringify(jar.map((c) => [c.name, c.path])));
+wms.close();
 
 await fetch(`${BASE}/api/admin/pallet-system`, { method: 'POST', headers: A, body: JSON.stringify({ url: '' }) });
 await page.reload(); await page.waitForSelector('#scrMain.active'); await page.evaluate(() => window.appApi.showSub('desk')); await page.waitForTimeout(1200);

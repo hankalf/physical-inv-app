@@ -52,6 +52,7 @@ import { siteTimezone, localDate, localHour } from './util/localtime.js';
 import { changed, memo } from './cache.js';
 import { readiness } from './routes/readiness.js';
 import { palletSystem, savePalletSystem, probePalletSystem } from './routes/pallet-system.js';
+import { proxyPalletSystem, makeTicket, ticketCookie, PREFIX as PS_PREFIX } from './routes/pallet-proxy.js';
 import { onedriveStatus, setOnedriveConfig, startSignIn, cancelSignIn, disconnect, uploadNow, startOnedrive } from './routes/onedrive.js';
 import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, unlockPlace, PER_LOGIN, PER_PLACE } from './routes/login-limit.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
@@ -416,6 +417,12 @@ async function handleHandheld(req, res, url, m) {
   }
   // --- the pallet system's address, for the move desk on the gun
   if (p === '/api/pallet-system' && method === 'GET') return sendJson(req, res, 200, palletSystem());
+  // a signed-in scanner's ticket to see the pallet system through this app
+  if (p === '/api/pallet-system/ticket' && method === 'POST') {
+    const t = makeTicket(device ? device.name : 'scanner');
+    res.setHeader('set-cookie', ticketCookie(t.ticket, t.maxAge, String(req.headers['x-forwarded-proto'] || '').split(',')[0] === 'https'));
+    return sendJson(req, res, 200, { ok: true, until: new Date(Date.now() + t.maxAge * 1000).toISOString() });
+  }
 
   // --- the fix list: a problem seen on the floor, reported from the gun
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/issues$/)) && method === 'GET') {
@@ -1382,6 +1389,12 @@ async function handleAdmin(req, res, url, m) {
     audit(actor, saved.url ? 'set the pallet system address' : 'cleared the pallet system address', saved.url ? `${saved.url} (opens in its own ${saved.mode})` : '');
     return sendJson(req, res, 200, saved);
   }
+  // the office's ticket to see the pallet system through this app (any signed-in login: the desks are theirs)
+  if (p === '/api/admin/pallet-system/ticket' && method === 'POST') {
+    const t = makeTicket(actor);
+    res.setHeader('set-cookie', ticketCookie(t.ticket, t.maxAge, String(req.headers['x-forwarded-proto'] || '').split(',')[0] === 'https'));
+    return sendJson(req, res, 200, { ok: true, until: new Date(Date.now() + t.maxAge * 1000).toISOString() });
+  }
   // what the system's own headers say about framing and signing in
   if (p === '/api/admin/pallet-system/check' && method === 'POST') {
     const body = await readJson(req);
@@ -1878,6 +1891,8 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/board' && req.method === 'GET') {
       return sendJson(req, res, 200, memo(`board:${url.searchParams.get('session') || ''}`, () => boardData(url.searchParams.get('session'))));
     }
+    // the pallet system, shown through this app (see pallet-proxy.js)
+    if (p === PS_PREFIX || p.startsWith(PS_PREFIX + '/')) return await proxyPalletSystem(req, res, url, readBody);
     if (p.startsWith('/api/admin/')) return await handleAdmin(req, res, url, null);
     if (p.startsWith('/api/')) {
       const handled = await handleHandheld(req, res, url, null);

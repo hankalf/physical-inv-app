@@ -1104,11 +1104,11 @@ with an empty bin behind it — or takes one you upload (Pallet, From bin, To bi
 3. The gun opens the **move desk**, the same strip as the office's: the **pallet**, the bin it is
    in (**from**) and the bin it goes to (**to**), **‹ ›** to step through the aisle, and
    underneath, the **pallet system's own screen** (the address the office set under *Settings →
-   Integrations → Pallet system*; the gun shows the screen, never the address) — or, when the
-   office set it to open **in its own window**, one big button, **Open the pallet system for
-   this pallet**, which opens the system on its own screen with the pallet already in it; sign
-   in there once, book the move, and come back to the app with the recent-apps key. There is
-   nothing to scan in the app: the move is booked, and scanned, in that screen.
+   Integrations → Pallet system*; the gun shows the screen, never the address). There is nothing
+   to scan in the app: the move is booked, and scanned, in that screen. (Only when the office had
+   to set the system to open *in its own window* does the gun show a button instead, **Open the
+   pallet system for this pallet**; sign in there once, book the move, and come back with the
+   recent-apps key.)
 4. Move the pallet, book it in the system, tap **Moved — next**. The next one comes up; when
    the aisle is finished the gun says so and goes back to the aisle list (**Aisles** goes back
    any time). A pallet that cannot be moved is left with **›**; the office skips it with the
@@ -1134,16 +1134,25 @@ screens need the room, and the choice is kept on that computer (the address is s
 `SameSite=None` — classic **ASP.NET** sites (`.aspx` pages), most in-house systems — never stays
 signed in there: the form submits, the browser drops the cookie, the login page comes back. Many
 such sites also refuse to be framed at all (a blank box). This is the system's doing, not the
-app's, and the fix is in Settings: **Check the address** reads the system's own headers and says
-which of the two it is, and **How it opens → In its own window** makes both desks and the guns
-open the system as its own page, where everything works. On the office desks one window stays
-open beside the page and moves to each pallet as you go; on a gun it opens on its own screen.
+app's. **Check the address** under *Settings → Integrations → Pallet system* reads the system's
+own headers and says which of the two it is; then **How it opens** has the answer:
+
+- **Through this app** keeps the frame under the strip and makes it work: this server fetches the
+  system's pages and shows them as part of this site, so to the browser the frame is this site,
+  the cookies are first-party and stick, and the "do not frame me" header never arrives. The
+  move desk, the find desk and the guns all show it that way. Two conditions: the server has to
+  be able to **reach** the system (a cloud system, or this app running on a PC in the building
+  rather than on Railway — *Check the address* says whether it can), and the system's pages then
+  run inside this site, so only a system you trust belongs here.
+- **In its own window**, for a system the server cannot reach: one window beside the office desk
+  that moves to each pallet; on a gun, a button that opens it on its own screen.
+
 Put **{pallet}**, **{from}** and **{to}** (or **{bin}** and **{last}** on the find desk) into the
-address and the system opens straight on that record —
+address either way and the system opens straight on that record —
 `https://wms.example.com/Move.aspx?pallet={pallet}&to={to}`. The other way round, the system's
-owner can allow the frame by setting its cookies to `SameSite=None; Secure` in `web.config`
-(`<httpCookies sameSite="None" requireSSL="true"/>`, and `cookieSameSite="None"` on `<forms>` and
-`<sessionState>`) and letting this site frame it; until then, its own window.
+owner can make a plain frame work by setting its cookies to `SameSite=None; Secure` in
+`web.config` (`<httpCookies sameSite="None" requireSSL="true"/>`, and `cookieSameSite="None"` on
+`<forms>` and `<sessionState>`) and letting this site frame it.
 5. Done moves update the report, so the count that follows expects the pallet where it now is.
    With no signal they queue and send later, like count lines.
 
@@ -1586,8 +1595,9 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | The printed barcodes will not scan | The page was printed “fit to page”, or on glossy paper | Print again at **100%** on plain white paper. If a gun still refuses them, print with **Per row: 1** — the bars are wider on a bigger label |
 | A code in the spreadsheet will not print | Code 128 carries plain ASCII only — an accented letter or a smart quote cannot be drawn | The book says which character it was; retype that code with plain letters and numbers |
 | The app still shows the old name somewhere | The name was changed under Settings → Logins & site → Site name | Supervisor pages change at once. A scanner picks it up when it is next online; the board on its next refresh. The name under a home-screen icon comes from the app's install and updates when the app is next reinstalled |
-| The strip on the gun shows the pallet but no system under it | No pallet system address is set (the gun says so), or the system refuses to be framed | Settings → Integrations → Pallet system: **Check the address**, and set **How it opens** to **In its own window** — the gun then shows a button that opens the system on its own screen |
-| The pallet system under the desk shows its login page, and signing in only brings the login page back | The system's sign-in cookies are set without SameSite=None (an ASP.NET site, most in-house systems), so the browser drops them inside a frame | Settings → Integrations → Pallet system → **In its own window**. Or the system's owner sets its cookies to SameSite=None; Secure |
+| The strip on the gun shows the pallet but no system under it | No pallet system address is set (the gun says so), or the system refuses to be framed | Settings → Integrations → Pallet system: **Check the address**, then **How it opens → Through this app** (the frame works again) or, if the server cannot reach the system, **In its own window** |
+| The pallet system under the desk shows its login page, and signing in only brings the login page back | The system's sign-in cookies are set without SameSite=None (an ASP.NET site, most in-house systems), so the browser drops them inside a plain frame | Settings → Integrations → Pallet system → **Through this app**: the frame stays and the sign-in sticks. Or the system's owner sets its cookies to SameSite=None; Secure |
+| Through this app, the frame says "The pallet system did not answer" | This server cannot reach the system — it is on the warehouse's own network and the app runs on Railway | Run the app on a PC in the building (README: *On a PC in the warehouse*), ask IT to expose the system to the server, or use *In its own window* |
 | The site's address opens the supervisor sign-in, not the scanner | That is how it works: the bare address is the office's | A scanner is opened from its own link under Settings → Scanners (`/?d=…`); after that its home-screen icon lands on the app. If a handheld lost that (site data cleared), open its link again |
 | A gun does not offer the cycle count, Front2Back or Not in Location | That job is unticked under Settings → Scanners → What the scanners offer | Deliberate during a wall-to-wall; tick it back on when the count is over |
 | A gun offers Front2Back but says *Nothing waiting to move right now* | The job is ticked and the move list is empty | Normal: build a move list under Front bins, or untick the job |

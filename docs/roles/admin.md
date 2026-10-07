@@ -115,10 +115,10 @@ office side as its own app (*FH Office*), with a Menu button in place of the sid
   day; Microsoft is retiring the old *Incoming Webhook* connectors.
 - **Pallet system**: the web address of the system the pallets live in, with `{pallet}`,
   `{from}`, `{to}` in it so each pallet opens on its own record, and **how it opens**: framed
-  under the desks, or in its own window. **Check the address** reads the system's headers and
-  says which: an ASP.NET (`.aspx`) or other system whose sign-in cookies lack `SameSite=None`
-  never stays signed in inside a frame, and many refuse to be framed at all — set those to
-  **In its own window**, and the desks and the guns open the system as its own page.
+  under the desks, **through this app** (framed too, but fetched by this server and shown as part
+  of this site, so a sign-in that will not stick in a plain frame sticks — the usual choice for an
+  ASP.NET or in-house system the server can reach), or in its own window (when it cannot).
+  **Check the address** reads the system's headers and says which it needs.
 
 ## 5 — Scanners
 

@@ -7,7 +7,7 @@
  * the pallet on the report, and queue through a dead spot like anything else.
  */
 import { chromium } from 'playwright-core';
-import { signIn, pickSession } from './helpers.mjs';
+import { signIn, pickSession, fakeAspx } from './helpers.mjs';
 
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
 const results = [];
@@ -90,6 +90,19 @@ check('Set to open in its own window, the gun offers a button for this pallet an
 const [gunPopup] = await Promise.all([gun.waitForEvent('popup', { timeout: 5000 }).catch(() => null), gun.click('#moveSys .gopen')]);
 check('…which opens the system on its own screen, on that pallet', !!gunPopup && gunPopup.url() === `${BASE}/board?pallet=M-1&to=F01A002`, gunPopup && gunPopup.url());
 if (gunPopup) await gunPopup.close();
+/* through this app: the frame is back under the strip, on this site, and the system's own sign-in shows in it */
+const wms = await fakeAspx();
+await post('/api/admin/pallet-system', { url: `${wms.origin}/Move.aspx?pallet={pallet}&to={to}`, mode: 'proxy' });
+await gun.reload(); await gun.waitForTimeout(1500);
+await gun.click('#btnModeMove'); await gun.waitForTimeout(300);
+await gun.fill('#fEmployee', 'E4'); await gun.press('#fEmployee', 'Enter');
+await gun.click('#btnStart'); await gun.waitForSelector('#scrMove.active', { timeout: 8000 }); await gun.waitForTimeout(500);
+await gun.click('#moveAisles button >> nth=0'); await gun.waitForTimeout(400);
+check('Shown through this app, the gun frames the system on this site, on the pallet in hand', (await gun.getAttribute('#moveFrame', 'src')) === '/ps/Move.aspx?pallet=M-1&to=F01A002' && (await gun.$('#moveSys .gopen')) === null, await gun.getAttribute('#moveFrame', 'src'));
+await gun.waitForFunction(() => { const f = document.getElementById('moveFrame'); try { return !!(f.contentDocument && f.contentDocument.querySelector('#go')); } catch { return false; } }, null, { timeout: 8000 }).catch(() => {});
+const wmsFrame = gun.frames().find((f) => f.url().includes('/ps/'));
+check('…and the system\'s own sign-in shows in the frame, where it will stick', !!wmsFrame && /Sign in to the WMS/.test(await wmsFrame.textContent('body')), wmsFrame && wmsFrame.url());
+wms.close();
 await post('/api/admin/pallet-system', { url: `${BASE}/board`, mode: 'frame' });
 await gun.reload(); await gun.waitForTimeout(1500);
 await gun.click('#btnModeMove'); await gun.waitForTimeout(300);

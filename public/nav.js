@@ -1126,6 +1126,8 @@
      window for it that every desk reuses - so the person signs in there once
      and the window moves from pallet to pallet beside the page. */
   api.fillUrl = (url, vars = {}) => String(url || '').replace(/\{([a-z]+)\}/gi, (whole, k) => { const v = vars[k.toLowerCase()]; return v == null ? '' : encodeURIComponent(String(v)); });
+  /* The desk's address for a system shown through this app: its path under /ps, on this site. */
+  api.proxiedPath = (url) => { try { const u = new URL(url); return '/ps' + u.pathname + u.search; } catch { return ''; } };
   api.openPalletSystem = (url) => {
     const w = window.open(url, 'fh-pallet-system', 'popup=1,width=1100,height=820');
     if (w) { try { w.focus(); } catch { /* another site's window */ } }

@@ -2408,7 +2408,9 @@
       try {
         const ps = await api('/api/pallet-system');
         state.palletSystem = ps.url || '';
-        state.palletSystemMode = ps.mode === 'window' ? 'window' : 'frame';
+        state.palletSystemMode = ['window', 'proxy'].includes(ps.mode) ? ps.mode : 'frame';
+        // through this app: a ticket, so the pages under /ps open for this gun
+        if (state.palletSystemMode === 'proxy' && state.palletSystem) { try { await api('/api/pallet-system/ticket', { method: 'POST', body: '{}' }); } catch { /* the last ticket may still hold */ } }
         await metaSet('palletSystem', state.palletSystem);
         await metaSet('palletSystemMode', state.palletSystemMode);
         return;
@@ -2476,7 +2478,9 @@
       frame.title = 'The pallet system';
       box.appendChild(frame);
     }
-    if (frame.getAttribute('src') !== url) frame.src = url;
+    // shown through this app: the system's page under /ps on this site, where its sign-in sticks
+    const src = state.palletSystemMode === 'proxy' ? (() => { try { const u = new URL(url); return '/ps' + u.pathname + u.search; } catch { return url; } })() : url;
+    if (frame.getAttribute('src') !== src) frame.src = src;
   }
 
   /** The aisle list: how many are waiting in each. */

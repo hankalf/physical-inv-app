@@ -548,7 +548,8 @@
       <div style="margin-top:10px">
         <label>How it opens</label>
         <label class="cb"><input type="radio" name="fPalletSystemMode" value="frame" id="fPsFrame" checked> <b>Framed under the desk</b> <span class="muted">— handiest, when the system allows it</span></label>
-        <label class="cb"><input type="radio" name="fPalletSystemMode" value="window" id="fPsWindow"> <b>In its own window</b> <span class="muted">— the one to use when sign-in does not stick in the frame (ASP.NET sites, most in-house systems) or the frame stays blank. One window stays open beside the desk and moves to each pallet; on a scanner it opens on its own screen.</span></label>
+        <label class="cb"><input type="radio" name="fPalletSystemMode" value="proxy" id="fPsProxy"> <b>Through this app</b> <span class="muted">— framed under the desk as before, but this server fetches the system's pages and shows them as part of this site, so a sign-in that does not stick in a plain frame (ASP.NET sites, most in-house systems) sticks here. Needs the server to reach the system: a cloud system, or this app running in the building. Only a system you trust belongs here — its pages run inside this site.</span></label>
+        <label class="cb"><input type="radio" name="fPalletSystemMode" value="window" id="fPsWindow"> <b>In its own window</b> <span class="muted">— when the server cannot reach the system. One window stays open beside the desk and moves to each pallet; on a scanner it opens on its own screen.</span></label>
       </div>
       <div class="feedback" id="palletSystemCheck"></div>
       <div class="feedback" id="palletSystemMsg"></div>

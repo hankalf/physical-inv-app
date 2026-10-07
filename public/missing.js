@@ -43,7 +43,7 @@
     }
     const link = deskLink(m);
     const asWindow = deskMode === 'window';
-    $('fdDeskUrlNote').textContent = deskUrl ? `Pallet system: ${deskUrl}${asWindow ? ' · opens in its own window' : ''}` : 'No pallet system address set — an admin can set it under Settings → Integrations → Pallet system. The strip above works without it.';
+    $('fdDeskUrlNote').textContent = deskUrl ? `Pallet system: ${deskUrl}${asWindow ? ' · opens in its own window' : deskMode === 'proxy' ? ' · shown through this app' : ''}` : 'No pallet system address set — an admin can set it under Settings → Integrations → Pallet system. The strip above works without it.';
     $('fdDeskOpen').hidden = !deskUrl || asWindow;
     $('fdDeskOpen').href = link || '#';
     $('fdDeskWindow').hidden = !deskUrl || !asWindow;
@@ -52,11 +52,16 @@
     $('fdDeskWindowNote').hidden = !deskUrl || !asWindow;
     $('fdDeskWide').hidden = !deskUrl || asWindow;
     $('fdDeskWrap').classList.toggle('none', !deskUrl || asWindow);
-    if (deskUrl && !asWindow && link !== deskUrlLoaded) { deskUrlLoaded = link; $('fdDeskFrame').src = link; }
+    // framed: the frame follows the pallet when the address carries placeholders;
+    // shown through this app, the frame opens the system's page under /ps on this site
+    const src = deskMode === 'proxy' ? api.proxiedPath(link) : link;
+    if (deskUrl && !asWindow && src !== deskUrlLoaded) { deskUrlLoaded = src; $('fdDeskFrame').src = src; }
   }
   $('fdDeskWindow').onclick = () => { const m = deskList[deskAt]; if (m && !api.openPalletSystem(deskLink(m))) msg($('fdDeskMsg'), 'err', 'The browser blocked the window', 'Allow pop-ups for this site and try again.'); };
   async function refreshDesk() {
-    try { const ps = await apiJson('/api/admin/pallet-system'); deskUrl = ps.url || ''; deskMode = ps.mode === 'window' ? 'window' : 'frame'; } catch { deskUrl = ''; }
+    try { const ps = await apiJson('/api/admin/pallet-system'); deskUrl = ps.url || ''; deskMode = ['window', 'proxy'].includes(ps.mode) ? ps.mode : 'frame'; } catch { deskUrl = ''; }
+    // through this app: a ticket, so the pages under /ps open for this browser
+    if (deskUrl && deskMode === 'proxy') await api.post('/api/admin/pallet-system/ticket', {}).catch(() => {});
     const d = await apiJson('/api/admin/missing?status=missing');
     deskList = d.rows || [];
     if (deskAt >= deskList.length) deskAt = Math.max(0, deskList.length - 1);
