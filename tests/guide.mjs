@@ -24,7 +24,7 @@ check('/guide serves the guide page', /<title>User guide<\/title>/.test(html));
 const content = await (await fetch(`${BASE}/guide-content.js`)).text();
 check('The content module ships', content.includes('window.GUIDE'));
 const countOf = (re) => (content.match(re) || []).length;
-check('…with nine journeys', countOf(/\n    {\n      key: '/g) === 9, String(countOf(/\n    {\n      key: '/g)));
+check('…with ten journeys', countOf(/\n    {\n      key: '/g) === 10, String(countOf(/\n    {\n      key: '/g)));
 check('…dozens of predicted issues', countOf(/\{ see: /g) >= 80, String(countOf(/\{ see: /g)));
 check('…and dozens of questions', countOf(/\{ q: /g) >= 35, String(countOf(/\{ q: /g)));
 
@@ -54,7 +54,7 @@ check('…and the brand banner spans the panel, edge to edge', await page.evalua
   return Math.abs(b.left - side.left) < 2 && Math.abs(b.right - side.right) < 2 && b.top <= side.top + 1;
 }));
 const journeys = await page.$$eval('#journeys .journey .t', (ns) => ns.map((n) => n.textContent));
-check('Nine journeys, first day first', journeys.length === 9 && journeys[0] === 'Your first day', journeys.join(' | '));
+check('Ten journeys, first day first, second counts among them', journeys.length === 10 && journeys[0] === 'Your first day' && journeys.includes('Second counts'), journeys.join(' | '));
 const firstSteps = await page.$$eval('#steps .step h3', (ns) => ns.map((n) => n.textContent));
 check('The first journey opens with its steps', firstSteps.length === 4 && /Sign in/.test(firstSteps[0]), firstSteps.join(' | '));
 check('A step carries what goes wrong and what people ask', await page.$eval('#steps .step', (s) => s.querySelectorAll('.issue').length >= 1 && s.querySelectorAll('.askq').length >= 1));

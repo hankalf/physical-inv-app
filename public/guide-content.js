@@ -346,6 +346,78 @@
       ],
     },
     {
+      key: 'second', title: 'Second counts', who: 'Inventory control, the supervisor, and the counters',
+      blurb: 'A bin somebody goes back to: why it comes back, how it is raised, how the gun does it blind, and how the line settles.',
+      steps: [
+        {
+          title: 'Know what a second count is',
+          do: 'A second count is a bin a counter goes back to because the first count and the inventory report disagree: the quantity differs, the pallet is in a bin the report did not expect, it is not on the report at all, it was counted in two bins, or an aisle was handed back with a pallet nobody saw. The counter is told the bin and the reason — never the numbers, and never who counted it first. A second count is blind, so it is a real check and not a copy. Its lines replace the first count for that bin on every report.',
+          where: S('/admin', 'second', 'Dashboard → Second counts'),
+          watch: [
+            { see: 'The counter asks what the first count was', means: 'They want to match it.', fix: 'Do not say. Two independent counts that agree settle the line; one copied from the other proves nothing.' },
+          ],
+          ask: [
+            { q: 'Is a second count the same as a recount?', a: 'Yes. The gun and the dashboard say second count; the report calls its lines pass 2.' },
+            { q: 'Can the team that did the first count do the second?', a: 'No. The server never offers a bin to the team that counted it first. A cycle count is the exception: there one person is the team.' },
+          ],
+        },
+        {
+          title: 'See how they are raised',
+          do: 'Three ways. Automatically, as counts land, when Count session → Second counts → Raise them automatically is ticked — subject to the thresholds (Over N units, or over %) and Cap open, how many may be open at once — and when an aisle is handed back with expected pallets nobody saw. From the dashboard, Raise from all variances now goes through everything that currently disagrees and leaves alone pallets in aisles nobody has reached yet. And by hand: Second counts → Bin or Pallet ID, a note, Request second count — whenever a supervisor wants a bin looked at again.',
+          where: S('/settings', 'start', 'Settings → Count setup → Count session'),
+          watch: [
+            { see: 'No second counts at all', means: 'No inventory report was uploaded, or Raise them automatically is off.', fix: 'Without a report there is nothing to compare: upload it under Count setup. Tick Raise them automatically, or press Raise from all variances now.' },
+            { see: 'The list is enormous', means: 'The thresholds are at 0, so every difference of one case comes back.', fix: 'Set Over N units or over %, and Cap open, under Count session.' },
+            { see: '… pallet(s) in aisles nobody has counted yet — not missing, just not reached', means: 'Raise from all variances skipped them on purpose.', fix: 'Nothing. They are raised when their aisle is counted or handed back.' },
+            { see: 'stopped at the cap of N open', means: 'The cap was reached.', fix: 'Work the open ones down and raise again, or lift the cap under Count session.' },
+          ],
+          ask: [
+            { q: 'What threshold is usual?', a: '2 to 5 units and 5 to 10 %. At 0 and 0 every difference is recounted and the list becomes unworkable.' },
+            { q: 'Can I send a bin to a particular team?', a: 'Yes: Team on the request, or the team box on the row (type it and press Enter). Blank means any team but the one that counted it first.' },
+          ],
+        },
+        {
+          title: 'Do one on the gun',
+          do: 'Signed on to the full count, the My aisle screen says Second counts available, with how many; tap Start second counts. The gun takes the nearest first — the aisle the team is in, then its racking block, then the aisles nearest by number — and shows SECOND COUNT · bin … with the reason. Scan every pallet in that bin as normal: pallet, quantity, bin; a pallet not on the report asks YES / NO as it did the first time. When the bin is finished tap Bin done — nothing more here, and the gun moves to the next. A bin with nothing in it: Bin is EMPTY — scan the bin. My aisle goes back to the team’s own aisle at any point; the second counts wait.',
+          where: S('/testing', '', 'Try it on the Testing Suite'),
+          watch: [
+            { see: 'This second count is for bin … — you scanned …', means: 'The bin scanned is not the one the second count is for.', fix: 'Scan the bin named in the banner, or tap Bin done if that bin is finished.' },
+            { see: 'That bin was taken by another team', means: 'Two guns reached for the same bin; the other got it.', fix: 'Nothing. The gun moves to the next one.' },
+            { see: 'a different team must do the second count', means: 'This team made the first count of that bin.', fix: 'Another team takes it; a supervisor can assign it to one on the row under Second counts.' },
+            { see: 'All second counts done — nothing more to go back to right now', means: 'The list is clear for this team.', fix: 'Carry on with the aisle. Refresh on My aisle shows any raised since.' },
+          ],
+          ask: [
+            { q: 'Why does the gun not show me the first count?', a: 'Because a second count is blind. Two independent counts that agree settle the line; one copied from the other proves nothing.' },
+            { q: 'A second count in a dead spot?', a: 'Its lines queue like any others and land when the gun has a signal; Bin done is kept too.' },
+          ],
+        },
+        {
+          title: 'Watch each line settle, and work them to zero',
+          do: 'Dashboard → Second counts shows every task: the bin, the reason, who has it, the first result and the second. Once the second count is in, the line is settled: its numbers replace the first count on every report, and if they still differ from the inventory report that is the variance, which goes on to Adjustments. Each row has done, reopen and delete, and a team box. Work the list down before closing: a count closed with open second counts has known-wrong numbers in it, and Final report is not offered while one is open.',
+          where: S('/admin', 'second', 'Dashboard → Second counts'),
+          watch: [
+            { see: 'A task sits at "taken" for a long time', means: 'A gun started it and never pressed Bin done — a dead spot, or a sign-off mid-bin.', fix: 'Ask the team. Reopen puts it back for anyone; done closes it if the bin was in fact counted.' },
+            { see: 'Final report is not offered', means: 'A second count is still open.', fix: 'Finish or delete it; the card says how many are left.' },
+          ],
+          ask: [
+            { q: 'Both counts differ from the report and from each other?', a: 'The second count stands on the reports. Request a third by hand if it matters, or settle it on the Adjustments tab with a reason.' },
+          ],
+        },
+        {
+          title: 'Practise it first',
+          do: 'Testing Suite → What to practise → Second counts. Another crew — team 98 — has counted aisle F03 on your practice count and got some of it wrong: a pallet keyed short, one missed, one in the wrong bin, one not on the report. Four bins come back to your practice gun; a fifth, which they recorded empty, is yours to raise by hand from the dashboard at the top of the page. The pane shows what they keyed beside what is really on the shelf, the tips follow every step, and the things to try tick off as you go. None of it touches a real count.',
+          where: S('/testing', '', 'Testing Suite'),
+          watch: [
+            { see: 'Second counts is not under What to practise', means: 'The practice run is on your own uploaded file.', fix: 'Press Back to the built-in test data first; the other jobs are practised on it.' },
+            { see: 'The gun does not say Second counts available', means: 'It was already signed on when the lesson was set up.', fix: 'Tap Refresh on the My aisle screen.' },
+          ],
+          ask: [
+            { q: 'Why is it another crew’s aisle?', a: 'Because the team that made a first count is never offered the second: your practice gun could not be sent back to its own bins.' },
+          ],
+        },
+      ],
+    },
+    {
       key: 'finish', title: 'Finish a count', who: 'Supervisor and inventory control',
       blurb: 'Second counts, reports, approvals, the ERP file, closing, and the backup.',
       steps: [
