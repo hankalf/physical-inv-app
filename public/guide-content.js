@@ -90,6 +90,20 @@
           ],
         },
         {
+          title: 'Switch off what nobody needs yet',
+          do: 'Settings → Logins & site → What is switched on. A team with a few days to learn the count does not need cycle counts, front bins or the map in front of it. Press Full counts and second counts only, and the rest is gone for everyone — the sidebar, the dashboard tabs, the search box and the scanners’ sign-on screen — until Everything on brings it back. Or tick the parts one by one and Save. Nothing is deleted; the count itself (Full Counts, Progress, Team plan, Second counts, Teams & crew) is always on.',
+          where: S('/settings', 'advanced', 'Settings → Logins & site'),
+          watch: [
+            { see: 'Cycle counts is switched off', means: 'Somebody opened a bookmark to a page the site has switched off.', fix: 'Nothing, unless it is wanted: an admin ticks it back under What is switched on.' },
+            { see: 'A scanner still offers a job you switched off', means: 'It has not been online since.', fix: 'It picks the change up the next time its sign-on screen loads.' },
+            { see: 'The jobs under Settings → Scanners are greyed out', means: 'Their part of the app is off for the whole site; the ticks are kept.', fix: 'Switch the part back on under What is switched on if the scanners should offer it.' },
+          ],
+          ask: [
+            { q: 'Is a hidden page locked?', a: 'No — hidden, not forbidden. A login’s role still says what it may use; switching a part off takes it out of everyone’s way, admins included, and switching it on puts it back exactly as it was.' },
+            { q: 'Why do the alerts and the Testing Suite stay on?', a: 'An SOS from the floor needs somebody to answer it, and the Testing Suite is where a new team practises the count. Untick either by hand if it should go too.' },
+          ],
+        },
+        {
           title: 'Upload the bin list',
           do: 'Settings → Lists & racking → Bin list. One column of bin codes, in the site’s format (F05A012 is aisle F05, bay A, level 012). Every count starts from this list and the aisles come from it.',
           where: S('/settings', 'lists', 'Settings → Lists & racking'),
@@ -570,6 +584,7 @@
     { q: 'Can I export everything?', a: 'Reports → Export everything gives a workbook with every sheet: counts, pallets, teams, adjustments, alerts, the log.', goto: S('/admin', 'reports', 'Dashboard → Reports') },
     { q: 'Who did what?', a: 'The log under Settings → Backups & log records every change with the login that made it.', goto: S('/settings', 'backups', 'Settings → Backups & log') },
     { q: 'How do I invite someone by email?', a: 'Settings → Logins & site → Supervisor logins: type their name, username and email (the invite box ticks itself) and Add login. Email the invite opens a ready-made message in your own email; Copy link is for a text. The link works once, for three days, and they choose their own password on it. Invite again on their row makes a new link.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },
+    { q: 'How do I hide the parts of the app we are not using yet?', a: 'Settings → Logins & site → What is switched on. Full counts and second counts only hides cycle counts, front bins, Not in Location, the map, adjustments and reports for everyone, on the office pages and the scanners; Everything on brings them back. Tick by hand for anything in between.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },
     { q: 'Somebody is locked out of signing in', a: 'Five wrong passwords from one place lock that login there for 15 minutes. An admin presses Unlock on their row under Settings → Logins & site, or resets the password, which lifts it too.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },
     { q: 'Can I use the office side on my phone?', a: 'Yes. Open the site on the phone, sign in, and Add to Home Screen (Safari: Share; Chrome: ⋮ → Install app). It opens as its own app; the Menu button at the top holds the pages and the search.' },
     { q: 'Are we ready for count day?', a: 'Settings → Count setup opens on Ready for count day: the scanners, the jobs they offer, the crew list, alerts, backups and OneDrive, and a default password, checked fresh, worst first, each with a button to the fix.', goto: S('/settings', 'start', 'Settings → Count setup') },
@@ -596,6 +611,7 @@
     { see: 'that aisle belongs to another team', means: 'The aisle is on another team’s plan.', fix: 'Take it off that team first.', goto: S('/teams', 'crew', 'Counting plan') },
     { see: 'that username and password do not match', means: 'Wrong password, or the username is spelt differently.', fix: 'Passwords are case-sensitive. An admin can set a new starter password.' },
     { see: 'only an admin can manage accounts', means: 'Your login is not an admin.', fix: 'Ask an admin.' },
+    { see: 'is switched off', means: 'The page is one an admin switched off for the site under What is switched on.', fix: 'Use the sidebar, or ask an admin to switch it back on.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },
     { see: 'this count is a trial run - end the trial and count it for real before sending anything to the ERP', means: 'ERP export is blocked on a trial.', fix: 'End the trial under Count session.', goto: S('/settings', 'start', 'Count session') },
     { see: 'this login may not approve adjustments', means: 'The login lacks the approval function.', fix: 'An admin adds it under Supervisor logins.' },
     { see: 'the address has to start with http:// or https://', means: 'The Teams or pallet-system address is not a web address.', fix: 'Paste the whole https:// address.' },

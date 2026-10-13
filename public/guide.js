@@ -32,8 +32,16 @@
      A "go" is shown only when the login may open that page; otherwise a quiet
      line says to ask an admin, so the guide never points at a locked door. */
   const mayGo = (g) => !!g && !!g.page && (g.page === '/board' || api.canTab(g.page, g.sub));
+  /* A part the site has switched off (Settings → Logins & site → What is
+     switched on): its journey is not offered, and a link to it says why. */
+  const PAGE_FEATURE = { '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/testing': 'testing' };
+  const SUB_FEATURE = { '/admin': { map: 'map', alerts: 'alerts', adjust: 'adjust', reports: 'reports' } };
+  const JOURNEY_FEATURE = { cycle: 'cycle', front: 'front', missing: 'missing' };
+  const isOff = (g) => !!g && !!g.page && api.on && ((PAGE_FEATURE[g.page] && !api.on(PAGE_FEATURE[g.page])) || (SUB_FEATURE[g.page] && SUB_FEATURE[g.page][g.sub] && !api.on(SUB_FEATURE[g.page][g.sub])));
+  const journeysOn = () => G.journeys.filter((j) => !JOURNEY_FEATURE[j.key] || !api.on || api.on(JOURNEY_FEATURE[j.key]));
   function goLink(g) {
     if (!g || !g.page) return null;
+    if (isOff(g)) return el('span', 'noway', `(${g.label || g.page} — switched off for the site just now; an admin can switch it back on under Settings → Logins & site)`);
     if (!mayGo(g)) return el('span', 'noway', `(${g.label || g.page} — this login cannot open it; ask an admin)`);
     const a = el('a', 'go', (g.label || g.page) + ' →');
     a.href = g.page + (g.sub ? '#' + g.sub : '');
@@ -274,7 +282,7 @@
   function drawJourneys() {
     const box = $('journeys');
     box.innerHTML = '';
-    for (const j of G.journeys) {
+    for (const j of journeysOn()) {
       const b = el('button', 'journey' + (j.key === journeyKey ? ' on' : ''));
       b.type = 'button';
       b.dataset.key = j.key;
@@ -372,8 +380,8 @@
     let key = '';
     try { key = sessionStorage.getItem('guide:journey') || ''; } catch { /* fine */ }
     const fromHash = (location.hash || '').replace('#', '');
-    if (G.journeys.some((j) => j.key === fromHash)) key = fromHash;
-    openJourney(G.journeys.some((j) => j.key === key) ? key : G.journeys[0].key);
+    if (journeysOn().some((j) => j.key === fromHash)) key = fromHash;
+    openJourney(journeysOn().some((j) => j.key === key) ? key : journeysOn()[0].key);
     await rightNow();
     ask();
   }

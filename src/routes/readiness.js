@@ -12,7 +12,7 @@
  * count will not go as planned), and says where to put it right.
  */
 import { db, getSession, listDevices } from '../db.js';
-import { defaultSessionId, scannerJobs, scannerPrompts, JOBS } from './scanner-prompts.js';
+import { defaultSessionId, jobsOffered, scannerPrompts, JOBS } from './scanner-prompts.js';
 import { idleConfig } from './idle.js';
 import { listEmployees } from './people.js';
 import { listBackups } from './admin-ops.js';
@@ -55,7 +55,7 @@ export function readiness(sessionId) {
   }
 
   /* ---- what the scanners offer */
-  const jobs = scannerJobs();
+  const jobs = jobsOffered();            // the ticks, less the parts switched off for the site
   const label = Object.fromEntries(JOBS);
   const others = JOBS.map(([k]) => k).filter((k) => k !== 'full' && jobs[k]);
   if (!jobs.full) add('fail', 'The scanners do not offer the full count', 'Tick Full count under the jobs, or nobody can count into it.', fix('gun', 'offersCard', 'Jobs on the scanners'));

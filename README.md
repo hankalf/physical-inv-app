@@ -121,6 +121,7 @@ sign-in covers all of them.
 | **Not in Location** (`/missing`) | the list, and a find desk; on the gun, Not in Location at sign-on with a badge alone, the aisle it was last seen in, the pallet system framed under the strip, Found — next |
 | **Testing Suite** (`/testing`) | the real scanner on a practice count of your own |
 | **Settings → Scanners → What the scanners offer** | one section, one Save: the jobs on the sign-on screen (tick the full count alone on count day), comments (ask / required / the wait / the one-tap reasons), the override reasons, the SOS list |
+| **Settings → Logins & site → What is switched on** | hide the parts of the app nobody needs yet, for every login and the scanners: *Full counts and second counts only* leaves the count, its second counts, the alerts and the Testing Suite; *Everything on* brings the rest back; or tick by part. Hidden, not forbidden — roles still apply, nothing is deleted, a bookmark to a hidden page says so |
 | **Settings → Logins & site → Site name** | the app's own name and the location under it, out of the box *Full Harvest Inventory · Front Royal*; a change lands on every page, the guns, the board and the installed app's manifest |
 | **User guide** (`/guide`) | the SOP inside the app: journeys, what goes wrong at each step, an Ask box that answers a question or a pasted message, and a live "Right now" read of the count. Open to every login |
 

@@ -242,6 +242,12 @@ input[type=file] { padding: 7px 9px; }
 input.sm { padding: 9px 9px; font-size: 13px; width: 110px; }
 label.cb { display: inline-flex; align-items: center; gap: 7px; text-transform: none; letter-spacing: 0; font-size: 13.5px; color: var(--text); font-weight: 500; margin: 0; }
 label.cb input { width: auto; }
+/* What is switched on: one row a part, its name and what it covers */
+.features { display: grid; gap: 6px; margin-top: 12px; }
+.features label.cb { align-items: flex-start; padding: 9px 12px; border: 1px solid var(--line-soft); border-radius: 9px; background: var(--surface-2); }
+.features label.cb input { margin-top: 3px; }
+.features label.cb .what { display: block; font-weight: 400; color: var(--text-dim); font-size: 12.5px; margin-top: 2px; }
+.features label.cb.off { opacity: .72; }
 
 .inline { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
 .inline > div { flex: 1 1 180px; min-width: 0; }

@@ -282,6 +282,16 @@
      shows; once /me has answered, the ones not on the list go. */
   /* The guide has no key: every login may read it. */
   const PAGE_KEY = { '/admin': 'dashboard', '/full': 'full', '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/teams': 'teams', '/settings': 'admin', '/testing': 'testing', '/guide': '' };
+  /* What the site has switched on (Settings → Logins & site → What is switched
+     on). A part that is off is gone for every login, admins included, until
+     it is switched back; before sign-in nothing is known, so everything shows. */
+  const PAGE_FEATURE = { '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/testing': 'testing' };
+  const SUB_FEATURE = { '/admin': { map: 'map', alerts: 'alerts', adjust: 'adjust', reports: 'reports' } };
+  api.on = (key) => !api.me || !api.me.features || api.me.features[key] !== false;
+  const pageOn = (href) => !PAGE_FEATURE[href] || api.on(PAGE_FEATURE[href]);
+  const subOn = (href, sub) => !(SUB_FEATURE[href] && SUB_FEATURE[href][sub]) || api.on(SUB_FEATURE[href][sub]);
+  /** The settings page saved a change: the sidebar and the tabs follow at once. */
+  api.setFeatures = (f) => { if (api.me) api.me.features = f; renderTabs(); renderSubTabs(); };
   api.can = (key) => {
     const me = api.me;
     if (!me) return true;
@@ -295,6 +305,7 @@
   /* A tab of a page: the whole page, or that tab by name. Pages without tabs
      in the list (Settings, the Testing Suite) are all or nothing. */
   api.canTab = (href, sub) => {
+    if (!pageOn(href) || !subOn(href, sub)) return false;
     const page = PAGE_KEY[href] || '';
     if (!page) return true;
     if (page === 'admin' || page === 'full') return api.can(page);    // no tabs of their own in the access list
@@ -302,7 +313,7 @@
     if (!me || me.role === 'admin' || !Array.isArray(me.access)) return true;
     return me.access.includes(page) || me.access.includes(`${page}.${sub}`);
   };
-  const mayOpen = (href) => !PAGE_KEY[href] || api.can(PAGE_KEY[href]);
+  const mayOpen = (href) => pageOn(href) && (!PAGE_KEY[href] || api.can(PAGE_KEY[href]));
 
   /* Before sign-in the page is a plain splash: the logo and the name, the
      sign-in box, nothing else. The sidebar comes with the sign-in. */
@@ -463,7 +474,9 @@
   /* A page this login may not open: over to the first one it may, or a plain
      word when there is none. The server refuses the data either way. */
   function keepOut() {
-    if (!api.me || mayOpen(here)) return false;
+    if (!api.me) return false;
+    if (!pageOn(here)) return switchedOff();
+    if (mayOpen(here)) return false;
     const next = TABS.map(([h]) => h).find((h) => mayOpen(h));
     if (next) { location.replace(next); return true; }
     const main = document.querySelector('main');
@@ -479,6 +492,26 @@
       }
       box.classList.add('active');
     }
+    return true;
+  }
+
+  /* A page the site has switched off: say so, rather than send a bookmark
+     somewhere else without a word. */
+  function switchedOff() {
+    const main = document.querySelector('main');
+    if (!main) return true;
+    for (const sec of main.querySelectorAll('.screen')) sec.classList.remove('active');
+    let box = document.getElementById('switchedOff');
+    if (!box) {
+      box = document.createElement('section');
+      box.id = 'switchedOff';
+      box.className = 'screen active';
+      const label = (TABS.find(([h]) => h === here) || [])[1] || 'This page';
+      const admin = api.me && api.me.role === 'admin';
+      box.innerHTML = `<div class="card"><h2>${label} is switched off</h2><div class="hint">An admin switched this part of the app off for the site, so it is not in the sidebar for anyone just now. ${admin ? 'Switch it back on under <a href="/settings#advanced">Settings → Logins & site → What is switched on</a>.' : 'Ask an admin if you need it: Settings → Logins & site → What is switched on.'}</div><div class="inline" style="margin-top:10px"><a class="btn" href="/admin">To the dashboard</a></div></div>`;
+      main.appendChild(box);
+    }
+    box.classList.add('active');
     return true;
   }
 
@@ -608,7 +641,13 @@
 
   /** Switch sub-tab. Pages listen for `subshow` to refresh what just appeared. */
   api.showSub = function showSub(name) {
-    for (const pane of document.querySelectorAll('[data-sub]')) pane.classList.toggle('active', pane.dataset.sub === name);
+    const panes = [...document.querySelectorAll('[data-sub]')];
+    // a tab that is switched off, or not this login's: the first one that is
+    if (panes.some((p) => p.dataset.sub === name) && !api.canTab(here, name)) {
+      const ok = panes.find((p) => api.canTab(here, p.dataset.sub));
+      if (ok) name = ok.dataset.sub;
+    }
+    for (const pane of panes) pane.classList.toggle('active', pane.dataset.sub === name);
     for (const b of document.querySelectorAll('#subTabs button')) b.classList.toggle('current', b.dataset.goto === name);
     for (const s of document.querySelectorAll(`#navTabs .sub[data-page="${here}"]`)) s.classList.toggle('current', s.dataset.navSub === name);
     try { sessionStorage.setItem(subKey, name); } catch { /* private window */ }
@@ -953,7 +992,7 @@
   function placeHits(q) {
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
     return PLACES
-      .filter((pl) => mayOpen(pl.page))
+      .filter((pl) => mayOpen(pl.page) && (!pl.sub || api.canTab(pl.page, pl.sub)))
       .map((pl) => {
         const hay = (pl.title + ' ' + pl.words).toLowerCase();
         const score = words.reduce((n, w) => n + (hay.includes(w) ? (pl.title.toLowerCase().includes(w) ? 2 : 1) : 0), 0);

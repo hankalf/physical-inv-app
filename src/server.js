@@ -29,7 +29,8 @@ import { practiceJobs, practiceSession, ensurePractice, resetPractice, practiceD
 import { branding, saveLogo, clearLogo, saveName } from './routes/branding.js';
 import { raiseAlert, tellTeams, listAlerts, seeAlert, closeAlert, alertsForDevice, sosReasons, saveSosReasons, DEFAULT_REASONS } from './routes/alerts.js';
 import { teamsConfig, saveTeamsConfig, postToTeams, testCard, alertCard } from './util/teams.js';
-import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout, scannerJobs, saveScannerJobs, JOBS } from './routes/scanner-prompts.js';
+import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout, scannerJobs, saveScannerJobs, jobsOffered, JOBS } from './routes/scanner-prompts.js';
+import { features, saveFeatures, FEATURES, PRESETS, offNames } from './routes/features.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks,
@@ -407,13 +408,14 @@ async function handleHandheld(req, res, url, m) {
     if (r) audit(device ? device.name : 'a scanner', 'found a Not in Location pallet', `${r.pallet_id} in ${r.found_bin || '?'}`, body.sessionId || null);
     return sendJson(req, res, 200, r ? { found: true, pallet: r } : { found: false, already: true });
   }
-  // --- which jobs the sign-on screen offers; a practice gun always has all of them
+  // --- which jobs the sign-on screen offers; a practice gun always has all of them,
+  //     short of a part of the app that is switched off for the whole site
   if (p === '/api/scanner-jobs' && method === 'GET') {
     const practice = url.searchParams.get('practice') === '1' || !!(device && device.practice_owner);
-    if (!practice) return sendJson(req, res, 200, { jobs: scannerJobs() });
+    if (!practice) return sendJson(req, res, 200, { jobs: jobsOffered() });
     // a practice gun: the jobs its person ticked in the Testing Suite, every one by default
     const ps = device && device.practice_owner ? practiceSession(device.practice_owner) : null;
-    return sendJson(req, res, 200, { jobs: ps ? practiceJobs(ps) : Object.fromEntries(JOBS.map(([k]) => [k, true])) });
+    return sendJson(req, res, 200, { jobs: jobsOffered(ps ? practiceJobs(ps) : Object.fromEntries(JOBS.map(([k]) => [k, true]))) });
   }
   // --- the pallet system's address, for the move desk on the gun
   if (p === '/api/pallet-system' && method === 'GET') return sendJson(req, res, 200, palletSystem());
@@ -651,7 +653,7 @@ async function handleAdmin(req, res, url, m) {
     // a starter password gets them in, but only as far as choosing a real one
     return sendJson(req, res, 200, {
       token, name: user.name, username: user.username, role: user.role,
-      mustChange: user.mustChange, accounts: countUsers(),
+      mustChange: user.mustChange, accounts: countUsers(), features: features(),
     });
   }
 
@@ -1011,7 +1013,7 @@ async function handleAdmin(req, res, url, m) {
     const account = who.username ? getUser(who.username) : null;
     return sendJson(req, res, 200, {
       ...who, role: whoNow.role, access: whoNow.access, accessKeys: ACCESS, tabs: TABS, profiles: PROFILES.map(([key, label, list]) => ({ key, label, access: list === undefined ? null : list })), mustChange: !!(account && account.must_change),
-      accounts: countUsers(), admins: countAdmins(),
+      accounts: countUsers(), admins: countAdmins(), features: features(),
     });
   }
   /* The site admin - the login the site started with - is nobody else's to
@@ -1242,13 +1244,22 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, { sessionId: id });
   }
 
+  // --- what is switched on: the parts of the app the site shows at all
+  if (p === '/api/admin/features' && method === 'GET') return sendJson(req, res, 200, { features: features(), all: FEATURES, presets: PRESETS });
+  if (p === '/api/admin/features' && method === 'POST') {
+    requireAccess('admin');
+    const f = saveFeatures(await readJson(req));
+    const off = offNames(f);
+    audit(actor, 'chose what is switched on', off.length ? `off: ${off.join(', ')}` : 'everything on');
+    return sendJson(req, res, 200, { features: f, all: FEATURES, presets: PRESETS });
+  }
   // --- what the gun offers as one-tap reasons
-  if (p === '/api/admin/scanner-jobs' && method === 'GET') return sendJson(req, res, 200, { jobs: scannerJobs(), all: JOBS });
+  if (p === '/api/admin/scanner-jobs' && method === 'GET') return sendJson(req, res, 200, { jobs: scannerJobs(), offered: jobsOffered(), all: JOBS });
   if (p === '/api/admin/scanner-jobs' && method === 'POST') {
     requireAccess('admin');
     const jobs = saveScannerJobs(await readJson(req));
     audit(actor, 'chose which jobs the scanners offer', JOBS.filter(([k]) => jobs[k]).map(([, l]) => l).join(', '));
-    return sendJson(req, res, 200, { jobs, all: JOBS });
+    return sendJson(req, res, 200, { jobs, offered: jobsOffered(jobs), all: JOBS });
   }
   if (p === '/api/admin/scanner-prompts' && method === 'GET') {
     return sendJson(req, res, 200, { ...scannerPrompts(), defaults: defaultScannerPrompts() });

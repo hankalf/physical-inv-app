@@ -295,6 +295,7 @@
         <label class="cb"><input type="checkbox" id="fJobMissing" checked> Not in Location (find lost pallets)</label>
         <button class="primary fit" id="btnJobsSave" hidden>Save</button>
       </div>
+      <div class="hint" id="jobsOffNote" hidden></div>
       <div class="feedback" id="jobsMsg"></div>
 
       <hr>
@@ -648,7 +649,28 @@
       </div>
 
       <div data-sub="advanced" data-sub-label="Logins &amp; site">
-    <p class="pane-intro">Who can sign in and what they may use, and how the app names and presents itself.</p>
+    <p class="pane-intro">Which parts of the app the site shows at all, who can sign in and what they may use, and how the app names and presents itself.</p>
+    <div class="card" id="featuresCard">
+      <h2>What is switched on <span class="chip" id="featuresChip" hidden></span>
+        <span class="muted">hide the parts nobody here needs yet — for every login, on the office pages and the scanners</span></h2>
+      <div class="hint" style="margin-top:0">
+        A team with a few days to learn the count does not need cycle counts, front bins or the map in front of it. Untick a part and
+        it is gone — from the sidebar, the dashboard tabs, the search box and the scanners' sign-on screen, for everyone, admins
+        included — until it is ticked again. Nothing is deleted: the data behind it waits. The count itself is always on: the
+        <b>Full Counts</b> page, the dashboard's <b>Progress</b>, <b>Team plan</b> and <b>Second counts</b>, <b>Teams &amp; crew</b>,
+        Settings and the guide. A page already open sees the change when it next loads; a scanner the next time it is online.
+      </div>
+      <div class="inline" style="margin-top:10px">
+        <button class="primary fit" id="btnFeaturesCountOnly">Full counts and second counts only</button>
+        <button class="ghost fit" id="btnFeaturesAll">Everything on</button>
+        <span class="muted">— the first keeps <b>Alerts</b> (an SOS from the floor needs an answer) and the <b>Testing Suite</b> (where the count is practised); untick them below if they should go too</span>
+      </div>
+      <div class="features" id="featuresList"></div>
+      <div class="inline" style="margin-top:10px">
+        <button class="primary fit" id="btnFeaturesSave">Save</button>
+      </div>
+      <div class="feedback" id="featuresMsg"></div>
+    </div>
     <div class="card" id="loginsCard">
       <h2>Supervisor logins
         <span class="muted">everyone who changes something is recorded by name in the log</span></h2>

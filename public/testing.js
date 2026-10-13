@@ -310,7 +310,13 @@
     $('sbOverrides').value = (sb.prompts.overrides || []).join('\n');
     $('sbSos').value = (sb.sosReasons || []).join('\n');
     const jobs = sb.jobs || {};
-    for (const [k, id] of Object.entries(SB_JOBS)) $(id).checked = jobs[k] !== false;
+    const JOB_FEATURE = { cycle: 'cycle', move: 'front', missing: 'missing' };
+    for (const [k, id] of Object.entries(SB_JOBS)) {
+      $(id).checked = jobs[k] !== false;
+      // a job switched off for the site is not on offer here either
+      const lbl = $(id).closest('label');
+      if (lbl) lbl.hidden = !!JOB_FEATURE[k] && api.on && !api.on(JOB_FEATURE[k]);
+    }
     const n = sb.overridden.prompts.length + sb.overridden.layout.length + (sb.overridden.sosReasons ? 1 : 0) + (sb.overridden.jobs ? 1 : 0);
     $('sbState').textContent = n ? `${n} setting${n === 1 ? '' : 's'} differ from the site's` : 'same as the site, except the 5-second comments step';
   }

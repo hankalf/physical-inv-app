@@ -11,6 +11,7 @@ import { queueAssignments } from './assignments.js';
 import { importMoves } from './moves.js';
 import { importMissing, practiceMissingRows, clearPracticeMissing } from './missing.js';
 import { allowed } from './access.js';
+import { features } from './features.js';
 
 /*
  * The practice count behind the Testing tab.
@@ -713,11 +714,13 @@ export function practiceModes(who, owner, s) {
     const [sku, desc, uom] = ITEMS[p.item];
     return { id: p.id, qty: p.qty, sku, desc, uom, lot: p.lot, bestBefore: usDate(day(p.days)) };
   });
+  const on = features();
   const out = {
     available: !!s && s.practice_source !== 'upload',
-    cycle: { allowed: allowed(who, 'cycle'), on: false, session: null, bins: [], done: 0, signedOn: false },
-    moves: { allowed: allowed(who, 'front'), on: false, list: [], done: 0, skipped: 0 },
-    missing: { allowed: allowed(who, 'missing'), on: false, rows: [], found: 0 },
+    // a job this login may do for real, and that the site has switched on at all
+    cycle: { allowed: allowed(who, 'cycle') && on.cycle, on: false, session: null, bins: [], done: 0, signedOn: false },
+    moves: { allowed: allowed(who, 'front') && on.front, on: false, list: [], done: 0, skipped: 0 },
+    missing: { allowed: allowed(who, 'missing') && on.missing, on: false, rows: [], found: 0 },
   };
   const c = cycleSession(owner);
   if (c) {

@@ -237,6 +237,40 @@ PDF beside it): Admin, Supervisor, Inventory control, Count supervisor, Warehous
 counter, and one for the counters on the handhelds. Hand a new login the right one; this manual
 is the reference behind them.
 
+### Step 4a — Switch off what nobody needs yet
+
+**Settings → Logins & site → What is switched on.** Admins only.
+
+A team with a few days to learn the count does not need cycle counts, front bins or the map in
+front of it. An admin can switch the parts of the app the site is not using off — for everyone,
+on the office pages and the scanners — and back on when the time comes.
+
+1. Press **Full counts and second counts only**. Cycle counts, Front bins, Not in Location, the
+   Map, Adjustments and Reports go: from the sidebar, the dashboard tabs, the search box and the
+   scanners' sign-on screen, for every login, admins included. The **Alerts** tab stays, because
+   an SOS from the floor needs an answer, and so does the **Testing Suite**, because that is where
+   the count is practised; untick either in the list if it should go too.
+2. Or tick the parts one by one and press **Save**.
+3. **Everything on** brings it all back, exactly as it was.
+
+![](images/settings-features.png)
+
+What it is and is not:
+
+- **Hidden, not forbidden.** A login's role still says what it may use (Step 4). Switching a part
+  off takes it out of everyone's way; nothing is deleted, and the data behind a hidden page waits
+  for it to come back.
+- **Always on:** the Dashboard's Progress, Team plan and Second counts, the Full Counts page,
+  Teams & crew, Settings and the User guide — the count itself.
+- **A bookmark** to a hidden page says *"Cycle counts is switched off"* with the way back for an
+  admin, rather than wandering somewhere else without a word.
+- **The scanners** stop offering the job of a part that is off — Cycle count, Front2Back, Not in
+  Location — whatever is ticked under Settings → Scanners → Jobs; those ticks are kept (greyed,
+  with a note saying why) for when the part comes back. The practice gun and the Testing Suite's
+  other jobs follow the same switches.
+- **When it takes effect:** a page already open sees the change when it next loads; a scanner the
+  next time it is online. The log records who switched what off.
+
 ### Step 5 — Change the superadmin's password
 
 Sign in as the superadmin, press **Change my password** at the foot of the sidebar, and
@@ -1580,6 +1614,8 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | What you see | What it means | What to do |
 |---|---|---|
 | Gun: *"this scanner is no longer authorised"* | Its link was reset or the scanner was removed | Settings → Scanners → **Reset link**, open the new link on the device |
+| A page is not in the sidebar, or a bookmark to it says *"… is switched off"* | An admin switched that part of the app off for the site (Step 4a) | Settings → Logins & site → **What is switched on**: tick it back, or **Everything on** |
+| The jobs under Settings → Scanners are greyed out | Their part of the app is switched off for the site; the ticks are kept | Switch the part back on under **What is switched on** if the scanners should offer it |
 | Gun: *"Offline and no list cached for this session"* | The handheld has never downloaded this count | Carry it into Wi-Fi once and sign on again |
 | Gun says `OFFLINE` with lines queued | Normal in a dead spot | Nothing. They upload when it gets a signal. Do not wipe the device |
 | A scan does nothing | DataWedge is not sending a suffix | DataWedge → Basic data formatting → send **ENTER** (or TAB) |

@@ -1,4 +1,5 @@
 import { db } from '../db.js';
+import { features } from './features.js';
 
 /*
  * What the gun offers a counter as a one-tap reason.
@@ -193,6 +194,16 @@ export function scannerJobs() {
   try { saved = row ? JSON.parse(row.value) : {}; } catch { saved = {}; }
   const out = {};
   for (const [k] of JOBS) out[k] = saved[k] !== false;
+  return out;
+}
+/* A job whose part of the app is switched off (Settings → Logins & site →
+   What is switched on) is off the sign-on screen whatever the ticks say -
+   the ticks are kept, so it comes back when the part does. */
+export const JOB_FEATURE = { cycle: 'cycle', move: 'front', missing: 'missing' };
+export function jobsOffered(base = scannerJobs()) {
+  const f = features();
+  const out = { ...base };
+  for (const [k, feature] of Object.entries(JOB_FEATURE)) if (f[feature] === false) out[k] = false;
   return out;
 }
 export function saveScannerJobs(body = {}) {

@@ -30,6 +30,8 @@ Everything on the **Settings** page, which no other profile opens. It has six se
 
 - create, rename and delete **supervisor logins**, choose what each may do, **invite** a new one by
   email, and lift a **sign-in lock**;
+- switch the parts of the app nobody needs yet **off for the whole site** (cycle counts, front
+  bins, the map…) and back on;
 - the **site name**, the **logo**, the **Teams channel**, the **pallet system** address;
 - register and reset **scanners**; choose which **jobs** the scanners offer;
 - upload the **bin list**, pair the **racking blocks**, upload the **inventory report**;
@@ -94,6 +96,17 @@ admin can delete a count.
    does a password reset.
 8. Sign-ins last 30 days from last use and survive a restart. **Log out** ends one, and the next
    person to sign in on that computer starts fresh on the dashboard, not where the last one left off.
+
+**What is switched on** — the card above the logins. A team with a few days to learn the count
+does not need cycle counts, front bins or the map in front of it. **Full counts and second counts
+only** hides Cycle counts, Front bins, Not in Location, the Map, Adjustments and Reports for
+every login, admins included — the sidebar, the dashboard tabs, the search box and the scanners'
+sign-on screen all follow — and keeps Alerts (an SOS needs an answer) and the Testing Suite
+(where the count is practised). Tick by hand and **Save** for anything in between; **Everything
+on** brings it all back. Hidden is not forbidden: roles still apply, nothing is deleted, a
+bookmark to a hidden page says so, and the job ticks under Scanners are kept, greyed, for when
+their part comes back. Always on: Progress, Team plan, Second counts, Full Counts, Teams & crew,
+Settings, the guide.
 
 Each role has a procedure of its own in `docs/roles/`; hand a new login the right one.
 

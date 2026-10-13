@@ -327,6 +327,7 @@ try {
   await saveCard(desk, '#inviteBox', 'settings-invite');
   const inviteLinkUrl = await desk.$eval('#inviteLink', (i) => i.value).catch(() => '');
   await saveCard(desk, '#userTable', 'settings-logins');
+  await saveCard(desk, '#featuresList', 'settings-features', 10);
   /* the access list, open on one login: what a supervisor may use, down to the tab */
   {
     const row = desk.locator('#userTable tr', { hasText: 'MARCUS-OBI' }).first();

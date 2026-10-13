@@ -652,6 +652,67 @@
     $('jobsChip').className = 'chip ' + (on.length === 4 ? 'online' : 'warn');
   }
   async function refreshJobs() { renderJobs((await api.json('/api/admin/scanner-jobs')).jobs); }
+  /* a job whose part of the app is off for the site is off the sign-on screen whatever is ticked */
+  const JOB_FEATURE = { cycle: 'cycle', move: 'front', missing: 'missing' };
+  function renderJobsNote(f) {
+    const off = Object.entries(JOB_FEATURE).filter(([, feat]) => f[feat] === false).map(([k]) => k);
+    for (const [k, id] of Object.entries(JOB_BOX)) {
+      $(id).disabled = off.includes(k);
+      $(id).closest('label').classList.toggle('off', off.includes(k));
+    }
+    $('jobsOffNote').hidden = !off.length;
+    $('jobsOffNote').innerHTML = off.length
+      ? `${off.map((k) => `<b>${JOB_NAME[k]}</b>`).join(', ')} ${off.length === 1 ? 'is' : 'are'} switched off for the whole site (Logins &amp; site → What is switched on), so the scanners do not offer ${off.length === 1 ? 'it' : 'them'} whatever is ticked here. The ticks are kept for when ${off.length === 1 ? 'it comes' : 'they come'} back.`
+      : '';
+  }
+
+  /* ---------------------------------------------- what is switched on */
+  let featureAll = [];
+  function renderFeatures(data) {
+    featureAll = data.all || featureAll;
+    const f = data.features || {};
+    $('featuresList').replaceChildren(...featureAll.map(([k, label, what]) => {
+      const l = document.createElement('label');
+      l.className = 'cb' + (f[k] === false ? ' off' : '');
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.id = 'fFeature-' + k;
+      box.dataset.feature = k;
+      box.checked = f[k] !== false;
+      box.onchange = () => l.classList.toggle('off', !box.checked);
+      const text = document.createElement('span');
+      text.append(document.createTextNode(label));
+      const w = document.createElement('span');
+      w.className = 'what';
+      w.textContent = what;
+      text.appendChild(w);
+      l.append(box, text);
+      return l;
+    }));
+    const off = featureAll.filter(([k]) => f[k] === false).map(([, l]) => l);
+    $('featuresChip').hidden = false;
+    $('featuresChip').textContent = off.length ? `off: ${off.join(', ')}` : 'everything on';
+    $('featuresChip').className = 'chip ' + (off.length ? 'warn' : 'online');
+    if (api.setFeatures) api.setFeatures(f);       // the sidebar follows at once
+    renderJobsNote(f);
+  }
+  async function refreshFeatures() {
+    if (!api.me || api.me.role !== 'admin') { $('featuresCard').hidden = true; return; }
+    $('featuresCard').hidden = false;
+    renderFeatures(await api.json('/api/admin/features'));
+  }
+  async function saveFeatures(body, okText) {
+    try {
+      const out = await api.post('/api/admin/features', body);
+      renderFeatures(out);
+      const off = featureAll.filter(([k]) => out.features[k] === false).map(([, l]) => l);
+      msg($('featuresMsg'), 'ok', okText || (off.length ? `Saved: ${off.join(', ')} switched off.` : 'Saved: everything is on.'),
+        off.length ? 'Gone from the sidebar, the dashboard tabs, the search box and the scanners for everyone, until ticked again.' : 'Every page and job shows again.');
+    } catch (err) { msg($('featuresMsg'), 'err', 'Not saved', err.message); }
+  }
+  $('btnFeaturesSave').onclick = () => saveFeatures(Object.fromEntries([...document.querySelectorAll('#featuresList input[data-feature]')].map((b) => [b.dataset.feature, b.checked])));
+  $('btnFeaturesCountOnly').onclick = () => saveFeatures({ preset: 'count-only' }, 'Saved: the full count and its second counts, with nothing else to wander into.');
+  $('btnFeaturesAll').onclick = () => saveFeatures({ preset: 'everything' });
   $('btnJobsSave').onclick = async () => {
     try {
       const body = {};
@@ -1852,6 +1913,7 @@
   async function load() {
     await refreshMe();
     await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshJobs().catch(() => {}), refreshReasons(), refreshSosSettings(), refreshLogo(), refreshPalletSystem().catch(() => {}), refreshOnedrive().catch(() => {})]);
+    await refreshFeatures().catch(() => {});
     await refreshGun().catch(() => {});
     await loadLayouts().catch(() => {});
     await refreshDefaultSession().catch(() => {});
