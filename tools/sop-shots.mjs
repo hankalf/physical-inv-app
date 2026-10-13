@@ -486,6 +486,10 @@ try {
       await desk.click('#modeList button[data-mode="cycle"]'); await wait(2500);
       await saveCard(desk, '#modeList', 'testing-modes', 8);
     }
+    if (await desk.$('#modeList button[data-mode="second"]')) {
+      await desk.click('#modeList button[data-mode="second"]'); await wait(2500);
+      await saveCard(desk, '#modePane', 'testing-second-counts', 8);
+    }
   }
   /* ---------- Full Counts ---------- */
   await desk.goto(BASE + '/full');

@@ -552,6 +552,7 @@ your login may do for real (a login without Cycle counts is not offered the cycl
 
 | Pick | What is set up | What the gun does |
 |---|---|---|
+| **Second counts** | Another crew — team 98 — has counted a third aisle, F03, and got some of it wrong: a pallet keyed short, one missed, one found in the wrong bin, one not on the report. Four bins come back as second counts; a fifth, which they recorded empty, is left for you to raise by hand. The crew that made a first count is never offered the second, which is why it has to be somebody else's aisle | Sign on to the **full count** as team 99 as usual. The My aisle screen says **Second counts available** — tap **Start second counts**. The gun names the bin and why it came back, never the numbers: scan every pallet in it, then **Bin done — nothing more here**; it moves to the next. Then raise one yourself: in the dashboard at the top, **Second counts → Bin F03A004 → Request second count**, tap **Refresh** on the gun, and do it with **Bin is EMPTY — scan the bin**. Watch each line settle under the dashboard's Second counts tab |
 | **Cycle count** | A practice cycle count beside your run, with a five-bin list: a plain bin, two pallets, an empty bin, a short pallet, one whose pallet has gone | **Cycle count** at the top of the sign-on screen; sign on with a clock-in number alone; **Start counting the list**; every pallet in the bin, then **Bin done** |
 | **Front2Back** | Three front pallets to put back in the empty bin behind — one of them into a bin that turns out not to be empty | **Front2Back** at sign-on with a clock-in number alone; pick the aisle; the gun shows the move desk — pallet, from → to, the pallet system under it; put it back, tap **Moved — next**; the one that will not go is left and skipped from the office with the reason |
 | **Not in Location** | Three lost pallets on the list, for you alone: two are on the shelves, one is nowhere | Count the full count as normal; the gun says **found!** the moment it scans one, and the office is told where |
@@ -567,6 +568,10 @@ never reach the real Not in Location page or a scanner on the floor. **Start ove
 ![](images/testing-modes.png)
 
 *What to practise: the cycle count picked, its five-bin list under the card.*
+
+![](images/testing-second-counts.png)
+
+*Second counts picked: the other crew's aisle, what they keyed beside what is on the shelf, and the state of each bin.*
 
 ### Step 8d — The user guide: this document, inside the app
 
@@ -1383,6 +1388,10 @@ supervisor.
 
 Work these down before you close the count. A count closed with open second counts is a
 count with known-wrong numbers in it.
+
+**Practise it first.** Testing Suite → What to practise → **Second counts** sets up another crew's
+aisle on your practice count, four bins that come back to the gun and one to raise by hand from
+the dashboard, with the tips following each step (Step 8c).
 
 ![](images/dashboard-second-counts.png)
 

@@ -59,7 +59,7 @@
         },
         {
           title: 'Practise on the Testing Suite before count day',
-          do: 'The Testing Suite opens a real scanner screen on a practice count of your own, with a sheet of test data beside it. Click a value to "scan" it. Nothing you do there touches a real count. The "What to practise" card also sets up a cycle count, a pallet move and a Not in Location run.',
+          do: 'The Testing Suite opens a real scanner screen on a practice count of your own, with a sheet of test data beside it. Click a value to "scan" it. Nothing you do there touches a real count. The "What to practise" card also sets up second counts (another crew’s aisle that comes back to your gun, and one to raise by hand), a cycle count, a pallet move and a Not in Location run.',
           where: S('/testing', '', 'Testing Suite'),
           watch: [
             { see: 'The gun is still starting — give it a second', means: 'The scanner frame has not finished loading.', fix: 'Wait a moment and click again.' },
@@ -358,6 +358,7 @@
             { see: 'The list is enormous', means: 'Thresholds at 0.', fix: 'Set Recount over, or over %, and a cap.' },
           ],
           ask: [
+            { q: 'Where can I practise a second count before count day?', a: 'Testing Suite → What to practise → Second counts. Another crew has counted aisle F03 and got some of it wrong: four bins come back to your gun, blind, and one is left for you to raise by hand from the dashboard. The tips follow each step.', goto: S('/testing', '', 'Testing Suite') },
             { q: 'Does the same team recount its own bin?', a: 'Preferably not: the server offers it to another team when one is near; a lone team gets it after its own aisles.' },
           ],
         },

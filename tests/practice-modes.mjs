@@ -82,7 +82,7 @@ await wait(300);
 if (/Hide tips/.test(await page.textContent('#btnTips'))) await page.click('#btnTips');
 
 const modeBtn = (k) => page.locator(`#modeList button[data-mode="${k}"]`);
-check('"What to practise" lists the full count and the three other jobs', (await page.$$('#modeList button')).length === 4 && await modeBtn('cycle').isVisible());
+check('"What to practise" lists the full count, its second counts and the three other jobs', (await page.$$('#modeList button')).length === 5 && await modeBtn('cycle').isVisible() && await modeBtn('second').isVisible());
 check('…marking the ones already set up', await modeBtn('cycle').evaluate((b) => b.classList.contains('set')) && await modeBtn('moves').evaluate((b) => b.classList.contains('set')));
 check('…on the full count to begin with, so the sheet reads as before', await modeBtn('full').evaluate((b) => b.classList.contains('now')) && await page.isHidden('#modePane'));
 

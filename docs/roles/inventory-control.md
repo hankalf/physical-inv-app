@@ -104,7 +104,9 @@ count can change the number, and a changed number clears its approval.
 
 When the floor reports every aisle handed back and *Progress* shows every bin with a count:
 
-1. **Second counts to zero.** Dashboard → Second counts must show nothing open. A count
+1. **Second counts to zero.** Dashboard → Second counts must show nothing open. (Practise this
+   first: Testing Suite → What to practise → **Second counts** — another crew's aisle comes back
+   to your gun, and one bin is yours to raise by hand.) A count
    closed with open second counts has known-wrong numbers in it. You can raise more by hand
    (**Request second count** on a bin) or **Raise from all variances now**: it skips aisles
    nobody has reached and says how many it skipped.

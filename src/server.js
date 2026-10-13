@@ -790,7 +790,7 @@ async function handleAdmin(req, res, url, m) {
     requireAccess(MODE_ACCESS[mode]);
     const s = ensurePractice(owner);
     const out = startPracticeMode(owner, mode);
-    audit(actor, `set up ${mode === 'cycle' ? 'a practice cycle count' : mode === 'moves' ? 'practice pallet moves' : 'a practice Not in Location list'}`, out.note || '', s.id);
+    audit(actor, `set up ${mode === 'second' ? 'practice second counts' : mode === 'cycle' ? 'a practice cycle count' : mode === 'moves' ? 'practice pallet moves' : 'a practice Not in Location list'}`, out.note || '', s.id);
     return sendJson(req, res, 200, practicePayload(who, owner, getSession(s.id), practiceDevice(who)));
   }
   // the features that ship off, switched on for this person's practice count only

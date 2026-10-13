@@ -541,7 +541,7 @@ check('With lot codes on, the sheet grows lot chips to scan', (await page.$$('#s
 await gunFetch(`/api/sessions/${(await get('/api/admin/practice')).session.id}/counts`,
   [{ clientId: 'feat-short-1', palletId: 'F12313-111', qty: 30, location: 'F01A004', team: '99', deviceId: 'TEST', lot: 'F12313' }]);
 const grown = await get('/api/admin/practice');
-check('…and the things to try grow with the features that are on', ['lot', 'approve', 'second'].every((k) => grown.checklist.some((c) => c.key === k)), grown.checklist.map((c) => c.key).join(','));
+check('…and the things to try grow with the features that are on', ['lot', 'approve', 'secondAuto'].every((k) => grown.checklist.some((c) => c.key === k)), grown.checklist.map((c) => c.key).join(','));
 check('…with the counts the tips speak up on: an adjustment waiting, from the short pallet', grown.extras.pendingApprovals >= 1, JSON.stringify(grown.extras));
 /* an uploaded file without lots says so */
 const noLots = await fetch(`${BASE}/api/admin/practice/upload?name=plain.csv`, { method: 'POST', headers: { authorization: 'Bearer ' + otherTok, 'content-type': 'text/csv' },

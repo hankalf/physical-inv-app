@@ -189,6 +189,8 @@
     border-left: 3px solid var(--accent); background: var(--accent-ink); border-radius: 0 7px 7px 0; padding: 6px 10px;
   }
   table.shelf .what b { color: var(--text); font-weight: 700; }
+  table.shelf tr.tryrow td { padding-top: 0; border-top: 0; }
+  table.shelf tr.tryrow .what { margin: 0 0 6px; }
   table.shelf td.num, table.shelf th.num { text-align: right; }
   table.shelf .item { color: var(--muted); font-size: 12px; margin-top: 3px; }
   table.shelf .item.expired { color: var(--err); }
@@ -318,7 +320,7 @@
                same two aisles: a cycle count, pallets to move back, the Not in
                Location list - only the jobs this login may do for real -->
           <div class="card" id="modesCard" hidden>
-            <h2>What to practise <span class="muted">the full count, or the other jobs a scanner does</span></h2>
+            <h2>What to practise <span class="muted">the full count, its second counts, or the other jobs a scanner does</span></h2>
             <div class="modes" id="modeList"></div>
             <div class="feedback" id="modeMsg"></div>
             <div class="modepane" id="modePane" hidden></div>

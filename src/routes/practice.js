@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { db, norm, getSession, createSession, createDevice, listDevices, sandboxOf } from '../db.js';
+import { db, norm, getSession, createSession, createDevice, listDevices, sandboxOf, saveCounts } from '../db.js';
+import { generateFromVariances, REASONS } from './recounts.js';
 import { refreshAdjustments } from './adjustments.js';
 import { exportEverything, when } from './export-all.js';
 import { scannerPrompts, scannerLayout } from './scanner-prompts.js';
@@ -446,8 +447,9 @@ function featureChecks(s, lines) {
       done: db.prepare("SELECT 1 FROM adjustments WHERE session_id = ? AND status IN ('approved', 'rejected')").get(id) != null });
   }
   if (s.auto_recount) {
-    checks.push({ key: 'second', label: 'Do a second count the gun raised — My aisle → Start second counts',
-      done: db.prepare("SELECT 1 FROM recounts WHERE session_id = ? AND status = 'done' AND source = 'auto'").get(id) != null });
+    // raised for another team: the crew that made the first count is never offered the second
+    checks.push({ key: 'secondAuto', label: 'See a second count the gun raised from your own count — Dashboard → Second counts (auto second counts are on)',
+      done: db.prepare("SELECT 1 FROM recounts WHERE session_id = ? AND source = 'auto' AND bin NOT LIKE 'F03%'").get(id) != null });
   }
   return { checks, counts };
 }
@@ -652,7 +654,66 @@ function resetSandbox(id) {
    positions, and the Not in Location list it watches for as it goes. Each can
    be practised here on the same two aisles, and each is set up only when asked
    for - and only for a login that may do that job for real. */
-export const MODE_ACCESS = { cycle: 'cycle', moves: 'front', missing: 'missing' };
+export const MODE_ACCESS = { second: 'full', cycle: 'cycle', moves: 'front', missing: 'missing' };
+
+/*
+ * Second counts. The crew that made a first count is never offered the second,
+ * so the practice team cannot be sent back to its own bins: another crew -
+ * team 98 - has to have counted first and got some of it wrong. Aisle F03 is
+ * theirs: what they keyed is written beside what is really on the shelf, so
+ * the person can see why each bin came back, and one bin is left for them to
+ * raise by hand from the dashboard.
+ */
+export const PRACTICE_OTHER_TEAM = '98';
+const SECOND_BINS = [
+  { bin: 'F03A001', shelf: [P('F34511-111', 40, 'straw', 'F34511', 150)], first: [['F34511-111', 36]],
+    why: 'They keyed 36; the report says 40',
+    try: 'Count it blind - there are 40 - and key what you see. Your count agrees with the report, so the line settles.' },
+  { bin: 'F03A002', shelf: [P('F34512-111', 30, 'peach', 'F34512', 240), P('F34512-112', 30, 'peach', 'F34512', 240)], first: [['F34512-111', 30]],
+    why: 'They scanned one pallet; the report has two here',
+    try: 'Scan both pallets, then the bin for each. The one they missed comes off the missing list.' },
+  { bin: 'F03A003', shelf: [P('F34513-111', 32, 'blue', 'F34513', 200)], report: [], first: [['F34513-111', 32]],
+    why: 'The report has this pallet in F03A004; they found it here',
+    try: 'It really is here. Scan it, then this bin; the gun says the report had it elsewhere - accept it. Two counts agree: it moved.' },
+  { bin: 'F03A004', shelf: [], report: [P('F34513-111', 32, 'blue', 'F34513', 200)], first: 'empty', manual: true,
+    why: 'They recorded it empty - nothing is raised for that',
+    try: 'Raise this one yourself: in the dashboard above, Second counts, type F03A004 in Bin, Request second count. On the gun tap Refresh, Start second counts, then Bin is EMPTY - scan the bin.' },
+  { bin: 'F03A005', shelf: [P('F39999-999', 20, 'rasp', 'F39999', 300)], report: [], first: [['F39999-999', 20]],
+    why: 'Not on the report at all',
+    try: 'Scan it and tap YES to count it anyway, as they did. Two counts agree: it is a pallet to add.' },
+];
+const SECOND_PALLETS = new Set(SECOND_BINS.flatMap((b) => [...b.shelf, ...(b.report || [])].map((p) => p.id)));
+const secondSetUp = (s) => !!s && !!db.prepare('SELECT 1 FROM counts WHERE session_id = ? AND team = ? AND voided = 0').get(s.id, PRACTICE_OTHER_TEAM);
+/* the other crew's aisle: its bins and report rows, added to the practice count */
+function secondReportCsv() {
+  let csv = 'Bin Code,Container No.,Item No.,Description,Variant Code,Quantity,Unit of Measure Code,Entry No.,Lot No.,System,Best Before\n';
+  let entry = 2517900;
+  for (const b of SECOND_BINS) {
+    const rows = b.report || b.shelf;
+    if (!rows.length) { csv += `${b.bin},,,,,,,,,OPEN,\n`; continue; }
+    for (const p of rows) {
+      const [sku, desc, uom] = ITEMS[p.item];
+      csv += `${b.bin},${p.id},${sku},"${desc}",,${p.qty},${uom},${entry++},${p.lot},${SYSTEM_OF(p.lot)},${usDate(day(p.days))}\n`;
+    }
+  }
+  return csv;
+}
+function buildSecondPractice(s) {
+  importMaster(s.id, 'bins', binCsv(SECOND_BINS.map((b) => b.bin)));
+  importMaster(s.id, 'pallets', secondReportCsv());
+  // the other crew's first count, line by line, the way a gun sends them
+  const at = now();
+  const rows = [];
+  for (const b of SECOND_BINS) {
+    if (b.first === 'empty') { rows.push({ clientId: `crew98-${b.bin}`, emptyBin: true, location: b.bin, team: PRACTICE_OTHER_TEAM, employees: ['T1098'], deviceId: 'PRACTICE-98', aisle: 'F03', scannedAt: at }); continue; }
+    for (const [id, qty] of b.first) rows.push({ clientId: `crew98-${id}`, palletId: id, qty, location: b.bin, team: PRACTICE_OTHER_TEAM, employees: ['T1098'], deviceId: 'PRACTICE-98', aisle: 'F03', unknownPallet: !SECOND_PALLETS.has(id) || id === 'F39999-999', scannedAt: at });
+  }
+  saveCounts(s.id, rows);
+  // and the second counts their count raises - for this aisle alone, whatever the run has done so far
+  const raised = generateFromVariances(s.id, { onlyPallets: SECOND_PALLETS, includeMissing: true });
+  db.prepare('UPDATE sessions SET master_version = master_version + 1 WHERE id = ?').run(s.id);   // the gun re-reads the count: it has an aisle more
+  return raised;
+}
 const PRACTICE_CYCLE_NAME = 'Practice cycle count';
 /* the bins a practice cycle list puts in front of you: a plain one, two
    pallets, an empty bin, a short pallet, and one whose pallet has gone */
@@ -689,6 +750,11 @@ export function startPracticeMode(owner, mode) {
   const s = practiceSession(owner);
   if (!s) throw Object.assign(new Error('open the Testing Suite first - there is no practice count yet'), { status: 404 });
   if (s.practice_source === 'upload') throw Object.assign(new Error('the other jobs are practised on the built-in test data - press "Back to the built-in test data" first'), { status: 400 });
+  if (mode === 'second') {
+    if (secondSetUp(s)) return { note: 'already set up' };
+    const r = buildSecondPractice(s);
+    return { note: `aisle F03 counted by team ${PRACTICE_OTHER_TEAM}, ${r.created} second counts raised` };
+  }
   if (mode === 'cycle') {
     if (cycleSession(owner)) return { note: 'already set up' };
     const c = buildCyclePractice(owner);
@@ -717,11 +783,37 @@ export function practiceModes(who, owner, s) {
   const on = features();
   const out = {
     available: !!s && s.practice_source !== 'upload',
+    // second counts are the full count's own: anyone who may count may practise them
+    second: { allowed: allowed(who, 'full'), on: false, team: PRACTICE_OTHER_TEAM, bins: [], done: 0, open: 0, raised: false },
     // a job this login may do for real, and that the site has switched on at all
     cycle: { allowed: allowed(who, 'cycle') && on.cycle, on: false, session: null, bins: [], done: 0, signedOn: false },
     moves: { allowed: allowed(who, 'front') && on.front, on: false, list: [], done: 0, skipped: 0 },
     missing: { allowed: allowed(who, 'missing') && on.missing, on: false, rows: [], found: 0 },
   };
+  if (secondSetUp(s)) {
+    const tasks = db.prepare("SELECT id, bin, reason, status, source FROM recounts WHERE session_id = ? AND bin LIKE 'F03%' ORDER BY id").all(s.id);
+    const second = db.prepare("SELECT pallet_id, location_code, empty_bin FROM counts WHERE session_id = ? AND voided = 0 AND pass = 2 AND location_code LIKE 'F03%'").all(s.id);
+    out.second = {
+      ...out.second, on: true,
+      bins: SECOND_BINS.map((b) => {
+        const t = tasks.find((x) => x.bin === b.bin) || null;
+        return {
+          bin: b.bin, why: b.why, try: b.try, manual: !!b.manual,
+          first: b.first === 'empty' ? 'recorded it empty' : b.first.map(([id, q]) => `${id} ×${q}`).join(', '),
+          task: t ? { id: t.id, reason: REASONS[t.reason] || t.reason, status: t.status, source: t.source } : null,
+          shelf: b.shelf.map((p) => {
+            const [sku, desc, uom] = ITEMS[p.item];
+            return { id: p.id, qty: p.qty, sku, desc, uom, lot: p.lot, onReport: SECOND_BINS.some((o) => (o.report || o.shelf).some((r) => r.id === p.id)),
+              counted: second.some((l) => l.pallet_id === p.id && l.location_code === b.bin) };
+          }),
+          recordedEmpty: second.some((l) => l.location_code === b.bin && l.empty_bin),
+        };
+      }),
+      done: tasks.filter((t) => t.status === 'done').length,
+      open: tasks.filter((t) => t.status !== 'done').length,
+      raised: tasks.some((t) => t.source === 'manual'),
+    };
+  }
   const c = cycleSession(owner);
   if (c) {
     const counted = new Map();
@@ -775,6 +867,15 @@ export function practiceModes(who, owner, s) {
 function modeChecks(s) {
   const owner = s.practice_owner;
   const checks = [];
+  if (secondSetUp(s)) {
+    const tasks = db.prepare("SELECT status, source FROM recounts WHERE session_id = ? AND bin LIKE 'F03%'").all(s.id);
+    checks.push({ key: 'second', label: 'Do a second count another crew’s count raised — My aisle → Start second counts',
+      done: tasks.some((t) => t.source === 'auto' && t.status === 'done') });
+    checks.push({ key: 'secondRaise', label: 'Raise a second count by hand — Dashboard → Second counts → Request second count',
+      done: tasks.some((t) => t.source === 'manual') });
+    checks.push({ key: 'secondAll', label: 'Work the second counts down to none open',
+      done: tasks.length > 0 && tasks.every((t) => t.status === 'done') && tasks.some((t) => t.source === 'manual') });
+  }
   const c = owner ? cycleSession(owner) : null;
   if (c) {
     checks.push({ key: 'cycle', label: 'Count a bin off a cycle-count list — Cycle count on the gun',

@@ -233,7 +233,7 @@
     { key: 'askExpiry', label: 'Ask for the best-before date', what: 'The gun adds an EXPIRY question, and flags a date that has already passed.' },
     { key: 'requireApproval', label: 'Adjustments need approval', what: 'Every difference from the report has to be approved, with a reason, before it can go to the ERP. See Dashboard → Adjustments.', more: 'approval' },
     { key: 'palletMode', label: 'Pallet ID check', what: 'Allow override (the default) asks YES / NO for a pallet not on the list. No overrides refuses it. Accept any ID does not check at all.', select: [['warn', 'Allow override'], ['strict', 'No overrides'], ['off', 'Accept any ID']] },
-    { key: 'autoRecount', label: 'Raise second counts automatically', what: 'Off here until you switch it on (real counts have it on): a pallet that disagrees with the report puts its bin on the second-count list, to try under My aisle → Start second counts.' },
+    { key: 'autoRecount', label: 'Raise second counts automatically', what: 'Off here until you switch it on (real counts have it on): a pallet that disagrees with the report puts its bin on the second-count list for another team — the crew that made the first count is never offered the second. See it under Dashboard → Second counts; to do one on the gun, pick Second counts under What to practise.' },
     { key: 'askComments', label: 'Comments step', what: 'On by default: the optional comments question at the end of each pallet.' },
   ];
 
@@ -364,6 +364,7 @@
      it would on the floor. Only the jobs this login may do for real appear. */
   const MODES = [
     { key: 'full', title: 'Full count', what: 'Team 99 walks its aisles: pallet, quantity, bin.' },
+    { key: 'second', title: 'Second counts', what: 'Another crew counted aisle F03 and got some of it wrong: the gun sends you back, blind, to count those bins again — and you raise one yourself.' },
     { key: 'cycle', title: 'Cycle count', what: 'One person, a clock-in number, and a list of bins to count today.' },
     { key: 'moves', title: 'Front2Back', what: 'Front pallets with an empty bin behind: the desk on the gun, the pallet system under it, Moved — next.' },
     { key: 'missing', title: 'Not in Location', what: 'Pallets the system has lost. Count as normal — the gun calls out one it finds.' },
@@ -414,7 +415,11 @@
     modeDrawn = '';
     renderModes();
     const g = gunPeek();
-    if (key !== 'full') {
+    if (key === 'second') {
+      // the second counts are on the same count: a gun already signed on picks them up with Refresh
+      if (g.screen === 'scrSignon') { restartGun(); msg($('modeMsg'), 'ok', 'Second counts are set up on your practice: team 98 counted aisle F03.', 'Sign on to the full count as usual; the gun offers them on its My aisle screen.'); }
+      else msg($('modeMsg'), 'ok', 'Second counts are set up on your practice: team 98 counted aisle F03.', 'On the gun, tap My aisle then Refresh: it says Second counts available.');
+    } else if (key !== 'full') {
       // the gun reads the list of counts at start-up: on the sign-on screen it is simply restarted
       if (g.screen === 'scrSignon') { restartGun(); msg($('modeMsg'), 'ok', `${MODES.find((x) => x.key === key).title} is set up on your practice.`, 'The gun has been restarted on its sign-on screen so it can see it.'); }
       else msg($('modeMsg'), 'ok', `${MODES.find((x) => x.key === key).title} is set up on your practice.`, 'Sign off the gun (My aisle → Sign off this scanner) and it is offered at sign-on; the tips take it from there.');
@@ -504,6 +509,49 @@
         td4.appendChild(x.status === 'done' ? stateOf('ok', `✓ moved to ${x.actual || x.to}`) : x.status === 'skipped' ? stateOf('warn', `⚠ skipped — ${x.reason}`) : stateOf('todo', 'to move'));
         tr.append(td1, td2, td3, td4);
         tbody.appendChild(tr);
+      }
+      pane.appendChild(wrap);
+    } else if (modeSel === 'second') {
+      const sc = m.second;
+      how.innerHTML = `Another crew — team ${sc.team} — counted aisle <b>F03</b> first and got some of it wrong, so four of its bins came back as <b>second counts</b>; the crew that made a first count is never offered the second, so they come to you. On the gun: sign on to the <b>full count</b> as team 99 as usual. The My aisle screen says <b>Second counts available</b> — tap <b>Start second counts</b>. The gun names the bin and why it came back, never the numbers: scan every pallet in it, then <b>Bin done — nothing more here</b>, and it moves to the next. A bin with nothing in it: <b>Bin is EMPTY — scan the bin</b>. Then raise one yourself from the dashboard above, and watch each line settle under its <b>Second counts</b> tab.`;
+      pane.appendChild(how);
+      const tasks = sc.bins.filter((b) => b.task).length;
+      pane.appendChild(el('div', 'muted', `${sc.done} of ${tasks} second counts done${sc.open ? ` · ${sc.open} open on the gun` : ''}${sc.raised ? ' · one raised by hand' : ' · one still to raise by hand'}`));
+      const { wrap, tbody } = binTable([['Bin', 'c-bin'], ['On the shelf', ''], ['Qty', 'c-qty'], ['State', 'c-state']]);
+      wrap.style.marginTop = '10px';
+      const stateFor = (b) => !b.task ? stateOf('todo', b.manual ? 'raise it yourself' : '—')
+        : b.task.status === 'done' ? stateOf('ok', '✓ done') : b.task.status === 'taken' ? stateOf('warn', 'in hand') : stateOf('todo', b.task.source === 'manual' ? 'raised — to do' : 'to do');
+      for (const b of sc.bins) {
+        const rows = Math.max(1, b.shelf.length);
+        for (let i = 0; i < rows; i++) {
+          const pl = b.shelf[i];
+          const tr = el('tr', (i === 0 ? 'binstart' : '') + (b.task && b.task.status === 'done' ? ' counted' : ''));
+          tr.dataset.secondBin = b.bin;
+          if (pl) { tr.dataset.pallet = pl.id; tr.dataset.done = pl.counted ? '1' : '0'; } else { tr.dataset.empty = '1'; tr.dataset.done = b.recordedEmpty ? '1' : '0'; }
+          if (i === 0) {
+            const td = el('td'); td.rowSpan = rows;
+            td.appendChild(chip(b.bin));
+            td.appendChild(el('div', 'item', b.task ? b.task.reason : b.why));
+            td.appendChild(el('div', 'item', `The other crew keyed: ${b.first}`));
+            tr.appendChild(td);
+          }
+          const tdP = el('td'); const tdQ = el('td');
+          if (pl) {
+            tdP.appendChild(chip(pl.id));
+            tdP.appendChild(el('div', 'item', `${pl.desc} · ${pl.uom} · lot ${pl.lot}${pl.onReport ? '' : ' · not on the report'}`));
+            tdQ.appendChild(chip(String(pl.qty), { cls: 'qty', title: 'Key this quantity into the gun' }));
+          } else {
+            tdP.appendChild(el('span', 'none', 'nothing here — Bin is EMPTY on the gun'));
+          }
+          tr.append(tdP, tdQ);
+          if (i === 0) { const tdS = el('td'); tdS.rowSpan = rows; tdS.appendChild(stateFor(b)); tr.appendChild(tdS); }
+          tbody.appendChild(tr);
+        }
+        // what this bin is here to teach, on a line of its own under it
+        const tt = el('tr', 'tryrow' + (b.task && b.task.status === 'done' ? ' counted' : ''));
+        tt.dataset.secondTry = b.bin;
+        const td = el('td'); td.colSpan = 4; td.appendChild(el('div', 'what', b.try)); tt.appendChild(td);
+        tbody.appendChild(tt);
       }
       pane.appendChild(wrap);
     } else if (modeSel === 'missing') {
@@ -831,8 +879,10 @@
         const o = (data.options && data.options.values) || {};
         const x = data.extras || {};
         const feat = (key, t) => (shownFeat.has(key) ? null : { key: 'feat:' + key, ...t });
-        const f = (x.openSecondCounts > 0 && feat('second', { target: $('gunFrame').closest('.gun'), step: 'Second counts', pos: 'left',
-            text: 'A pallet you counted disagreed with the report, so the gun raised a <b>second count</b>. Tap <b>My aisle</b>, then <b>Start second counts</b>, and count that bin again.' }))
+        const f = (x.openSecondCounts > 0 && (o.autoRecount || modeOn('second')) && feat('second', { target: $('dashCard'), step: 'Second counts',
+            text: modeOn('second')
+              ? 'Second counts are waiting on the gun — the ones under <b>What to practise → Second counts</b>. Finish this pallet, then <b>My aisle → Start second counts</b>.'
+              : 'A pallet you counted disagreed with the report, so the gun raised a <b>second count</b> — for another team: the crew that made the first count is never offered the second. See it in the dashboard at the top under <b>Second counts</b>; to do one on the gun, pick <b>Second counts</b> under What to practise.' }))
           || (x.pendingApprovals > 0 && api.can('approve') && feat('approve', { target: $('dashCard'), step: 'Approvals are on',
             text: 'A difference is waiting to be signed for. In the dashboard at the top, open <b>Adjustments</b>: approve it with a reason, or reject it.' }))
           || (o.palletMode === 'strict' && feat('strict', { target: $('fWedge'), step: 'No overrides is on',
@@ -881,6 +931,38 @@
         if (p) return { key: 'cyc:done:' + b.bin, target: GUN(), step: `Cycle count · bin ${b.bin}`, pos: 'left', text: `Everything in <b>${b.bin}</b> is counted. Tap <b>Bin done — nothing more here</b> on the gun; it moves to the next bin on the list.` };
       }
       if (g.screen === 'scrScan' && !g.recountBin) return { key: 'cyc:back', target: GUN(), step: 'Cycle count', pos: 'left', text: 'Tap <b>My list</b> on the gun, then <b>Start counting the list</b>, to count off today\'s list.' };
+      return null;
+    }
+    if (modeSel === 'second') {
+      const open = m.bins.filter((b) => b.task && b.task.status !== 'done');
+      if (g.screen === 'scrSignon') {
+        if (g.job && g.job !== 'full') return { key: 'sc:pick', target: GUN(), step: 'Second counts', pos: 'left', text: 'Second counts are part of the full count: on the gun, tap <b>Full count</b> at the top of the sign-on screen.' };
+        if (!g.team) return { key: 'sc:team', target: $('teamVals').querySelector('.scan'), step: 'Second counts · sign on', text: 'Sign on as usual — click <b>99</b>.' };
+        if (!g.crew.trim()) return { key: 'sc:crew', target: $('crewVals').querySelector('.scan'), step: 'Second counts · sign on', text: 'And a clock-in number — click <b>T1001</b>.' };
+        return { key: 'sc:start', target: GUN(), step: 'Second counts · sign on', pos: 'left', text: 'Now on the gun: tap <b>Sign on &amp; load list</b>.' };
+      }
+      if (g.screen === 'scrAssign') {
+        if (open.length) return { key: 'sc:go', target: GUN(), step: 'Second counts', pos: 'left', text: `The gun says <b>Second counts available</b>: ${open.length} bin${open.length === 1 ? '' : 's'} another crew counted. Tap <b>Start second counts</b>.` };
+        if (!m.raised) return { key: 'sc:raise', target: $('dashCard'), step: 'Raise one yourself', text: 'Every second count the gun raised is done. Now raise one by hand: in the dashboard at the top, open <b>Second counts</b>, type <b>F03A004</b> in Bin and press <b>Request second count</b>. Then tap <b>Refresh</b> on the gun.' };
+        return { key: 'sc:done', target: $('dashCard'), step: 'Second counts', text: 'Every second count is done. Open <b>Second counts</b> in the dashboard at the top: each line shows both counts, and the ones that agreed have settled.' };
+      }
+      if (g.recountBin && g.recountKind !== 'cycle') {
+        const b = m.bins.find((x) => x.bin === g.recountBin);
+        if (!b) return null;
+        if (g.override) return { key: 'sc:yes:' + b.bin, target: GUN(), step: `Second count · bin ${b.bin}`, pos: 'left', text: 'Not on the report — the other crew counted it anyway, and so do you: tap <b>YES</b>.' };
+        if (g.screen !== 'scrScan') return null;
+        const next = b.shelf.find((p) => !p.counted && !justCounted(p.id));
+        const p = /PALLET/i.test(g.prompt), q = /QUANTITY/i.test(g.prompt), bn = /BIN/i.test(g.prompt), c = /Comments/i.test(g.prompt);
+        const row = next ? $('modePane').querySelector(`tr[data-pallet="${next.id}"]`) : null;
+        if (p && next && row) return { key: 'sc:pal:' + next.id, target: row.querySelector(`.scan[data-code="${next.id}"]`), step: `Second count · bin ${b.bin}`, text: `The gun says why <b>${b.bin}</b> came back — never the numbers. Click <b>${next.id}</b>, the pallet on that shelf.` };
+        if (q && next && row) return { key: 'sc:qty:' + next.id, target: row.querySelector('.scan.qty'), step: `Second count · bin ${b.bin}`, text: 'Now the <b>quantity</b> — what is actually there, not what the other crew keyed.' };
+        if (bn && next) return { key: 'sc:bin:' + next.id, target: paneChip(b.bin), step: `Second count · bin ${b.bin}`, text: `And the <b>bin</b> — click <b>${b.bin}</b>. A second count takes its own bin and no other.` };
+        if (c) return { key: 'comments', target: GUN(), step: 'Comments', pos: 'left', text: 'Optional. Tap a reason on the gun, or <b>Skip</b> — or just wait, it moves on by itself.' };
+        if (p && !b.shelf.length && !b.recordedEmpty) return { key: 'sc:empty:' + b.bin, target: paneChip(b.bin), step: `Second count · bin ${b.bin}`, text: `Nothing is in <b>${b.bin}</b>. On the gun tap <b>Bin is EMPTY — scan the bin</b>, then click <b>${b.bin}</b>.` };
+        if (p) return { key: 'sc:done:' + b.bin, target: GUN(), step: `Second count · bin ${b.bin}`, pos: 'left', text: `Everything in <b>${b.bin}</b> is counted. Tap <b>Bin done — nothing more here</b>; the gun moves to the next bin.` };
+        return null;
+      }
+      if (g.screen === 'scrScan') return { key: 'sc:back', target: GUN(), step: 'Second counts', pos: 'left', text: 'Tap <b>My aisle</b> on the gun, then <b>Start second counts</b>.' };
       return null;
     }
     if (modeSel === 'moves') {
