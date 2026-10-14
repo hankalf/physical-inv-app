@@ -126,8 +126,22 @@ const waitTip = async (re, ms = 6000) => {
   return false;
 };
 
-/* ---- the cycle count ---- */
+/* ---- a gun already signed on to the full count ---- */
 await page.click('#btnTips');          // tips on, to see them follow the job
+await page.locator('#teamVals .scan').first().click(); await wait(400);
+await page.locator('#crewVals .scan').first().click(); await wait(400);
+await gun.click('#btnStart');
+check('A gun signed on to the full count sits on its aisle', await waitScreen('scrAssign'));
+await modeBtn('cycle').click(); await wait(800);
+check('Picking Cycle count then tells the person to sign off first - not to look for a list the gun has not got', await waitTip(/signed on to the full count, not Cycle count/) && /Sign off this scanner/.test(await tip()), await tip());
+await gun.click('#btnCount'); await wait(600);
+check('…and says so on the counting screen too, with the way back', await waitTip(/My aisle.*Sign off this scanner/), await tip());
+await gun.click('#btnToAssign'); await waitScreen('scrAssign');
+await gun.click('#btnSignoff'); await waitScreen('scrSignon');
+gun = await gunFrame();
+await wait(9000);                      // past the restart throttle, so the next pick restarts the gun as before
+
+/* ---- the cycle count ---- */
 await modeBtn('cycle').click();
 await wait(600);
 check('Picking Cycle count opens its pane: the clock-in number and today\'s list', await page.isVisible('#modePane') && (await page.$$('#modePane tr[data-cycle-bin]')).length >= 5 && await paneChip('T1001').isVisible());

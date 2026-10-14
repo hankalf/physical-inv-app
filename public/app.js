@@ -182,6 +182,8 @@
   const SCREENS = ['scrDevice', 'scrSignon', 'scrAssign', 'scrScan', 'scrOverride', 'scrHistory', 'scrSos', 'scrEmptyRun', 'scrMove', 'scrFind', 'scrIssue'];
   function showScreen(name) {
     for (const s of SCREENS) $(s).classList.toggle('active', s === name);
+    // which job the gun is on, readable from outside (the Testing Suite's tips follow it)
+    document.documentElement.dataset.job = name === 'scrSignon' ? '' : (state.mode || 'full');
     if (name === 'scrScan') focusScan();
     // a badge is scanned, not typed: put the cursor where the scan should land
     if (name === 'scrSignon') setTimeout(() => { try { $('fEmployee').focus({ preventScroll: true }); } catch { /* ignore */ } }, 60);

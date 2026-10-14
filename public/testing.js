@@ -829,6 +829,8 @@
       return {
         up: typeof frame().contentWindow.wedge === 'function',
         screen: scr ? scr.id : '',
+        // the job the gun is signed on to, once it is past the sign-on screen
+        signedJob: d.documentElement.dataset.job || '',
         prompt: (q('#prompt') || {}).textContent || '',
         team: (q('#fTeam') || {}).value || '',
         crew: (q('#employeeChips') || {}).textContent || '',
@@ -905,12 +907,23 @@
      so a gun sitting on its sign-on screen without the job on offer is simply
      restarted; one mid-count is asked to sign off first. */
   const GUN = () => $('gunFrame').closest('.gun');
+  /* The gun is signed on to one job and the lesson is another: it has to sign
+     off and sign on again, from the screen it is on. */
+  const JOB_NAME = { full: 'the full count', cycle: 'the cycle count', move: 'Front2Back', missing: 'Not in Location' };
+  function signOffFirst(want, g) {
+    const on = JOB_NAME[g.signedJob] || 'another job';
+    const to = want === 'full' ? 'the full count' : want === 'cycle' ? 'Cycle count' : 'Front2Back';
+    const back = g.screen === 'scrAssign' ? '' : g.signedJob === 'move' ? 'tap <b>Sign off this scanner</b>' : g.signedJob === 'missing' ? 'tap <b>Sign off this scanner</b>' : 'tap <b>My aisle</b>, then ';
+    return { key: 'signoff:' + want + ':' + g.screen, target: GUN(), pos: 'left', step: 'Sign off first',
+      text: `The gun is signed on to <b>${on}</b>, not ${to}. On the gun ${back}${g.screen === 'scrAssign' ? 'tap ' : ''}<b>Sign off this scanner</b>, then sign on again with <b>${want === 'full' ? 'Full count' : to}</b> at the top of the sign-on screen.` };
+  }
   const paneChip = (code) => $('modePane').querySelector(`.scan[data-code="${code}"]`);
   function modeTip(g) {
     if (!data || modeSel === 'full' || !modeOn(modeSel)) return null;
     const m = data.modes[modeSel];
     const name = MODES.find((x) => x.key === modeSel).title;
     if (modeSel === 'cycle') {
+      if (g.screen !== 'scrSignon' && g.signedJob && g.signedJob !== 'cycle') return signOffFirst('cycle', g);
       if (g.screen === 'scrSignon') {
         if (!g.offers.cycle) { restartGun(); return { key: 'cyc:restart', target: GUN(), step: 'Cycle count', pos: 'left', text: 'Restarting the gun so it sees the cycle count…' }; }
         if (g.job !== 'cycle') return { key: 'cyc:pick', target: GUN(), step: 'Cycle count', pos: 'left', text: 'On the gun, tap <b>Cycle count</b> at the top of the sign-on screen.' };
@@ -935,6 +948,7 @@
       return null;
     }
     if (modeSel === 'second') {
+      if (g.screen !== 'scrSignon' && g.signedJob && g.signedJob !== 'full') return signOffFirst('full', g);
       const open = m.bins.filter((b) => b.task && b.task.status !== 'done');
       if (g.screen === 'scrSignon') {
         if (g.job && g.job !== 'full') return { key: 'sc:pick', target: GUN(), step: 'Second counts', pos: 'left', text: 'Second counts are part of the full count: on the gun, tap <b>Full count</b> at the top of the sign-on screen.' };
@@ -967,6 +981,7 @@
       return null;
     }
     if (modeSel === 'moves') {
+      if (g.screen !== 'scrSignon' && g.signedJob && g.signedJob !== 'move') return signOffFirst('move', g);
       if (g.screen === 'scrSignon') {
         if (!g.offers.move) { restartGun(); return { key: 'mv:restart', target: GUN(), step: 'Front2Back', pos: 'left', text: 'Restarting the gun so it sees the pallets to move…' }; }
         if (g.job !== 'move') return { key: 'mv:pick', target: GUN(), step: 'Front2Back', pos: 'left', text: 'On the gun, tap <b>Front2Back</b> at the top of the sign-on screen.' };
