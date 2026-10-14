@@ -13,6 +13,7 @@ import {
   enrollDevice, deviceByToken, resetDevice, saveAdminToken, adminTokenInfo, dropAdminToken, dropAdminTokensFor, purgeAdminTokens } from './db.js';
 import { importMaster, pruneAreaAisles } from './routes/master.js';
 import { boardData } from './routes/board.js';
+import { countClock } from './routes/count-clock.js';
 import { sendMessage, listMessages, messagesFor, ackMessage, clearMessage } from './routes/messages.js';
 import { listAdjustments, adjustmentView, decideAdjustments, adjustmentReasons, saveAdjustmentReasons } from './routes/adjustments.js';
 import { setupState } from './routes/setup.js';
@@ -697,6 +698,7 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, {
       clocks: teamClocks(m[1]), open: openIdleAlerts(m[1]), recent: recentIdleAlerts(m[1], 30),
       config: idleConfig(), now: new Date().toISOString(),
+      count: countClock(m[1]),                    // the clock on the whole count: time, downtime, pace, finish
     });
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/clocks\/(\d+)$/)) && method === 'POST') {

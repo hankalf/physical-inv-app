@@ -219,6 +219,16 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 18px -20px; }
    a number that wraps reads as two numbers. */
 .stat .n { font-size: 23px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
 .stat .l { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; margin-top: 3px; }
+/* the clock on the count, under the hero: five figures that tick, and a line on the quiet spells */
+.clockrow { margin-top: 16px; }
+.clockrow .grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.clockrow .stat .n { font-variant-numeric: tabular-nums; }
+.clockrow .stat.quiet .n { color: var(--warn); }
+.clockrow .stat.eta .n { color: var(--ok); }
+.clockrow .stat .l { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.clockrow .spells { margin-top: 8px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.clockrow .spells b { color: var(--text-dim); font-weight: 600; }
+.clockrow .spells .now { color: var(--warn); font-weight: 600; }
 
 /* --------------------------------------------------------------- type bits */
 .muted { color: var(--muted); font-size: 13px; }
@@ -589,7 +599,7 @@ tbody td.wrap { white-space: normal; }
 /* the team table's clocks */
 td.timer { font-variant-numeric: tabular-nums; font-weight: 700; }
 td.timer.stopped { color: var(--muted); font-weight: 500; }
-td.quiet.late { color: var(--warn); font-weight: 800; }
+td.quiet.late, td.late { color: var(--warn); font-weight: 800; }
 
 /* a heading with a small segmented control beside it */
 .tablehead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 16px 0 8px; }

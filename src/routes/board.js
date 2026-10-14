@@ -1,5 +1,6 @@
 import { db } from '../db.js';
 import { progress } from './reports.js';
+import { countClock } from './count-clock.js';
 
 /*
  * The office board.
@@ -86,5 +87,8 @@ export function boardData(sessionId) {
     aislesTotal: aisles.length,
     teams: [...teams.values()].sort((a, b) => String(a.team).localeCompare(String(b.team), undefined, { numeric: true })),
     aisles,
+    /* the clock: how long the count has run, the downtime in it, the pace and
+       when it will be done - team numbers only, like the rest of the board */
+    clock: countClock(session.id),
   };
 }

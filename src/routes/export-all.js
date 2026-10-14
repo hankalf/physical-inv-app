@@ -3,6 +3,7 @@ import { progress, palletReport, rawCounts, sourcesOf } from './reports.js';
 import { adjustmentView } from './adjustments.js';
 import { withEntries } from './erp-entries.js';
 import { teamClocks } from './idle.js';
+import { countClock, spanWords } from './count-clock.js';
 import { fixList } from './issues.js';
 import { siteTimezone } from '../util/localtime.js';
 
@@ -58,6 +59,8 @@ export function exportEverything(sessionId, { by = '' } = {}) {
   const counts = rawCounts(id);
   const pallets = palletReport(id);
   const clocks = teamClocks(id);
+  const clock = countClock(id);
+  const clockTeams = new Map(clock.teams.map((t) => [t.team, t]));
 
   const summary = sheet('Summary', ['What', 'Value'], [
     ['Count', s.name],
@@ -66,6 +69,12 @@ export function exportEverything(sessionId, { by = '' } = {}) {
     ['Trial run', yes(s.trial)],
     ['Created', when(s.created_at)],
     ['Closed', when(s.closed_at)],
+    ['Started (first sign-on or line)', when(clock.started)],
+    ['Ended (last activity)', clock.running ? 'still running' : when(clock.ended)],
+    ['Time on the clock', clock.started ? spanWords(clock.elapsedMs) : '—'],
+    [`Downtime (quiet spells over ${clock.gapMinutes} min)`, clock.started ? spanWords(clock.downtimeMs) : '—'],
+    ['Counting time', clock.started ? spanWords(clock.countingMs) : '—'],
+    ['Pace', clock.binsPerHour != null ? `${clock.binsPerHour} bins an hour · ${clock.linesPerHour} lines an hour, over the counting time` : '—'],
     ['Bins on the list', p.bins_total],
     ['Bins counted', p.bins_counted],
     ['Bins still to count', Math.max(0, p.bins_total - p.bins_counted)],
@@ -138,11 +147,19 @@ export function exportEverything(sessionId, { by = '' } = {}) {
   const notCounted = sheet('Bins not counted', ['Bin', 'Zone', 'Aisle', 'Level', 'Description'],
     binRows.filter((b) => !b.lines).map((b) => ({ 'Bin': b.code, 'Zone': b.zone || '', 'Aisle': b.aisle || '', 'Level': b.level || '', 'Description': b.description || '' })));
 
-  const teams = sheet('Teams', ['Team', 'Shift', 'Started', 'Last activity', 'Time on count', 'Lines', 'State'],
-    clocks.map((c) => ({
-      'Team': c.team, 'Shift': c.shift === '1' ? '1st' : c.shift === '2' ? '2nd' : '', 'Started': when(c.started),
-      'Last activity': when(c.lastActive), 'Time on count': mins(c.started, c.endedAt || null), 'Lines': c.lines, 'State': c.state,
-    })));
+  const teams = sheet('Teams', ['Team', 'Shift', 'Started', 'Last activity', 'Time on count', 'Downtime', 'Counting time', 'Lines', 'Lines an hour', 'Bins an hour', 'State'],
+    clocks.map((c) => {
+      const k = clockTeams.get(c.team) || {};
+      return {
+        'Team': c.team, 'Shift': c.shift === '1' ? '1st' : c.shift === '2' ? '2nd' : '', 'Started': when(c.started),
+        'Last activity': when(c.lastActive), 'Time on count': mins(c.started, c.endedAt || null),
+        'Downtime': k.started ? spanWords(k.downtimeMs) : '', 'Counting time': k.started ? spanWords(k.countingMs) : '',
+        'Lines': c.lines, 'Lines an hour': k.linesPerHour ?? '', 'Bins an hour': k.binsPerHour ?? '', 'State': c.state,
+      };
+    }));
+
+  const downtime = sheet('Downtime', ['From', 'To', 'Minutes', 'Still quiet'],
+    clock.spells.map((x) => ({ 'From': when(x.from), 'To': when(x.to), 'Minutes': x.minutes, 'Still quiet': yes(x.open) })));
 
   const signons = sheet('Sign-ons', ['Signed on', 'Team', 'Scanner', 'Clock-in numbers', 'Signed off'],
     db.prepare('SELECT * FROM signons WHERE session_id = ? ORDER BY id').all(id).map((r) => ({
@@ -189,6 +206,6 @@ export function exportEverything(sessionId, { by = '' } = {}) {
 
   return {
     filename: `${String(s.name).replace(/[^A-Za-z0-9 _-]+/g, '').trim().replace(/\s+/g, '-') || 'count'}-${new Date().toISOString().slice(0, 10)}.xlsx`,
-    sheets: [summary, lines, report, adjustments, bins, notCounted, teams, signons, sos, quiet, second, fixes, log],
+    sheets: [summary, lines, report, adjustments, bins, notCounted, teams, downtime, signons, sos, quiet, second, fixes, log],
   };
 }

@@ -90,6 +90,7 @@
     ]);
     clockData = cl;
     renderIdle();
+    renderCountClock(cl.count);
     const raw = p.bins_total ? (p.bins_counted / p.bins_total) * 100 : 0;
     // one decimal early on, so the first hour of a big count doesn't read "0%"
     const pct = raw >= 10 ? Math.round(raw) : Math.round(raw * 10) / 10;
@@ -153,12 +154,14 @@
       .sort((a, b) => String(a.team).localeCompare(String(b.team), undefined, { numeric: true }));
     for (const b of document.querySelectorAll('#shiftFilter button')) b.classList.toggle('selected', b.dataset.shift === shiftFilter);
     const limit = (clockData.config && clockData.config.minutes) || 0;
+    const paces = new Map(((clockData.count && clockData.count.teams) || []).map((k) => [k.team, k]));
     table($('teamTable'),
       [{ label: 'Team' }, { label: 'Shift' }, { label: 'Scanner(s)' }, { label: 'Employees' }, { label: 'Active aisle' },
-        { label: 'Started' }, { label: 'Time on count' }, { label: 'Last scan' }, { label: 'Lines', num: true }, { label: 'Bins', num: true }],
+        { label: 'Started' }, { label: 'Time on count' }, { label: 'Downtime' }, { label: 'Last scan' }, { label: 'Lines', num: true }, { label: 'Bins', num: true }, { label: 'Lines / h', num: true }],
       rows,
       (t) => {
         const c = t.clock;
+        const k = paces.get(t.team) || null;
         const tr = document.createElement('tr');
         tr.dataset.team = t.team;
         const timer = cell('—', 'timer');
@@ -174,16 +177,105 @@
         }
         const st = cell(c ? (c.started ? new Date(c.started).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '—') : '—');
         if (c && !c.working && c.started) st.appendChild(Object.assign(document.createElement('div'), { className: 'muted', textContent: c.state }));
+        /* the team's downtime: its own quiet spells over the limit, amber while one is running */
+        const down = cell(k && k.started ? span(k.downtimeMs) : '—');
+        if (k && k.quietMinutes != null) { down.classList.add('late'); down.title = `quiet for ${k.quietMinutes} min right now`; }
+        else if (k && k.spells) down.title = `${k.spells} quiet spell${k.spells === 1 ? '' : 's'} over ${clockData.count.gapMinutes} min`;
+        const pace = cell(k && k.linesPerHour != null ? String(k.linesPerHour) : '—', 'num');
+        if (k && k.linesPerHour != null) pace.title = `${k.binsPerHour} bins an hour, over ${span(k.countingMs)} of counting`;
         tr.append(cell(c && c.person ? `${t.team} · ${c.person}` : t.team), cell(c && c.shift ? SHIFT_NAME[c.shift] : '—'), cell(t.devices || '—'), cell(t.employees || '—', 'wrap'),
           (() => { const a = t.active_aisle || (c && c.aisle); return cell(a ? aisleLabel(a, zoneByAisle.get(a)) : '—'); })(),
-          st, timer, quiet, cell(t.lines || 0, 'num'), cell(t.bins || 0, 'num'));
+          st, timer, down, quiet, cell(t.lines || 0, 'num'), cell(t.bins || 0, 'num'), pace);
         return tr;
       }, shiftFilter ? `No ${SHIFT_NAME[shiftFilter]}-shift team on this count yet.` : 'No team has signed on yet.');
     tickClocks();
   }
 
+  /* ------------------------------------------------------ the count clock
+     From the first sign-on: how long the count has run, how much of that was
+     downtime (nobody on the count scanning for longer than the stopped-scanning
+     limit - lunch, a fire drill, the night), how long it was actually counting,
+     the pace over the counting time, and when it will be done at the pace of
+     the last half hour. The figures tick here; the server is asked every 15 s. */
+  let countClockData = null;
+  const clockTime = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return d.toDateString() === new Date().toDateString() ? t : `${d.toLocaleDateString([], { weekday: 'short' })} ${t}`;
+  };
+  function renderCountClock(c) {
+    countClockData = c && c.started ? c : null;
+    const box = $('countClock');
+    box.innerHTML = '';
+    box.hidden = !countClockData;
+    if (!countClockData) return;
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    const stat = (id, label, cls) => {
+      const d = document.createElement('div');
+      d.className = 'stat' + (cls ? ' ' + cls : '');
+      d.innerHTML = '<div class="n"></div><div class="l"></div>';
+      d.querySelector('.n').id = id;
+      d.querySelector('.l').id = id + 'L';
+      d.querySelector('.l').textContent = label;
+      grid.appendChild(d);
+    };
+    stat('ccElapsed', c.running ? 'On the clock' : 'Took');
+    stat('ccDown', `Downtime · quiet over ${c.gapMinutes} min`, 'quiet');
+    stat('ccCounting', 'Counting time');
+    stat('ccPace', 'Pace');
+    stat('ccEta', c.running ? 'Done about' : 'Finished', 'eta');
+    box.appendChild(grid);
+    box.appendChild(Object.assign(document.createElement('div'), { className: 'spells', id: 'ccSpells' }));
+    /* the pace: the last half hour when there is one, the average underneath */
+    const r = c.recent;
+    const avg = c.binsPerHour != null ? `${c.binsPerHour} bins / h · ${c.linesPerHour} lines / h` : 'no pace yet';
+    if (r && r.binsPerHour != null && c.running) {
+      $('ccPace').textContent = `${r.binsPerHour} bins / h`;
+      $('ccPaceL').textContent = `Pace, last ${r.minutes} min · average ${avg}`;
+    } else {
+      $('ccPace').textContent = c.binsPerHour != null ? `${c.binsPerHour} bins / h` : '—';
+      $('ccPaceL').textContent = c.running ? `Pace, over the counting time · ${c.linesPerHour != null ? c.linesPerHour + ' lines / h' : 'nothing counted yet'}` : `Pace, over the counting time · ${avg}`;
+    }
+    if (!c.running) { $('ccEta').textContent = clockTime(c.ended); $('ccEtaL').textContent = 'Finished · the last thing anybody did'; }
+    else if (!c.binsLeft) { $('ccEta').textContent = 'now'; $('ccEtaL').textContent = 'Done about · every bin has a count'; }
+    else if (c.finishAt) {
+      $('ccEta').textContent = clockTime(c.finishAt);
+      $('ccEtaL').textContent = `Done about · ${c.binsLeft.toLocaleString()} bins left at the ${c.finishBasis === 'recent' ? 'last half hour\'s' : 'average'} pace`;
+    } else { $('ccEta').textContent = '—'; $('ccEtaL').textContent = `Done about · ${c.binsLeft.toLocaleString()} bins left, no pace to read it from yet`; }
+    tickCountClock();
+  }
+  function tickCountClock() {
+    const c = countClockData;
+    if (!c || !$('ccElapsed')) return;
+    const now = Date.now();
+    let elapsed = c.elapsedMs;
+    let down = c.downtimeMs;
+    let quietMs = null;
+    if (c.running) {
+      elapsed = Math.max(0, now - Date.parse(c.started));
+      const q = Math.max(0, now - Date.parse(c.lastActivity));
+      const isDown = q > c.gapMinutes * 60000;
+      down = c.downtimeClosedMs + (isDown ? q : 0);
+      if (isDown) quietMs = q;
+    }
+    $('ccElapsed').textContent = span(elapsed);
+    $('ccDown').textContent = span(down);
+    $('ccCounting').textContent = span(Math.max(0, elapsed - down));
+    const parts = [`Started <b>${clockTime(c.started)}</b>`];
+    if (!c.running) parts.push(`ended <b>${clockTime(c.ended)}</b>`);
+    const over = c.spells.filter((x) => !x.open);
+    parts.push(over.length
+      ? `quiet spells: ${over.map((x) => `${clockTime(x.from)}–${clockTime(x.to)} (${span(x.minutes * 60000)})`).join(', ')}`
+      : 'no quiet spells over the limit');
+    if (quietMs != null) parts.push(`<span class="now">quiet now for ${span(quietMs)}</span>`);
+    $('ccSpells').innerHTML = parts.join(' · ');
+  }
+
   /* once a second: the timers move without asking the server anything */
   function tickClocks() {
+    tickCountClock();
     const t = Date.now();
     for (const el of document.querySelectorAll('#teamTable td.timer[data-start]')) {
       const end = el.dataset.end ? Date.parse(el.dataset.end) : t;
@@ -253,6 +345,7 @@
   async function refreshClocks() {
     clockData = await apiJson(`/api/admin/sessions/${sessionId}/clocks`);
     renderIdle();
+    renderCountClock(clockData.count);
     renderTeamTable();
   }
 

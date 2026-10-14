@@ -82,10 +82,12 @@ control's.
 
 Refresh is automatic; the panes you have open refresh every few seconds.
 
-- **Progress**: bins counted, lines, pace, time left at this pace. Compare the pace to the
-  plan at the first hour and the half-way mark; the load test puts twenty teams through
-  twenty thousand bins in six hours, so a shift well below that is a floor problem, not an
-  app problem.
+- **Progress**: bins counted, lines, and the **clock on the count** — time on the clock since
+  the first sign-on, **downtime** (nobody scanning for longer than the stopped-scanning limit:
+  lunch, a fire drill), counting time, the **pace** over the last half hour, and **done about**
+  at that pace. Compare the pace to the plan at the first hour and the half-way mark; the load
+  test puts twenty teams through twenty thousand bins in six hours, so a shift well below that
+  is a floor problem, not an app problem. Each team's row has its own downtime and lines an hour.
 - **Map**: each aisle colored as it is counted. Click an aisle for its bins. A map that is a
   schematic rather than the site drawing means no drawing on this count; ask the admin.
 - **Team plan**: where each team is, how long since its last scan, which aisles it has

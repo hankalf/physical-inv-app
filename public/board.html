@@ -35,6 +35,17 @@
   .tiles .stat.warn .n { color: var(--warn); }
   .tiles .stat.err .n { color: var(--err); }
 
+  /* the clock on the count: time on it, the downtime in it, the counting time,
+     the pace, and when it will be done - the five numbers a manager asks for */
+  .bclock { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1vw; }
+  .bclock .stat { padding: 1.1vh 1.2vw; border-color: #2b3a52; }
+  .bclock .n { font-size: clamp(22px, 2.6vw, 40px); font-variant-numeric: tabular-nums; }
+  .bclock .l { font-size: clamp(10px, .82vw, 13px); }
+  .bclock .stat.quiet .n { color: var(--warn); }
+  .bclock .stat.eta .n { color: var(--ok); }
+  .bclock .l .now { color: var(--warn); font-weight: 800; }
+  @media (max-width: 1000px) { .bclock { grid-template-columns: repeat(2, 1fr); } }
+
   .split { display: grid; grid-template-columns: 1.15fr 1fr; gap: 1.4vw; flex: 1 1 auto; min-height: 0; }
   @media (max-width: 1000px) { .split { grid-template-columns: 1fr; } .headline { grid-template-columns: 1fr; } }
   .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.4vh 1.2vw; display: flex; flex-direction: column; min-height: 0; }
@@ -105,6 +116,14 @@
       <div class="subbar"><i id="bAisleBar" style="width:0%"></i></div>
       <div class="barlabel"><span>Aisles handed back as complete</span><span id="bAisles"></span></div>
     </div>
+  </div>
+
+  <div class="bclock" id="bClockRow" hidden>
+    <div class="stat"><div class="n" id="bcElapsed"></div><div class="l" id="bcElapsedL">On the clock</div></div>
+    <div class="stat quiet"><div class="n" id="bcDown"></div><div class="l" id="bcDownL">Downtime</div></div>
+    <div class="stat"><div class="n" id="bcCounting"></div><div class="l">Counting time</div></div>
+    <div class="stat"><div class="n" id="bcPace"></div><div class="l" id="bcPaceL">Pace</div></div>
+    <div class="stat eta"><div class="n" id="bcEta"></div><div class="l" id="bcEtaL">Done about</div></div>
   </div>
 
   <div class="tiles" id="bTiles"></div>

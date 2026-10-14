@@ -112,7 +112,7 @@ sign-in covers all of them.
 
 | Section | Sub-tabs |
 |---|---|
-| **Dashboard** (`/admin`) | Progress · Map · Team plan · Alerts · Second counts · Adjustments (with *Entered in the ERP*: mark lines keyed into the ERP by hand, from the table or by uploading the ERP worksheet back with its In ERP column filled, so nothing is keyed twice) · Reports — the live view of the count in the picker |
+| **Dashboard** (`/admin`) | Progress (with the clock on the count: time on the clock since the first sign-on, downtime, counting time, pace and *done about*, ticking; each team's downtime and lines an hour) · Map · Team plan · Alerts · Second counts · Adjustments (with *Entered in the ERP*: mark lines keyed into the ERP by hand, from the table or by uploading the ERP worksheet back with its In ERP column filled, so nothing is keyed twice) · Reports — the live view of the count in the picker |
 | **Full Counts** (`/full`) | Counts · New count · Set-up — every wall-to-wall, open and closed; which one the scanners land on; start one; what it still needs |
 | **Cycle counts** (`/cycle`) | Today · Still open · Coverage · Program & data |
 | **Teams & crew** (`/teams`) | Crew & teams · Equipment rules |
@@ -136,8 +136,9 @@ monitor, while the handheld's `styles.css` is tuned for a gloved thumb in a free
 ## The office board — `/board`
 
 A read-only progress screen for the office wall: the percentage counted, bins and aisles
-done, a row per team showing which aisle they are in and how long since their last scan,
-and a tile per aisle. It **needs no sign-in** — nobody is going to sign a TV in every
+done, the clock on the count (time on the clock, downtime, counting time, pace, done about),
+a row per team showing which aisle they are in, their pace and downtime and how long since
+their last scan, and a tile per aisle. It **needs no sign-in** — nobody is going to sign a TV in every
 morning — so it carries progress and nothing else: no pallet IDs, no clock in numbers, no
 exports, no controls. It refreshes every 15 seconds, fits a 1080p screen without
 scrolling, and if the server goes away it keeps the last numbers up and says it is not

@@ -1246,8 +1246,9 @@ light), so three dashboards left open on a big count do not keep rebuilding the 
 
 - **Progress** — lines, bins counted, pallets, exceptions; and a row per team with its
   **shift**, what it is counting right now, **when it started**, a **clock** of its time on the
-  count, and when it last scanned. *All shifts / 1st shift / 2nd shift* above the table narrows it.
-  A team's clock stops when it signs off on the gun or finishes its last aisle. When the report
+  count, its **downtime**, when it last scanned and its **lines an hour**. *All shifts / 1st shift /
+  2nd shift* above the table narrows it. A team's clock stops when it signs off on the gun or
+  finishes its last aisle. When the report
   carries a **System** column — three systems' stock in one warehouse — a tile per system shows how
   many of its pallets have been found, and the pallet report, adjustments and ERP files can each
   be narrowed to one system. The scanners never see the difference.
@@ -1255,6 +1256,20 @@ light), so three dashboards left open on a big count do not keep rebuilding the 
 ![](images/dashboard-progress.png)
 
 *Progress: the count in numbers, then a row per team with its shift, aisle, clock and last scan.*
+
+- **The clock on the count** — the five figures under the progress bar, ticking. **On the clock**
+  runs from the first sign-on (or the first line, whichever came first), not from when the count
+  was created. **Downtime** is every stretch in which nobody on the count scanned, signed on or
+  signed off for longer than the stopped-scanning limit (Settings → Scanners, 10 minutes to
+  start) — lunch, a fire drill, the night between two days of counting; the line under the
+  figures lists each spell, and says *quiet now for …* while one is running. **Counting time**
+  is the rest. **Pace** is bins an hour over the last half hour, with the average over the
+  counting time beside it — so a long lunch does not make the crews look slow. **Done about** is
+  when the bins still to count will be done at that pace; it reads from the last half hour when
+  there is one, else from the average. Once the count is closed the clock stops at the last thing
+  anybody did on it, not at the click that closed it the next morning, and reads *Took*. All of
+  it is in **Export everything**: the Summary sheet, a *Downtime* sheet of the spells, and the
+  Teams sheet with each team's downtime, counting time and pace.
 
 ![](images/dashboard-systems.png)
 
@@ -1347,9 +1362,11 @@ it and the adjustment waiting to be signed — without opening any of those thre
 ### Step 17 — The office board
 
 Put `/board` on the office TV. It needs no sign-in and is read-only: the percentage
-counted, bins with a count, aisles handed back as complete, a row per team with what they
-are on, and every aisle as a tile colored by state. It deliberately shows no pallet IDs
-and no clock-in numbers.
+counted, bins with a count, aisles handed back as complete, the **clock on the count** (time on
+the clock, downtime, counting time, pace and *done about* — the same five figures as the
+dashboard, big enough for the far wall), a row per team with what they are on, their lines an
+hour and their downtime, and every aisle as a tile colored by state. It deliberately shows no
+pallet IDs and no clock-in numbers.
 
 It follows the newest open count on its own. To pin it to a particular one, add the
 session to the address: `/board?session=12`.
