@@ -214,6 +214,8 @@
 
   /* Before you start: what has to be true for the tab to be any use. The gun
      being up is checked here, in the page; the rest comes from the server. */
+  let readyOpen = false;
+  $('readyCard').querySelector('h2').onclick = () => { if ($('readyCard').classList.contains('foldable')) { readyOpen = !readyOpen; renderReady(); } };
   function renderReady() {
     const w = frame().contentWindow;
     let gunUp = false;
@@ -226,6 +228,10 @@
     const todo = items.filter((i) => !i.ok && !i.optional).length;
     $('readySum').textContent = todo ? `${todo} thing${todo === 1 ? '' : 's'} to do first` : 'ready to test';
     $('readySum').style.color = todo ? 'var(--warn)' : 'var(--ok)';
+    // everything green: the list folds away behind its one line, and a click opens it
+    const card = $('readyCard');
+    card.classList.toggle('allgood', !todo && !readyOpen);
+    card.classList.toggle('foldable', !todo);
     $('readyList').replaceChildren(...items.map((i) => {
       const row = el('div', 'check' + (i.ok ? ' done' : i.optional ? ' opt' : ''));
       const txt = el('span', '', i.label);

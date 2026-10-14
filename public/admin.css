@@ -201,6 +201,10 @@ html.embed main { padding: 14px 16px 24px; }
 }
 .card > h2 + .hint, .card > h2 + .muted { margin-top: 0; margin-bottom: 12px; }
 .card h2 .muted { font-weight: 400; font-size: 13px; }
+/* A long explanation folds to two lines; More opens it. The page is a tool first. */
+.hint.folded { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.hint-more { display: inline-block; background: none; border: 0; padding: 0 0 2px; margin: 2px 0 0; font-size: 12px; font-weight: 600; color: var(--accent); cursor: pointer; }
+.hint-more:hover { text-decoration: underline; }
 .card h3 { margin: 20px 0 8px; font-size: 14px; font-weight: 700; }
 hr { border: 0; border-top: 1px solid var(--line); margin: 18px -20px; }
 
@@ -521,7 +525,12 @@ ol.steporder .grip { margin-left: auto; color: var(--muted); font-size: 16px; le
 /* the title block, divided from the body */
 .card > h2 { padding-bottom: 10px; border-bottom: 1px solid var(--line-soft); margin-bottom: 12px; }
 .card > h2 + .hint, .card > h2 + .muted { margin-top: -4px; margin-bottom: 14px; }
-.card > h2 .muted { margin-left: auto; text-align: right; }
+/* The words after a title are its deck: a line of their own under the title,
+   left with it and quieter, so the title reads first and the deck second, in
+   the same place on every card. A chip stays on the title line. */
+.card > h2 { row-gap: 2px; }
+.card > h2 > .muted { order: 9; flex-basis: 100%; margin: 0; text-align: left; font-size: 13px; font-weight: 400; color: var(--muted); line-height: 1.45; }
+.card > h2 > .muted:empty { display: none; }
 
 /* a row of buttons that act on the whole card, kept together and to the right */
 .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 12px 0; }
@@ -809,10 +818,7 @@ html.signed-in .splashbrand { display: none; }
    (and any status beside it) on the first line and what it is for on the
    second, so the eye finds the same thing in the same place on every card. */
 .settings-page .pane-intro { margin: 2px 2px 14px; color: var(--muted); font-size: 14px; max-width: 80ch; }
-.settings-page [data-sub] > .card > h2 { align-items: baseline; row-gap: 2px; }
-.settings-page [data-sub] > .card > h2 > .muted {
-  order: 9; flex-basis: 100%; margin: 0; text-align: left; font-size: 13px; font-weight: 400; color: var(--muted); line-height: 1.45;
-}
+.settings-page [data-sub] > .card > h2 { align-items: baseline; }
 .settings-page [data-sub] > .card > h2 + .hint { margin-top: 10px; }
 .settings-page [data-sub] > .card { scroll-margin-top: 16px; }
 .card.flash { animation: cardflash 1.6s ease-out; }

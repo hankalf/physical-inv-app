@@ -515,6 +515,30 @@
     return true;
   }
 
+  /* A long explanation under a card title folds to two lines, with More to open
+     it: every card is a tool first and a manual second. Only still text is
+     folded - never a hint with controls in it, nor one a page rewrites by id. */
+  api.foldHints = function foldHints(root = document) {
+    for (const el of root.querySelectorAll('.card .hint')) {
+      if (el.dataset.fold || el.id || el.closest('.inline, .feedback, #modePane, .check, details, .modes') || el.querySelector('input, select, button, textarea, table')) continue;
+      if (el.textContent.replace(/\s+/g, ' ').trim().length < 180) continue;
+      el.dataset.fold = '1';
+      el.classList.add('folded');
+      if (el.scrollHeight <= el.clientHeight + 2) { el.classList.remove('folded'); continue; }   // short enough after all
+      const more = document.createElement('button');
+      more.type = 'button';
+      more.className = 'hint-more';
+      more.textContent = 'More ▾';
+      more.setAttribute('aria-expanded', 'false');
+      more.onclick = () => {
+        const open = el.classList.toggle('folded') === false;
+        more.textContent = open ? 'Less ▴' : 'More ▾';
+        more.setAttribute('aria-expanded', String(open));
+      };
+      el.insertAdjacentElement('afterend', more);
+    }
+  };
+
   function announce() {
     renderTabs();
     renderSubTabs();
@@ -524,6 +548,7 @@
     box.hidden = true;
     box.classList.remove('active');     // so the DOM does not claim a screen that is not showing
     document.dispatchEvent(new CustomEvent('auth', { detail: api.me }));
+    setTimeout(() => api.foldHints(), 0);           // once the page's own markup is on screen
   }
 
   function setPasswordPanel() {
