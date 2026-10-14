@@ -176,7 +176,7 @@ const paneRow = clean(await page.locator('#modePane tr[data-cycle-bin="F01A001"]
 check('…and the pane shows the bin done', /✓ counted/.test(paneRow) && /bin done/.test(paneRow), paneRow);
 check('The cycle count\'s lines are on the cycle count, not on the run', (await get('/api/admin/practice')).totals.lines === 0);
 check('The gun moved on to the next bin on the list', /bin F01A002/.test(clean(await gun.textContent('#recountBanner'))), clean(await gun.textContent('#recountBanner')));
-check('The dashboard lists the practice cycle count for its owner, flagged practice', (await get('/api/admin/sessions')).some((s) => s.name === 'Practice cycle count' && s.practice === 1 && s.mode === 'cycle'));
+check('The Testing Suite\'s dashboard lists the practice cycle count for its owner, flagged practice; the dashboard picker does not', (await get('/api/admin/sessions?practice=1')).some((s) => s.name === 'Practice cycle count' && s.practice === 1 && s.mode === 'cycle') && !(await get('/api/admin/sessions')).some((s) => s.practice));
 
 /* ---- moving pallets ---- */
 await gun.click('#btnToAssign');

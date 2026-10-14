@@ -14,6 +14,9 @@
   /* Inside the Testing Suite the page is about one count - the practice count -
      and stays on it whatever the picker would have chosen. */
   const EMBED = api.embed || 0;
+  // a practice count is only ever listed to the dashboard inside the Testing Suite, or opened from it in its own tab (?practice=1)
+  const WITH_PRACTICE = !!EMBED || new URLSearchParams(location.search).get('practice') === '1';
+  const SESSIONS_URL = '/api/admin/sessions' + (WITH_PRACTICE ? '?practice=1' : '');
 
   const needSession = (el) => {
     if (sessionId) return true;
@@ -47,7 +50,7 @@
 
   /* ------------------------------------------------------------ sessions */
   async function loadSessions() {
-    sessions = await apiJson('/api/admin/sessions');
+    sessions = await apiJson(SESSIONS_URL);
     const prior = sessionId;
     if (!sessions.length) {
       sessionId = null;
@@ -1141,7 +1144,7 @@
 
   /** Re-read the session list so the header picker's progress stays live. */
   async function refreshPicker() {
-    sessions = await apiJson('/api/admin/sessions');
+    sessions = await apiJson(SESSIONS_URL);
     picker.render(sessions, sessionId);
   }
 

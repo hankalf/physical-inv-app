@@ -491,6 +491,12 @@ try {
       await saveCard(desk, '#modePane', 'testing-second-counts', 8);
     }
   }
+  /* ---------- Practice data: every login's practice, for an admin ---------- */
+  await desk.goto(BASE + '/practice');
+  await desk.waitForSelector('#pdTable tbody tr', { timeout: 15000 }).catch(() => {}); await wait(1200);
+  await desk.click('#pdTable tr[data-run] button.linkish').catch(() => {}); await wait(400);
+  await saveCard(desk, '#pdTable', 'practice-data', 10);
+
   /* ---------- Full Counts ---------- */
   await desk.goto(BASE + '/full');
   await desk.waitForSelector('#fcTable tbody tr', { timeout: 15000 }).catch(() => {}); await wait(1500);

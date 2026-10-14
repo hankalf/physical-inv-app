@@ -45,6 +45,7 @@ on a PC.
 | **Full Counts** | `/full` | Every wall-to-wall on the site: open and closed, how far each got, which one the scanners land on; start a new one; what a count still needs | Supervisor login (the Dashboard's access) |
 | **Settings** | `/settings` | Whoever sets the count up | Supervisor login |
 | **Office board** | `/board` | Anyone — put it on the office TV | **None.** Read-only |
+| **Practice data** | `/practice` | An admin: every login's runs in the Testing Suite | Admin login |
 | **Cycle counts** | `/cycle` | Whoever runs the daily program | Supervisor login |
 | **User guide** | `/guide` | Anyone with a login — new starters first | Supervisor login, any access |
 
@@ -233,9 +234,9 @@ the scanners land on, else the newest — and, when no full count is open, on an
 It lists only the kinds of count the login may work and the site has switched on (Step 4a): with
 cycle counts switched off, no cycle count appears in it.
 
-**What an admin sees in the count picker.** An admin's picker lists every count on the site,
-other people's practice counts from the Testing Suite included, each tagged *practice · NAME*; a
-supervisor sees the real counts and only their own practice count.
+**Practice counts are not in the picker.** Nobody's practice count from the Testing Suite is
+listed in a dashboard's count picker — not even an admin's — so no page ever opens on one by
+mistake. An admin reads every login's practice under **Learn → Practice data** (Step 8c-1).
 
 **A procedure per role.** Each profile has a short SOP of its own under `docs/roles/` (and as a
 PDF beside it): Admin, Supervisor, Inventory control, Count supervisor, Warehouse jobs, Cycle
@@ -515,8 +516,9 @@ to see it all from the supervisor's side: progress, the pallet report, the SOS b
 
 - It counts into a **Practice count** of its own. A gun on the floor is never offered it, and the
   test gun is never offered anything else.
-- The office board never shows it. In every dashboard's count picker it is listed **last** and
-  marked **PRACTICE**, so no page opens on it by mistake.
+- The office board never shows it, and no dashboard's count picker lists it. The dashboard at
+  the top of the Testing Suite is the one place it is on screen (and **Own tab** opens that
+  dashboard on it, marked **PRACTICE**).
 - **It is yours.** Each login has its own practice count and its own test scanner (**TEST-** and
   their name, under Scanners), kept from one sign-in to the next. Nobody else sees it, two people
   practicing at once never touch each other's, and a **new user** opens the tab to a fresh one.
@@ -580,6 +582,30 @@ never reach the real Not in Location page or a scanner on the floor. **Start ove
 ![](images/testing-second-counts.png)
 
 *Second counts picked: the other crew's aisle, what they keyed beside what is on the shelf, and the state of each bin.*
+
+### Step 8c-1 — Practice data: every login's practice, for an admin
+
+**Learn → Practice data** (`/practice`) is in the sidebar for admins only. It lists every
+login's practice from the Testing Suite in one place — the practice itself stays each person's
+own, and this is the one page that sees all of it:
+
+- **Who** has practiced, named with their login, the most recent first; the tiles count the
+  people, the runs, who is on a run now, and the lines counted in practice.
+- **A row per run**: *current* (the one they are on) or *earlier* (kept when they pressed Start
+  over — the last ten each), when it started, when they last did anything on it, whether it was
+  the built-in data or their own file, **things tried** (open it for the list, done ones ticked,
+  and which other jobs — second counts, a cycle count, Front2Back, Not in Location — were set up
+  on the run), bins and lines counted.
+- **Who** and **Current runs only** narrow the list. **Export** gives one workbook of everything a
+  person did (the same one the Testing Suite gives them). **Delete** takes a person's practice
+  away — every run — so the Testing Suite starts them fresh next time; it is written to the log.
+
+Nothing here touches a real count, and a supervisor opening the address is sent on to a page
+they may use.
+
+![](images/practice-data.png)
+
+*Learn → Practice data: every login's runs, who tried what, and how far they got.*
 
 ### Step 8d — The user guide: this document, inside the app
 

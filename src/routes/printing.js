@@ -244,7 +244,7 @@ export function barcodeBook(rows, { title = 'Barcode test book', note = '', qtyB
 <button class="noprint" onclick="window.print()" style="margin-bottom:10px;padding:6px 12px">Print</button>
 ${rows.length ? `<table>
   <thead><tr><th class="bin">Bin</th><th class="pallet">Pallet</th><th class="qty">Qty</th></tr></thead>
-  <tbody>${body}</tbody></table>` : '<div class="none">Nothing to print — pick a count, or upload a sheet of codes.</div>'}
+  <tbody>${body}</tbody></table>` : `<div class="none">Nothing to print${note ? ': ' + esc(note) : ' — pick a count, or upload a sheet of codes'}.</div>`}
 <div class="tip">Work down the page the way a counter works down an aisle: scan the pallet, key the quantity, scan the bin.
 Print at <b>100%</b> — “fit to page” shrinks the bars and a scanner will refuse them. If a label will not read, print that page
 again on plain white paper: a glossy or colored sheet scatters the beam.</div>

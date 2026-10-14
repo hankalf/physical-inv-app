@@ -135,8 +135,8 @@ check('Settings: signing in as an account shows who you are in the header',
   /Dana Whitfield/.test(clean(await page.textContent('#navWho'))) && /admin/.test(clean(await page.textContent('#navWho'))), clean(await page.textContent('#navWho')));
 
 /* ---- the shell: a sidebar, and sub-tabs that show one thing at a time ---- */
-check('Shell: the sidebar links every page, the guide last, with this one marked',
-  (await page.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/full,/cycle,/front,/missing,/teams,/settings,/testing,/guide'
+check('Shell: the sidebar links every page, Learn last (the guide, then Practice data for an admin), with this one marked',
+  (await page.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/full,/cycle,/front,/missing,/teams,/settings,/testing,/guide,/practice'
     && (await page.$eval('#navTabs .tab.current', (a) => a.getAttribute('href'))) === '/settings');
 check('Shell: Settings is split into sub-tabs',
   (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.replace(/\d+$/, '').trim()))).join(' | ') === 'Count setup | Lists & racking | Scanners | Integrations | Backups & log | Logins & site',
@@ -294,7 +294,7 @@ await sup.close();
   await narrow.goto(BASE + '/admin');
   await narrow.waitForSelector('#scrMain.active'); await narrow.waitForTimeout(1500);
   check('Narrow: the sidebar becomes a top bar and the tabs stay reachable',
-    (await narrow.$$('#navTabs .tab')).length === 9
+    (await narrow.$$('#navTabs .tab')).length === 10
       && await narrow.$eval('#navTabs .tab.current', (a) => a.getBoundingClientRect().top < 260),
     `tab top ${Math.round(await narrow.$eval('#navTabs .tab.current', (a) => a.getBoundingClientRect().top))}px`);
   await narrow.screenshot({ path: `${S}screenshots/settings-narrow.png` });

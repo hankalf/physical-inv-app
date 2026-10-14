@@ -104,6 +104,18 @@
           ],
         },
         {
+          title: 'See how everyone is getting on in the Testing Suite',
+          do: 'Learn → Practice data, admins only. Every login’s practice in one place: who has practiced, each run with the things tried (open a run for the list) and how far it got, when they last did anything. Export gives one workbook of a person’s runs; Delete takes their practice away so the Testing Suite starts them fresh. Practice counts never appear in a dashboard’s count picker.',
+          where: S('/practice', '', 'Learn → Practice data'),
+          watch: [
+            { see: 'Somebody has a run with nothing tried', means: 'They opened the Testing Suite and stopped at the sign-on.', fix: 'Sit with them for the first bin; the tips on the page point at each step.' },
+            { see: 'Practice data is not in your sidebar', means: 'The page is for admins only.', fix: 'Ask an admin, or for the admin role under Settings → Logins & site.' },
+          ],
+          ask: [
+            { q: 'Can a supervisor see other people’s practice?', a: 'No. The Testing Suite shows each person their own practice and nobody else’s; only an admin sees them all, here.' },
+          ],
+        },
+        {
           title: 'Upload the bin list',
           do: 'Settings → Lists & racking → Bin list. One column of bin codes, in the site’s format (F05A012 is aisle F05, bay A, level 012). Every count starts from this list and the aisles come from it.',
           where: S('/settings', 'lists', 'Settings → Lists & racking'),

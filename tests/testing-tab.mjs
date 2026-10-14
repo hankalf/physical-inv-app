@@ -62,11 +62,14 @@ const other = await post('/api/admin/practice', {}, O);
 check('A second supervisor gets a different test scanner, so they cannot sign each other out',
   other.device.name === 'TEST-MARCUS-OBI' && other.device.uid !== made.device.uid);
 check('…and a practice count of their own, starting fresh', other.session.id !== pid && other.checklist.every((c) => !c.done), `#${other.session.id} vs #${pid}`);
-check('A supervisor sees only their own practice count in the dashboards; an admin sees everyone\'s, tagged with whose it is',
-  (await get('/api/admin/sessions', O)).filter((s) => s.practice).map((s) => s.id).join(',') === String(other.session.id)
-  && (await get('/api/admin/sessions')).filter((s) => s.practice).map((s) => s.id).sort().join(',') === [pid, other.session.id].sort().join(',')
-  && (await get('/api/admin/sessions')).find((s) => s.id === other.session.id).practice_owner === 'user:marcus-obi',
+check('No dashboard picker lists a practice count - not a supervisor\'s, not an admin\'s',
+  !(await get('/api/admin/sessions', O)).some((s) => s.practice) && !(await get('/api/admin/sessions')).some((s) => s.practice),
   JSON.stringify((await get('/api/admin/sessions')).filter((s) => s.practice).map((s) => [s.id, s.practice_owner, s.status])));
+check('The dashboard inside the Testing Suite asks for them (?practice=1): a supervisor gets their own, an admin every open one, tagged with whose it is',
+  (await get('/api/admin/sessions?practice=1', O)).filter((s) => s.practice).map((s) => s.id).join(',') === String(other.session.id)
+  && (await get('/api/admin/sessions?practice=1')).filter((s) => s.practice).map((s) => s.id).sort().join(',') === [pid, other.session.id].sort().join(',')
+  && (await get('/api/admin/sessions?practice=1')).find((s) => s.id === other.session.id).practice_owner === 'user:marcus-obi',
+  JSON.stringify((await get('/api/admin/sessions?practice=1')).filter((s) => s.practice).map((s) => [s.id, s.practice_owner, s.status])));
 
 /* ---------------- where it must not show ---------------- */
 const floorDev = await post('/api/admin/devices', { name: 'FLOOR-01' });
@@ -83,10 +86,10 @@ check('A test gun is offered its own person\'s practice count and nothing else',
 const board = await get('/api/board');
 check('The office board does not fall back to the practice count', board.session && board.session.id === live.id, board.session && board.session.name);
 check('…nor list it', !(board.sessions || []).some((s) => s.id === pid));
-const adminList = await get('/api/admin/sessions');
+const adminList = await get('/api/admin/sessions?practice=1');
 const openOnes = adminList.filter((s) => s.status === 'open');
-check('The dashboards list it last, so no page opens on it by default', openOnes[0].id === live.id && openOnes[openOnes.length - 1].id === pid);
-check('…and flag it as practice', adminList.find((s) => s.id === pid).practice === 1);
+check('Where it is listed at all, it is last, so no page opens on it by default', openOnes[0].id === live.id && openOnes[openOnes.length - 1].id === pid);
+check('…and flagged as practice', adminList.find((s) => s.id === pid).practice === 1);
 
 /* ---------------- the page ---------------- */
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });

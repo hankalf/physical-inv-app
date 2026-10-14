@@ -1452,7 +1452,11 @@
     w.document.close();
   }
 
-  async function bookFromCount() {
+  /* The book from the count is a page of its own, opened by its address on
+     the click - the way the count sheets and the scanner cards open - so it
+     comes up in every browser, can be refreshed, and prints from its own tab.
+     (A blank tab written into once the page arrived was left empty by some.) */
+  function bookFromCount() {
     if (!needSession($('bookMsg'))) return;
     const q = new URLSearchParams({
       session: String(sessionId),
@@ -1460,17 +1464,12 @@
       aisle: $('fBookAisle').value.trim(),
       limit: $('fBookLimit').value || '40',
       qty: $('fBookQty').checked ? '1' : '0',
+      t: api.token,
     });
-    let tab;
-    try {
-      tab = openTab();
-      const res = await api.call('/api/admin/print/barcode-book?' + q.toString());
-      writeTab(tab, await res.text());
-      clearMsg($('bookMsg'));
-    } catch (err) {
-      if (tab) tab.close();
-      msg($('bookMsg'), 'err', err.message);
-    }
+    const w = window.open('/api/admin/print/barcode-book?' + q.toString(), '_blank');
+    if (!w) { msg($('bookMsg'), 'err', 'The browser blocked the new tab', 'Allow pop-ups for this site, then press Open the book again.'); return; }
+    const s = sessions.find((x) => x.id === sessionId);
+    msg($('bookMsg'), 'ok', `The book opened in a new tab${s ? `, from #${s.id} — ${s.name}` : ''}.`, 'Nothing on it? That count has no inventory report yet — upload one under Lists & racking, or pick Bins on their own.');
   }
 
   $('btnBookTemplate').onclick = bookTemplate;

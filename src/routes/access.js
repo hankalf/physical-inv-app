@@ -31,7 +31,7 @@ export const TABS = {
 };
 export const TAB_KEYS = Object.entries(TABS).flatMap(([page, subs]) => subs.map(([sub]) => `${page}.${sub}`));
 export const ACCESS_KEYS = [...ACCESS.map(([k]) => k), ...TAB_KEYS];
-export const PAGE_KEY = { '/admin': 'dashboard', '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/teams': 'teams', '/testing': 'testing', '/settings': 'admin' };
+export const PAGE_KEY = { '/admin': 'dashboard', '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/teams': 'teams', '/testing': 'testing', '/settings': 'admin', '/practice': 'admin' };
 
 /** A stored list, or null for "everything a supervisor can". */
 export function parseAccess(raw) {
@@ -122,6 +122,7 @@ export function routeNeed(p, method) {
   // the pages' own data
   if (/\/erp-entries(\/|$)/.test(p)) return 'approve';            // marking lines as keyed into the ERP is inventory control's
   if (/\/export\/erp-worksheet\.csv$/.test(p)) return 'export';
+  if (p.startsWith('/api/admin/practice/all')) return 'admin';   // every login's practice: Learn → Practice data
   if (p.startsWith('/api/admin/practice')) return 'testing';
   if (p.startsWith('/api/admin/people')) return 'teams';
   if (p.startsWith('/api/admin/missing')) return 'missing';

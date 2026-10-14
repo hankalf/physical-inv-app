@@ -123,6 +123,7 @@ sign-in covers all of them.
 | **Settings → Scanners → What the scanners offer** | one section, one Save: the jobs on the sign-on screen (tick the full count alone on count day), comments (ask / required / the wait / the one-tap reasons), the override reasons, the SOS list |
 | **Settings → Logins & site → What is switched on** | hide the parts of the app nobody needs yet, for every login and the scanners: *Full counts and second counts only* leaves the count, its second counts, the alerts and the Testing Suite; *Everything on* brings the rest back; or tick by part. Hidden, not forbidden — roles still apply, nothing is deleted, a bookmark to a hidden page says so |
 | **Settings → Logins & site → Site name** | the app's own name and the location under it, out of the box *Full Harvest Inventory · Front Royal*; a change lands on every page, the guns, the board and the installed app's manifest |
+| **Practice data** (`/practice`) | admins only: every login's practice from the Testing Suite — who has practiced, each run with what was tried and how far it got, export one person's lot, delete it to start them fresh. Practice counts are never in a dashboard's picker |
 | **User guide** (`/guide`) | the SOP inside the app: journeys, what goes wrong at each step, an Ask box that answers a question or a pasted message, and a live "Right now" read of the count. Open to every login |
 
 Two splits, both deliberate. **Running a count** is the Dashboard; **setting one up** is

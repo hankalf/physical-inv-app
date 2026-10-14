@@ -168,6 +168,17 @@ await signIn(page);
 await pickSession(page, sess.id);
 await page.waitForTimeout(800);
 
+/* Open the book, as a person does: a real tab with the page at its own address */
+await page.evaluate(() => window.appApi.showSub('gun'));
+await page.waitForTimeout(500);
+const [bookTab] = await Promise.all([page.waitForEvent('popup', { timeout: 8000 }).catch(() => null), page.click('#btnBookPrint')]);
+if (bookTab) { await bookTab.waitForLoadState('load').catch(() => {}); await bookTab.waitForTimeout(800); }
+check('Open the book opens the book in a tab of its own, at its own address',
+  !!bookTab && /\/api\/admin\/print\/barcode-book\?/.test(bookTab.url()) && (await bookTab.$$('td.pallet svg')).length > 0,
+  bookTab ? `${bookTab.url().slice(0, 60)} · ${(await bookTab.$$('td.pallet svg')).length} labels` : 'no tab');
+check('…and the page says which count it came from', /The book opened in a new tab, from #\d+/.test((await page.textContent('#bookMsg')) || ''), (await page.textContent('#bookMsg')).trim().slice(0, 80));
+if (bookTab) await bookTab.close();
+
 check('The card is on the Settings page', await page.$('#btnBookTemplate') !== null);
 const [download] = await Promise.all([
   page.waitForEvent('download', { timeout: 20000 }),

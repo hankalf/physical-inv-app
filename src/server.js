@@ -26,7 +26,7 @@ import { endTrial, setTrial } from './routes/trial.js';
 import { exportEverything } from './routes/export-all.js';
 import { archiveAisle, finalReadiness, finalReport, listArchives, archivePath } from './routes/archive.js';
 import { idleConfig, saveIdleConfig, teamClocks, checkIdle, answerIdle, openIdleAlerts, recentIdleAlerts, tellTeamsIdle, idleTick, recordSignoff } from './routes/idle.js';
-import { practiceJobs, practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, practiceReadiness, practiceFromFile, practiceOptions, setPracticeOptions, practiceSandbox, setPracticeSandbox, practiceExport, ownerOf, practiceModes, startPracticeMode, MODE_ACCESS } from './routes/practice.js';
+import { practiceJobs, practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, practiceReadiness, practiceFromFile, practiceOptions, setPracticeOptions, practiceSandbox, setPracticeSandbox, practiceExport, ownerOf, practiceModes, startPracticeMode, MODE_ACCESS, practiceAll, deletePracticeOf } from './routes/practice.js';
 import { branding, saveLogo, clearLogo, saveName } from './routes/branding.js';
 import { raiseAlert, tellTeams, listAlerts, seeAlert, closeAlert, alertsForDevice, sosReasons, saveSosReasons, DEFAULT_REASONS } from './routes/alerts.js';
 import { teamsConfig, saveTeamsConfig, postToTeams, testCard, alertCard } from './util/teams.js';
@@ -119,7 +119,7 @@ try {
 /* The office pages' own stamp, and the commit the host built from (Railway
    sets RAILWAY_GIT_COMMIT_SHA): so /api/health says which code is running
    even when a change touched no scanner file. */
-const OFFICE_FILES = ['nav.js', 'admin.js', 'testing.js', 'settings.js', 'guide.js', 'guide-content.js', 'full.js', 'cycle.js', 'front.js', 'missing.js', 'teams.js', 'admin.css'];
+const OFFICE_FILES = ['nav.js', 'admin.js', 'testing.js', 'settings.js', 'guide.js', 'guide-content.js', 'full.js', 'cycle.js', 'front.js', 'missing.js', 'teams.js', 'practice.js', 'admin.css'];
 let officeBuild = 'dev';
 try {
   officeBuild = createHash('sha256').update(OFFICE_FILES.map((n) => `${n}:${createHash('sha256').update(readFileSync(join(PUBLIC_DIR, n))).digest('hex').slice(0, 12)}`).join('|')).digest('hex').slice(0, 12);
@@ -303,6 +303,7 @@ async function serveStatic(req, res, pathname) {
     : /^\/settings\/?$/.test(pathname) ? '/settings.html'
     : /^\/board\/?$/.test(pathname) ? '/board.html'
     : /^\/testing\/?$/.test(pathname) ? '/testing.html'
+    : /^\/practice\/?$/.test(pathname) ? '/practice.html'
     : /^\/front\/?$/.test(pathname) ? '/front.html'
     : /^\/missing\/?$/.test(pathname) ? '/missing.html'
     : /^\/guide\/?$/.test(pathname) ? '/guide.html'
@@ -738,11 +739,14 @@ async function handleAdmin(req, res, url, m) {
   }
 
   if (p === '/api/admin/sessions' && method === 'GET') {
-    // a practice count is its owner's alone, and only the one they are on -
-    // except to an admin, who sees every count on the site, practice ones included
+    /* A practice count stays out of every picker: it is the Testing Suite's,
+       and an admin reads them all under Learn → Practice data. Only the
+       dashboard inside the Testing Suite asks for them (?practice=1), and gets
+       its own person's open one - every open one, to an admin. */
     const who = currentUser(req, url);
     const mine = ownerOf(who);
     const admin = who && who.role === 'admin';
+    const withPractice = url.searchParams.get('practice') === '1';
     // and a login sees only the kinds of count it may work: cycle counts need the
     // Cycle counts page, full counts any of the pages that work a full count
     // ...and only the kinds the site has switched on (Settings → Logins & site → What is switched on)
@@ -750,9 +754,24 @@ async function handleAdmin(req, res, url, m) {
     const mayFull = ['dashboard', 'full', 'teams', 'front', 'missing'].some((k) => allowed(who, k));
     const landing = defaultSessionId();          // the count the scanners land on: the page opens on it too
     return sendJson(req, res, 200, listSessions().filter((s) => {
-      if (s.practice) { if (!(admin || s.practice_owner === mine) || s.status !== 'open') return false; }
+      if (s.practice) { if (!withPractice || !(admin || s.practice_owner === mine) || s.status !== 'open') return false; }
       return (s.mode || 'full') === 'cycle' ? mayCycle : mayFull;
     }).map((s) => ({ ...s, isDefault: s.id === landing })));
+  }
+
+  // --- every login's practice, for an admin: Learn → Practice data
+  if (p === '/api/admin/practice/all' && method === 'GET') return sendJson(req, res, 200, practiceAll());
+  if (p === '/api/admin/practice/all/export' && method === 'GET') {
+    const owner = String(url.searchParams.get('owner') || '');
+    if (!/^(user|name):/.test(owner)) throw httpError(400, 'say whose practice to export');
+    return sendJson(req, res, 200, practiceExport(owner));
+  }
+  if (p === '/api/admin/practice/all' && method === 'DELETE') {
+    const owner = String(url.searchParams.get('owner') || '');
+    if (!/^(user|name):/.test(owner)) throw httpError(400, 'say whose practice to delete');
+    const out = deletePracticeOf(owner);
+    audit(actor, 'deleted a login\'s practice data', `${owner.replace(/^(user|name):/, '')}: ${out.runs} run${out.runs === 1 ? '' : 's'}`);
+    return sendJson(req, res, 200, out);
   }
 
   // --- the Testing tab: a practice count and a scanner of this supervisor's own
@@ -1210,6 +1229,7 @@ async function handleAdmin(req, res, url, m) {
         ).all(...(aisle ? [id, aisle, limit] : [id, limit]))
           .map((r) => ({ bin: r.code, pallet: '', qty: '', note: [r.zone, r.level && 'level ' + r.level].filter(Boolean).join(' · ') }));
         note = `bins from count #${id}${aisle ? ', aisle ' + aisle : ''}`;
+        if (!rows.length) note += aisle ? ' — no bins in that aisle on this count' : ' — this count has no bin list yet (Settings → Lists & racking)';
       } else {
         /* One row per pallet, in bin order: bin, the pallet in it, and what the
            report says is on it - the three things a counter handles per line. */
@@ -1227,6 +1247,7 @@ async function handleAdmin(req, res, url, m) {
             note: [r.sku, r.uom].filter(Boolean).join(' '),
           }));
         note = `pallets from count #${id}${aisle ? ', aisle ' + aisle : ''}`;
+        if (!rows.length) note += aisle ? ' — no pallets in that aisle on this count' : ' — this count has no inventory report yet (Settings → Lists & racking)';
       }
     }
     audit(actor, 'printed a barcode test book', `${rows.length} line(s) ${note}`);

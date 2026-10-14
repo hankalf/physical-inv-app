@@ -335,6 +335,63 @@ export function practiceExport(owner) {
   };
 }
 
+/* ------------------------------------------------- every login's practice
+   The Testing Suite is each person's own; an admin wants to see all of it in one
+   place - who has practiced, what they tried, how far they got - without the
+   practice counts cluttering every dashboard's picker. */
+const JOB_OF_CHECK = [[/^second/, 'Second counts'], [/^cycle/, 'Cycle count'], [/^move/, 'Front2Back'], [/^found/, 'Not in Location']];
+const whoOwns = (owner, users) => {
+  const u = users.get(owner);
+  if (u) return { username: u.username, name: u.name, role: u.role, active: !!u.active };
+  const m = /^(user|name):(.*)$/.exec(owner || '');
+  return { username: m && m[1] === 'user' ? m[2].toUpperCase() : '', name: m ? m[2] : String(owner || ''), role: '', active: null };
+};
+
+/** Every practice run on the site, by person, newest activity first. Admins only. */
+export function practiceAll() {
+  const users = new Map(db.prepare('SELECT username, name, role, active FROM users').all().map((u) => [`user:${String(u.username).toLowerCase()}`, u]));
+  const lastScan = db.prepare('SELECT MAX(scanned_at) AS at FROM counts WHERE session_id = ?');
+  const lastSignon = db.prepare('SELECT MAX(started_at) AS at FROM signons WHERE session_id = ?');
+  const byOwner = new Map();
+  for (const s of db.prepare("SELECT * FROM sessions WHERE practice = 1 AND COALESCE(mode, 'full') = 'full' ORDER BY id DESC").all()) {
+    const owner = s.practice_owner || 'name:supervisor';
+    const sh = practiceSheet(s.id);
+    const done = sh.checklist.filter((c) => c.done);
+    const jobs = [...new Set(sh.checklist.map((c) => (JOB_OF_CHECK.find(([re]) => re.test(c.key)) || [])[1]).filter(Boolean))];
+    const run = {
+      id: s.id, status: s.status === 'open' ? 'current' : 'earlier', started: s.created_at, ended: s.closed_at,
+      source: sh.source === 'upload' ? `Own file: ${sh.label || ''}`.trim() : 'Built in',
+      tried: done.length, of: sh.checklist.length,
+      checklist: sh.checklist.map((c) => ({ key: c.key, label: c.label, done: !!c.done })),
+      jobs,
+      bins: sh.totals.binsCounted, binsTotal: sh.totals.bins, lines: sh.totals.lines,
+      lastActivity: [lastScan.get(s.id).at, lastSignon.get(s.id).at].filter(Boolean).sort().pop() || null,
+    };
+    if (!byOwner.has(owner)) byOwner.set(owner, { owner, ...whoOwns(owner, users), runs: [], lines: 0, tried: 0, of: 0, lastActivity: null, current: false });
+    const o = byOwner.get(owner);
+    o.runs.push(run);
+    o.lines += run.lines;
+    if (run.status === 'current') { o.current = true; o.tried = run.tried; o.of = run.of; }
+    if (run.lastActivity && (!o.lastActivity || run.lastActivity > o.lastActivity)) o.lastActivity = run.lastActivity;
+  }
+  const owners = [...byOwner.values()].sort((a, b) => String(b.lastActivity || '').localeCompare(String(a.lastActivity || '')) || String(a.name).localeCompare(String(b.name)));
+  return {
+    owners,
+    people: owners.length,
+    runs: owners.reduce((k, o) => k + o.runs.length, 0),
+    current: owners.filter((o) => o.current).length,
+    lines: owners.reduce((k, o) => k + o.lines, 0),
+  };
+}
+
+/** Take one person's practice away - every run, the practice cycle count, the planted lists. Their test scanner stays. */
+export function deletePracticeOf(owner) {
+  const runs = db.prepare('SELECT id FROM sessions WHERE practice = 1 AND practice_owner = ?').all(owner);
+  for (const r of runs) db.prepare('DELETE FROM sessions WHERE id = ?').run(r.id);
+  clearPracticeMissing(owner);
+  return { owner, runs: runs.length };
+}
+
 /**
  * The scanner a supervisor tests with: one each, so two people trying the gun at
  * once do not sign each other's scanner out.

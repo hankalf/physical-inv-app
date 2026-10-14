@@ -754,7 +754,7 @@
   $('btnDashboard').onclick = () => {
     if (!data || !data.session) return;
     try { sessionStorage.setItem('searchGoto', JSON.stringify({ page: '/admin', session: data.session.id, sub: 'progress' })); } catch { /* private window */ }
-    window.open('/admin#progress', '_blank');
+    window.open('/admin?practice=1#progress', '_blank');     // a dashboard that may list the practice count
   };
   // clicking into the dashboard counts as having seen it
   window.addEventListener('blur', () => { setTimeout(() => { if (document.activeElement === dashFrame()) dashSeen = true; }, 0); });

@@ -30,7 +30,7 @@ check('Renaming the site renames the installed office app', man.name === 'North 
 await fetch(`${BASE}/api/admin/site-name`, { method: 'POST', headers: { ...hdr, authorization: 'Bearer ' + tok }, body: JSON.stringify({ name: '', place: '' }) });
 
 const missingOn = [];
-for (const page of ['/admin', '/full', '/cycle', '/front', '/missing', '/teams', '/settings', '/testing', '/guide']) {
+for (const page of ['/admin', '/full', '/cycle', '/front', '/missing', '/teams', '/settings', '/testing', '/guide', '/practice']) {
   const html = await (await fetch(BASE + page)).text();
   if (!/rel="manifest" href="\/office\.webmanifest"/.test(html) || !/apple-touch-icon/.test(html) || !/apple-mobile-web-app-capable/.test(html)) missingOn.push(page);
 }

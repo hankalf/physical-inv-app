@@ -15,6 +15,7 @@
     ['/settings', 'Settings', '⚙', 'The site'],
     ['/testing', 'Testing Suite', '▶', 'Learn'],
     ['/guide', 'User guide', '?', 'Learn'],
+    ['/practice', 'Practice data', '◔', 'Learn'],       // admins only: every login's practice runs
   ];
 
   /* Each page's sections, so the sidebar can open them out under the page.
@@ -29,6 +30,7 @@
     '/missing': [],
     '/testing': [],
     '/guide': [],
+    '/practice': [],
   };
 
   const here = location.pathname.replace(/\/$/, '') || '/admin';
@@ -281,7 +283,7 @@
   /* What this login may open. Nothing is known before sign-in, so every tab
      shows; once /me has answered, the ones not on the list go. */
   /* The guide has no key: every login may read it. */
-  const PAGE_KEY = { '/admin': 'dashboard', '/full': 'full', '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/teams': 'teams', '/settings': 'admin', '/testing': 'testing', '/guide': '' };
+  const PAGE_KEY = { '/admin': 'dashboard', '/full': 'full', '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/teams': 'teams', '/settings': 'admin', '/testing': 'testing', '/guide': '', '/practice': 'admin' };
   /* What the site has switched on (Settings → Logins & site → What is switched
      on). A part that is off is gone for every login, admins included, until
      it is switched back; before sign-in nothing is known, so everything shows. */
@@ -936,6 +938,7 @@
     ['Pallets to move back — front bins with an empty bin behind', '/front', 'moves', 'move pallets back front behind empty double deep relocate'],
     ['Auto-assign the aisles — a staggered plan', '/admin', 'teams', 'auto assign plan stagger staggered aisles teams spread automatic queue every team'],
     ['Test with your own pallets, and try features that are off', '/testing', '', 'testing upload own pallets file lot expiry approval try features off practice'],
+    ['Practice data — every login\'s runs in the Testing Suite', '/practice', '', 'practice data runs testing suite users who practiced history tried export delete admin learn'],
   ].map(([title, page, sub, words]) => ({ title, page, sub, words }));
 
   const PENDING = 'searchGoto';

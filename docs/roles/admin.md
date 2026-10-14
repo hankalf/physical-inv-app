@@ -149,8 +149,10 @@ office side as its own app (*FH Office*), with a Menu button in place of the sid
   Suite's sandbox, all four to start with.
 - **The picker opens on the right count.** An open full count first (the one the scanners land
   on, else the newest), else an open cycle count; and it lists only the kinds the site has switched on.
-- **Your picker sees everything.** An admin's count picker lists every count on the site,
-  other people's practice counts from the Testing Suite included, tagged *practice · NAME*.
+- **Practice counts stay out of the picker.** Nobody's practice count from the Testing Suite is
+  in a dashboard's picker, yours included. **Learn → Practice data** — admins only — lists every
+  login's practice in one place: who has practiced, each run with what was tried and how far it
+  got, an export of one person's lot, and Delete to start them fresh.
 - **How the counting screen is put together**: the order of the questions (pallet, quantity,
   lot, expiry, bin, comments), text size, language, the Keyboard button, *Keep it upright*,
   *Update itself after a deploy*, *Show the next bin in the aisle*. The preview is the real
