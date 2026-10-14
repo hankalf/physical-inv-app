@@ -733,12 +733,14 @@ async function handleAdmin(req, res, url, m) {
     const admin = who && who.role === 'admin';
     // and a login sees only the kinds of count it may work: cycle counts need the
     // Cycle counts page, full counts any of the pages that work a full count
-    const mayCycle = allowed(who, 'cycle');
+    // ...and only the kinds the site has switched on (Settings → Logins & site → What is switched on)
+    const mayCycle = allowed(who, 'cycle') && features().cycle;
     const mayFull = ['dashboard', 'full', 'teams', 'front', 'missing'].some((k) => allowed(who, k));
+    const landing = defaultSessionId();          // the count the scanners land on: the page opens on it too
     return sendJson(req, res, 200, listSessions().filter((s) => {
       if (s.practice) { if (!(admin || s.practice_owner === mine) || s.status !== 'open') return false; }
       return (s.mode || 'full') === 'cycle' ? mayCycle : mayFull;
-    }));
+    }).map((s) => ({ ...s, isDefault: s.id === landing })));
   }
 
   // --- the Testing tab: a practice count and a scanner of this supervisor's own

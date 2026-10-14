@@ -32,7 +32,7 @@
     sessions = (await apiJson('/api/admin/sessions')).filter((s) => (s.mode || 'full') === 'full' && !s.practice);
     try { defaultId = (await apiJson('/api/admin/default-session')).sessionId || null; } catch { defaultId = null; }
     if (!sessionId || !sessions.some((s) => s.id === sessionId)) {
-      const open = sessions.find((s) => s.status !== 'closed') || sessions[0];
+      const open = api.defaultSession(sessions) || sessions[0];
       sessionId = open ? open.id : null;
     }
     picker.render(sessions, sessionId);

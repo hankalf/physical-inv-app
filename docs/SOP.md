@@ -228,6 +228,11 @@ own password from **Change my password** at the foot of the sidebar.
 
 *May use, opened on one login: the pages, each page's tabs, and the functions — a tick takes effect on their next click.*
 
+**Which count a page opens on.** The picker in the header opens on an open full count — the one
+the scanners land on, else the newest — and, when no full count is open, on an open cycle count.
+It lists only the kinds of count the login may work and the site has switched on (Step 4a): with
+cycle counts switched off, no cycle count appears in it.
+
 **What an admin sees in the count picker.** An admin's picker lists every count on the site,
 other people's practice counts from the Testing Suite included, each tagged *practice · NAME*; a
 supervisor sees the real counts and only their own practice count.

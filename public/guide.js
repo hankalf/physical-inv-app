@@ -367,7 +367,7 @@
     sessions = await api.json('/api/admin/sessions');
     const real = sessions.filter((s) => !s.practice);
     if (!sessionId || !sessions.some((s) => s.id === sessionId)) {
-      const open = real.find((s) => s.status !== 'closed') || real[0] || sessions[0];
+      const open = api.defaultSession(sessions) || real[0] || sessions[0];
       sessionId = open ? open.id : null;
     }
     picker.render(sessions, sessionId);

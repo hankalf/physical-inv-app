@@ -55,9 +55,9 @@
       applySessionSettings();
       return;
     }
-    // the list puts open sessions first, so the default is a live count
+    // an open full count first (the one the scanners land on), else a cycle count
     sessionId = EMBED && sessions.some((s) => s.id === EMBED) ? EMBED
-      : sessions.some((s) => s.id === prior) ? prior : sessions[0].id;
+      : sessions.some((s) => s.id === prior) ? prior : (api.defaultSession(sessions) || sessions[0]).id;
     picker.render(sessions, sessionId);
     applySessionSettings();
     await refreshAll();

@@ -679,6 +679,17 @@
     return new Date(iso).toLocaleDateString();
   }
 
+  /* Which count a page opens on when nothing was picked: an open full count
+     first - the one the scanners land on, else the newest - then an open
+     cycle count, then whatever is there. A practice count is never it. */
+  api.defaultSession = (sessions) => {
+    const all = sessions || [];
+    const real = all.filter((s) => !s.practice);
+    const open = real.filter((s) => s.status !== 'closed');
+    const full = open.filter((s) => (s.mode || 'full') !== 'cycle');
+    return full.find((s) => s.isDefault) || full[0] || open.find((s) => s.mode === 'cycle') || real[0] || all[0] || null;
+  };
+
   api.sessionPicker = function sessionPicker(mountId, onPick) {
     const mount = document.getElementById(mountId);
     if (!mount) return { render() {} };
