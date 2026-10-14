@@ -125,7 +125,7 @@ check('…and the page itself has the Logins & site tab, being an admin', (await
 /* the Testing Suite follows the list too: Sue now has testing and the dashboard, but no exports and no approvals */
 await page.goto(BASE + '/testing'); await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(2500);
 check('Testing Suite: no export buttons for a login without exports', await page.isHidden('#btnExportMine') && await page.isHidden('#btnExportRuns'));
-check('…approvals are not offered to practise when she may not approve for real', (await page.$$('#optList .opt[data-key="requireApproval"]')).length === 0 && (await page.$$('#optList .opt[data-key="askLot"]')).length === 1);
+check('…approvals are not offered to practice when she may not approve for real', (await page.$$('#optList .opt[data-key="requireApproval"]')).length === 0 && (await page.$$('#optList .opt[data-key="askLot"]')).length === 1);
 check('…the server says the same', (await fetch(`${BASE}/api/admin/practice/options`, { method: 'POST', headers: S, body: JSON.stringify({ requireApproval: true }) })).status === 403
   && (await fetch(`${BASE}/api/admin/practice/export`, { headers: S })).status === 403);
 check('…the office side is there, since she has the dashboard', !(await page.$eval('#dashCard', (el) => el.hidden)) && (await page.$$('#stepDots button')).length === 6);

@@ -24,7 +24,7 @@
     .bench > .rig { position: static; justify-self: center; }
   }
 
-  /* A Zebra MC9300, near enough: a dark slab, a screen, a keypad-coloured
+  /* A Zebra MC9300, near enough: a dark slab, a screen, a keypad-colored
      trigger underneath. It is the real app in the screen, not a picture. */
   .gun {
     width: 404px; max-width: 100%;
@@ -131,7 +131,7 @@
   .guidegrid > div span { color: var(--text-dim); }
   .guide.collapsed #guideBody { display: none; }
   .checks.ready { grid-template-columns: 1fr; gap: 4px; margin-top: 4px; }
-  /* what to practise: one button per job a scanner does */
+  /* what to practice: one button per job a scanner does */
   .modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin-top: 12px; }
   .modes button { width: auto; margin: 0; text-align: left; display: block; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); color: var(--text); cursor: pointer; }
   .modes button b { display: block; font-size: 14px; }
@@ -307,7 +307,7 @@
                   <div><b>SCAN box</b><span>Type anything — a wrong pallet ID, a bin from another aisle — and press SCAN to see how the gun answers.</span></div>
                   <div><b>Español</b><span>The button at the top of the gun switches it to Spanish and back.</span></div>
                   <div><b>Try the features that ship off</b><span>Lot codes, best-before, approvals and more — switch them on for your practice only, then count a pallet and see the difference.</span></div>
-                  <div><b>Your own test pallets</b><span>Upload a Bin / Pallet / Qty sheet to practise on your own data. It is the same sheet as the printed barcode book.</span></div>
+                  <div><b>Your own test pallets</b><span>Upload a Bin / Pallet / Qty sheet to practice on your own data. It is the same sheet as the printed barcode book.</span></div>
                   <div><b>Restart the gun</b><span>Reloads the app on the scanner, as if it had been switched off and on. Nothing counted is lost.</span></div>
                   <div><b>Start over</b><span>Begins a fresh run. The one you were on is kept under <i>Your earlier runs</i>.</span></div>
                 </div>
@@ -321,11 +321,11 @@
             <div class="checks ready" id="readyList"></div>
           </div>
 
-          <!-- the job to practise, first: the full count, its second counts, or the
+          <!-- the job to practice, first: the full count, its second counts, or the
                other jobs a scanner does - only the jobs this login may do for real,
                and the page below follows the one picked -->
           <div class="card" id="modesCard" hidden>
-            <h2>Practise <span class="muted">pick the job — the sheet, the tips and the things to try follow it</span></h2>
+            <h2>Practice <span class="muted">pick the job — the sheet, the tips and the things to try follow it</span></h2>
             <div class="modes" id="modeList"></div>
             <div class="hint" id="modeNote" hidden style="margin-top:8px"></div>
             <div class="feedback" id="modeMsg"></div>

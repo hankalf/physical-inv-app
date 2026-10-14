@@ -167,7 +167,7 @@ export function exportEverything(sessionId, { by = '' } = {}) {
   const second = sheet('Second counts', ['Bin', 'Pallet', 'Why', 'Raised by', 'First counted by', 'Team', 'State', 'Raised', 'Done', 'Done by'],
     db.prepare('SELECT * FROM recounts WHERE session_id = ? ORDER BY id').all(id).map((r) => ({
       'Bin': r.bin, 'Pallet': r.pallet_id || '', 'Why': STATUS[r.reason] || (r.reason === 'CYCLE' ? 'Cycle count' : r.reason === 'MANUAL' ? 'Asked for by a supervisor' : r.reason),
-      'Raised by': r.source === 'auto' ? 'the app' : r.source === 'cycle' ? 'cycle programme' : 'a supervisor',
+      'Raised by': r.source === 'auto' ? 'the app' : r.source === 'cycle' ? 'cycle program' : 'a supervisor',
       'First counted by': r.first_team || '', 'Team': r.team || '', 'State': r.status === 'done' ? 'Done' : r.status === 'taken' ? 'Being counted' : 'Open',
       'Raised': when(r.created_at), 'Done': when(r.done_at), 'Done by': r.done_by_team || '',
     })));

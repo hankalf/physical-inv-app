@@ -137,7 +137,7 @@ await gun.press('#fScan', 'Enter'); await gun.waitForTimeout(2500);
   await gun.click('#btnOvNo'); await gun.waitForTimeout(500);
   await fetch(`${BASE}/api/admin/scanner-prompts`, { method: 'POST', headers: A,
     body: JSON.stringify({ comments: ['Frozen to the rack', 'Shrink wrap torn'],
-      overrides: ['Label unreadable', 'New receipt, not on the report', 'Relabelled', 'Hand-written ID'] }) });
+      overrides: ['Label unreadable', 'New receipt, not on the report', 'Relabeled', 'Hand-written ID'] }) });
   await gun.reload(); await gun.waitForTimeout(1500); await intoCounting(gun);
 }
 

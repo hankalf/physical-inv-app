@@ -173,7 +173,7 @@ const HISTORY_KEEP = 10;             // earlier runs kept per person
 
 export const practiceSession = (owner) =>
   db.prepare("SELECT * FROM sessions WHERE practice = 1 AND practice_owner = ? AND status = 'open' AND COALESCE(mode, 'full') = 'full' ORDER BY id DESC LIMIT 1").get(owner) || null;
-/* The cycle count beside the run, when the person has asked to practise one. */
+/* The cycle count beside the run, when the person has asked to practice one. */
 const cycleSession = (owner) =>
   db.prepare("SELECT * FROM sessions WHERE practice = 1 AND practice_owner = ? AND status = 'open' AND mode = 'cycle' ORDER BY id DESC LIMIT 1").get(owner) || null;
 
@@ -652,7 +652,7 @@ function resetSandbox(id) {
    A count is not the only thing a scanner is used for: there is the cycle
    count a person does alone off a list, the pallets to move back out of front
    positions, and the Not in Location list it watches for as it goes. Each can
-   be practised here on the same two aisles, and each is set up only when asked
+   be practiced here on the same two aisles, and each is set up only when asked
    for - and only for a login that may do that job for real. */
 export const MODE_ACCESS = { second: 'full', cycle: 'cycle', moves: 'front', missing: 'missing' };
 
@@ -749,7 +749,7 @@ function buildCyclePractice(owner) {
 export function startPracticeMode(owner, mode) {
   const s = practiceSession(owner);
   if (!s) throw Object.assign(new Error('open the Testing Suite first - there is no practice count yet'), { status: 404 });
-  if (s.practice_source === 'upload') throw Object.assign(new Error('the other jobs are practised on the built-in test data - press "Back to the built-in test data" first'), { status: 400 });
+  if (s.practice_source === 'upload') throw Object.assign(new Error('the other jobs are practiced on the built-in test data - press "Back to the built-in test data" first'), { status: 400 });
   if (mode === 'second') {
     if (secondSetUp(s)) return { note: 'already set up' };
     const r = buildSecondPractice(s);
@@ -774,7 +774,7 @@ export function startPracticeMode(owner, mode) {
   throw Object.assign(new Error('that is not a practice mode'), { status: 400 });
 }
 
-/** The state of each job, for the suite's "What to practise" card. */
+/** The state of each job, for the suite's "What to practice" card. */
 export function practiceModes(who, owner, s) {
   const shelfOf = (bin) => (BINS.find((b) => b.bin === bin) || { shelf: [] }).shelf.map((p) => {
     const [sku, desc, uom] = ITEMS[p.item];
@@ -783,7 +783,7 @@ export function practiceModes(who, owner, s) {
   const on = features();
   const out = {
     available: !!s && s.practice_source !== 'upload',
-    // second counts are the full count's own: anyone who may count may practise them
+    // second counts are the full count's own: anyone who may count may practice them
     second: { allowed: allowed(who, 'full'), switchedOff: false, on: false, team: PRACTICE_OTHER_TEAM, bins: [], done: 0, open: 0, raised: false },
     // a job this login may do for real, and that the site has switched on at all
     cycle: { allowed: allowed(who, 'cycle') && on.cycle, switchedOff: !on.cycle, on: false, session: null, bins: [], done: 0, signedOn: false },

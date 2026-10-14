@@ -1340,16 +1340,16 @@
      A page of real Code 128 labels to print, cut up and scan: for training a
      crew, or for dry-running a count before the real one. Either from the
      count's own bins and pallets, or from a spreadsheet of whatever codes a
-     site wants to practise on. */
+     site wants to practice on. */
   /* One row per practice line: the bin, the pallet in it, and the quantity a
      trainee keys in. An empty cell simply prints nothing in that column - a bin
-     with no pallet is an empty bay to practise on. */
+     with no pallet is an empty bay to practice on. */
   const TEMPLATE_ROWS = [
     ['Bin', 'Pallet', 'Qty', 'Note'],
     ['F01A001', 'F01-001', 40, 'SKU-4120 Chicken breast'],
     ['F01A002', 'F01-002', 33, 'SKU-2210 Peas petite'],
     ['F01A003', 'F01-003', 28, 'SKU-6610 Salmon fillet'],
-    ['F01A004', '', '', 'an empty bay to practise on'],
+    ['F01A004', '', '', 'an empty bay to practice on'],
   ];
 
   async function bookTemplate() {

@@ -135,7 +135,7 @@ await toDashboard();
 /* ---- the map: rings, labels, and clicking an aisle ---- */
 await admin.evaluate(() => window.appApi.showSub('map'));
 await admin.waitForTimeout(1200);
-check('Map: every aisle gets a ring coloured by what state it is in',
+check('Map: every aisle gets a ring colored by what state it is in',
   (await admin.$$('#map .aisle-g')).length === 28
     && new Set(await admin.$$eval('#map .aisle-g .ring', (r) => r.map((x) => x.getAttribute('stroke')))).size >= 2,
   JSON.stringify(await admin.$$eval('#map .aisle-g', (gs) => {
@@ -144,7 +144,7 @@ check('Map: every aisle gets a ring coloured by what state it is in',
 check('Map: an aisle a team is in is ringed blue, one handed back is green',
   await admin.$eval('#map .aisle-g[data-aisle="F01"] .ring', (r) => r.getAttribute('stroke')) === '#2f81f7',
   await admin.$eval('#map .aisle-g[data-aisle="F01"] .ring', (r) => r.getAttribute('stroke')));
-check('Map: each aisle is labelled with its code, zone and percentage',
+check('Map: each aisle is labeled with its code, zone and percentage',
   (await admin.textContent('#map .aisle-g[data-aisle="F01"] .aisle-label')) === 'F01'
     && /Frz · \d+%/.test(await admin.textContent('#map .aisle-g[data-aisle="F01"] .aisle-sub')),
   await admin.textContent('#map .aisle-g[data-aisle="F01"] .aisle-sub'));
@@ -258,10 +258,10 @@ check('Handheld T1: step 1 is PALLET ID', (await t1.T('#prompt')) === 'Scan PALL
 
 // good line: pallet -> qty -> bin -> comment chip
 await t1.scan('plt01001a');
-check('Handheld T1: pallet recognised — a blind count, so nothing says what is on it',
+check('Handheld T1: pallet recognized — a blind count, so nothing says what is on it',
   /PLT01001A/.test(await t1.T('#scanMsg')) && !/Chicken|SKU/i.test(await t1.T('#scanMsg') + await t1.T('#ctx'))
     && (await t1.T('#prompt')) === 'Enter QUANTITY', await t1.T('#scanMsg'));
-await shot(t1.p, 'hh-pallet-recognised');
+await shot(t1.p, 'hh-pallet-recognized');
 await t1.scan('40');
 check('Handheld T1: qty accepted → BIN prompt', (await t1.T('#prompt')) === 'Scan BIN LOCATION');
 await t1.scan('F01A001');
@@ -283,7 +283,7 @@ await t1.scan('PLT01005A'); await t1.scan('30'); await t1.scan('F01A005'); await
 await t1.scan('PLT01001A'); await t1.p.waitForSelector('#scrOverride.active');
 check('Handheld T1: duplicate pallet caught', /already counted in bin F01A001/.test(await t1.T('#ovWhy')), await t1.T('#ovWhy'));
 await shot(t1.p, 'hh-duplicate');
-await t1.p.selectOption('#fReason', 'Relabelled'); await t1.p.click('#btnOverrideAccept'); await t1.p.waitForTimeout(200);
+await t1.p.selectOption('#fReason', 'Relabeled'); await t1.p.click('#btnOverrideAccept'); await t1.p.waitForTimeout(200);
 await t1.scan('40'); await t1.scan('F01A009'); await t1.p.click('#btnSkip'); await t1.p.waitForTimeout(200);
 check('Handheld T1: duplicate accepted with reason → flagged line', /Counted PLT01001A.*flagged/.test(await t1.T('#scanMsg')), await t1.T('#scanMsg'));
 // unknown pallet with override
@@ -470,7 +470,7 @@ check('Admin: map level filter (level A) recolours the map for that level only',
 await (await admin.$('#mapWrap')).evaluate((el) => el.closest('.card').scrollIntoView());
 await admin.screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-map-level-a.png`, clip: await (await admin.$('#mapWrap')).evaluate((el) => { const r = el.closest('.card').getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: Math.min(r.height, 700) }; }) });
 await admin.click('#mapLevels button:nth-child(1)'); await admin.waitForTimeout(900);
-check('Admin: map note summarises areas not on the drawing (no staging/doors)', /Not on the drawing — AREAS \d+\/8 · SYSTEM \d+\/4 · WIP \d+\/4\./.test(await admin.textContent('#mapNote')), clean(await admin.textContent('#mapNote')).slice(0, 200));
+check('Admin: map note summarizes areas not on the drawing (no staging/doors)', /Not on the drawing — AREAS \d+\/8 · SYSTEM \d+\/4 · WIP \d+\/4\./.test(await admin.textContent('#mapNote')), clean(await admin.textContent('#mapNote')).slice(0, 200));
 await toSettings();
 const devRow = clean(await admin.textContent('#deviceTable'));
 check('Settings: scanners show last seen + team after sign-on', /SCANNER-01.*\d{1,2}:\d\d.*1/.test(devRow), devRow.slice(0, 160));

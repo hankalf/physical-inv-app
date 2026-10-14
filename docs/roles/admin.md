@@ -102,9 +102,9 @@ does not need cycle counts, front bins or the map in front of it. **Full counts 
 only** hides Cycle counts, Front bins, Not in Location, the Map, Adjustments and Reports for
 every login, admins included — the sidebar, the dashboard tabs, the search box and the scanners'
 sign-on screen all follow — and keeps Alerts (an SOS needs an answer) and the Testing Suite
-(where the count is practised). Tick by hand and **Save** for anything in between; **Everything
+(where the count is practiced). Tick by hand and **Save** for anything in between; **Everything
 on** brings it all back. Hidden is not forbidden: roles still apply, nothing is deleted, a
-bookmark to a hidden page says so, and the job ticks under Scanners are kept, greyed, for when
+bookmark to a hidden page says so, and the job ticks under Scanners are kept, grayed, for when
 their part comes back. Always on: Progress, Team plan, Second counts, Full Counts, Teams & crew,
 Settings, the guide.
 
@@ -254,7 +254,7 @@ say when they will come to you.
 |---|---|---|
 | Nobody can sign in | The admin logins were lost | Set `SUPERADMIN_USER` to a new name in the server variables and restart |
 | Everyone was signed out | A normal restart does not do this; a lost database volume does | Check the volume on the host |
-| Gun: *this scanner is no longer authorised* | Its link was reset or it was removed | Reset link, open the new link on it |
+| Gun: *this scanner is no longer authorized* | Its link was reset or it was removed | Reset link, open the new link on it |
 | Gun: *this scanner link is not registered* | A link that was never created here, or the server was reset | Add the scanner again |
 | A scan does nothing on a handheld | DataWedge is not sending ENTER | DataWedge → Basic data formatting → send ENTER |
 | An SOS did not reach Teams | Address wrong, expired, or Teams down | The dashboard still has it; send a test card; make a Workflows webhook |

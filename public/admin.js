@@ -706,7 +706,7 @@
       });
       drawAisleFurniture(svg, a, spec, segs, horizontal);
     }
-    // Areas with no place on the drawing (doors, staging, ...) are summarised, not lost.
+    // Areas with no place on the drawing (doors, staging, ...) are summarized, not lost.
     const missing = [...byAisle.entries()].filter(([k]) => !placed.has(k)).map(([k, bays]) => {
       let c = 0, t = 0; for (const b of bays.values()) { c += b.counted; t += b.bins.length; }
       counted += c; total += t;
@@ -719,7 +719,7 @@
   /* --------------------------------------------------- aisle rings and labels
      A ring round each aisle says at a glance what state it is in, before you
      read a single cell: green done, blue a team is in it, amber part-counted,
-     grey untouched. The label carries the zone, the code and the percentage,
+     gray untouched. The label carries the zone, the code and the percentage,
      and the whole thing is clickable. */
   const RING = {
     done:    { stroke: '#2ea043', label: 'complete' },
@@ -728,7 +728,7 @@
     queued:  { stroke: '#8957e5', label: 'queued to a team' },
     idle:    { stroke: '#8b949e', label: 'not started' },
   };
-  /* The ring colour is right for a 2px line on a pale drawing and too dark for
+  /* The ring color is right for a 2px line on a pale drawing and too dark for
      8px type: the aisle codes of every untouched aisle were unreadable. Text
      gets a lighter shade of the same idea. */
   const RING_TEXT = { done: '#7ee2a0', active: '#79b8ff', partial: '#f2c057', queued: '#c0a6ff', idle: '#cdd9e5' };
@@ -1514,7 +1514,7 @@
 
   async function closeAlert(id) {
     const outcome = prompt('Close this SOS — what happened? (optional)') ?? null;
-    if (outcome === null) return;                    // cancelled: leave it open
+    if (outcome === null) return;                    // canceled: leave it open
     try {
       await postJson(`/api/admin/sessions/${sessionId}/alerts/${id}/close`, { outcome });
       await refreshAlerts();

@@ -547,7 +547,7 @@ export function resolveAisle(sessionId, raw) {
 /*
  * Sessions, with enough on each row to tell them apart in a picker: how big it
  * is, how far along, and when it was last touched. A name and an id alone are
- * not enough once a site has a few counts and a cycle programme running.
+ * not enough once a site has a few counts and a cycle program running.
  */
 export function listSessions(status) {
   const where = status ? 'WHERE s.status = ?' : '';

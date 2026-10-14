@@ -217,8 +217,8 @@ try {
   // everything still to do, which is what a first-time user actually sees
   const blank = await post('/api/admin/sessions', { name: 'October spot check' });
 
-  /* a cycle-count programme too, so /cycle has a batch to show */
-  const cyc = await post('/api/admin/sessions', { name: 'Cycle count programme 2026', mode: 'cycle' });
+  /* a cycle-count program too, so /cycle has a batch to show */
+  const cyc = await post('/api/admin/sessions', { name: 'Cycle count program 2026', mode: 'cycle' });
   await post(`/api/admin/sessions/${cyc.id}/master?kind=bins`, binCsv, csv);
   await post(`/api/admin/sessions/${cyc.id}/master?kind=pallets`, report, csv);
   await post(`/api/admin/sessions/${cyc.id}/cycle/batches`, { target: 40, strategy: 'oldest', name: `${new Date().toISOString().slice(0, 10)} · freezer sweep` }).catch(() => {});
@@ -271,7 +271,7 @@ try {
   };
   const sub = async (name) => { await desk.evaluate((s) => window.appApi.showSub(s), name); await wait(1400); };
   /* Both supervisor pages default to the newest count, which is the cycle
-     programme; the manual's screenshots are of the wall-to-wall. */
+     program; the manual's screenshots are of the wall-to-wall. */
   const pick = async (id) => {
     const menu = await desk.$('#sessionPick .sess-btn');
     if (!menu) {                              // Settings uses a plain select
@@ -443,7 +443,7 @@ try {
   /* a few moves of our own, so the list and the desk have something in hand,
      and the office board standing in for the pallet system's screen */
   const mv = ['F05A001', 'F05A003', 'F06A001'].map((b, i) => [(palletAt.get(b) || [])[0], b, b.replace(/\d{3}$/, (n) => String(Number(n) + 1).padStart(3, '0'))]).filter(([p]) => p);
-  /* Front bins works from the site's newest bin list, which is the cycle programme's here */
+  /* Front bins works from the site's newest bin list, which is the cycle program's here */
   for (const sid of [sess.id, cyc.id]) await fetch(`${BASE}/api/admin/sessions/${sid}/moves/import`, { method: 'POST', headers: csv, body: 'Pallet,From bin,To bin\n' + mv.map((r) => r.join(',')).join('\n') + '\n' }).catch(() => {});
   await post('/api/admin/pallet-system', { url: `${BASE}/board?session=${sess.id}` }).catch(() => {});
   await desk.goto(BASE + '/front');
@@ -635,7 +635,7 @@ try {
   if (again) {
     await scan(again); await wait(900);
     if (await gun.$('#scrOverride.active')) {
-      await gun.selectOption('#fReason', 'Relabelled').catch(() => {});
+      await gun.selectOption('#fReason', 'Relabeled').catch(() => {});
       await gun.fill('#fReasonNote', 'old label left on');
       await wait(300);
       await save(gun, 'gun-override-reason');

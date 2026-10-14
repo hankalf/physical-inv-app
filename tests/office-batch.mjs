@@ -24,7 +24,7 @@ const post = async (p, body = {}, h = A) => (await fetch(BASE + p, { method: 'PO
 const postRaw = (p, body = {}, h = A) => fetch(BASE + p, { method: 'POST', headers: h, body: JSON.stringify(body) });
 
 /* ================= front-placed bins ================= */
-const cyc = await post('/api/admin/sessions', { name: 'Cycle programme', mode: 'cycle' });
+const cyc = await post('/api/admin/sessions', { name: 'Cycle program', mode: 'cycle' });
 const binRows = [];
 for (const a of ['F01', 'F02']) for (const lvl of ['A', 'B']) for (let n = 1; n <= 6; n++) {
   const pos = String(n).padStart(3, '0');

@@ -3,13 +3,13 @@
 **Role:** Supervisor  **Login profile:** *Supervisor — everything a supervisor can*  **Pages:** Dashboard, Cycle counts, Front bins, Not in Location, Teams & crew, Testing Suite, User guide  **Functions:** all but Settings
 
 This procedure is for the senior supervisor whose login does everything except open
-**Settings**: run the floor, read the numbers, approve adjustments, run the cycle programme,
+**Settings**: run the floor, read the numbers, approve adjustments, run the cycle program,
 the front-bin moves and the Not in Location list. It is a map of the three procedures that
 make it up, with what is specific to holding all of them at once. Read it with:
 
 - **SOP — Count Supervisor** for count day on the floor;
 - **SOP — Inventory Control** for the numbers, the approvals and the exports;
-- **SOP — Warehouse Jobs** for front bins, moves, Not in Location and the cycle programme.
+- **SOP — Warehouse Jobs** for front bins, moves, Not in Location and the cycle program.
 
 ## Contents
 
@@ -93,7 +93,7 @@ Small sites give one person both. What to keep separate:
 - **Not in Location**: the ERP's lost pallets; any scan anywhere finds them; close the rest.
 - **Teams & crew**: leavers off the crew, new badges on, equipment rules current.
 - **Testing Suite**: twenty minutes with every new starter, and with everyone before a
-  wall-to-wall. *What to practise* sets up the cycle count, a move and a Not in Location run.
+  wall-to-wall. *What to practice* sets up the cycle count, a move and a Not in Location run.
 
 ## 6 — Where everything is
 

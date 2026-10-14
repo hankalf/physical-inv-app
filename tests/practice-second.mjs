@@ -3,7 +3,7 @@
  *
  * The crew that made a first count is never offered the second, so the
  * practice team could never be sent back to its own bins. "Second counts"
- * under What to practise has another crew - team 98 - count aisle F03 first
+ * under What to practice has another crew - team 98 - count aisle F03 first
  * and get some of it wrong: four bins come back to the practice gun, blind,
  * and one bin recorded empty is left for the person to raise by hand from the
  * dashboard. The gun, the dashboard's Second counts tab, the checklist and
@@ -24,7 +24,7 @@ const post = async (p, body = {}, h = A) => (await fetch(BASE + p, { method: 'PO
 
 /* ---------------- the API: set up, offered, scoped ---------------- */
 const made = await post('/api/admin/practice');
-check('A practice count offers second counts to practise, not set up yet', made.modes.second && made.modes.second.allowed && !made.modes.second.on && made.modes.second.team === '98', JSON.stringify(made.modes.second));
+check('A practice count offers second counts to practice, not set up yet', made.modes.second && made.modes.second.allowed && !made.modes.second.on && made.modes.second.team === '98', JSON.stringify(made.modes.second));
 const sc = await post('/api/admin/practice/mode', { mode: 'second' });
 const S = sc.modes.second;
 check('Picking it has team 98 count aisle F03, and four of its bins come back', S.on && S.bins.length === 5 && S.open === 4 && S.bins.filter((b) => b.task).length === 4, JSON.stringify(S.bins.map((b) => [b.bin, b.task && b.task.reason])));
@@ -117,7 +117,7 @@ await page.waitForSelector('#scrMain.active');
 await page.waitForSelector('#shelves table.shelf');
 await wait(800);
 const modeBtn = (k) => page.locator(`#modeList button[data-mode="${k}"]`);
-check('"What to practise" lists Second counts beside the other jobs, marked as set up', await modeBtn('second').isVisible() && await modeBtn('second').evaluate((b) => b.classList.contains('set')) && (await page.$$('#modeList button')).length === 5);
+check('"What to practice" lists Second counts beside the other jobs, marked as set up', await modeBtn('second').isVisible() && await modeBtn('second').evaluate((b) => b.classList.contains('set')) && (await page.$$('#modeList button')).length === 5);
 await modeBtn('second').click(); await wait(900);
 const paneText = clean(await page.textContent('#modePane'));
 check('…and its pane: the other crew\'s aisle, what they keyed, what is on the shelf, the state of each bin', await page.isVisible('#modePane') && (await page.$$('#modePane tr[data-second-bin]')).length === 6 && /The other crew keyed/.test(paneText) && /F34511-111 ×36/.test(paneText) && /✓ done/.test(paneText), paneText.slice(0, 160));
@@ -125,14 +125,14 @@ check('…with the bins and pallets as chips to click into the gun', await page.
 check('…and how to do it, in the gun\'s own words', /Start second counts/.test(paneText) && /Bin done/.test(paneText) && /Request second count/.test(paneText));
 check('The page threw no errors', errors.length === 0, errors.join(' | '));
 
-/* Start over clears the lot; who may practise it */
+/* Start over clears the lot; who may practice it */
 const reset = await post('/api/admin/practice/reset', {});
 check('Start over clears it: the new run has no second counts set up and nothing raised', !reset.modes.second.on && (await get(`/api/admin/sessions/${reset.session.id}/recounts`)).length === 0);
 await fetch(`${BASE}/api/admin/users`, { method: 'POST', headers: A, body: JSON.stringify({ username: 'IVY-CHEN', name: 'Ivy Chen', password: 'cold-room-11', mustChange: false, profile: 'inventory' }) });
 await fetch(`${BASE}/api/admin/users`, { method: 'POST', headers: A, body: JSON.stringify({ username: 'CY-ONLY', name: 'Cy Only', password: 'cold-room-12', mustChange: false, profile: 'cycle' }) });
 const ivy = await post('/api/admin/practice', {}, { ...hdr, authorization: 'Bearer ' + (await post('/api/admin/login', { username: 'IVY-CHEN', password: 'cold-room-11' }, hdr)).token });
 const cy = await post('/api/admin/practice', {}, { ...hdr, authorization: 'Bearer ' + (await post('/api/admin/login', { username: 'CY-ONLY', password: 'cold-room-12' }, hdr)).token });
-check('Inventory control, who works the count, may practise second counts; a cycle-only login may not', ivy.modes.second.allowed === true && cy.modes.second.allowed === false);
+check('Inventory control, who works the count, may practice second counts; a cycle-only login may not', ivy.modes.second.allowed === true && cy.modes.second.allowed === false);
 
 await browser.close();
 const passed = results.filter(Boolean).length;

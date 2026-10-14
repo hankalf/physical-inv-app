@@ -8,7 +8,7 @@
  * office board and two dashboards poll over the top of them.
  *
  * It asserts the things that only break under load: nothing lost, nothing
- * double-counted, the racking-block rule still honoured when two teams ask at
+ * double-counted, the racking-block rule still honored when two teams ask at
  * the same instant, and reads still answering while writes are in flight.
  */
 import { readFileSync } from 'node:fs';

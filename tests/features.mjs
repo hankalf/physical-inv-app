@@ -61,7 +61,7 @@ const ptok = (await j(await post(`/api/devices/${prac.device.uid}`, {}, hdr))).t
 const pj = await j(await fetch(`${BASE}/api/scanner-jobs?practice=1`, { headers: { authorization: 'Device ' + ptok } }));
 check('…and so is the practice gun, whatever its own ticks', pj.jobs.full === true && !pj.jobs.cycle && !pj.jobs.move && !pj.jobs.missing, JSON.stringify(pj.jobs));
 const pr = await get('/api/admin/practice');
-check('The Testing Suite does not offer the other jobs to practise', pr.modes && pr.modes.cycle.allowed === false && pr.modes.moves.allowed === false && pr.modes.missing.allowed === false, JSON.stringify(pr.modes && { c: pr.modes.cycle.allowed, m: pr.modes.moves.allowed }));
+check('The Testing Suite does not offer the other jobs to practice', pr.modes && pr.modes.cycle.allowed === false && pr.modes.moves.allowed === false && pr.modes.missing.allowed === false, JSON.stringify(pr.modes && { c: pr.modes.cycle.allowed, m: pr.modes.moves.allowed }));
 const ready = await get('/api/admin/readiness');
 check('Ready for count day sees the full count alone on the scanners, with nothing to untick', ready.checks.some((c) => c.level === 'ok' && /full count alone/.test(c.title)), ready.checks.filter((c) => /scanners/.test(c.title)).map((c) => c.level + ' ' + c.title).join(' | '));
 
@@ -108,7 +108,7 @@ await page.goto(`${BASE}/settings#advanced`); await page.waitForTimeout(1500);
 check('Settings → Logins & site has the card, with what is off in its chip', await page.isVisible('#featuresCard') && /off: Cycle counts, Front bins, Not in Location, Map, Adjustments, Reports/.test(await page.textContent('#featuresChip')), await page.textContent('#featuresChip'));
 check('…one row a part, ticked as it stands', !(await page.$eval('#fFeature-cycle', (b) => b.checked)) && await page.$eval('#fFeature-alerts', (b) => b.checked) && await page.$eval('#fFeature-testing', (b) => b.checked) && (await page.$$('#featuresList label')).length === 8);
 await page.goto(`${BASE}/settings#gun`); await page.reload(); await page.waitForTimeout(1500);
-check('Under the scanners, the jobs that are off are greyed with a note saying why', await page.$eval('#fJobCycle', (b) => b.disabled) && await page.$eval('#fJobMove', (b) => b.disabled) && !(await page.$eval('#fJobFull', (b) => b.disabled)) && await page.isVisible('#jobsOffNote') && /switched off for the whole site/.test(await page.textContent('#jobsOffNote')), await page.textContent('#jobsOffNote'));
+check('Under the scanners, the jobs that are off are grayed with a note saying why', await page.$eval('#fJobCycle', (b) => b.disabled) && await page.$eval('#fJobMove', (b) => b.disabled) && !(await page.$eval('#fJobFull', (b) => b.disabled)) && await page.isVisible('#jobsOffNote') && /switched off for the whole site/.test(await page.textContent('#jobsOffNote')), await page.textContent('#jobsOffNote'));
 
 await page.goto(`${BASE}/settings#advanced`); await page.reload(); await page.waitForTimeout(1500);
 await page.click('#btnFeaturesAll'); await page.waitForTimeout(1000);
@@ -151,7 +151,7 @@ await page.goto(`${BASE}/testing`); await page.waitForTimeout(2000);
 const sbCycle = await page.$('#sbJobCycle');
 check('The Testing Suite hides the practice tick for a job that is off', sbCycle ? !(await page.isVisible('#sbJobCycle')) : true);
 const modeBtns = (await page.$$eval('#modeList button', (bs) => bs.map((b) => b.dataset.mode))).join('|');
-check('…and its "what to practise" row too', !/cycle/.test(modeBtns), modeBtns || '(no row)');
+check('…and its "what to practice" row too', !/cycle/.test(modeBtns), modeBtns || '(no row)');
 await post('/api/admin/features', { preset: 'everything' });
 
 await browser.close();

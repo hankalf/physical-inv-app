@@ -80,7 +80,7 @@ check('Gun: it counts normally', /Counted PLT01004A/.test(await T('#scanMsg')), 
 await fetch(`${BASE}/api/admin/devices/${dev2.uid}/reset`, { method: 'POST', headers: A, body: '{}' });
 await scan('PLT01005A'); await scan('40'); await scan('F01A005'); await gun.click('#btnSkip'); await gun.waitForTimeout(2500);
 check('Gun: when the scanner is cut off it says so plainly, not "network error"',
-  (await gun.getAttribute('#deviceProblem', 'hidden')) === null && /no longer authorised/.test(await T('#deviceProblem')), (await T('#deviceProblem')).slice(0, 120));
+  (await gun.getAttribute('#deviceProblem', 'hidden')) === null && /no longer authorized/.test(await T('#deviceProblem')), (await T('#deviceProblem')).slice(0, 120));
 check('Gun: the line it just counted is kept, not lost', /queued/.test(await T('#chipQueue')), await T('#chipQueue'));
 await gun.screenshot({ path: `${S}screenshots/auth-cut-off.png` });
 const csv = await (await fetch(`${BASE}/api/admin/sessions/${sess.id}/export/counts.csv`, { headers: A })).text();

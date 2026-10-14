@@ -13,7 +13,7 @@ import { features } from './features.js';
  */
 const DEFAULTS = {
   comments: ['Damaged', 'Partial pallet', 'Mixed pallet', 'Label unreadable', 'Needs recount', 'Blocked / could not reach'],
-  overrides: ['Label unreadable', 'New receipt, not on the report', 'Relabelled', 'Hand-written ID', 'Supervisor said to count it'],
+  overrides: ['Label unreadable', 'New receipt, not on the report', 'Relabeled', 'Hand-written ID', 'Supervisor said to count it'],
 };
 /* How long the comments step waits before moving itself on. Two seconds is
    long enough to tap a chip and short enough that a counter with nothing to say
@@ -28,7 +28,7 @@ const clean = (list, cap = 24) => [...new Set(
 )].slice(0, cap);
 
 /* Which count a scanner lands on at sign-on. A site running a wall-to-wall
-   alongside its cycle programme wants every gun starting on the right one. */
+   alongside its cycle program wants every gun starting on the right one. */
 export function defaultSessionId() {
   const row = db.prepare("SELECT value FROM settings WHERE key = 'defaultSessionId'").get();
   const id = row ? Number(row.value) : 0;

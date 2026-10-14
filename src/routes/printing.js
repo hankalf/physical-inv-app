@@ -188,7 +188,7 @@ ${devices.length ? `<div class="sheet">${cards}</div>` : '<div class="none">No s
  * to scan that is not the warehouse. This prints real Code 128 labels - the same
  * symbology the racking uses, so a gun that reads the book reads the rack -
  * either from the count's own bins and pallets, or from a spreadsheet somebody
- * filled in with the codes they want to practise on.
+ * filled in with the codes they want to practice on.
  *
  * Laid out to be cut up, taped to a desk or a shelf, and scanned.
  */
@@ -247,6 +247,6 @@ ${rows.length ? `<table>
   <tbody>${body}</tbody></table>` : '<div class="none">Nothing to print — pick a count, or upload a sheet of codes.</div>'}
 <div class="tip">Work down the page the way a counter works down an aisle: scan the pallet, key the quantity, scan the bin.
 Print at <b>100%</b> — “fit to page” shrinks the bars and a scanner will refuse them. If a label will not read, print that page
-again on plain white paper: a glossy or coloured sheet scatters the beam.</div>
+again on plain white paper: a glossy or colored sheet scatters the beam.</div>
 </body></html>`;
 }

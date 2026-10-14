@@ -19,7 +19,7 @@ const csv = { authorization: 'Bearer ' + tok, 'content-type': 'text/csv' };
 const j = (r) => r.json();
 const post = (p, body = {}, h = A) => fetch(BASE + p, { method: 'POST', headers: h, body: JSON.stringify(body) });
 
-/* a full count, a cycle programme with a batch, and a move list: every job exists */
+/* a full count, a cycle program with a batch, and a move list: every job exists */
 const full = await j(await post('/api/admin/sessions', { name: 'Jobs full' }));
 const cyc = await j(await post('/api/admin/sessions', { name: 'Jobs cycle', mode: 'cycle' }));
 const bins = 'Bin Location\nF01A001\nF01A002\nF01A003\nF02A001\nF02A002\n';

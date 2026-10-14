@@ -2,9 +2,9 @@
  * Code 128, drawn as SVG.
  *
  * For the test book: a page of bin and pallet labels a supervisor can print,
- * tape to a desk and practise on, or use to dry-run a count before the real one.
+ * tape to a desk and practice on, or use to dry-run a count before the real one.
  * Zebra handhelds read Code 128 out of the box and it is what warehouse labels
- * are normally printed in, so what a counter practises on behaves exactly like
+ * are normally printed in, so what a counter practices on behaves exactly like
  * the racking will.
  *
  * Code 128 in one paragraph: every character is six bars and spaces, written as
@@ -96,9 +96,9 @@ export function widths(text) {
 /**
  * One barcode as an SVG element.
  *
- * `module` is the width of the narrowest bar in millimetres - 0.33mm (13 mil) is
+ * `module` is the width of the narrowest bar in millimeters - 0.33mm (13 mil) is
  * the usual floor for a laser-printed label that a warehouse scanner will read
- * across a metre. `height` is the bars only; the text underneath is drawn below
+ * across a meter. `height` is the bars only; the text underneath is drawn below
  * them so the code can be typed when a scanner will not have it.
  */
 export function barcodeSvg(text, { module = 0.36, height = 14, quiet = 3, showText = true, fontSize = 3.6 } = {}) {
@@ -126,6 +126,6 @@ export function barcodeSvg(text, { module = 0.36, height = 14, quiet = 3, showTe
     ${rects}${label}</svg>`;
 }
 
-/** How wide that barcode will print, in millimetres - for fitting it on a label. */
+/** How wide that barcode will print, in millimeters - for fitting it on a label. */
 export const barcodeWidthMm = (text, module = 0.36, quiet = 3) =>
   ([...widths(text)].reduce((n, c) => n + Number(c), 0) + quiet * 2) * module;

@@ -112,7 +112,7 @@ export function saveFormat(id, format) {
 
 export const availableFields = () => Object.keys(FIELDS);
 
-/** The rows a format is built from, normalised so every field works everywhere. */
+/** The rows a format is built from, normalized so every field works everywhere. */
 function sourceRows(sessionId, rowsOf, source = null) {
   const id = Number(sessionId);
   const reference = `PI-${id}-${localDate()}`;

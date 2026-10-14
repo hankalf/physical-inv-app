@@ -223,7 +223,7 @@
     'Label unreadable': 'Etiqueta ilegible', 'Needs recount': 'Necesita reconteo',
     'Blocked / could not reach': 'Bloqueado / no se alcanzó',
     'New receipt, not on the report': 'Recibo nuevo, no está en el reporte',
-    'Relabelled': 'Re-etiquetada', 'Hand-written ID': 'Número escrito a mano',
+    'Relabeled': 'Re-etiquetada', 'Hand-written ID': 'Número escrito a mano',
     'Supervisor said to count it': 'El supervisor dijo que se contara',
 
     'Type a note or tap one below': 'Escribe una nota o toca una abajo',
@@ -354,7 +354,7 @@
     [/^(.+) → every team$/, (m) => `${m[1] === 'the office' ? 'la oficina' : m[1]} → todos los equipos`],
     [/^(.+) → team (\S+)$/, (m) => `${m[1] === 'the office' ? 'la oficina' : m[1]} → equipo ${m[2]}`],
     [/^(.+) Overrides are off for this session\.$/, (m) => `${T(m[1])} Las excepciones están desactivadas en esta sesión.`],
-    [/^(.+) Anything already counted is still saved on this scanner and will send once it is authorised again\.$/,
+    [/^(.+) Anything already counted is still saved on this scanner and will send once it is authorized again\.$/,
       (m) => `${m[1]} Lo que ya se contó sigue guardado en este escáner y se enviará cuando vuelva a estar autorizado.`],
     [/^Every bin in (\S+) has a count — tap "Aisle complete" when you are happy\.$/, (m) => `Todas las ubicaciones de ${m[1]} tienen conteo — toca "Pasillo terminado" cuando estés seguro.`],
     [/^App build (\S+) on the server — this scanner is (up to date|behind it; an update is waiting)\.$/,

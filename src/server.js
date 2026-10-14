@@ -277,7 +277,7 @@ function requireDevice(req) {
   const token = auth.startsWith('Device ') ? auth.slice(7) : '';
   if (!token) throw Object.assign(httpError(401, 'this scanner is not signed in - open its link again'), { code: 'device' });
   const d = deviceByToken(token);
-  if (!d) throw Object.assign(httpError(401, 'this scanner is no longer authorised - ask a supervisor for its link'), { code: 'device' });
+  if (!d) throw Object.assign(httpError(401, 'this scanner is no longer authorized - ask a supervisor for its link'), { code: 'device' });
   return d;
 }
 
@@ -617,7 +617,7 @@ function practicePayload(who, owner, s, dev) {
     ready: practiceReadiness(who, s.id, dev),
     options: practiceOptions(s.id),
     sandbox: practiceSandbox(s),
-    // the other jobs a scanner does, each ready to practise on this run
+    // the other jobs a scanner does, each ready to practice on this run
     modes: practiceModes(who, owner, s),
     teamsChannel: teamsConfig().on,
   };
@@ -798,7 +798,7 @@ async function handleAdmin(req, res, url, m) {
     const who = currentUser(req, url);
     const owner = ownerOf(who);
     const body = await readJson(req);
-    // a feature this login may not use for real is not offered to practise either
+    // a feature this login may not use for real is not offered to practice either
     if (body.requireApproval && !allowed(whoNow, 'approve')) throw httpError(403, 'this login may not approve adjustments, so approvals are not something to try here');
     // working the classes out is asking to try the feature, so it goes on too
     const s = setPracticeOptions(owner, body);
@@ -1162,7 +1162,7 @@ async function handleAdmin(req, res, url, m) {
     return send(req, res, 200, html, { 'content-type': 'text/html; charset=utf-8' });
   }
 
-  /* --- the test book: real Code 128 labels to practise on, either from this
+  /* --- the test book: real Code 128 labels to practice on, either from this
          count's own bins and pallets or from a sheet somebody filled in */
   if (p === '/api/admin/print/barcode-book') {
     const q = url.searchParams;
@@ -1172,7 +1172,7 @@ async function handleAdmin(req, res, url, m) {
     let rows = [];
     let note = '';
     if (method === 'POST') {
-      /* A spreadsheet the site filled in: whatever codes they want to practise
+      /* A spreadsheet the site filled in: whatever codes they want to practice
          on, which need not exist in any count. */
       const body = await readJson(req);
       rows = (Array.isArray(body.rows) ? body.rows : []).slice(0, 600).map((r) => ({
@@ -1188,7 +1188,7 @@ async function handleAdmin(req, res, url, m) {
       const aisle = norm(q.get('aisle') || '');
       if (kind === 'bins') {
         /* Bins on their own: a rack walk, with nothing in the other columns to
-           read off - which is the point when practising empty bins. */
+           read off - which is the point when practicing empty bins. */
         rows = db.prepare(
           `SELECT code, COALESCE(zone, '') AS zone, COALESCE(aisle, '') AS aisle, COALESCE(level, '') AS level
              FROM locations WHERE session_id = ?${aisle ? ' AND aisle = ?' : ''}

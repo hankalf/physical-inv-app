@@ -20,7 +20,7 @@
   const journeys = [
     {
       key: 'first', title: 'Your first day', who: 'Any new supervisor login',
-      blurb: 'Where things are, how to get around, and where to practise before a real count.',
+      blurb: 'Where things are, how to get around, and where to practice before a real count.',
       steps: [
         {
           title: 'Sign in and set your own password',
@@ -58,8 +58,8 @@
           ],
         },
         {
-          title: 'Practise on the Testing Suite before count day',
-          do: 'The Testing Suite opens a real scanner screen on a practice count of your own, with a sheet of test data beside it. Click a value to "scan" it. Nothing you do there touches a real count. The "What to practise" card also sets up second counts (another crew’s aisle that comes back to your gun, and one to raise by hand), a cycle count, a pallet move and a Not in Location run.',
+          title: 'Practice on the Testing Suite before count day',
+          do: 'The Testing Suite opens a real scanner screen on a practice count of your own, with a sheet of test data beside it. Click a value to "scan" it. Nothing you do there touches a real count. The "What to practice" card also sets up second counts (another crew’s aisle that comes back to your gun, and one to raise by hand), a cycle count, a pallet move and a Not in Location run.',
           where: S('/testing', '', 'Testing Suite'),
           watch: [
             { see: 'The gun is still starting — give it a second', means: 'The scanner frame has not finished loading.', fix: 'Wait a moment and click again.' },
@@ -67,7 +67,7 @@
           ],
           ask: [
             { q: 'Will my practice count show up on the dashboard for others?', a: 'Not for other supervisors. An admin’s picker lists every count on the site, practice ones included, tagged with whose it is.' },
-            { q: 'Can I practise with our own pallets?', a: 'Yes. The Testing Suite takes a file of your own pallets in the site’s inventory report format.', goto: S('/testing', '', 'Testing Suite') },
+            { q: 'Can I practice with our own pallets?', a: 'Yes. The Testing Suite takes a file of your own pallets in the site’s inventory report format.', goto: S('/testing', '', 'Testing Suite') },
           ],
         },
       ],
@@ -96,11 +96,11 @@
           watch: [
             { see: 'Cycle counts is switched off', means: 'Somebody opened a bookmark to a page the site has switched off.', fix: 'Nothing, unless it is wanted: an admin ticks it back under What is switched on.' },
             { see: 'A scanner still offers a job you switched off', means: 'It has not been online since.', fix: 'It picks the change up the next time its sign-on screen loads.' },
-            { see: 'The jobs under Settings → Scanners are greyed out', means: 'Their part of the app is off for the whole site; the ticks are kept.', fix: 'Switch the part back on under What is switched on if the scanners should offer it.' },
+            { see: 'The jobs under Settings → Scanners are grayed out', means: 'Their part of the app is off for the whole site; the ticks are kept.', fix: 'Switch the part back on under What is switched on if the scanners should offer it.' },
           ],
           ask: [
             { q: 'Is a hidden page locked?', a: 'No — hidden, not forbidden. A login’s role still says what it may use; switching a part off takes it out of everyone’s way, admins included, and switching it on puts it back exactly as it was.' },
-            { q: 'Why do the alerts and the Testing Suite stay on?', a: 'An SOS from the floor needs somebody to answer it, and the Testing Suite is where a new team practises the count. Untick either by hand if it should go too.' },
+            { q: 'Why do the alerts and the Testing Suite stay on?', a: 'An SOS from the floor needs somebody to answer it, and the Testing Suite is where a new team practices the count. Untick either by hand if it should go too.' },
           ],
         },
         {
@@ -132,13 +132,13 @@
           do: 'Settings → Scanners. Add a scanner, give it a name, open its link on the device once, then install the app from Chrome’s menu. Each scanner has its own link; a reset link locks the old one out.',
           where: S('/settings', 'gun', 'Settings → Scanners'),
           watch: [
-            { see: 'Gun: "this scanner is no longer authorised - ask a supervisor for its link"', means: 'Its link was reset or the scanner was removed.', fix: 'Reset link on its row and open the new link on the device.' },
+            { see: 'Gun: "this scanner is no longer authorized - ask a supervisor for its link"', means: 'Its link was reset or the scanner was removed.', fix: 'Reset link on its row and open the new link on the device.' },
             { see: 'Gun: "this scanner link is not registered - ask a supervisor"', means: 'The device opened a link that was never created here, or the server was reset.', fix: 'Add the scanner again and open the fresh link.' },
             { see: 'A scan does nothing on the handheld', means: 'DataWedge is not sending a suffix.', fix: 'DataWedge → Basic data formatting → send ENTER (or TAB).' },
           ],
           ask: [
             { q: 'Do I have to install it, or can it run in Chrome?', a: 'Install it. In a plain tab the address bar appears on every scan and the keyboard can wander. Chrome menu → Install app, or the button on the sign-on screen.' },
-            { q: 'How do I know a gun has the latest version?', a: 'The grey line at the bottom of the sign-on screen says the build and whether the scanner is up to date. With "Update itself after a deploy" on, it reloads between pallets.' },
+            { q: 'How do I know a gun has the latest version?', a: 'The gray line at the bottom of the sign-on screen says the build and whether the scanner is up to date. With "Update itself after a deploy" on, it reloads between pallets.' },
           ],
         },
         {
@@ -230,7 +230,7 @@
             { see: 'Numbers look wrong after an ERP import', means: 'The report moved on since the upload.', fix: 'Re-upload with Replace what is there, then re-read the pallet report.' },
           ],
           ask: [
-            { q: 'Does the column order matter?', a: 'No, the headers do. The site’s names and the common ERP names are both recognised.' },
+            { q: 'Does the column order matter?', a: 'No, the headers do. The site’s names and the common ERP names are both recognized.' },
             { q: 'What about pallets in VA-FR_LOC that are not on the bin list?', a: 'They import and show on the pallet report, but no bin will be guided to them. Counting one anywhere still records it.' },
           ],
         },
@@ -244,7 +244,7 @@
           ],
           ask: [
             { q: 'Warn or strict pallet check?', a: 'Warn tells the counter a pallet is not on the report and lets them count it. Strict refuses it. Use warn for a physical, strict only when the report is trusted.' },
-            { q: 'Is a blind count possible?', a: 'Yes. The gun never shows what the report says is in a bin or on a pallet. It only says which bin and which pallet it recognised.' },
+            { q: 'Is a blind count possible?', a: 'Yes. The gun never shows what the report says is in a bin or on a pallet. It only says which bin and which pallet it recognized.' },
           ],
         },
         {
@@ -293,7 +293,7 @@
         },
         {
           title: 'Watch Progress and the Map',
-          do: 'Progress shows bins counted, lines, pace and the time left at this pace. The Map colours each aisle as it is counted. Team plan shows where each team is, how long since their last scan, and who has stopped.',
+          do: 'Progress shows bins counted, lines, pace and the time left at this pace. The Map colors each aisle as it is counted. Team plan shows where each team is, how long since their last scan, and who has stopped.',
           where: S('/admin', 'progress', 'Dashboard → Progress'),
           watch: [
             { see: 'A team shows stopped scanning', means: 'No line from them for longer than the limit.', fix: 'Message the team from the Team plan, or go and look. A dead spot queues lines and uploads them later, so a quiet gun is not always a stopped team.' },
@@ -309,7 +309,7 @@
           do: 'Alerts shows every SOS with its reason, team and aisle. Mark it seen so the gun tells the counter help is coming, close it when it is dealt with.',
           where: S('/admin', 'alerts', 'Dashboard → Alerts'),
           watch: [
-            { see: 'A counter says they pressed SOS and nothing happened', means: 'The gun had no signal.', fix: 'The gun says "No signal — this has NOT been sent" and sends it the moment it has one. Ten metres usually fixes it.' },
+            { see: 'A counter says they pressed SOS and nothing happened', means: 'The gun had no signal.', fix: 'The gun says "No signal — this has NOT been sent" and sends it the moment it has one. Ten meters usually fixes it.' },
           ],
           ask: [
             { q: 'What reasons can a counter pick?', a: 'The ones under Settings → Scanners → What the scanners offer → SOS: equipment breakdown, need a supervisor, blocked, damage, someone trapped, and your own.' },
@@ -404,11 +404,11 @@
           ],
         },
         {
-          title: 'Practise it first',
-          do: 'Testing Suite → What to practise → Second counts. Another crew — team 98 — has counted aisle F03 on your practice count and got some of it wrong: a pallet keyed short, one missed, one in the wrong bin, one not on the report. Four bins come back to your practice gun; a fifth, which they recorded empty, is yours to raise by hand from the dashboard at the top of the page. The pane shows what they keyed beside what is really on the shelf, the tips follow every step, and the things to try tick off as you go. None of it touches a real count.',
+          title: 'Practice it first',
+          do: 'Testing Suite → What to practice → Second counts. Another crew — team 98 — has counted aisle F03 on your practice count and got some of it wrong: a pallet keyed short, one missed, one in the wrong bin, one not on the report. Four bins come back to your practice gun; a fifth, which they recorded empty, is yours to raise by hand from the dashboard at the top of the page. The pane shows what they keyed beside what is really on the shelf, the tips follow every step, and the things to try tick off as you go. None of it touches a real count.',
           where: S('/testing', '', 'Testing Suite'),
           watch: [
-            { see: 'Second counts is not under What to practise', means: 'The practice run is on your own uploaded file.', fix: 'Press Back to the built-in test data first; the other jobs are practised on it.' },
+            { see: 'Second counts is not under What to practice', means: 'The practice run is on your own uploaded file.', fix: 'Press Back to the built-in test data first; the other jobs are practiced on it.' },
             { see: 'The gun does not say Second counts available', means: 'It was already signed on when the lesson was set up.', fix: 'Tap Refresh on the My aisle screen.' },
           ],
           ask: [
@@ -430,7 +430,7 @@
             { see: 'The list is enormous', means: 'Thresholds at 0.', fix: 'Set Recount over, or over %, and a cap.' },
           ],
           ask: [
-            { q: 'Where can I practise a second count before count day?', a: 'Testing Suite → What to practise → Second counts. Another crew has counted aisle F03 and got some of it wrong: four bins come back to your gun, blind, and one is left for you to raise by hand from the dashboard. The tips follow each step.', goto: S('/testing', '', 'Testing Suite') },
+            { q: 'Where can I practice a second count before count day?', a: 'Testing Suite → What to practice → Second counts. Another crew has counted aisle F03 and got some of it wrong: four bins come back to your gun, blind, and one is left for you to raise by hand from the dashboard. The tips follow each step.', goto: S('/testing', '', 'Testing Suite') },
             { q: 'Does the same team recount its own bin?', a: 'Preferably not: the server offers it to another team when one is near; a lone team gets it after its own aisles.' },
           ],
         },
@@ -439,7 +439,7 @@
           do: 'Reports → Filed as the count goes: every aisle handed back was written to disk at once as CSV files, one folder per hand-back. Final report files every sheet of Export everything, and is offered only when every bin has a count and no second count is open; the card says what is still missing until then.',
           where: S('/admin', 'reports', 'Dashboard → Reports'),
           watch: [
-            { see: 'Final report is greyed out', means: 'Bins are still uncounted, or second counts are open.', fix: 'The line beside it says which. Finish them; it switches on by itself.' },
+            { see: 'Final report is grayed out', means: 'Bins are still uncounted, or second counts are open.', fix: 'The line beside it says which. Finish them; it switches on by itself.' },
             { see: 'An aisle handed back is not in the list', means: 'The server could not write the folder.', fix: 'Check the disk on the host; the count itself is unaffected, and Export everything still has the lot.' },
           ],
           ask: [
@@ -491,11 +491,11 @@
       ],
     },
     {
-      key: 'cycle', title: 'Cycle counts', who: 'Whoever runs the daily programme',
+      key: 'cycle', title: 'Cycle counts', who: 'Whoever runs the daily program',
       blurb: 'Small batches every day instead of one big count.',
       steps: [
         {
-          title: 'Set the programme up',
+          title: 'Set the program up',
           do: 'Cycle counts → Program & data: how many bins a day and how the picker chooses them (longest since counted first). It needs the inventory report with last-counted dates.',
           where: S('/cycle', 'setup', 'Cycle counts → Program & data'),
           watch: [
@@ -597,7 +597,7 @@
             { see: 'Gun: "That date has passed"', means: 'An expiry in the past.', fix: 'Tell a supervisor; it is recorded.' },
           ],
           ask: [
-            { q: 'Why does the gun not show what should be on the pallet?', a: 'It is a blind count. It shows the pallet and the bin it recognised, never the quantity the office expects.' },
+            { q: 'Why does the gun not show what should be on the pallet?', a: 'It is a blind count. It shows the pallet and the bin it recognized, never the quantity the office expects.' },
           ],
         },
         {
@@ -623,7 +623,7 @@
           do: 'Cannot reach the bins: Bin blocked, come back later, the supervisor sees it. SOS: pick a reason; Enviado / Sent means a supervisor was told.',
           where: S('/testing', '', 'Try it in the Testing Suite'),
           watch: [
-            { see: 'Gun: "No signal — this has NOT been sent"', means: 'No connection just now.', fix: 'It sends itself with the next signal. Walk ten metres.' },
+            { see: 'Gun: "No signal — this has NOT been sent"', means: 'No connection just now.', fix: 'It sends itself with the next signal. Walk ten meters.' },
           ],
           ask: [],
         },
@@ -669,11 +669,11 @@
     { see: 'too many wrong passwords - try again in 15 minutes, or ask an admin to unlock it', means: 'Five wrong passwords for this login from this computer.', fix: 'Wait it out, or an admin presses Unlock on the row under Settings → Logins & site.', goto: S('/settings', 'advanced', 'Logins & site') },
     { see: 'this invite has expired or has already been used - ask an admin for a new one', means: 'The invite link was used, replaced by a newer one, or is more than three days old.', fix: 'An admin presses Invite again on the row; use the newest link.', goto: S('/settings', 'advanced', 'Logins & site') },
     { see: 'The last OneDrive copy failed', means: 'OneDrive was unreachable, full, or the sign-in was withdrawn.', fix: 'Settings → Backups & log shows why. It is tried again every half hour; if it says connect again, press Connect OneDrive.', goto: S('/settings', 'backups', 'Backups & log') },
-    { see: 'this scanner is no longer authorised - ask a supervisor for its link', means: 'Its link was reset or the scanner was removed.', fix: 'Settings → Scanners → Reset link, open the new link on the device.', goto: S('/settings', 'gun', 'Scanners') },
+    { see: 'this scanner is no longer authorized - ask a supervisor for its link', means: 'Its link was reset or the scanner was removed.', fix: 'Settings → Scanners → Reset link, open the new link on the device.', goto: S('/settings', 'gun', 'Scanners') },
     { see: 'this scanner link is not registered - ask a supervisor', means: 'The device opened a link that was never created here.', fix: 'Add the scanner and open the fresh link.', goto: S('/settings', 'gun', 'Scanners') },
     { see: 'this scanner is not signed in - open its link again', means: 'The scanner lost its token.', fix: 'Open its link from Settings → Scanners on the device.', goto: S('/settings', 'gun', 'Scanners') },
     { see: 'Offline and no list cached for this session', means: 'The handheld never downloaded this count.', fix: 'Carry it into Wi-Fi once and sign on again.' },
-    { see: 'No signal — this has NOT been sent', means: 'An SOS or line is waiting for signal.', fix: 'It sends itself the moment there is signal. Walk ten metres.' },
+    { see: 'No signal — this has NOT been sent', means: 'An SOS or line is waiting for signal.', fix: 'It sends itself the moment there is signal. Walk ten meters.' },
     { see: 'OFFLINE with lines queued', means: 'Normal in a dead spot.', fix: 'Nothing. They upload when the gun has signal. Do not wipe the device.' },
     { see: 'Team N is counting aisle X', means: 'Another team holds that racking block.', fix: 'Wait, or hand the other aisle back first.' },
     { see: 'That bin was taken by another team', means: 'Two teams reached one bin; the server gave it to the first.', fix: 'Move on, the gun shows the next bin.' },
@@ -682,7 +682,7 @@
     { see: 'session is closed', means: 'The count was closed.', fix: 'Reopen it from the Count session card if work remains.', goto: S('/settings', 'start', 'Count session') },
     { see: 'session not found', means: 'The count was deleted, or the link is to another server.', fix: 'Pick a count from the picker.' },
     { see: 'that aisle belongs to another team', means: 'The aisle is on another team’s plan.', fix: 'Take it off that team first.', goto: S('/teams', 'crew', 'Counting plan') },
-    { see: 'that username and password do not match', means: 'Wrong password, or the username is spelt differently.', fix: 'Passwords are case-sensitive. An admin can set a new starter password.' },
+    { see: 'that username and password do not match', means: 'Wrong password, or the username is spelled differently.', fix: 'Passwords are case-sensitive. An admin can set a new starter password.' },
     { see: 'only an admin can manage accounts', means: 'Your login is not an admin.', fix: 'Ask an admin.' },
     { see: 'is switched off', means: 'The page is one an admin switched off for the site under What is switched on.', fix: 'Use the sidebar, or ask an admin to switch it back on.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },
     { see: 'this count is a trial run - end the trial and count it for real before sending anything to the ERP', means: 'ERP export is blocked on a trial.', fix: 'End the trial under Count session.', goto: S('/settings', 'start', 'Count session') },

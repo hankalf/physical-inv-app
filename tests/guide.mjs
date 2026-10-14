@@ -84,8 +84,8 @@ const askFor = async (q) => {
 };
 let hits = await askFor('the gun says offline did we lose the counts');
 check('A worried question finds the offline answer first', hits.length && /OFFLINE|lose the counts/i.test(hits[0].q), hits.map((h) => h.q).join(' | '));
-hits = await askFor('this scanner is no longer authorised - ask a supervisor for its link');
-check('A pasted server message finds its own row', hits.length && hits[0].q.includes('this scanner is no longer authorised - ask a supervisor for its link') && hits[0].kind === 'issue', hits.map((h) => h.q).join(' | '));
+hits = await askFor('this scanner is no longer authorized - ask a supervisor for its link');
+check('A pasted server message finds its own row', hits.length && hits[0].q.includes('this scanner is no longer authorized - ask a supervisor for its link') && hits[0].kind === 'issue', hits.map((h) => h.q).join(' | '));
 hits = await askFor('how do I approve adjustments');
 check('"approve adjustments" lands on the approvals step', hits.some((h) => /Approve the adjustments|Adjustments tab/.test(h.q)), hits.map((h) => h.q).join(' | '));
 hits = await askFor('second count list is huge');

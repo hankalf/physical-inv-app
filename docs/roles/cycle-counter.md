@@ -3,8 +3,8 @@
 **Role:** Cycle counter  **Login profile:** *Cycle counter — cycle counts only*  **Pages:** Cycle counts, Testing Suite, User guide  **Functions:** none beyond reading
 
 This procedure is for the person who counts a handful of bins every day as part of the
-cycle programme: the gun in the morning, the Cycle counts page to see what is done and what
-is left. Building the programme, uploading its lists and reading the variances are the
+cycle program: the gun in the morning, the Cycle counts page to see what is done and what
+is left. Building the program, uploading its lists and reading the variances are the
 warehouse-jobs and inventory-control procedures.
 
 ## Contents
@@ -13,7 +13,7 @@ warehouse-jobs and inventory-control procedures.
 - [2 — The morning: sign on and count the list](#2--the-morning-sign-on-and-count-the-list)
 - [3 — Counting a bin properly](#3--counting-a-bin-properly)
 - [4 — The Cycle counts page](#4--the-cycle-counts-page)
-- [5 — Practising](#5--practising)
+- [5 — Practicing](#5--practicing)
 - [6 — When something goes wrong](#6--when-something-goes-wrong)
 
 ## 1 — What a cycle count is
@@ -68,12 +68,12 @@ Suite** and the **User guide**, and nothing else.
 - **Still open**: bins from earlier batches nobody finished.
 - **Coverage**: how much of the warehouse has been counted this period.
 
-Your login reads these pages; it does not generate batches or change the programme.
+Your login reads these pages; it does not generate batches or change the program.
 
-## 5 — Practising
+## 5 — Practicing
 
 **Testing Suite** in the sidebar puts the real scanner app in a frame with a sheet of test
-data beside it; clicking a value "scans" it. *What to practise → Cycle count* sets up a
+data beside it; clicking a value "scans" it. *What to practice → Cycle count* sets up a
 practice cycle count with a five-bin list: a plain bin, two pallets, an empty bin, a short
 pallet, one whose pallet has gone. Nothing you do there touches a real count. Spend twenty
 minutes on it before your first morning.

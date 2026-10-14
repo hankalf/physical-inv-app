@@ -46,7 +46,7 @@ that count.
 - closing the count: Settings → Count session, an admin or supervisor. You say when it is
   ready to close; section 10 is the test.
 
-If the sidebar shows a page or a button greyed out, that is the profile, not a fault.
+If the sidebar shows a page or a button grayed out, that is the profile, not a fault.
 
 ## 2 — Before the count: the data going in
 
@@ -74,7 +74,7 @@ A count compares the floor with a report. If the report is wrong, every variance
    you will pick for every approval and what the ERP file carries. Match them to the ERP's own
    list.
 6. **Ask for a trial run** if the team is new. A trial counts for real on the dashboard and is
-   wiped by *End the trial*; nothing from it can be exported to the ERP. Practise the close
+   wiped by *End the trial*; nothing from it can be exported to the ERP. Practice the close
    on it: sections 4 to 7, end to end.
 
 ## 3 — During the count: reading it as it runs
@@ -104,8 +104,8 @@ count can change the number, and a changed number clears its approval.
 
 When the floor reports every aisle handed back and *Progress* shows every bin with a count:
 
-1. **Second counts to zero.** Dashboard → Second counts must show nothing open. (Practise this
-   first: Testing Suite → What to practise → **Second counts** — another crew's aisle comes back
+1. **Second counts to zero.** Dashboard → Second counts must show nothing open. (Practice this
+   first: Testing Suite → What to practice → **Second counts** — another crew's aisle comes back
    to your gun, and one bin is yours to raise by hand.) A count
    closed with open second counts has known-wrong numbers in it. You can raise more by hand
    (**Request second count** on a bin) or **Raise from all variances now**: it skips aisles
@@ -157,7 +157,7 @@ What the app guarantees, so you can rely on it:
 - **Counted again means signed again.** A second count that changes an approved pallet
   clears the approval and the line comes back. A variance a second count removes disappears.
 - **Every decision is in the log** with your name, the reason and the time: the answer to
-  *"who authorised writing off 400 cases"*.
+  *"who authorized writing off 400 cases"*.
 - **MISSING pallets join the list when the count is closed.** Plan the close so you are at
   the desk when it happens: that is usually the largest batch of the count.
 
@@ -239,7 +239,7 @@ A **closed** count still exports, for as long as it exists.
 
 ## 8 — Cycle counts and coverage
 
-If the site runs the cycle-count programme, the inventory controller reads it the same way,
+If the site runs the cycle-count program, the inventory controller reads it the same way,
 on the **Cycle counts** page (`/cycle`). That page is not in the *Inventory control* profile
 by default; ask for the *Coverage* tab at least, or the whole page.
 

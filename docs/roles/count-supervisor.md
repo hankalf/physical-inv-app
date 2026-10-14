@@ -30,11 +30,11 @@ control's.
    **inventory report** is what makes second counts and variances possible; **racking
    blocks** keep two teams off one rack.
 3. Walk the scanners: each one opened from its own link once, installed on the home screen,
-   charged, and the grey line on its sign-on screen saying it is up to date. A gun that
+   charged, and the gray line on its sign-on screen saying it is up to date. A gun that
    says *Offline and no list cached for this session* has never downloaded this count:
    carry it into Wi-Fi and sign on once.
 4. Spend twenty minutes on the **Testing Suite** with anyone new: it is the real gun on a
-   practice count, with a sheet of things to try. *What to practise* also sets up a cycle
+   practice count, with a sheet of things to try. *What to practice* also sets up a cycle
    count, a pallet move and a Not in Location run.
 5. Print the **count sheet** for one aisle (Dashboard → Reports) and keep it in the office: it
    is the fallback if a scanner dies.
@@ -86,7 +86,7 @@ Refresh is automatic; the panes you have open refresh every few seconds.
   plan at the first hour and the half-way mark; the load test puts twenty teams through
   twenty thousand bins in six hours, so a shift well below that is a floor problem, not an
   app problem.
-- **Map**: each aisle coloured as it is counted. Click an aisle for its bins. A map that is a
+- **Map**: each aisle colored as it is counted. Click an aisle for its bins. A map that is a
   schematic rather than the site drawing means no drawing on this count; ask the admin.
 - **Team plan**: where each team is, how long since its last scan, which aisles it has
   queued and handed back. **Reassign** moves an aisle; **Hand back** frees one a team has
@@ -108,7 +108,7 @@ dealt with, with the outcome. With a Teams channel set the same card lands in Te
 one the Dashboard and the board are the whole alarm.
 
 A counter who says they pressed SOS and nothing happened had no signal: the gun told them
-*No signal — this has NOT been sent* and sends it the moment it has signal. Ten metres
+*No signal — this has NOT been sent* and sends it the moment it has signal. Ten meters
 usually fixes it.
 
 **Stopped scanning.** A team with no line for longer than the limit raises an alert. A dead
@@ -175,7 +175,7 @@ supervisor. Do not create the next count on top of this one; a closed count stay
 
 | What you see | What it means | What to do |
 |---|---|---|
-| Gun: *this scanner is no longer authorised* | Its link was reset or it was removed | The admin resets its link under Settings → Scanners; open the new link on it |
+| Gun: *this scanner is no longer authorized* | Its link was reset or it was removed | The admin resets its link under Settings → Scanners; open the new link on it |
 | Gun: *Offline and no list cached for this session* | Never downloaded this count | Into Wi-Fi once, sign on again |
 | Gun shows OFFLINE with a number | Lines queued in a dead spot | Nothing. They upload with signal. Never wipe or reinstall |
 | Gun: *Team N is counting aisle X* | That racking block is held | Wait, or have the other team hand back |

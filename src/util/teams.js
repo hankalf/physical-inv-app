@@ -36,7 +36,7 @@ export function teamsConfig() {
     tellWhenClosed: saved.tellWhenClosed !== false,
     /* The address is a key: anybody who has it can post into that channel, and
        what makes it a key is the signature at the end. The page is shown enough
-       to recognise which channel it is - the host - and nothing that would let
+       to recognize which channel it is - the host - and nothing that would let
        somebody else post. */
     masked: url ? `${originOf(url)}/…` : '',
     configured: !!url,

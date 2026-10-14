@@ -12,7 +12,7 @@ import { progress } from './reports.js';
 
 /**
  * The count a board should show by default. A wall-to-wall count is the thing
- * people stand and watch, so it wins over a cycle programme that runs all year.
+ * people stand and watch, so it wins over a cycle program that runs all year.
  */
 export function defaultBoardSession() {
   /* The Testing tab's practice count is never what the wall shows by itself;

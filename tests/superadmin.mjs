@@ -60,7 +60,7 @@ await boot(SA, async (log) => {
   check('Seeding it is recorded in the audit log',
     (await j(await fetch(`${BASE}/api/admin/audit?limit=20`, { headers: { authorization: 'Bearer ' + tok } })))
       .some((r) => r.action === 'created the superadmin account'), '');
-  check('The username is normalised the same as any other', (await asUser('robin', PW)).ok, 'lowercase works');
+  check('The username is normalized the same as any other', (await asUser('robin', PW)).ok, 'lowercase works');
 });
 
 /* ---- the one that matters: a restart must not undo a password change ---- */

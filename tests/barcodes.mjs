@@ -133,7 +133,7 @@ const oneAisle = await book(`session=${sess.id}&aisle=F02`);
 check('An aisle can be picked, so a trainer prints one rack rather than the warehouse',
   rowsOn(oneAisle).length === 1 && /BK-002/.test(oneAisle), String(rowsOn(oneAisle).length));
 const binsOnly = await book(`session=${sess.id}&kind=bins`);
-check('Bins can be printed on their own — an empty bay is worth practising too',
+check('Bins can be printed on their own — an empty bay is worth practicing too',
   rowsOn(binsOnly).length === 3 && codesOn(binsOnly).join(' ') === 'F01A001 F01A002 F02A001',
   codesOn(binsOnly).join(' '));
 check('...and those rows have nothing in the pallet or quantity columns',
@@ -148,7 +148,7 @@ const uploaded = await (await fetch(`${BASE}/api/admin/print/barcode-book`, { me
     { bin: 'TRAIN-A2', pallet: '', qty: '' },
     { bin: '', pallet: '' },
   ] }) })).text();
-check('A sheet of codes that exist nowhere can be printed — that is the point of practising',
+check('A sheet of codes that exist nowhere can be printed — that is the point of practicing',
   rowsOn(uploaded).length === 2 && codesOn(uploaded).join(' ') === 'TRAIN-A1 TRAIN-P1 TRAIN-A2',
   codesOn(uploaded).join(' '));
 check('...an empty row is dropped rather than printed blank', !/TRAIN-A3/.test(uploaded) && rowsOn(uploaded).length === 2);
@@ -181,7 +181,7 @@ check('...and it is a workbook, not a renamed CSV', bytes.subarray(0, 2).toStrin
 /* Upload a CSV of codes and check the printable page that opens carries them. */
 await page.setInputFiles('#fBookFile', {
   name: 'my-codes.csv', mimeType: 'text/csv',
-  buffer: Buffer.from('Bin,Pallet,Qty,Note\nPRACTICE-A1,PRACTICE-P1,25,a line to practise on\n'),
+  buffer: Buffer.from('Bin,Pallet,Qty,Note\nPRACTICE-A1,PRACTICE-P1,25,a line to practice on\n'),
 });
 const [printed] = await Promise.all([
   page.context().waitForEvent('page', { timeout: 20000 }),

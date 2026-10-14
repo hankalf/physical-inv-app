@@ -99,7 +99,7 @@ check('Gun: a cycle count asks for a clock-in number only - no team box', await 
 await gun.fill('#fEmployee', 'E7001'); await gun.press('#fEmployee', 'Enter');
 await gun.click('#btnStart'); await gun.waitForSelector('#scrAssign.active', { timeout: 90000 });
 check('Gun: the person signs on as themselves', /E7001/.test(await gun.textContent('#chipDevice')) && !/T7/.test(await gun.textContent('#chipDevice')), await gun.textContent('#chipDevice'));
-/* a second person on the same programme at the same time */
+/* a second person on the same program at the same time */
 {
   const d2 = await j(await fetch(`${BASE}/api/admin/devices`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'CYC-02' }) }));
   const t2 = (await j(await fetch(`${BASE}/api/devices/${d2.uid}`, { method: 'POST' }))).token;

@@ -269,7 +269,7 @@
       msg($('uploadMsg'), stats.unknownEquipment.length ? 'warn' : 'ok',
         `Imported ${stats.imported} of ${stats.rows} rows from ${file.name}`,
         (stats.skipped ? `${stats.skipped} row(s) had no badge. ` : '') +
-        (stats.unknownEquipment.length ? `Equipment not recognised, so ignored: ${stats.unknownEquipment.join(', ')}. Add it under the level rules if it should count.` : ''));
+        (stats.unknownEquipment.length ? `Equipment not recognized, so ignored: ${stats.unknownEquipment.join(', ')}. Add it under the level rules if it should count.` : ''));
       $('fFile').value = '';
       await refresh();
     } catch (err) { msg($('uploadMsg'), 'err', 'Upload failed', err.message); }

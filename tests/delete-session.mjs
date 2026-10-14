@@ -111,7 +111,7 @@ await page.reload(); await page.waitForSelector('#scrMain.active'); await expand
 await page.selectOption('#fSessionPick', String(ui.id)); await page.waitForTimeout(2000);
 check('Settings: once closed, delete is live', !(await page.$eval('#btnDeleteSession', (b) => b.disabled)));
 
-// it warns, asks for the name, and a cancelled prompt leaves it alone
+// it warns, asks for the name, and a canceled prompt leaves it alone
 let asked = '';
 let cancelTheName = true;
 page.on('dialog', async (d) => {
@@ -120,7 +120,7 @@ page.on('dialog', async (d) => {
   else await d.accept('delete me from the page');
 });
 await page.click('#btnDeleteSession'); await page.waitForTimeout(1500);
-check('Settings: cancelling the name prompt leaves the count alone', await exists(ui.id));
+check('Settings: canceling the name prompt leaves the count alone', await exists(ui.id));
 check('Settings: it says exactly what will go before it asks',
   /counted lines/.test(asked) && /cannot be undone/.test(asked), clean(asked).slice(0, 120));
 

@@ -164,7 +164,7 @@ check('...and the device now shows them as sent', (await localLines(gun)).every(
 
 /* ---------------- 4. a connection that drops mid-send ---------------- */
 /* The gun re-sends anything it has not had an answer for. Every line carries an
-   id the device made up, so the second copy is recognised and dropped. */
+   id the device made up, so the second copy is recognized and dropped. */
 /* A second scanner for this one: enrolling a device issues it a new token and
    retires the old, so borrowing the gun's link here would sign the gun out from
    under the rest of the suite - which is the app behaving correctly. */

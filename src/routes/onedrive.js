@@ -141,7 +141,7 @@ export async function startSignIn(by = '') {
 
 function waitForSignIn(p) {
   const tick = async () => {
-    if (pending !== p) return;                          // started again, or cancelled
+    if (pending !== p) return;                          // started again, or canceled
     if (Date.now() > p.expiresAt) { pending = null; patch({ signInError: explain('expired_token') }); return; }
     const c = load();
     let b = {};

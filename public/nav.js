@@ -41,9 +41,9 @@
   if (EMBED) document.documentElement.classList.add('embed');
 
   /* ------------------------------------------------------------- themes
-     Kept in this browser, applied before the page draws. Every colour in the
+     Kept in this browser, applied before the page draws. Every color in the
      stylesheet is a token, so a theme is a set of tokens on <html>. */
-  const THEMES = [['midnight', 'Midnight (dark blue)'], ['graphite', 'Graphite (dark grey)'], ['daylight', 'Daylight (light)'], ['frost', 'Frost (light, cool)']];
+  const THEMES = [['midnight', 'Midnight (dark blue)'], ['graphite', 'Graphite (dark gray)'], ['daylight', 'Daylight (light)'], ['frost', 'Frost (light, cool)']];
   const ACCENTS = ['blue', 'teal', 'green', 'amber', 'orange', 'coral', 'berry', 'violet', 'slate'];
   /* The rest of the look: each is a data attribute on <html> the stylesheet
      answers to, kept in this browser like the theme. The first value is the
@@ -197,7 +197,7 @@
       td.textContent = text ?? '';
       return td;
     },
-    /** A coloured tag: the class names its colour, the words default to the class. */
+    /** A colored tag: the class names its color, the words default to the class. */
     tag(text, label) {
       const s = document.createElement('span');
       s.className = 'tag ' + text;
@@ -859,7 +859,7 @@
     ['Find a lot', '/admin', 'reports', 'lot batch recall find trace expiry'],
     ['Labels to replace', '/admin', 'reports', 'label barcode unreadable relabel print rack tag damaged'],
     ['Printable count sheets', '/admin', 'reports', 'print paper count sheet blind auditor pen'],
-    ['Cycle count programme', '/cycle', '', 'cycle batch schedule daily weekly oldest coverage programme'],
+    ['Cycle count program', '/cycle', '', 'cycle batch schedule daily weekly oldest coverage program'],
     ['Crew list and equipment', '/teams', 'crew', 'crew employee badge clock in number people roster equipment forklift scissor reach'],
     ['Teams and who is on them', '/teams', 'teams', 'team member crew drag assign people'],
     ['Level rules for equipment', '/teams', 'rules', 'level rules reach equipment which levels forklift high reach'],
@@ -868,7 +868,7 @@
     ['Scanner screen layout', '/settings', 'gun', 'scanner screen questions order keyboard text size upright portrait update comments countdown gun handheld'],
     ['Supervisor logins', '/settings', 'advanced', 'login user password account supervisor admin access advanced'],
     ['Microsoft Teams channel', '/settings', 'erp', 'teams channel webhook alerts sos notify card integrations'],
-    ['Appearance: theme, accent, text size, density', '/settings', 'advanced', 'theme dark light colour color accent look appearance text size density compact corners sidebar contrast advanced'],
+    ['Appearance: theme, accent, text size, density', '/settings', 'advanced', 'theme dark light color color accent look appearance text size density compact corners sidebar contrast advanced'],
     ['Pallet system address (move desk)', '/settings', 'erp', 'pallet system url address frame move desk erp wms link integrations'],
     ['Site name and location', '/settings', 'advanced', 'site name location place rename title company brand header sidebar advanced'],
     ['Site logo', '/settings', 'advanced', 'logo brand image picture upload company header scanner advanced'],

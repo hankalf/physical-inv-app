@@ -36,7 +36,7 @@ check('Uploading the bin list ticks that step off, with the real numbers',
 check('...and it is no longer blocking', !st.blocking.includes('bins'), st.blocking.join(', '));
 
 /* ---------------- a cycle count needs different things ---------------- */
-const cyc = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'cycle programme', mode: 'cycle' }) }));
+const cyc = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'cycle program', mode: 'cycle' }) }));
 const cst = await j(await fetch(`${BASE}/api/admin/sessions/${cyc.id}/setup`, { headers: A }));
 check('A cycle count gets its own steps — a batch, no aisle plan',
   cst.steps.map((x) => x.key).join(',') === 'bins,pallets,scanners,batch', cst.steps.map((x) => x.key).join(','));

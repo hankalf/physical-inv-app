@@ -18,7 +18,7 @@ await fetch(`${BASE}/api/admin/sessions/${full.id}/master?kind=bins`, { method: 
 await fetch(`${BASE}/api/admin/sessions/${full.id}/master?kind=pallets`, { method: 'POST', headers: csv, body: readFileSync(`${S}fixtures/pallets.csv`, 'utf8') });
 await fetch(`${BASE}/api/admin/sessions/${full.id}/settings`, { method: 'POST', headers: A, body: JSON.stringify({ guided: true, askComments: false }) });
 await fetch(`${BASE}/api/admin/sessions/${full.id}/assignments`, { method: 'POST', headers: A, body: JSON.stringify({ team: '1', aisles: 'F01', levels: 'A', force: true }) });
-const cyc = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'the cycle programme', mode: 'cycle' }) }));
+const cyc = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'the cycle program', mode: 'cycle' }) }));
 const dev = await j(await fetch(`${BASE}/api/admin/devices`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'GUIDE-01' }) }));
 
 /* ---------------- which count a gun lands on ---------------- */

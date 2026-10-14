@@ -5,7 +5,7 @@
 This is the working manual. It assumes you have never opened the app before and takes
 you from an empty deployment through to a finished count sent to the ERP. Read Part 1
 and Part 2 once, when the app is first set up. Parts 3 to 5 are what you do for every
-count. Part 6 is the cycle-count programme, Part 7 is what to do when something goes
+count. Part 6 is the cycle-count program, Part 7 is what to do when something goes
 wrong.
 
 > **About the screenshots.** Every picture below is the real application, photographed
@@ -25,7 +25,7 @@ wrong.
 - [Part 3 — Setting up a count](#part-3--setting-up-a-count)
 - [Part 4 — Counting day](#part-4--counting-day)
 - [Part 5 — Finishing a count](#part-5--finishing-a-count)
-- [Part 6 — The cycle-count programme](#part-6--the-cycle-count-programme)
+- [Part 6 — The cycle-count program](#part-6--the-cycle-count-program)
 - [Part 7 — When something goes wrong](#part-7--when-something-goes-wrong)
 - [Part 8 — Capacity: what the system will take](#part-8--capacity-what-the-system-will-take)
 - [Appendix A — File column reference](#appendix-a--file-column-reference)
@@ -45,7 +45,7 @@ on a PC.
 | **Full Counts** | `/full` | Every wall-to-wall on the site: open and closed, how far each got, which one the scanners land on; start a new one; what a count still needs | Supervisor login (the Dashboard's access) |
 | **Settings** | `/settings` | Whoever sets the count up | Supervisor login |
 | **Office board** | `/board` | Anyone — put it on the office TV | **None.** Read-only |
-| **Cycle counts** | `/cycle` | Whoever runs the daily programme | Supervisor login |
+| **Cycle counts** | `/cycle` | Whoever runs the daily program | Supervisor login |
 | **User guide** | `/guide` | Anyone with a login — new starters first | Supervisor login, any access |
 
 ![](images/sign-in.png)
@@ -58,7 +58,7 @@ app compares the two, tells you where they disagree, sends people back to look a
 where it matters, and produces an adjustment file for the ERP.
 
 **What a "count session" is.** One count — a wall-to-wall in October, a spot check of
-the freezer, the year's cycle-count programme. Everything (bin list, inventory report,
+the freezer, the year's cycle-count program. Everything (bin list, inventory report,
 team assignments, every scanned line) belongs to a session. You can have several open
 at once; scanners choose which one they are working on at sign-on.
 
@@ -216,7 +216,7 @@ crew, Testing Suite) and what they **can also** do (approve adjustments, message
 answer an SOS, queue aisles and raise second counts, downloads and printouts). A new login
 may use everything a supervisor can until you untick something; a tick takes effect on
 their very next click, with no sign-out needed. The sidebar shows them only the pages on
-their list, and the buttons they may not press are greyed out and say why. **Settings** —
+their list, and the buttons they may not press are grayed out and say why. **Settings** —
 every section of it — is for admins only, whatever the list says; supervisors change their
 own password from **Change my password** at the foot of the sidebar.
 
@@ -249,7 +249,7 @@ on the office pages and the scanners — and back on when the time comes.
    Map, Adjustments and Reports go: from the sidebar, the dashboard tabs, the search box and the
    scanners' sign-on screen, for every login, admins included. The **Alerts** tab stays, because
    an SOS from the floor needs an answer, and so does the **Testing Suite**, because that is where
-   the count is practised; untick either in the list if it should go too.
+   the count is practiced; untick either in the list if it should go too.
 2. Or tick the parts one by one and press **Save**.
 3. **Everything on** brings it all back, exactly as it was.
 
@@ -265,7 +265,7 @@ What it is and is not:
 - **A bookmark** to a hidden page says *"Cycle counts is switched off"* with the way back for an
   admin, rather than wandering somewhere else without a word.
 - **The scanners** stop offering the job of a part that is off — Cycle count, Front2Back, Not in
-  Location — whatever is ticked under Settings → Scanners → Jobs; those ticks are kept (greyed,
+  Location — whatever is ticked under Settings → Scanners → Jobs; those ticks are kept (grayed,
   with a note saying why) for when the part comes back. The practice gun and the Testing Suite's
   other jobs follow the same switches.
 - **When it takes effect:** a page already open sees the change when it next loads; a scanner the
@@ -393,7 +393,7 @@ the change up the next time they are online. The practice gun in the Testing Sui
 
 *Settings &rarr; Scanners &rarr; What the scanners offer: the full count alone ticked, for count day.*
 
-### Step 8a — A barcode test book, to practise on
+### Step 8a — A barcode test book, to practice on
 
 **Settings → Scanners → Barcode test book.** A page of real **Code 128** labels to print, cut up
 and scan — the same symbology the racking uses, so a gun that reads the book reads the rack.
@@ -410,7 +410,7 @@ Two ways to fill it:
 - **From this count** — **Pallets, with their bin and quantity** gives a full practice line per row,
   straight from the uploaded lists, so what you scan off the paper is what the gun expects.
   **Bins on their own** prints rack labels with the other two columns empty, which is what you want
-  for practising empty bays. Narrow it to one aisle, and say how many rows.
+  for practicing empty bays. Narrow it to one aisle, and say how many rows.
 - **From a spreadsheet** — **↓ Excel template** downloads a workbook with four columns:
 
 | Column | What goes in it |
@@ -421,15 +421,15 @@ Two ways to fill it:
 | **Note** | A small line under the pallet — the item, or what the row is for |
 
 Fill it in, upload it back, and the book opens ready to print. The codes need not exist in any
-count — that is the point of practising.
+count — that is the point of practicing.
 
 > **Print at 100%.** “Fit to page” shrinks the bars and a scanner will refuse them. Plain white
-> paper only: glossy or coloured stock scatters the beam.
+> paper only: glossy or colored stock scatters the beam.
 
 ![](images/settings-barcode-book.png)
 
 *The test book card: a practice line per row from the count itself, or from a spreadsheet of
-whatever you want to practise on.*
+whatever you want to practice on.*
 
 ### Step 8b — The SOS list, and the Teams channel
 
@@ -514,7 +514,7 @@ to see it all from the supervisor's side: progress, the pallet report, the SOS b
   marked **PRACTICE**, so no page opens on it by mistake.
 - **It is yours.** Each login has its own practice count and its own test scanner (**TEST-** and
   their name, under Scanners), kept from one sign-in to the next. Nobody else sees it, two people
-  practising at once never touch each other's, and a **new user** opens the tab to a fresh one.
+  practicing at once never touch each other's, and a **new user** opens the tab to a fresh one.
   The test gun keeps its own storage in the browser, separate from a real scanner's and from
   anyone else's.
 
@@ -546,7 +546,7 @@ it needs (*✓ 25 of 25 pallets have a lot code*) and, when it does not, what to
 — when it started, how many of the twelve things you tried, how much you counted — so you can
 see your own progress. The last ten are kept. Nothing on a real count is touched.
 
-**Practise — pick the job.** The first card after *Before you start* lists the jobs a scanner does,
+**Practice — pick the job.** The first card after *Before you start* lists the jobs a scanner does,
 and the page follows the one picked: the full count keeps its sheet and sign-on chips; the others
 bring their own pane in their place, and *Things to try* lists only that job's. Each is set up on
 your practice the first time you pick it — and only the jobs your login may do for real are offered
@@ -570,7 +570,7 @@ never reach the real Not in Location page or a scanner on the floor. **Start ove
 
 ![](images/testing-modes.png)
 
-*Practise, as inventory control sees it: the full count and its second counts, and a line saying which jobs are not on this login.*
+*Practice, as inventory control sees it: the full count and its second counts, and a line saying which jobs are not on this login.*
 
 ![](images/testing-second-counts.png)
 
@@ -729,7 +729,7 @@ cycle count in the picker at the top of any page, and a cycle-counter login sees
 
 **Settings → Count setup → Count session → Start a new count.**
 
-1. **Name** it something you will recognise later: `Q3 2026 wall-to-wall`.
+1. **Name** it something you will recognize later: `Q3 2026 wall-to-wall`.
 2. **Type**:
    - **Full count** — teams work whole aisles. This is a wall-to-wall.
    - **Cycle count** — a batch of bins per day or week; see Part 6.
@@ -944,7 +944,7 @@ many lines are still queued.
 
 | | | |
 |:--:|:--:|:--:|
-| ![](images/gun-your-aisle.png)<br>**After sign-on** — the aisle this team has been given, what is queued behind it, and any second counts waiting | ![](images/gun-step-pallet-mid.png)<br>**Question 1** — *Next bin* tells the team which bin comes next in the aisle, so nothing gets skipped | ![](images/gun-pallet-scanned.png)<br>**Question 2** — the pallet is recognised; the gun does not say what is on it, so the count is blind |
+| ![](images/gun-your-aisle.png)<br>**After sign-on** — the aisle this team has been given, what is queued behind it, and any second counts waiting | ![](images/gun-step-pallet-mid.png)<br>**Question 1** — *Next bin* tells the team which bin comes next in the aisle, so nothing gets skipped | ![](images/gun-pallet-scanned.png)<br>**Question 2** — the pallet is recognized; the gun does not say what is on it, so the count is blind |
 | ![](images/gun-step-lot.png)<br>**Questions 3 and 4** — only on counts that ask for them. A lot that disagrees with the report is called out here, not a week later in a report | ![](images/gun-step-bin.png)<br>**The last required question** — the gun says where that bin is and which face it is on | ![](images/gun-step-comments.png)<br>**Comments** — tap a reason rather than type one. Left alone, the gun counts down and moves to the next bin by itself |
 
 **A bin with more than one pallet in it**
@@ -1217,8 +1217,8 @@ seconds, fetching only the tab on screen (plus the progress figures and the aler
 light), so three dashboards left open on a big count do not keep rebuilding the pallet report.
 
 > **How it looks** is up to you: **Settings → Logins & site → Appearance** offers four themes —
-> *Midnight* (dark blue), *Graphite* (dark grey), *Daylight* and *Frost* (light) — nine accent
-> colours, the text size, how tightly the tables sit, the corners, the sidebar's width and the
+> *Midnight* (dark blue), *Graphite* (dark gray), *Daylight* and *Frost* (light) — nine accent
+> colors, the text size, how tightly the tables sit, the corners, the sidebar's width and the
 > strength of the lines. It is kept per computer, so the office TV can be dark and a desk can be
 > light. The same tab holds the **site name**: what the app calls itself (*Full Harvest Inventory*
 > out of the box) and the location under it (*Front Royal*). Change either and it lands at once on
@@ -1343,7 +1343,7 @@ it and the adjustment waiting to be signed — without opening any of those thre
 
 Put `/board` on the office TV. It needs no sign-in and is read-only: the percentage
 counted, bins with a count, aisles handed back as complete, a row per team with what they
-are on, and every aisle as a tile coloured by state. It deliberately shows no pallet IDs
+are on, and every aisle as a tile colored by state. It deliberately shows no pallet IDs
 and no clock-in numbers.
 
 It follows the newest open count on its own. To pin it to a particular one, add the
@@ -1366,7 +1366,7 @@ one team, or all of them, with a read receipt — use **Message the floor** unde
 
 ![](images/office-board.png)
 
-*The office board, for the TV: percentage counted, aisles complete, every team, and every aisle coloured by state.*
+*The office board, for the TV: percentage counted, aisles complete, every team, and every aisle colored by state.*
 
 ---
 
@@ -1392,7 +1392,7 @@ supervisor.
 Work these down before you close the count. A count closed with open second counts is a
 count with known-wrong numbers in it.
 
-**Practise it first.** Testing Suite → What to practise → **Second counts** sets up another crew's
+**Practice it first.** Testing Suite → What to practice → **Second counts** sets up another crew's
 aisle on your practice count, four bins that come back to the gun and one to raise by hand from
 the dashboard, with the tips following each step (Step 8c).
 
@@ -1488,7 +1488,7 @@ What the feature is actually for:
   signed for is no longer the number.
 - **A variance a second count clears disappears.** There is nothing left to adjust.
 - **It is all in the log**: who approved what, with which reason, and when. That is the
-  answer to "who authorised writing off 400 cases of chicken".
+  answer to "who authorized writing off 400 cases of chicken".
 
 A pallet nobody has reached yet is not on this list while the count is running. Once the
 count is **closed**, a pallet the report expected and nobody found becomes an adjustment
@@ -1576,7 +1576,7 @@ kept — only a sign-in token that lets the app write to that account's files.
 
 ---
 
-## Part 6 — The cycle-count programme
+## Part 6 — The cycle-count program
 
 A cycle count is the same app with a different rhythm: instead of stopping the warehouse,
 a handful of bins are counted every day.
@@ -1585,7 +1585,7 @@ a handful of bins are counted every day.
    year — do not create a new one each week, or you lose the history of when each bin was
    last counted.
 2. Upload the bin list and the inventory report. If your ERP export has a
-   *last physical inventory date* column it is read automatically, and the programme
+   *last physical inventory date* column it is read automatically, and the program
    picks up where the ERP left off.
 3. Go to **`/cycle` → Today's bins**. Choose:
    - **how many bins** in the batch,
@@ -1606,7 +1606,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 
 5. Counters pick **Cycle count** at sign-on. A cycle count is one person with a gun, so the
    gun asks for **their clock-in number only — no team**. Several people can be on the same
-   programme at once: each signs on as themselves and takes their own bins; a bin one person
+   program at once: each signs on as themselves and takes their own bins; a bin one person
    has taken is not offered to the next. The dashboard shows each by clock-in number and name.
    They then work the list. Each bin is counted as it
    stands — it is *the* count for that bin, not a second opinion.
@@ -1617,7 +1617,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 
 ![](images/cycle-batches.png)
 
-*The batches that have been generated, and the programme's own bin list and inventory report.*
+*The batches that have been generated, and the program's own bin list and inventory report.*
 
 ---
 
@@ -1625,9 +1625,9 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 
 | What you see | What it means | What to do |
 |---|---|---|
-| Gun: *"this scanner is no longer authorised"* | Its link was reset or the scanner was removed | Settings → Scanners → **Reset link**, open the new link on the device |
+| Gun: *"this scanner is no longer authorized"* | Its link was reset or the scanner was removed | Settings → Scanners → **Reset link**, open the new link on the device |
 | A page is not in the sidebar, or a bookmark to it says *"… is switched off"* | An admin switched that part of the app off for the site (Step 4a) | Settings → Logins & site → **What is switched on**: tick it back, or **Everything on** |
-| The jobs under Settings → Scanners are greyed out | Their part of the app is switched off for the site; the ticks are kept | Switch the part back on under **What is switched on** if the scanners should offer it |
+| The jobs under Settings → Scanners are grayed out | Their part of the app is switched off for the site; the ticks are kept | Switch the part back on under **What is switched on** if the scanners should offer it |
 | Gun: *"Offline and no list cached for this session"* | The handheld has never downloaded this count | Carry it into Wi-Fi once and sign on again |
 | Gun says `OFFLINE` with lines queued | Normal in a dead spot | Nothing. They upload when it gets a signal. Do not wipe the device |
 | A scan does nothing | DataWedge is not sending a suffix | DataWedge → Basic data formatting → send **ENTER** (or TAB) |
@@ -1639,7 +1639,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | The note is not on the board | The board polls every 15 seconds by default, or the note is on a different count | Wait a few seconds; check the board is pinned to the same count (`/board?session=12`) |
 | A change you made does not appear on the scanners | The gun is still running the app it loaded before the change | Site settings (questions, reasons, text size) reach a running gun within about half a minute and need nothing. A new **version of the app** needs the page to reload: with **Update itself after a deploy** on it does that by itself between pallets, within a couple of minutes of somebody picking the gun up. To force it: tap the green **Update ready** bar, or close the app fully (not just the home button) and reopen it. Reinstalling is never necessary |
 | An SOS did not reach Teams | The channel address is wrong, expired, or Teams was down | The alert is still on the dashboard — the row says what Teams answered. Settings → Integrations → **Send a test card** to check the address. Microsoft is retiring the old *Incoming Webhook* connectors; if yours was one, make a **Workflows** one instead |
-| A counter says they pressed SOS and nothing happened | The gun had no signal | The gun tells them: *"No signal — this has NOT been sent."* It sends itself the moment there is signal. In a dead zone, walking ten metres usually fixes it |
+| A counter says they pressed SOS and nothing happened | The gun had no signal | The gun tells them: *"No signal — this has NOT been sent."* It sends itself the moment there is signal. In a dead zone, walking ten meters usually fixes it |
 | The printed barcodes will not scan | The page was printed “fit to page”, or on glossy paper | Print again at **100%** on plain white paper. If a gun still refuses them, print with **Per row: 1** — the bars are wider on a bigger label |
 | A code in the spreadsheet will not print | Code 128 carries plain ASCII only — an accented letter or a smart quote cannot be drawn | The book says which character it was; retype that code with plain letters and numbers |
 | The app still shows the old name somewhere | The name was changed under Settings → Logins & site → Site name | Supervisor pages change at once. A scanner picks it up when it is next online; the board on its next refresh. The name under a home-screen icon comes from the app's install and updates when the app is next reinstalled |
@@ -1655,7 +1655,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | You cannot find where something is set | The app has four pages and twenty-odd cards | Type what you would call it into the search box at the top of the sidebar — *"upload bin list"*, *"keyboard"*, *"approve"* — and the **Go to** hits take you straight there. **/** puts the cursor in it |
 | Not sure whether a gun has the latest version | — | The sign-on screen's bottom line reads *"App build a1b2c3d4e5f6 on the server — this scanner is up to date"*. Compare it across two guns, or against a fresh reload |
 | A gun keeps saying "update did not take" | It reloaded and is still on the old version — something between it and the server is serving stale files | Close the app fully and reopen it. If it persists, clear the site data for the app on that device (Android → Settings → Apps → the app → Storage), then open its link again |
-| The screen keeps rotating, or reads upside down | Auto-rotate is on, and a browser tab is never allowed to lock the orientation | The app turns itself back upright on its own, sideways or end over end. If it is not, check **Keep it upright** is ticked under Settings → Scanners, then read the grey line at the bottom of the sign-on screen — it says the screen size the handheld gave the app, how far the device says it has turned, and what the app did about it. To stop the device turning at all, install the app (it asks for one way up) or turn auto-rotate off on the handheld |
+| The screen keeps rotating, or reads upside down | Auto-rotate is on, and a browser tab is never allowed to lock the orientation | The app turns itself back upright on its own, sideways or end over end. If it is not, check **Keep it upright** is ticked under Settings → Scanners, then read the gray line at the bottom of the sign-on screen — it says the screen size the handheld gave the app, how far the device says it has turned, and what the app did about it. To stop the device turning at all, install the app (it asks for one way up) or turn auto-rotate off on the handheld |
 | A team says they never got a message | Look at **Read by** on the dashboard | It shows which scanners have tapped Got it. A scanner that is offline gets it on its next sync |
 | A scan seems to land on a button instead of the box | Something else took the focus | Nothing — the app puts the keystrokes in the box and carries on. Tell us if it still happens |
 | The guide is a bin or two ahead of the team | The bins hold several pallets each | Fixed: the guide now stays on a bin until its tags are counted. Check **Show the next bin in the aisle** is on |
@@ -1700,7 +1700,7 @@ minutes — twenty-eight times real speed, every scanner posting a line every se
 the server still answered: 20,000 bins in, a count line at 8 ms typical and 536 ms at the
 95th percentile, dashboards at 150 ms typical. (`node tests/run-all.mjs load-15-teams` keeps the
 older fifteen-team burst test in the suite: thirty scanners posting flat out, nothing lost, nothing
-doubled, the racking-block rule honoured.)
+doubled, the racking-block rule honored.)
 
 **What the simulation found and fixed.** On a count this size the pallet report took six seconds
 to build, and the adjustments list, its summary and *Export everything* twelve to eighteen; the
@@ -1717,7 +1717,7 @@ small fraction of what the rehearsal threw at it.
 
 Files may be CSV, TSV or Excel (`.xlsx`/`.xlsm`). Column names are matched loosely —
 case, spaces and punctuation are ignored — so most ERP exports load unchanged. Each
-upload card shows exactly which columns it recognised.
+upload card shows exactly which columns it recognized.
 
 **Bin list** — the only required column is the location.
 

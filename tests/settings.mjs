@@ -23,7 +23,7 @@ check('Who am I needs a sign-in', (await fetch(`${BASE}/api/admin/me`)).status =
 
 /* ---------------- creating accounts ---------------- */
 const dana = await j(await fetch(`${BASE}/api/admin/users`, { method: 'POST', headers: A, body: JSON.stringify({ username: 'dana', name: 'Dana Whitfield', password: 'freezer-2026', role: 'admin' }) }));
-check('An account is created, and the username is normalised', dana.username === 'DANA' && dana.role === 'admin' && dana.active === true, JSON.stringify(dana));
+check('An account is created, and the username is normalized', dana.username === 'DANA' && dana.role === 'admin' && dana.active === true, JSON.stringify(dana));
 const sam = await j(await fetch(`${BASE}/api/admin/users`, { method: 'POST', headers: A, body: JSON.stringify({ username: 'SAM', name: 'Sam Ortiz', password: 'dock-truck-9' }) }));
 check('An account defaults to supervisor, not admin', sam.role === 'supervisor', sam.role);
 check('No password comes back from the server, ever', !('password' in dana) && !('password_hash' in dana), Object.keys(dana).join(','));

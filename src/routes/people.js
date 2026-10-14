@@ -98,7 +98,7 @@ export function reachOf(equipmentList, cfg = getConfig()) {
  * The smallest set of extra equipment that would put all of `levels` in reach.
  * Answering per level and merging would over-state it: level C can be had two
  * ways, so "dock truck AND high reach" reads as if both were needed when either
- * would do. Brute force over the catalogue - there are only ever a handful.
+ * would do. Brute force over the catalog - there are only ever a handful.
  */
 export function missingForLevels(levels, equipmentList, cfg = getConfig()) {
   const have = (equipmentList || []).map(norm);

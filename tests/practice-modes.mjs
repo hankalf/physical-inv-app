@@ -4,7 +4,7 @@
  * A scanner is not only used for the wall-to-wall count: there is the cycle
  * count a person does alone off a list, the front pallets to put back in the
  * empty bin behind them, and the Not in Location list it watches for as it
- * goes. Each can be practised on the same two aisles, set up only when asked
+ * goes. Each can be practiced on the same two aisles, set up only when asked
  * for, only for a login that may do that job for real - and none of it leaks:
  * the planted lost pallets never reach the real Not in Location page or a
  * floor gun, and a new run clears the lot.
@@ -55,12 +55,12 @@ const guns = await get('/api/sessions?practice=1', T);
 check('The practice gun is offered the cycle count and the pallets to move, as a floor gun would be',
   guns.some((s) => s.mode === 'cycle') && guns.some((s) => s.id === made.session.id && s.movesOpen === 3), JSON.stringify(guns.map((s) => [s.name, s.mode, s.movesOpen])));
 
-/* only a login that may do the job for real may practise it */
+/* only a login that may do the job for real may practice it */
 await fetch(`${BASE}/api/admin/users`, { method: 'POST', headers: A, body: JSON.stringify({ username: 'IVY-CHEN', name: 'Ivy Chen', password: 'cold-room-11', mustChange: false, profile: 'inventory' }) });
 const ivyTok = (await post('/api/admin/login', { username: 'IVY-CHEN', password: 'cold-room-11' }, hdr)).token;
 const I = { ...hdr, authorization: 'Bearer ' + ivyTok };
 const ivy = await post('/api/admin/practice', {}, I);
-check('Inventory control may not do cycle counts or moves for real, so is not offered them to practise', !ivy.modes.cycle.allowed && !ivy.modes.moves.allowed, JSON.stringify(ivy.modes));
+check('Inventory control may not do cycle counts or moves for real, so is not offered them to practice', !ivy.modes.cycle.allowed && !ivy.modes.moves.allowed, JSON.stringify(ivy.modes));
 const ivyTry = await fetch(`${BASE}/api/admin/practice/mode`, { method: 'POST', headers: I, body: JSON.stringify({ mode: 'cycle' }) });
 check('…and the server refuses the set-up outright', ivyTry.status === 403);
 
@@ -82,7 +82,7 @@ await wait(300);
 if (/Hide tips/.test(await page.textContent('#btnTips'))) await page.click('#btnTips');
 
 const modeBtn = (k) => page.locator(`#modeList button[data-mode="${k}"]`);
-check('"What to practise" lists the full count, its second counts and the three other jobs', (await page.$$('#modeList button')).length === 5 && await modeBtn('cycle').isVisible() && await modeBtn('second').isVisible());
+check('"What to practice" lists the full count, its second counts and the three other jobs', (await page.$$('#modeList button')).length === 5 && await modeBtn('cycle').isVisible() && await modeBtn('second').isVisible());
 check('…marking the ones already set up', await modeBtn('cycle').evaluate((b) => b.classList.contains('set')) && await modeBtn('moves').evaluate((b) => b.classList.contains('set')));
 check('…on the full count to begin with, so the sheet reads as before', await modeBtn('full').evaluate((b) => b.classList.contains('now')) && await page.isHidden('#modePane'));
 

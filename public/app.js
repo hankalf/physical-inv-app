@@ -92,7 +92,7 @@
      not synced a session yet. */
   const FALLBACK_PROMPTS = {
     comments: ['Damaged', 'Partial pallet', 'Mixed pallet', 'Label unreadable', 'Needs recount', 'Blocked / could not reach'],
-    overrides: ['Label unreadable', 'New receipt, not on the report', 'Relabelled', 'Hand-written ID', 'Supervisor said to count it'],
+    overrides: ['Label unreadable', 'New receipt, not on the report', 'Relabeled', 'Hand-written ID', 'Supervisor said to count it'],
     commentTimeout: 5,
   };
   const prompts = () => state.session?.prompts || FALLBACK_PROMPTS;
@@ -270,7 +270,7 @@
     el.appendChild(document.createTextNode('This scanner is not signed in'));
     const d = document.createElement('div');
     d.className = 'detail';
-    d.textContent = `${state.deviceRejected} Anything already counted is still saved on this scanner and will send once it is authorised again.`;
+    d.textContent = `${state.deviceRejected} Anything already counted is still saved on this scanner and will send once it is authorized again.`;
     el.appendChild(d);
   }
 
@@ -529,7 +529,7 @@
     $('btnModeFind').classList.toggle('selected', state.mode === 'missing');
 
     /* A cycle count is one person with a gun, not a crew: no team number, just
-       their own clock-in number. Several people can be on the same programme at
+       their own clock-in number. Several people can be on the same program at
        once - each signs on as themselves, and each takes their own bins. Moving
        and finding pallets are the same: a badge, no team. */
     const solo = state.mode === 'cycle' || state.mode === 'move' || state.mode === 'missing';
@@ -821,7 +821,7 @@
   }
 
   /**
-   * What the sign-on check found. A badge nobody recognises, somebody rostered
+   * What the sign-on check found. A badge nobody recognizes, somebody rostered
    * to another team, or a crew that cannot reach the levels they were given -
    * none of it stops the count, but the gun says so plainly.
    */
@@ -2050,7 +2050,7 @@
   }
 
   /* The name for a pallet nobody could read: its bin, and which one in that bin
-     it is, so two unlabelled pallets in the same rack do not collide. */
+     it is, so two unlabeled pallets in the same rack do not collide. */
   async function nameFromBin(bin) {
     const base = `NO-LABEL-${bin || 'BIN'}`;
     let n = 1;

@@ -119,7 +119,7 @@ sign-in covers all of them.
 | **Settings** (`/settings`) | Count setup · Lists & racking · Scanners · Integrations · Backups & log · Logins & site |
 | **Front bins** (`/front`) | Pallets to move back · Move desk · Front-placed bins. The gun has the same desk: Front2Back at sign-on with a badge alone, pick the aisle, the pallet and its two bins, the pallet system framed under them (plain, or through this app so its sign-in sticks), Moved — next |
 | **Not in Location** (`/missing`) | the list, and a find desk; on the gun, Not in Location at sign-on with a badge alone, the aisle it was last seen in, the pallet system framed under the strip, Found — next |
-| **Testing Suite** (`/testing`) | the real scanner on a practice count of your own. *Practise* picks the job and the page follows it — the full count, its second counts (another crew's aisle that comes back to the gun, and one to raise by hand), a cycle count, Front2Back, Not in Location — offering only what the login may do for real and saying why the rest is missing |
+| **Testing Suite** (`/testing`) | the real scanner on a practice count of your own. *Practice* picks the job and the page follows it — the full count, its second counts (another crew's aisle that comes back to the gun, and one to raise by hand), a cycle count, Front2Back, Not in Location — offering only what the login may do for real and saying why the rest is missing |
 | **Settings → Scanners → What the scanners offer** | one section, one Save: the jobs on the sign-on screen (tick the full count alone on count day), comments (ask / required / the wait / the one-tap reasons), the override reasons, the SOS list |
 | **Settings → Logins & site → What is switched on** | hide the parts of the app nobody needs yet, for every login and the scanners: *Full counts and second counts only* leaves the count, its second counts, the alerts and the Testing Suite; *Everything on* brings the rest back; or tick by part. Hidden, not forbidden — roles still apply, nothing is deleted, a bookmark to a hidden page says so |
 | **Settings → Logins & site → Site name** | the app's own name and the location under it, out of the box *Full Harvest Inventory · Front Royal*; a change lands on every page, the guns, the board and the installed app's manifest |
@@ -305,8 +305,8 @@ with the same message.
 
 ### 5. Put the map on the real floor plan — Dashboard
 
-The **Map** tab draws every bay as a cell coloured by how much of it has a
-count, and rings each aisle in the colour of its state — grey not started, purple queued
+The **Map** tab draws every bay as a cell colored by how much of it has a
+count, and rings each aisle in the color of its state — gray not started, purple queued
 to a team, blue a team is in it, amber part counted, green handed back as complete. Each
 ring carries a label in the gutter: the aisle code, its zone and how far along it is.
 
@@ -468,7 +468,7 @@ count, or the bins on their list in a cycle count — naming the machine they ar
 scans their own numbers in.
 
 **Assignment screen** (guided sessions): shows the team's aisle, a grid of its bins
-coloured as they get a count, and what comes next. **Aisle complete** hands the aisle
+colored as they get a count, and what comes next. **Aisle complete** hands the aisle
 back and pulls the next one.
 
 **Counting:** Pallet → Qty → Bin → Comments, then straight back to Pallet.
@@ -677,7 +677,7 @@ Treat a link like a key. **Reset link** issues a new one and kills the old token
 immediately; **Remove** stops the scanner entirely. Settings shows when each scanner
 signed in and flags a link used more than once — normal after a scanner is wiped, worth a
 look otherwise. A scanner that gets cut off mid-count says so plainly and keeps its queued
-lines until it is authorised again.
+lines until it is authorized again.
 
 `SCANNER_AUTH=off` disables this, for a closed network where anyone who can reach the
 server is already trusted. The app warns at startup when it is off.

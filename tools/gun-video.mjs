@@ -301,7 +301,7 @@ try {
   await beat(2600);
 
   /* ------------------------------------------------- 4. two labels, one pallet */
-  say('Two labels on one pallet', 'Re-labelled stock often carries both tags. The counter says so, scans the second one, '
+  say('Two labels on one pallet', 'Re-labeled stock often carries both tags. The counter says so, scans the second one, '
     + 'and it is recorded against the same pallet <b>with no quantity of its own</b> — so nobody counts it twice and '
     + 'nobody is sent back to look for a pallet that is right there.');
   await tap('#btnSameLabel');

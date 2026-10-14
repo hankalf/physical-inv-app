@@ -92,7 +92,7 @@ it first. Count the bin fully, then **Bin done — nothing more here**.
 - **Report a problem**: damage, a leak, unsafe racking, with a reason and a note.
 - **SOS — I need help**: equipment broke down, you need a supervisor, someone is hurt or
   trapped. Pick the reason. *Sent* means the office has it; the gun tells you when they
-  have seen it. *No signal — this has NOT been sent*: walk ten metres, it sends itself.
+  have seen it. *No signal — this has NOT been sent*: walk ten meters, it sends itself.
 
 ## 8 — The other jobs: cycle count, Front2Back, Not in Location
 
@@ -133,7 +133,7 @@ cradle.
 | The gun says | It means | Do |
 |---|---|---|
 | *Offline and no list cached for this session* | It has never downloaded this count | Into Wi-Fi once, sign on again |
-| *this scanner is no longer authorised* | Its link was reset | A supervisor opens its new link on it |
+| *this scanner is no longer authorized* | Its link was reset | A supervisor opens its new link on it |
 | *Add at least one clock in number* | Sign on with no badge | Scan a badge |
 | *Not signed on — see a supervisor* | Your clock-in number is not on the crew list | See a supervisor; they add you and you sign on again |
 | *Team N is counting aisle X* | Another team holds that racking | Wait, or ask |
@@ -141,6 +141,6 @@ cradle.
 | *EMPTY bin — scan its LOCATION* | Waiting for the rack label | Scan the bin, not a pallet |
 | *Bin done — nothing more here* | The bin is finished | Normal: the next bin comes up |
 | *F03-118 was on the Not in Location list — found!* | The office was looking for it | Count it as normal |
-| *No signal — this has NOT been sent* | Your SOS or line is waiting for signal | Walk ten metres |
+| *No signal — this has NOT been sent* | Your SOS or line is waiting for signal | Walk ten meters |
 | *No pallet system set yet* under a desk | The office has not set the system's address | Tell the office; the strip still shows the pallet and its bins |
 | anything else | — | Ask a supervisor, or paste it into the User guide's Ask box |

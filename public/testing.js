@@ -242,7 +242,7 @@
     { key: 'askExpiry', label: 'Ask for the best-before date', what: 'The gun adds an EXPIRY question, and flags a date that has already passed.' },
     { key: 'requireApproval', label: 'Adjustments need approval', what: 'Every difference from the report has to be approved, with a reason, before it can go to the ERP. See Dashboard → Adjustments.', more: 'approval' },
     { key: 'palletMode', label: 'Pallet ID check', what: 'Allow override (the default) asks YES / NO for a pallet not on the list. No overrides refuses it. Accept any ID does not check at all.', select: [['warn', 'Allow override'], ['strict', 'No overrides'], ['off', 'Accept any ID']] },
-    { key: 'autoRecount', label: 'Raise second counts automatically', what: 'Off here until you switch it on (real counts have it on): a pallet that disagrees with the report puts its bin on the second-count list for another team — the crew that made the first count is never offered the second. See it under Dashboard → Second counts; to do one on the gun, pick Second counts under What to practise.' },
+    { key: 'autoRecount', label: 'Raise second counts automatically', what: 'Off here until you switch it on (real counts have it on): a pallet that disagrees with the report puts its bin on the second-count list for another team — the crew that made the first count is never offered the second. See it under Dashboard → Second counts; to do one on the gun, pick Second counts under What to practice.' },
     { key: 'askComments', label: 'Comments step', what: 'On by default: the optional comments question at the end of each pallet.' },
   ];
 
@@ -365,7 +365,7 @@
   }
 
 
-  /* ------------------------------------------------- what to practise
+  /* ------------------------------------------------- what to practice
      The full count is the lesson; the other jobs a scanner does - a cycle
      count off a list, putting front pallets back, the Not in Location list -
      are each a button here. The first click sets the job up on this person's
@@ -413,7 +413,7 @@
     const byLogin = off.filter((x) => !m[x.key].switchedOff).map((x) => x.title);
     const bySite = off.filter((x) => m[x.key].switchedOff).map((x) => x.title);
     const note = [];
-    if (byLogin.length) note.push(`<b>Not on your login:</b> ${byLogin.join(', ')} — a login practises only what it may do for real; an admin can add it under Settings → Logins & site.`);
+    if (byLogin.length) note.push(`<b>Not on your login:</b> ${byLogin.join(', ')} — a login practices only what it may do for real; an admin can add it under Settings → Logins & site.`);
     if (bySite.length) note.push(`<b>Switched off for the site:</b> ${bySite.join(', ')} (Settings → Logins & site → What is switched on).`);
     $('modeNote').hidden = !note.length;
     $('modeNote').innerHTML = note.join('<br>');
@@ -430,7 +430,7 @@
   async function chooseMode(key) {
     clearMsg($('modeMsg'));
     if (key !== 'full' && !modeOn(key)) {
-      if (!data.modes.available) { msg($('modeMsg'), 'err', 'The other jobs are practised on the built-in test data.', 'Press “Back to the built-in test data” under Your own test pallets first.'); return; }
+      if (!data.modes.available) { msg($('modeMsg'), 'err', 'The other jobs are practiced on the built-in test data.', 'Press “Back to the built-in test data” under Your own test pallets first.'); return; }
       try {
         const next = await api.post('/api/admin/practice/mode', { mode: key });
         drawn = '';
@@ -920,8 +920,8 @@
         const lessonOpen = modeOn('second') && data.modes.second.open > 0;
         const f = (x.openSecondCounts > 0 && (o.autoRecount || lessonOpen) && feat('second', { target: $('dashCard'), step: 'Second counts',
             text: lessonOpen
-              ? 'Second counts are waiting on the gun — the ones under <b>What to practise → Second counts</b>. Finish this pallet, then <b>My aisle → Start second counts</b>.'
-              : 'A pallet you counted disagreed with the report, so the gun raised a <b>second count</b> — for another team: the crew that made the first count is never offered the second. See it in the dashboard at the top under <b>Second counts</b>; to do one on the gun, pick <b>Second counts</b> under What to practise.' }))
+              ? 'Second counts are waiting on the gun — the ones under <b>What to practice → Second counts</b>. Finish this pallet, then <b>My aisle → Start second counts</b>.'
+              : 'A pallet you counted disagreed with the report, so the gun raised a <b>second count</b> — for another team: the crew that made the first count is never offered the second. See it in the dashboard at the top under <b>Second counts</b>; to do one on the gun, pick <b>Second counts</b> under What to practice.' }))
           || (x.pendingApprovals > 0 && api.can('approve') && feat('approve', { target: $('dashCard'), step: 'Approvals are on',
             text: 'A difference is waiting to be signed for. In the dashboard at the top, open <b>Adjustments</b>: approve it with a reason, or reject it.' }))
           || (o.palletMode === 'strict' && feat('strict', { target: $('fWedge'), step: 'No overrides is on',
@@ -1048,7 +1048,7 @@
   const shownFeat = new Set();     // a feature's tip has had its say once the person moves on
   /* A pallet whose bin was just scanned is counted as far as the tips are
      concerned, straight away - the server and the sheet catch up a moment
-     later. The memory is short, so a cancelled scan cannot hide a row for long. */
+     later. The memory is short, so a canceled scan cannot hide a row for long. */
   const walked = new Map();        // pallet -> when to forget it
   const awaiting = new Map();      // pallet -> when its bin was scanned, until the server shows it counted
   function renderSync() {
@@ -1246,7 +1246,7 @@
 
   /* The suite follows the login's access: no dashboard means no office side
      here (and no step for it), no exports means no export buttons, and a
-     feature they may not use for real is not offered to practise. */
+     feature they may not use for real is not offered to practice. */
   function applyAccess() {
     const dash = api.can('dashboard');
     $('dashCard').hidden = !dash;

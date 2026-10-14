@@ -1,6 +1,6 @@
 # SOP — Warehouse Jobs
 
-**Role:** Warehouse jobs (front bins, moves, Not in Location, the cycle programme)  **Login profile:** *Warehouse jobs — front bins, Not in Location, cycle counts*  **Pages:** Front bins, Not in Location, Cycle counts, Testing Suite, User guide  **Functions:** Downloads and printouts
+**Role:** Warehouse jobs (front bins, moves, Not in Location, the cycle program)  **Login profile:** *Warehouse jobs — front bins, Not in Location, cycle counts*  **Pages:** Front bins, Not in Location, Cycle counts, Testing Suite, User guide  **Functions:** Downloads and printouts
 
 This procedure is for the day-to-day warehouse jobs the app carries between the big counts:
 putting front pallets back where they belong, finding the pallets the system has lost, and
@@ -14,7 +14,7 @@ scanner. The physical count itself is the count supervisor's and inventory contr
 - [3 — Moving pallets: the desk, on the page and on the gun](#3--moving-pallets-the-desk-on-the-page-and-on-the-gun)
 - [4 — Not in Location: the list](#4--not-in-location-the-list)
 - [5 — Finding pallets: the desk, on the page and on the gun](#5--finding-pallets-the-desk-on-the-page-and-on-the-gun)
-- [6 — The cycle programme, day to day](#6--the-cycle-programme-day-to-day)
+- [6 — The cycle program, day to day](#6--the-cycle-program-day-to-day)
 - [7 — The pallet system under the desks](#7--the-pallet-system-under-the-desks)
 - [8 — When something goes wrong](#8--when-something-goes-wrong)
 
@@ -108,7 +108,7 @@ on it:
    is booked into is in the pallet system. **›** leaves one; **Aisles** goes back.
 4. A find with no signal is kept on the gun and sent with the next signal.
 
-## 6 — The cycle programme, day to day
+## 6 — The cycle program, day to day
 
 **Cycle counts** runs on one session for the year. Each day:
 
