@@ -50,6 +50,10 @@ control's.
 - **Teams**: a number, a shift (1 or 2; *day*, *am*, *first* read as 1, *night*, *pm*,
   *second* as 2) and the people on it. Two people with one gun is the usual team; a team of
   one is fine.
+- **The team sheet**: upload the sheet you already keep — *Team #, Department, Employee,
+  Equipment*, a row per seat. *S1-DS01* reads as 1st shift, dock stocker, truck 01. Names on the
+  crew list go on the team; a blank name is an open seat (Production, on the day) and its machine
+  still counts toward the team's reach. Names not on the crew list yet are marked on the card.
 - **Equipment rules** (the other tab): which levels need which equipment. A team without a
   reach truck is not given levels D to F; the rules are enforced when aisles are queued.
 

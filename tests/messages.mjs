@@ -98,7 +98,7 @@ check('Gun: and the cursor is already in the clock-in box, so a badge scan lands
   await gun.evaluate(() => (document.activeElement || {}).id || 'nothing'));
 await gun.click('#btnSignonKeyboard'); await gun.waitForTimeout(300);
 check('Gun: whoever has to type says so first, and then gets one',
-  (await gun.$eval('#fEmployee', (f) => f.inputMode)) === 'text' && (await gun.$eval('#fTeam', (f) => f.inputMode)) === 'numeric');
+  (await gun.$eval('#fEmployee', (f) => f.inputMode)) === 'text' && (await gun.$eval('#fTeam', (f) => f.inputMode)) === 'text');
 await gun.click('#btnSignonKeyboard'); await gun.waitForTimeout(300);
 check('Gun: and can put it away again', (await gun.$eval('#fEmployee', (f) => f.inputMode)) === 'none');
 

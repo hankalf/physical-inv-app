@@ -917,8 +917,44 @@ Teams & crew (a team with nobody on it is given every level), and the **shift**.
 
 *Teams &amp; crew (`/teams`): the crew list and who is on which team. Equipment is what decides which levels a team can be sent to.*
 
+**The team sheet.** *Teams & crew → Teams → Upload the team sheet* takes the sheet the floor already
+keeps, one row per seat on each team: **Team #**, **Department**, **Employee**, **Equipment** (and a
+**Clock In Number** column, if the sheet has one).
+
+| Team # | Department | Employee | Equipment |
+|---|---|---|---|
+| S1-DS01 | Warehouse | Michael Roman Travera | Dock Stocker |
+| S1-DS01 | Production | | On Foot with Dock Stockers |
+| S1-RT05 | Warehouse | Jason Davies | High Reach |
+| S1-RT05 | Warehouse | Donovan Lopez | Scissor Lift - Counting |
+| S1-RT05 | Production | | Scissor Lift - Driving |
+
+- **The team number says the shift and the truck.** *S1-DS01* is 1st shift, dock stocker, truck 01;
+  *S1-RT05* is a reach truck, truck 05; *S2-…* is 2nd shift; *S1-T0L* is the team lead. Each team
+  on the sheet is made (or brought up to date) with that shift and a note saying what it is.
+- **A named person on the crew list goes on the team** — matched by clock-in number when the sheet
+  has one, else by name. A name that is not on the crew list yet stays on the card, marked *not on
+  the crew list*: add their clock-in number under Crew list and upload the sheet again.
+- **A blank name is an open seat** — Production sends someone on the day. Its equipment still
+  counts toward what the team can reach: the truck is the team's either way.
+- **The equipment words are read as the floor writes them**: *Dock Stocker* is the dock truck,
+  *High Reach* the high reach, *Scissor Lift - Counting* and *- Driving* both the scissor lift,
+  *On Foot with Dock Stockers* on foot, *Supervisor* a job rather than a machine.
+- Uploading again replaces each listed team's seats, never doubles them; teams not on the sheet are
+  left alone unless **Remove teams not on the sheet** is ticked (their people go back to the crew
+  list). The upload says how many teams, how many people were found on the crew list, the open
+  seats, and any equipment word it did not know.
+- On the gun, the team box takes the number as scanned or typed — **Type it instead** brings up the
+  full keyboard, so *S1-DS01* can be keyed by hand.
+
+> **Check the level rules against these teams.** With the shipped rules (*What each level needs*),
+> a dock stocker team with someone on foot reaches **level A** only, because levels B–C need a dock
+> truck *and* a scissor lift; a reach-truck team (high reach and scissor lift) reaches **A and C–F**.
+> If a dock stocker reaches B–C on its own at your site, change the rule under *Teams & crew →
+> Equipment rules* before you plan the aisles.
+
 **1st and 2nd shift.** Each team on Teams & crew has a **shift** — set it when you add the team,
-or on the team's card. The page can show one shift at a time, and so can the team table on the
+or on the team's card (a team from the team sheet takes it from the S1 / S2 in its number). The page can show one shift at a time, and so can the team table on the
 dashboard, so the 2nd-shift lead sees only their crews.
 
 ---

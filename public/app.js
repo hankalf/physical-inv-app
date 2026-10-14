@@ -2966,8 +2966,9 @@
   /* Badges and team numbers are scanned, so the sign-on fields ask the device
      for no keyboard either. Whoever has to type one says so first. */
   $('btnSignonKeyboard').onclick = () => {
-    const on = $('fTeam').inputMode !== 'numeric';
-    $('fTeam').inputMode = on ? 'numeric' : 'none';
+    // a team number can carry letters (S1-DS01), so the team box gets the full keyboard too
+    const on = $('fTeam').inputMode === 'none' || !$('fTeam').inputMode;
+    $('fTeam').inputMode = on ? 'text' : 'none';
     $('fEmployee').inputMode = on ? 'text' : 'none';
     $('btnSignonKeyboard').textContent = on
       ? 'Keyboard on — tap to put it away'

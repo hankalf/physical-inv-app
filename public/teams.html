@@ -35,6 +35,14 @@
   .bucket .reach.some { color: var(--warn); border-color: #5c4813; background: var(--warn-ink); }
   .bucket .reach.none { color: var(--err); border-color: #6e2c2f; background: var(--err-ink); }
   .bucket .kit { font-size: 12px; color: var(--muted); margin-top: 5px; min-height: 16px; }
+  /* seats from the team sheet with nobody from the crew list in them yet */
+  .bucket .seats { display: grid; gap: 4px; margin-top: 6px; }
+  .bucket .seat { font-size: 12.5px; border: 1px dashed var(--line); border-radius: 8px; padding: 5px 8px; display: flex; flex-direction: column; }
+  .bucket .seat b { font-weight: 700; }
+  .bucket .seat span { color: var(--muted); font-size: 12px; }
+  .bucket .seat.unmatched { border-color: #8a6a1f; }
+  .person .seatrole { color: var(--text-dim); margin-top: 3px; }
+  .bucket .drop .empty { font-size: 12px; }
   .bucket .drop { margin-top: 11px; display: flex; flex-direction: column; gap: 7px; min-height: 42px; }
   .bucket .empty { color: var(--muted); font-size: 13px; border: 1px dashed var(--line); border-radius: 9px; padding: 14px; text-align: center; }
 
@@ -125,6 +133,20 @@
         <div class="auto"><button class="primary" id="btnAddTeam">Add team</button></div>
       </div>
       <div class="feedback" id="teamMsg"></div>
+      <!-- the team sheet the floor already keeps: a row per seat on each team -->
+      <div class="inline" style="margin-top:12px">
+        <div><label for="fTeamFile">Team sheet — CSV or Excel</label><input type="file" id="fTeamFile" accept=".csv,.tsv,.txt,.xlsx,.xlsm"></div>
+        <div class="auto"><label class="cb" title="Teams that are not on the sheet are deleted; their people go back to the crew list"><input type="checkbox" id="fTeamReplace"> Remove teams not on the sheet</label></div>
+        <div class="auto"><button class="primary" id="btnTeamUpload">Upload the team sheet</button></div>
+        <div class="auto"><a href="/templates/team-sheet-template.csv" download style="color:var(--accent);font-weight:700;text-decoration:none">⬇ Sample sheet</a></div>
+      </div>
+      <div class="hint" style="margin-top:6px">
+        One row per seat: <b>Team #</b>, <b>Department</b>, <b>Employee</b>, <b>Equipment</b> (a <b>Clock In Number</b> column is used
+        when there is one). A team number like <b>S1-DS01</b> reads as 1st shift, dock stocker, truck 01; <b>S2-…</b> is 2nd shift.
+        A name found on the crew list is put on the team; a blank name is an open seat — Production sends someone on the day — and its
+        equipment still counts toward what the team can reach. Each team on the sheet gets the sheet's seats; other teams are left alone.
+      </div>
+      <div class="feedback" id="teamFileMsg"></div>
       <div class="inline" style="margin-top:12px">
         <div class="auto"><div class="seg" id="shiftView">
           <button type="button" data-shift="">All shifts</button>

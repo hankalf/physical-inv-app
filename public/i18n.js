@@ -227,7 +227,7 @@
     'Supervisor said to count it': 'El supervisor dijo que se contara',
 
     'Type a note or tap one below': 'Escribe una nota o toca una abajo',
-    'e.g. 2027-03-15': 'p. ej. 2027-03-15', 'e.g. 3': 'p. ej. 3', 'e.g. SCANNER-04': 'p. ej. SCANNER-04',
+    'e.g. 2027-03-15': 'p. ej. 2027-03-15', 'e.g. 3': 'p. ej. 3', 'e.g. 3 or S1-DS01': 'p. ej. 3 o S1-DS01', 'e.g. SCANNER-04': 'p. ej. SCANNER-04',
     'Team': 'Equipo', 'Aisle': 'Pasillo', 'Last bin': 'Última ubicación', 'Scanner': 'Escáner',
     'Scans can land in the address bar. Install it — Chrome menu →': 'Los escaneos pueden caer en la barra de direcciones. Instálala — menú de Chrome →',
     'Add to Home screen': 'Agregar a la pantalla de inicio',

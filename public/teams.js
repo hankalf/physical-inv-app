@@ -34,7 +34,7 @@
   const kitName = (key) => state.config.equipment[key] || key;
 
   /* ------------------------------------------------------------ people cards */
-  function personCard(e) {
+  function personCard(e, seatRole = '') {
     const div = document.createElement('div');
     div.className = 'person';
     div.draggable = true;
@@ -55,6 +55,8 @@
     if (e.equipment.length) for (const k of e.equipment) { const s = document.createElement('span'); s.textContent = kitName(k); kit.appendChild(s); }
     else { const s = document.createElement('span'); s.textContent = 'on foot'; s.style.color = 'var(--muted)'; kit.appendChild(s); }
     left.appendChild(kit);
+    /* on a team from the team sheet: the job the sheet gives them on this team */
+    if (seatRole) left.appendChild(Object.assign(document.createElement('div'), { className: 'meta seatrole', textContent: `On this team: ${seatRole}` }));
 
     const right = document.createElement('div');
     const sel = document.createElement('select');
@@ -134,8 +136,9 @@
       head.className = 'head';
       const name = document.createElement('span'); name.className = 'name'; name.textContent = 'Team ' + t.name;
       const reach = document.createElement('span');
-      reach.className = 'reach ' + (!t.members.length ? 'none' : t.reach === full ? 'full' : t.reach.length > 1 ? 'some' : 'none');
-      reach.textContent = t.members.length ? `reaches ${levelsLabel(t.reach)}` : 'nobody assigned';
+      const anyone = t.members.length || (t.seats || []).length;
+      reach.className = 'reach ' + (!anyone ? 'none' : t.reach === full ? 'full' : t.reach.length > 1 ? 'some' : 'none');
+      reach.textContent = anyone ? `reaches ${levelsLabel(t.reach)}` : 'nobody assigned';
       head.append(name, reach);
       /* which shift this team works - the dashboard filters on it */
       const shiftRow = document.createElement('div');
@@ -154,13 +157,26 @@
       shiftRow.appendChild(sel);
       const kit = document.createElement('div');
       kit.className = 'kit';
-      kit.textContent = t.members.length
-        ? (t.equipment.length ? 'Between them: ' + t.equipment.map(kitName).join(', ') : 'No equipment between them — level A only')
+      kit.textContent = anyone
+        ? [t.notes, t.equipment.length ? 'Between them: ' + t.equipment.map(kitName).join(', ') : 'No equipment between them — level A only'].filter(Boolean).join(' · ')
         : (t.notes || '');
+      /* the seats from the team sheet: who sits where, and the seats Production fills on the day */
+      const seatBox = document.createElement('div');
+      seatBox.className = 'seats';
+      for (const s of t.seats || []) {
+        if (s.onCrewList) continue;                 // a matched person is on the card as themselves
+        const row = document.createElement('div');
+        row.className = 'seat' + (s.open ? ' open' : ' unmatched');
+        row.append(Object.assign(document.createElement('b'), { textContent: s.open ? `${s.dept || 'Open'} — open seat` : s.name }),
+          Object.assign(document.createElement('span'), { textContent: [s.role, s.open ? '' : 'not on the crew list'].filter(Boolean).join(' · ') }));
+        row.title = s.open ? 'Filled on the day; its equipment counts toward what the team can reach' : 'Add their clock-in number on the crew list and upload the sheet again to put them on the team';
+        seatBox.appendChild(row);
+      }
       const drop = document.createElement('div');
       drop.className = 'drop';
-      if (!t.members.length) drop.innerHTML = '<div class="empty">Drag someone here</div>';
-      for (const m of t.members) drop.appendChild(personCard(m));
+      if (!t.members.length) drop.innerHTML = `<div class="empty">${(t.seats || []).length ? 'Nobody from the crew list yet — drag someone here' : 'Drag someone here'}</div>`;
+      const roleOf = new Map((t.seats || []).filter((s) => s.badge).map((s) => [s.badge, s.role]));
+      for (const m of t.members) drop.appendChild(personCard(m, roleOf.get(m.badge) || ''));
       const del = document.createElement('button');
       del.className = 'sm ghost'; del.textContent = 'Delete team'; del.style.marginTop = '8px';
       del.onclick = async () => {
@@ -168,7 +184,7 @@
         try { await apiJson(`/api/admin/people/teams/${t.id}`, { method: 'DELETE' }); await refresh(); }
         catch (err) { msg($('teamMsg'), 'err', err.message); }
       };
-      card.append(head, shiftRow, kit, drop, del);
+      card.append(head, shiftRow, kit, drop, seatBox, del);
       dropTarget(card, String(t.id));
       box.appendChild(card);
     }
@@ -274,6 +290,27 @@
       await refresh();
     } catch (err) { msg($('uploadMsg'), 'err', 'Upload failed', err.message); }
   };
+  /* the team sheet: Team #, Department, Employee, Equipment - one row per seat */
+  $('btnTeamUpload').onclick = async () => {
+    const file = $('fTeamFile').files[0];
+    if (!file) return msg($('teamFileMsg'), 'err', 'Choose the team sheet first');
+    if ($('fTeamReplace').checked && !confirm('Remove every team that is not on this sheet? Their people go back to the crew list.')) return;
+    msg($('teamFileMsg'), 'warn', `Reading ${file.name}…`);
+    try {
+      const st = await apiJson(`/api/admin/people/teams/import?replace=${$('fTeamReplace').checked ? 1 : 0}`,
+        { method: 'POST', headers: { 'content-type': 'text/csv' }, body: await fileToCsv(file) });
+      const bits = [
+        `${st.created} new, ${st.updated} brought up to date${st.removed ? `, ${st.removed} not on the sheet removed` : ''}.`,
+        `${st.matched} of ${st.people} named people found on the crew list${st.open ? `; ${st.open} open seat${st.open === 1 ? '' : 's'}` : ''}.`,
+        st.notOnCrewList.length ? `Not on the crew list yet (add their clock-in numbers, then upload again): ${st.notOnCrewList.slice(0, 12).join(', ')}${st.notOnCrewList.length > 12 ? '…' : ''}.` : '',
+        st.unknownEquipment.length ? `Equipment not recognized, so not counted toward reach: ${st.unknownEquipment.join(', ')}.` : '',
+      ].filter(Boolean).join(' ');
+      msg($('teamFileMsg'), st.unknownEquipment.length || st.notOnCrewList.length ? 'warn' : 'ok', `${st.teams} teams from ${file.name}`, bits);
+      $('fTeamFile').value = '';
+      await refresh();
+    } catch (err) { msg($('teamFileMsg'), 'err', 'Upload failed', err.message); }
+  };
+
   $('btnExport').onclick = () => api.download('/api/admin/people/export/employees.csv', 'employees.csv')
     .catch((err) => msg($('uploadMsg'), 'err', err.message));
 

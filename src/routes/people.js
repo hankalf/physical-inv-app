@@ -37,7 +37,14 @@ const ALIASES = {
   'HIGH REACH': 'HIGH REACH', HIGHREACH: 'HIGH REACH', REACH: 'HIGH REACH', 'REACH TRUCK': 'HIGH REACH',
   'HIGH REACH TRUCK': 'HIGH REACH', FORKLIFT: 'HIGH REACH', FORK: 'HIGH REACH',
   'ORDER PICKER': 'HIGH REACH', 'CHERRY PICKER': 'HIGH REACH', TURRET: 'HIGH REACH',
+  // the words on Front Royal's own team sheet
+  'DOCK STOCKER': 'DOCK TRUCK', DOCKSTOCKER: 'DOCK TRUCK', 'DOCK STOCKER FORKLIFT': 'DOCK TRUCK', STOCKER: 'DOCK TRUCK',
+  'RT': 'HIGH REACH', 'REACH TRUCK DRIVER': 'HIGH REACH',
 };
+/* a job on the sheet that is not a machine: no equipment, and not "unknown" either */
+const ROLES = /^(SUPERVISOR|LEAD|TEAM LEAD|LEADER|COUNTER|CHECKER|SPOTTER|HELPER|PRODUCTION)$/;
+/* "Scissor Lift - Counting", "On Foot with Dock Stockers": the machine first, then what the person does on it */
+const TRAILING = /\s+(COUNTING|DRIVING|DRIVER|OPERATOR|RIDER|SPOTTER|WITH .*)$/;
 
 export function getConfig() {
   const row = db.prepare("SELECT value FROM settings WHERE key = 'equipment'").get();
@@ -72,13 +79,18 @@ export function setConfig({ equipment, levelRules }) {
 export function parseEquipment(raw, known = getEquipment()) {
   const out = new Set();
   for (const part of String(raw == null ? '' : raw).split(/[,;/|]+/)) {
-    const t = norm(part).replace(/[^A-Z ]/g, ' ').replace(/\s+/g, ' ').trim();
+    let t = norm(part).replace(/[^A-Z ]/g, ' ').replace(/\s+/g, ' ').trim();
     if (!t) continue;
-    const key = known[t] ? t : ALIASES[t] || ALIASES[t.replace(/ /g, '')] || null;
+    const look = (x) => (known[x] ? x : ALIASES[x] || ALIASES[x.replace(/ /g, '')] || null);
+    let key = look(t);
+    while (!key && TRAILING.test(t)) { t = t.replace(TRAILING, ''); key = look(t); }
     if (key && known[key]) out.add(key);
   }
   return [...out];
 }
+
+/** A word on the sheet that names a job rather than a machine. */
+export const isRoleWord = (raw) => ROLES.test(norm(raw).replace(/[^A-Z ]/g, ' ').replace(/\s+/g, ' ').trim());
 
 /**
  * Levels a set of equipment can reach: every level whose rule is satisfied in
@@ -202,23 +214,136 @@ export const importHelpers = {};
 
 /* ----------------------------------------------------------------- teams */
 
+/*
+ * A team's seats: the rows of the team sheet. Each is a place on the team -
+ * its department, the person in it (or nobody yet: Production sends someone on
+ * the day), and the machine it comes with. A seat's machine counts toward what
+ * the team can reach whether or not the person is named yet, because the truck
+ * is the team's: S1-RT05 has its high reach and its scissor lift either way.
+ */
+db.exec(`CREATE TABLE IF NOT EXISTS team_seats (
+  id        INTEGER PRIMARY KEY AUTOINCREMENT,
+  team_id   INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  position  INTEGER NOT NULL DEFAULT 0,
+  dept      TEXT NOT NULL DEFAULT '',
+  name      TEXT NOT NULL DEFAULT '',
+  role      TEXT NOT NULL DEFAULT '',        -- the equipment cell as written: "Scissor Lift - Counting"
+  equipment TEXT NOT NULL DEFAULT '[]',      -- what that is, in the app's own terms
+  badge     TEXT                             -- the crew-list person in the seat, when matched
+)`);
+db.exec('CREATE INDEX IF NOT EXISTS idx_seats_team ON team_seats(team_id, position)');
+
 export function listTeams() {
   const teams = db.prepare('SELECT * FROM teams ORDER BY name').all();
   const members = db
     .prepare('SELECT m.team_id, e.* FROM team_members m JOIN employees e ON e.badge = m.badge ORDER BY e.name')
     .all();
+  const seats = db.prepare('SELECT * FROM team_seats ORDER BY team_id, position, id').all();
+  const cfg = getConfig();
   return teams.map((t) => {
     const mine = members.filter((m) => m.team_id === t.id).map(shape);
+    const mySeats = seats.filter((s) => s.team_id === t.id).map((s) => ({
+      id: s.id, dept: s.dept, name: s.name, role: s.role, badge: s.badge || '',
+      equipment: JSON.parse(s.equipment || '[]'),
+      open: !s.name,
+      onCrewList: !!s.badge,
+    }));
     const equip = new Set();
     for (const m of mine) for (const e of m.equipment) equip.add(e);
+    for (const s of mySeats) for (const e of s.equipment) equip.add(e);
+    const anyone = mine.length || mySeats.length;
     return {
       id: t.id, name: t.name, notes: t.notes || '', shift: t.shift || '',
       members: mine,
-      equipment: [...equip],
-      reach: mine.length ? reachOf([...equip]) : '',
-      reachLabel: mine.length ? levelsLabel(reachOf([...equip])) : 'nobody assigned',
+      seats: mySeats,
+      equipment: [...equip].filter((e) => cfg.equipment[e]),
+      reach: anyone ? reachOf([...equip], cfg) : '',
+      reachLabel: anyone ? levelsLabel(reachOf([...equip], cfg)) : 'nobody assigned',
     };
   });
+}
+
+/* What a team code like S1-DS01 says: the shift, the kind of truck, its number. */
+const TEAM_KIND = { DS: 'Dock stocker', RT: 'Reach truck', HR: 'High reach', SL: 'Scissor lift', DT: 'Dock truck', OF: 'On foot', TL: 'Team lead', T0L: 'Team lead', TOL: 'Team lead', SUP: 'Supervisor' };
+export function readTeamCode(code) {
+  const c = norm(code);
+  const m = /^S([12])\s*[-_ ]\s*([A-Z0-9]*?)(\d*)$/.exec(c);
+  if (!m) return { shift: '', note: '' };
+  const letters = m[2] || '';
+  const kind = TEAM_KIND[letters] || TEAM_KIND[letters + m[3]] || (letters ? letters : '');
+  const truck = TEAM_KIND[letters + m[3]] ? '' : m[3];
+  return { shift: m[1], note: [kind, truck ? `truck ${truck}` : ''].filter(Boolean).join(' · ') };
+}
+
+/**
+ * The team sheet: one row per seat - Team #, Department, Employee, Equipment
+ * (and a clock-in number, if the sheet has one). Every team on it is made or
+ * brought up to date: its shift from the S1 / S2 at the front of its number,
+ * a note from the rest (DS = dock stocker, RT = reach truck, the truck number),
+ * and its seats replaced by the sheet's rows. A named person found on the crew
+ * list - by clock-in number, else by name - is put on the team; a blank name is
+ * an open seat; teams not on the sheet are left alone.
+ */
+export function importTeamSheet(text, { replace = false } = {}) {
+  const { parseRecords, pick } = importHelpers;
+  const { records, headers } = parseRecords(text);
+  if (!records.length) throw Object.assign(new Error('no data rows found'), { status: 400 });
+  const cfg = getConfig();
+  const known = cfg.equipment;
+  const teamOf = (rec) => norm(pick(rec, ['team', 'teamno', 'teamnumber', 'teamid', 'crew', 'truck']));
+  if (!records.some(teamOf)) throw Object.assign(new Error('the sheet has no Team # column - the columns are Team #, Department, Employee, Equipment'), { status: 400 });
+  const byName = new Map(db.prepare('SELECT badge, name FROM employees').all().map((e) => [String(e.name || '').replace(/\s+/g, ' ').trim().toLowerCase(), e.badge]));
+  const groups = new Map();
+  const stats = { rows: records.length, teams: 0, created: 0, updated: 0, seats: 0, people: 0, matched: 0, notOnCrewList: [], open: 0, unknownEquipment: new Set(), removed: 0, headers };
+  for (const rec of records) {
+    const team = teamOf(rec);
+    if (!team) continue;
+    if (!groups.has(team)) groups.set(team, []);
+    groups.get(team).push(rec);
+  }
+  db.exec('BEGIN');
+  try {
+    if (replace) {
+      const keep = new Set(groups.keys());
+      for (const t of db.prepare('SELECT id, name FROM teams').all()) if (!keep.has(t.name)) { db.prepare('DELETE FROM team_members WHERE team_id = ?').run(t.id); db.prepare('DELETE FROM team_seats WHERE team_id = ?').run(t.id); db.prepare('DELETE FROM teams WHERE id = ?').run(t.id); stats.removed++; }
+    }
+    for (const [name, rows] of groups) {
+      const code = readTeamCode(name);
+      let t = db.prepare('SELECT * FROM teams WHERE name = ?').get(name);
+      if (!t) {
+        db.prepare('INSERT INTO teams (name, notes, shift, created_at) VALUES (?, ?, ?, ?)').run(name, code.note, code.shift, new Date().toISOString());
+        t = db.prepare('SELECT * FROM teams WHERE name = ?').get(name);
+        stats.created++;
+      } else {
+        if (code.shift && t.shift !== code.shift) db.prepare('UPDATE teams SET shift = ? WHERE id = ?').run(code.shift, t.id);
+        if (code.note && !t.notes) db.prepare('UPDATE teams SET notes = ? WHERE id = ?').run(code.note, t.id);
+        stats.updated++;
+      }
+      stats.teams++;
+      db.prepare('DELETE FROM team_seats WHERE team_id = ?').run(t.id);
+      rows.forEach((rec, i) => {
+        const person = String(pick(rec, ['employee', 'employe', 'employeename', 'name', 'fullname', 'person'])).replace(/\s+/g, ' ').trim();
+        const dept = String(pick(rec, ['department', 'dept', 'area'])).trim();
+        const role = String(pick(rec, ['equipment', 'role', 'position', 'job', 'machine'])).replace(/\s+/g, ' ').trim();
+        const equipment = parseEquipment(role, known);
+        if (role && !equipment.length && !isRoleWord(role)) stats.unknownEquipment.add(role);
+        let badge = norm(pick(rec, ['clockinnumber', 'clocknumber', 'clockin', 'badge', 'badgeid', 'employeeid', 'empid', 'employeenumber']));
+        if (badge && person) upsertEmployee({ badge, name: person, dept, equipment });
+        if (!badge && person) badge = byName.get(person.toLowerCase()) || '';
+        if (badge && !db.prepare('SELECT 1 FROM employees WHERE badge = ?').get(badge)) badge = '';
+        if (person) { stats.people++; if (badge) stats.matched++; else stats.notOnCrewList.push(`${person} (${name})`); } else stats.open++;
+        if (badge) { db.prepare('DELETE FROM team_members WHERE badge = ?').run(badge); db.prepare('INSERT INTO team_members (team_id, badge) VALUES (?, ?)').run(t.id, badge); }
+        db.prepare('INSERT INTO team_seats (team_id, position, dept, name, role, equipment, badge) VALUES (?, ?, ?, ?, ?, ?, ?)')
+          .run(t.id, i, dept, person, role, JSON.stringify(equipment), badge || null);
+        stats.seats++;
+      });
+    }
+    db.exec('COMMIT');
+  } catch (err) { db.exec('ROLLBACK'); throw err; }
+  stats.unknownEquipment = [...stats.unknownEquipment];
+  const teams = listTeams().filter((t) => groups.has(t.name));
+  stats.reach = teams.map((t) => ({ team: t.name, shift: t.shift, reach: t.reach, label: t.reachLabel }));
+  return stats;
 }
 
 /* 1 or 2 - however it was written: "1st", "first", "day", "2nd", "second", "night" */
@@ -246,6 +371,7 @@ export function setTeamShift(id, shift) {
 
 export function deleteTeam(id) {
   db.prepare('DELETE FROM team_members WHERE team_id = ?').run(Number(id));
+  db.prepare('DELETE FROM team_seats WHERE team_id = ?').run(Number(id));
   return db.prepare('DELETE FROM teams WHERE id = ?').run(Number(id)).changes;
 }
 

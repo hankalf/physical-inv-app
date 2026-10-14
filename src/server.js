@@ -46,7 +46,7 @@ import { generateBatch, previewBatch, binList, listBatches, deleteBatch, coverag
 import {
   listEmployees, upsertEmployee, deleteEmployee, importEmployees, importHelpers,
   listTeams, createTeam, deleteTeam, setTeamShift, assignMember, getConfig, setConfig, getEmployee,
-  crewCheck, crewShortfall,
+  crewCheck, crewShortfall, importTeamSheet,
 } from './routes/people.js';
 
 import { toCsv, parseRecords, pick } from './util/csv.js';
@@ -1126,6 +1126,12 @@ async function handleAdmin(req, res, url, m) {
     const text = await readBody(req);
     const st = importEmployees(text, { replace: url.searchParams.get('replace') === '1' });
     audit(actor, 'uploaded the crew list', `${st.imported} of ${st.rows} rows${url.searchParams.get('replace') === '1' ? ', replacing the list' : ''}`);
+    return sendJson(req, res, 200, st);
+  }
+  if (p === '/api/admin/people/teams/import' && method === 'POST') {
+    const text = await readBody(req);
+    const st = importTeamSheet(text, { replace: url.searchParams.get('replace') === '1' });
+    audit(actor, 'uploaded the team sheet', `${st.teams} teams, ${st.seats} seats (${st.matched} of ${st.people} people on the crew list, ${st.open} open)${st.removed ? `, ${st.removed} teams not on it removed` : ''}`);
     return sendJson(req, res, 200, st);
   }
   if ((m = p.match(/^\/api\/admin\/people\/employees\/([^/]+)$/)) && method === 'DELETE') {

@@ -167,7 +167,10 @@ A separate page for the roster, on the same sign-in.
 is reported rather than silently dropped. People can also be added one at a time.
 
 **Teams** are created here and people are **dragged** between the crew list and a team
-card (every card also has a menu, for a tablet). Each card shows the equipment the team
+card (every card also has a menu, for a tablet). Or **upload the team sheet** — `Team #`,
+`Department`, `Employee`, `Equipment`, one row per seat: `S1-DS01` reads as 1st shift, dock
+stocker, truck 01; a named person on the crew list goes on the team; a blank name is an open
+seat whose equipment still counts toward the team's reach. Each card shows the equipment the team
 has between them and the levels that reaches.
 
 **What each level needs** is the rule table, and it is enforced. At Front Royal:
