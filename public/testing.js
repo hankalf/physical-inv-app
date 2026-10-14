@@ -1171,10 +1171,12 @@
       return;
     }
     let top, left;
-    if (t.pos === 'left') {           // beside the gun, pointing at it
-      box.classList.add('left');
-      top = Math.max(12, r.top + 40);
-      left = r.left - w - 16;
+    if (t.pos === 'left') {
+      /* a tip about the gun itself: over the top of the gun, arrow pointing
+         down into its screen - there is no room beside it, the sidebar is there */
+      box.classList.add('gun');
+      top = Math.max(HEAD() + 4, r.top + 6);
+      left = r.left + Math.max(0, (r.width - w) / 2);
     } else if (r.bottom + h + 20 < window.innerHeight) {
       box.classList.add('below');
       top = r.bottom + 12; left = r.left - 14;

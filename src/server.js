@@ -115,7 +115,16 @@ try {
 } catch (err) {
   console.warn(`[warn] could not stamp the app build (${err.message}); scanners will not auto-update.`);
 }
-console.log(`[app] build ${appBuild.version}`);
+/* The office pages' own stamp, and the commit the host built from (Railway
+   sets RAILWAY_GIT_COMMIT_SHA): so /api/health says which code is running
+   even when a change touched no scanner file. */
+const OFFICE_FILES = ['nav.js', 'admin.js', 'testing.js', 'settings.js', 'guide.js', 'guide-content.js', 'full.js', 'cycle.js', 'front.js', 'missing.js', 'teams.js', 'admin.css'];
+let officeBuild = 'dev';
+try {
+  officeBuild = createHash('sha256').update(OFFICE_FILES.map((n) => `${n}:${createHash('sha256').update(readFileSync(join(PUBLIC_DIR, n))).digest('hex').slice(0, 12)}`).join('|')).digest('hex').slice(0, 12);
+} catch { /* a file missing: the stamp stays "dev" */ }
+const sourceCommit = String(process.env.RAILWAY_GIT_COMMIT_SHA || process.env.SOURCE_COMMIT || process.env.GIT_COMMIT || '').slice(0, 7);
+console.log(`[app] build ${appBuild.version} · office ${officeBuild}${sourceCommit ? ` · commit ${sourceCommit}` : ''}`);
 
 if (!SCANNER_AUTH) {
   console.warn('[warn] SCANNER_AUTH=off - anyone who can reach this server can post counts.');
@@ -1894,7 +1903,7 @@ const server = http.createServer(async (req, res) => {
       return sendJson(req, res, 200, {
         ok: true, time: new Date().toISOString(), siteDate: localDate(), siteTimezone: siteTimezone(),
         // what the handhelds check themselves against - see appBuild above
-        build: appBuild.version, shell: appBuild.files,
+        build: appBuild.version, shell: appBuild.files, office: officeBuild, commit: sourceCommit,
       });
     }
     // The site's logo: on the sign-in page before anybody has signed in, and on

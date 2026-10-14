@@ -49,6 +49,11 @@ const placed = async () => page.evaluate(() => {
   const ok = b.top >= 0 && b.bottom <= innerHeight && r.top >= head && r.bottom <= innerHeight && shown;
   return { ok, why: ok ? '' : `box ${Math.round(b.top)}, target ${Math.round(r.top)} (header ${Math.round(head)})${shown ? '' : ' target invisible'}` };
 });
+/* a tip about the gun itself sits over the gun column, never in the page's corner */
+const overGun = () => page.evaluate(() => {
+  const box = document.querySelector('#coach').getBoundingClientRect(); const gun = document.querySelector('#gunFrame').closest('.gun').getBoundingClientRect();
+  return { ok: box.left >= gun.left - 2 && box.right <= gun.right + 2 && box.top >= gun.top - 2 && box.top < gun.top + 120, box: [Math.round(box.left), Math.round(box.top)], gun: [Math.round(gun.left), Math.round(gun.top), Math.round(gun.right)] };
+});
 const step = async (label, re) => {
   const seen = await waitTip(re);
   let p = await placed();
@@ -63,6 +68,9 @@ await page.locator('#teamVals .scan').first().click();
 await step('Sign on: badge', /T1001/);
 await page.locator('#crewVals .scan').first().click();
 await step('Sign on: start', /Sign on/);
+await wait(500);                       // the box slides to its place
+const og = await overGun();
+check('A tip about the gun sits over the gun, not in the corner of the page', og.ok, JSON.stringify(og));
 await gunClick('#btnStart'); await wait(1500);
 await step('The list', /Start second counts/);
 await gunClick('#btnRecounts'); await wait(1000);
