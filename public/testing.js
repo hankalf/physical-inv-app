@@ -454,9 +454,13 @@
     coach();
   }
   let restarted = 0;
+  let restartsFor = '';          // the lesson the restarts were for, and how many
+  let restartCount = 0;
   function restartGun() {
     if (Date.now() - restarted < 8000) return;
     restarted = Date.now();
+    if (restartsFor !== modeSel) { restartsFor = modeSel; restartCount = 0; }
+    restartCount++;
     try { frame().contentWindow.location.reload(); } catch { loadGun({ force: true }); }
   }
   const binTable = (heads) => {
@@ -961,7 +965,10 @@
     if (modeSel === 'cycle') {
       if (g.screen !== 'scrSignon' && g.signedJob && g.signedJob !== 'cycle') return signOffFirst('cycle', g);
       if (g.screen === 'scrSignon') {
-        if (!g.offers.cycle) { restartGun(); return { key: 'cyc:restart', target: GUN(), step: 'Cycle count', pos: 'left', text: 'Restarting the gun so it sees the cycle count…' }; }
+        if (!g.offers.cycle) {
+          if (restartsFor === 'cycle' && restartCount >= 2) return { key: 'cyc:nojob', target: $('sandboxCard'), step: 'Cycle count', text: 'The gun is not offering the cycle count. Under <b>Scanner settings in this sandbox</b>, tick <b>Cycle count</b> and save — or the site has cycle counts switched off (Settings → Logins & site).' };
+          restartGun(); return { key: 'cyc:restart', target: GUN(), step: 'Cycle count', pos: 'left', text: 'Restarting the gun so it sees the cycle count…' };
+        }
         if (g.job !== 'cycle') return { key: 'cyc:pick', target: GUN(), step: 'Cycle count', pos: 'left', text: 'On the gun, tap <b>Cycle count</b> at the top of the sign-on screen.' };
         if (!g.crew.trim()) return { key: 'cyc:crew', target: paneChip(data.crew[0]) || $('crewVals').querySelector('.scan'), step: 'Cycle count · sign on', text: `Click <b>${data.crew[0]}</b>. On a cycle count the person is the team — no team number.` };
         return { key: 'cyc:start', target: GUN(), step: 'Cycle count · sign on', pos: 'left', text: 'Now on the gun: tap <b>Sign on &amp; load list</b>.' };
@@ -1019,7 +1026,10 @@
     if (modeSel === 'moves') {
       if (g.screen !== 'scrSignon' && g.signedJob && g.signedJob !== 'move') return signOffFirst('move', g);
       if (g.screen === 'scrSignon') {
-        if (!g.offers.move) { restartGun(); return { key: 'mv:restart', target: GUN(), step: 'Front2Back', pos: 'left', text: 'Restarting the gun so it sees the pallets to move…' }; }
+        if (!g.offers.move) {
+          if (restartsFor === 'moves' && restartCount >= 2) return { key: 'mv:nojob', target: $('sandboxCard'), step: 'Front2Back', text: 'The gun is not offering Front2Back. Under <b>Scanner settings in this sandbox</b>, tick <b>Front2Back</b> and save — or the site has front bins switched off (Settings → Logins & site).' };
+          restartGun(); return { key: 'mv:restart', target: GUN(), step: 'Front2Back', pos: 'left', text: 'Restarting the gun so it sees the pallets to move…' };
+        }
         if (g.job !== 'move') return { key: 'mv:pick', target: GUN(), step: 'Front2Back', pos: 'left', text: 'On the gun, tap <b>Front2Back</b> at the top of the sign-on screen.' };
         if (!g.crew.trim()) return { key: 'mv:crew', target: paneChip(data.crew[0]) || $('crewVals').querySelector('.scan'), step: 'Front2Back · sign on', text: 'Front2Back is one person with a gun: just a clock-in number, no team — click <b>T1001</b>.' };
         return { key: 'mv:start', target: GUN(), step: 'Front2Back · sign on', pos: 'left', text: 'Now on the gun: tap <b>Sign on &amp; load list</b>.' };
@@ -1103,6 +1113,18 @@
     const w = box.offsetWidth || 300;
     const h = box.offsetHeight || 90;
     box.className = 'coach';
+    /* The thing to click has been scrolled off the screen: the box sits in the
+       corner, says which way it is, and offers to take them there - rather
+       than being placed off the screen too, which reads as no tip at all. */
+    const away = r.width > 0 && (r.bottom < 0 || r.top > window.innerHeight);
+    $('coachGo').hidden = !away;
+    if (away) {
+      box.classList.add('docked');
+      $('coachGo').textContent = r.bottom < 0 ? 'Show me ↑' : 'Show me ↓';
+      box.style.top = `${Math.max(8, window.innerHeight - h - 16)}px`;
+      box.style.left = `${Math.max(8, window.innerWidth - w - 16)}px`;
+      return;
+    }
     let top, left;
     if (t.pos === 'left') {           // beside the gun, pointing at it
       box.classList.add('left');
@@ -1115,9 +1137,10 @@
       box.classList.add('above');
       top = r.top - h - 12; left = r.left - 14;
     }
-    box.style.top = `${Math.max(8, top)}px`;
+    box.style.top = `${Math.max(8, Math.min(top, window.innerHeight - h - 8))}px`;
     box.style.left = `${Math.max(8, Math.min(left, window.innerWidth - w - 8))}px`;
   }
+  $('coachGo').onclick = () => { if (lastTarget) lastTarget.scrollIntoView({ block: 'center', behavior: 'smooth' }); };
 
   function coach() {
     renderStepper();

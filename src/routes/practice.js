@@ -750,6 +750,10 @@ export function startPracticeMode(owner, mode) {
   const s = practiceSession(owner);
   if (!s) throw Object.assign(new Error('open the Testing Suite first - there is no practice count yet'), { status: 404 });
   if (s.practice_source === 'upload') throw Object.assign(new Error('the other jobs are practiced on the built-in test data - press "Back to the built-in test data" first'), { status: 400 });
+  // a job unticked in the sandbox is ticked back on: the lesson needs the gun to offer it
+  const jobOf = { cycle: 'cycle', moves: 'move', missing: 'missing' }[mode];
+  const own = sandboxOf(s).jobs;
+  if (jobOf && own && own[jobOf] === false) setPracticeSandbox(owner, { jobs: { ...own, [jobOf]: true } });
   if (mode === 'second') {
     if (secondSetUp(s)) return { note: 'already set up' };
     const r = buildSecondPractice(s);

@@ -307,10 +307,28 @@
           <button type="button" data-side="negative">Negative</button>
           <button type="button" data-side="all">All</button>
         </div>
+        <label class="cb" style="margin-left:8px"><input type="checkbox" id="fPnHideEntered"> Hide lines already in the ERP</label>
         <button class="fit sm" id="btnPnCsv">Download this list (CSV)</button>
       </div>
       <div class="scroll"><table id="pnTable"></table></div>
       <div class="muted" id="pnNote" style="margin-top:8px"></div>
+
+      <h3 style="margin-top:14px">Entered in the ERP <span class="chip" id="erpChip" hidden></span></h3>
+      <div class="hint" style="margin-top:0">
+        Inventory control keys these lines into the ERP by hand, from the worksheet. Mark each line as it goes in, so nothing is keyed
+        twice: tick lines above and press <b>Mark as entered</b>, or download the <b>ERP worksheet</b>, fill its <b>In ERP</b> column as you work
+        (a <i>yes</i>, an <i>x</i>, a date or your initials all count; <i>no</i> takes a mark off; blank leaves it) and upload it back.
+        A line counted again after it was entered is flagged <b>changed</b>: the ERP has the old number.
+      </div>
+      <div class="inline" style="margin-top:8px">
+        <div class="auto"><button class="primary" id="btnErpMark">Mark as entered</button></div>
+        <div class="auto"><button id="btnErpUnmark">Take the mark off</button></div>
+        <div class="auto"><button id="btnErpAll">Select all shown</button></div>
+        <div class="auto"><button id="btnErpNone">Select none</button></div>
+        <div class="auto"><button id="btnErpWorksheet">Download the ERP worksheet (CSV)</button></div>
+        <div class="auto"><label class="btn" for="fErpFile" id="lblErpFile">Upload the worksheet back…</label><input type="file" id="fErpFile" accept=".csv,.xlsx,.xls,text/csv" hidden></div>
+      </div>
+      <div class="feedback" id="erpMsg"></div>
     </div>
 
     <div class="card" id="adjustCard">

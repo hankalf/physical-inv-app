@@ -161,6 +161,13 @@ What the app guarantees, so you can rely on it:
 - **MISSING pallets join the list when the count is closed.** Plan the close so you are at
   the desk when it happens: that is usually the largest batch of the count.
 
+**Keying into the ERP by hand?** *Dashboard → Adjustments → Entered in the ERP.* Download the
+**ERP worksheet**, key from it, fill its **In ERP** column as you go (a *yes*, an *x*, a date or
+your initials; *no* takes a mark off; blank leaves it) and **upload it back** — or tick lines in
+the table and **Mark as entered**. Nothing gets keyed twice: the column shows who entered what
+and when, **Hide lines already in the ERP** leaves only what is still to key, and a line counted
+again after it was entered is tagged **changed** with the number the ERP was given.
+
 ## 6 — Exporting the data
 
 Every download on the Dashboard is a function of your profile (*Downloads and printouts*).

@@ -120,6 +120,8 @@ export function routeNeed(p, method) {
   if (/\/alerts\/\d+\/(seen|close)$/.test(p) || (w && /\/clocks\/\d+$/.test(p))) return 'alerts';
   if ((w && /\/assignments(\/|$)/.test(p)) || (w && /\/recounts(\/|$)/.test(p)) || /\/aisles\/apply-layout$/.test(p) || (w && /\/notes?(\/\d+)?$/.test(p))) return 'assign';
   // the pages' own data
+  if (/\/erp-entries(\/|$)/.test(p)) return 'approve';            // marking lines as keyed into the ERP is inventory control's
+  if (/\/export\/erp-worksheet\.csv$/.test(p)) return 'export';
   if (p.startsWith('/api/admin/practice')) return 'testing';
   if (p.startsWith('/api/admin/people')) return 'teams';
   if (p.startsWith('/api/admin/missing')) return 'missing';

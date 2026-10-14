@@ -31,6 +31,7 @@ import { raiseAlert, tellTeams, listAlerts, seeAlert, closeAlert, alertsForDevic
 import { teamsConfig, saveTeamsConfig, postToTeams, testCard, alertCard } from './util/teams.js';
 import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout, scannerJobs, saveScannerJobs, jobsOffered, JOBS } from './routes/scanner-prompts.js';
 import { features, saveFeatures, FEATURES, PRESETS, offNames } from './routes/features.js';
+import { withEntries, markEntered, markFromFile, worksheetRows, WORKSHEET_COLUMNS } from './routes/erp-entries.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks,
@@ -1719,8 +1720,23 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, saved);
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/adjustments\/view$/)) && method === 'GET') {
-    return sendJson(req, res, 200, adjustmentView(m[1]));
+    return sendJson(req, res, 200, withEntries(adjustmentView(m[1]), m[1]));
+  }  // --- entered in the ERP: marked a few at a time, or from the worksheet brought back
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/erp-entries$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const out = markEntered(m[1], { ...body, actor });
+    audit(actor, body.on === false ? 'unmarked adjustments as entered in the ERP' : 'marked adjustments as entered in the ERP', `${body.on === false ? out.unmarked : out.marked} pallet(s)${body.note ? ' - ' + String(body.note).slice(0, 120) : ''}`, m[1]);
+    return sendJson(req, res, 200, out);
   }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/erp-entries\/upload$/)) && method === 'POST') {
+    const out = markFromFile(m[1], await readBody(req), actor);
+    audit(actor, 'marked adjustments as entered in the ERP from the worksheet', `${out.marked} marked, ${out.unmarked} unmarked, ${out.unknown.length} not on the count`, m[1]);
+    return sendJson(req, res, 200, out);
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/erp-worksheet\.csv$/))) {
+    return sendCsv(req, res, `erp-worksheet-session-${m[1]}.csv`, toCsv(worksheetRows(m[1]), WORKSHEET_COLUMNS));
+  }
+
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/adjustments$/)) && method === 'GET') {
     return sendJson(req, res, 200, listAdjustments(m[1], { status: url.searchParams.get('status') || '' }));
   }
@@ -1732,10 +1748,12 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, done);
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/adjustments\.csv$/))) {
-    const rows = listAdjustments(m[1], { limit: 2000 }).adjustments;
+    const marks = withEntries(adjustmentView(m[1]), m[1]);
+    const mark = new Map([...marks.positive.rows, ...marks.negative.rows].filter((r) => r.erp).map((r) => [r.pallet_id, r.erp]));
+    const rows = listAdjustments(m[1], { limit: 2000 }).adjustments.map((r) => ({ ...r, in_erp: mark.has(r.pallet_id) ? 'yes' : '', entered_by: mark.get(r.pallet_id)?.by || '', entered_at: mark.get(r.pallet_id)?.at || '' }));
     return sendCsv(req, res, `adjustments-session-${m[1]}.csv`, toCsv(rows, [
       'pallet_id', 'sku', 'location', 'kind', 'expected_qty', 'counted_qty', 'variance_qty',
-      'status', 'reason', 'note', 'decided_by', 'decided_at',
+      'status', 'reason', 'note', 'decided_by', 'decided_at', 'in_erp', 'entered_by', 'entered_at',
     ]));
   }
 

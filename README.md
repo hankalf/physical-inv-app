@@ -112,7 +112,7 @@ sign-in covers all of them.
 
 | Section | Sub-tabs |
 |---|---|
-| **Dashboard** (`/admin`) | Progress · Map · Team plan · Alerts · Second counts · Adjustments · Reports — the live view of the count in the picker |
+| **Dashboard** (`/admin`) | Progress · Map · Team plan · Alerts · Second counts · Adjustments (with *Entered in the ERP*: mark lines keyed into the ERP by hand, from the table or by uploading the ERP worksheet back with its In ERP column filled, so nothing is keyed twice) · Reports — the live view of the count in the picker |
 | **Full Counts** (`/full`) | Counts · New count · Set-up — every wall-to-wall, open and closed; which one the scanners land on; start one; what it still needs |
 | **Cycle counts** (`/cycle`) | Today · Still open · Coverage · Program & data |
 | **Teams & crew** (`/teams`) | Crew & teams · Equipment rules |

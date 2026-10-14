@@ -1,6 +1,7 @@
 import { db, getSession } from '../db.js';
 import { progress, palletReport, rawCounts, sourcesOf } from './reports.js';
 import { adjustmentView } from './adjustments.js';
+import { withEntries } from './erp-entries.js';
 import { teamClocks } from './idle.js';
 import { fixList } from './issues.js';
 import { siteTimezone } from '../util/localtime.js';
@@ -53,7 +54,7 @@ export function exportEverything(sessionId, { by = '' } = {}) {
   const s = getSession(id);
   if (!s) throw Object.assign(new Error('session not found'), { status: 404 });
   const p = progress(id);
-  const adj = adjustmentView(id);
+  const adj = withEntries(adjustmentView(id), id);
   const counts = rawCounts(id);
   const pallets = palletReport(id);
   const clocks = teamClocks(id);
@@ -114,11 +115,12 @@ export function exportEverything(sessionId, { by = '' } = {}) {
     'Second label': r.also_tagged || r.alias_of || '', 'Last scanned': when(r.last_scan), 'Comments': r.comments || '',
   })));
 
-  const adjCols = ['Side', 'Pallet', 'System', 'Item', 'Bin', 'Why', 'Report quantity', 'Counted quantity', 'Adjustment', 'Approval', 'Approval reason', 'Approved by'];
+  const adjCols = ['Side', 'Pallet', 'System', 'Item', 'Bin', 'Why', 'Report quantity', 'Counted quantity', 'Adjustment', 'Approval', 'Approval reason', 'Approved by', 'In ERP', 'Entered by', 'Entered at'];
   const adjRow = (side) => (r) => ({
     'Side': side, 'Pallet': r.pallet_id, 'System': r.source || '', 'Item': r.sku || '', 'Bin': r.location || '', 'Why': r.why,
     'Report quantity': r.expected_qty ?? '', 'Counted quantity': r.counted_qty, 'Adjustment': r.variance_qty,
     'Approval': adj.approvals ? (r.status || 'waiting') : 'not required', 'Approval reason': r.reason || '', 'Approved by': r.decided_by || '',
+    'In ERP': r.erp ? 'yes' : '', 'Entered by': r.erp ? r.erp.by : '', 'Entered at': r.erp ? r.erp.at : '',
   });
   const adjustments = sheet('Adjustments', adjCols,
     [...adj.positive.rows.map(adjRow('Positive')), ...adj.negative.rows.map(adjRow('Negative'))]);

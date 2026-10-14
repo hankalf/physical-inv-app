@@ -1504,6 +1504,28 @@ like any other.
 *The adjustments waiting for a signature, biggest first. AUTO is under the threshold and
 goes through without anybody being asked; APPROVED carries the reason and the name.*
 
+### Step 20a — Mark what has been keyed into the ERP
+
+**Dashboard → Adjustments → Entered in the ERP.** For a site that keys the adjustments into the
+ERP by hand, from the worksheet, over a day or two — and must not key a line twice.
+
+1. **Download the ERP worksheet (CSV)**: every adjustment line — side, pallet, item, bin, why,
+   report and counted quantities, the adjustment, its approval — with an **In ERP** column.
+2. Work the lines into the ERP from the worksheet. As each goes in, fill its **In ERP** cell:
+   a *yes*, an *x*, a date or your initials all count as entered; *no* takes a mark off; a blank
+   leaves the line as it is.
+3. **Upload the worksheet back.** The lines you filled are marked, with who and when, and the
+   message says how many were marked, how many unmarked and how many left alone. A pallet that
+   is not on this count is named and ignored.
+4. Or mark a few at a time from the table: tick the lines, **Mark as entered**; **Take the mark
+   off** undoes it. **Hide lines already in the ERP** leaves only what is still to key.
+
+The **In ERP** column shows the mark with who and when; the chip in the heading counts *entered
+of total*. A line **counted again after it was entered** is flagged **changed**, with the number
+the ERP was given, because the ERP now holds the old figure. The mark also appears in the
+adjustments CSV and in the *Adjustments* sheet of **Export everything**. Marking is for logins
+that may approve adjustments — inventory control, admins, supervisors.
+
 ### Step 21 — Send it to the ERP
 
 **Settings → Integrations → Send to the ERP.**
@@ -1639,6 +1661,8 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | A keypad covers the screen | Somebody left the **Keyboard** button on | Tap **Keyboard** again. It is off by default and never comes up by itself |
 | The Adjustments tab is empty | Approvals are off for this count, or nothing differs from the report yet | Turn on **Adjustments need approval** under Count session. A pallet nobody has counted yet is not an adjustment until the count is closed |
 | The ERP file is shorter than the variance list | Adjustments are waiting for approval and are held back deliberately | Work the Adjustments tab, then export again. The preview says how many were left out |
+| *the file has no "In ERP" column* when uploading the worksheet | The file uploaded is not the ERP worksheet | Download the ERP worksheet under Adjustments → Entered in the ERP, fill its In ERP column, upload that |
+| A line under Adjustments is tagged **CHANGED** | It was counted again after it was keyed into the ERP | Correct it in the ERP to the adjustment shown; the tag says the number the ERP was given |
 | A pallet is on the report as `NOT IN MASTER` with a name like `NO-LABEL-F01A001-1` | Its label would not scan and nothing on it was readable, so it was counted under the bin's name | Send somebody to relabel it — **Reports → Labels to replace** has the list |
 | A line is in a bin called `NO-LABEL-BIN-F01-1` | The rack label would not scan, and the app had nothing to suggest — an unguided count, with the pallet not on the report either | The quantity is safe. Relabel the bay, then correct the bin on the line if it matters; the relabel list says which aisle it was in |
 | The note is not on the board | The board polls every 15 seconds by default, or the note is on a different count | Wait a few seconds; check the board is pinned to the same count (`/board?session=12`) |

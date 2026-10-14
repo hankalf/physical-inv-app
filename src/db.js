@@ -382,6 +382,17 @@ if (!hasCol('recounts', 'batch_id')) db.exec('ALTER TABLE recounts ADD COLUMN ba
 if (!hasCol('counts', 'pass')) db.exec('ALTER TABLE counts ADD COLUMN pass INTEGER NOT NULL DEFAULT 1');
 // a second count supersedes the first in its bin: the reports ask that of every line
 db.exec('CREATE INDEX IF NOT EXISTS idx_counts_loc_pass ON counts(session_id, location_code, pass, voided)');
+/* Adjustment lines keyed into the ERP by hand, so none is keyed twice; the
+   adjustment as it stood when it was entered, so a change since shows. */
+db.exec(`CREATE TABLE IF NOT EXISTS erp_entries (
+  session_id   INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  pallet_id    TEXT    NOT NULL,
+  variance_qty REAL,
+  entered_by   TEXT,
+  entered_at   TEXT    NOT NULL,
+  note         TEXT,
+  PRIMARY KEY (session_id, pallet_id)
+)`);
 if (!hasCol('counts', 'recount_id')) db.exec('ALTER TABLE counts ADD COLUMN recount_id INTEGER');
 if (!hasCol('sessions', 'auto_recount')) db.exec('ALTER TABLE sessions ADD COLUMN auto_recount INTEGER NOT NULL DEFAULT 1');
 /* Lot codes and expiry dates. Off unless a count asks for them: a frozen-food

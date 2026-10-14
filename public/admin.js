@@ -1129,11 +1129,12 @@
     renderPositiveNegative();
   }
 
+  const erpPicked = new Set();           // lines ticked for "entered in the ERP"
   function pnRows() {
     if (!pnData) return [];
-    if (pnSide === 'positive') return pnData.positive.rows;
-    if (pnSide === 'negative') return pnData.negative.rows;
-    return [...pnData.positive.rows, ...pnData.negative.rows];
+    const hide = $('fPnHideEntered').checked;
+    const rows = pnSide === 'positive' ? pnData.positive.rows : pnSide === 'negative' ? pnData.negative.rows : [...pnData.positive.rows, ...pnData.negative.rows];
+    return hide ? rows.filter((r) => !r.erp) : rows;
   }
 
   function renderPositiveNegative() {
@@ -1144,17 +1145,43 @@
     $('pnMinusSub').textContent = `${d.negative.pallets.toLocaleString()} pallet${d.negative.pallets === 1 ? '' : 's'}`;
     $('pnNet').textContent = signed(d.net);
     for (const b of document.querySelectorAll('#pnSide button, #pnTiles button')) b.classList.toggle('selected', b.dataset.side === pnSide);
-    const cols = [{ label: 'Pallet' }, { label: 'System' }, { label: 'Item' }, { label: 'Bin' }, { label: 'Why' },
+    const cols = [{ label: '' }, { label: 'Pallet' }, { label: 'System' }, { label: 'Item' }, { label: 'Bin' }, { label: 'Why' },
       { label: 'Report qty', num: true }, { label: 'Counted', num: true }, { label: 'Adjustment', num: true }];
     if (d.approvals) cols.push({ label: 'Approval' });
-    table($('pnTable'), cols, pnRows(), (r) => {
+    cols.push({ label: 'In ERP' });
+    const shown = pnRows();
+    for (const id of [...erpPicked]) if (!shown.some((r) => r.pallet_id === id)) erpPicked.delete(id);
+    table($('pnTable'), cols, shown, (r) => {
       const tr = document.createElement('tr');
+      tr.dataset.pallet = r.pallet_id;
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.className = 'erpPick';
+      box.checked = erpPicked.has(r.pallet_id);
+      box.onchange = () => { if (box.checked) erpPicked.add(r.pallet_id); else erpPicked.delete(r.pallet_id); };
+      const tdBox = document.createElement('td');
+      tdBox.appendChild(box);
       const adj = cell(signed(r.variance_qty), 'num ' + (r.variance_qty > 0 ? 'pos' : 'neg'));
-      tr.append(cell(r.pallet_id), cell(r.source || '—'), cell(r.sku || '—'), cell(r.location || '—'), cell(r.why, 'wrap'),
+      tr.append(tdBox, cell(r.pallet_id), cell(r.source || '—'), cell(r.sku || '—'), cell(r.location || '—'), cell(r.why, 'wrap'),
         cell(r.expected_qty == null ? '—' : r.expected_qty, 'num'), cell(r.counted_qty, 'num'), adj);
       if (d.approvals) tr.appendChild(cell(r.status ? r.status + (r.decided_by ? ` · ${r.decided_by}` : '') : '—'));
+      const te = document.createElement('td');
+      if (r.erp) {
+        te.appendChild(tag(r.erp.changed ? 'CHANGED' : 'IN ERP'));
+        const who = document.createElement('div');
+        who.className = 'muted';
+        who.style.fontSize = '11px';
+        who.textContent = `${r.erp.by || ''} ${new Date(r.erp.at).toLocaleDateString()}${r.erp.changed ? ` · entered as ${signed(r.erp.qty)}` : ''}`.trim();
+        te.appendChild(who);
+        te.title = r.erp.changed ? `Entered in the ERP as ${signed(r.erp.qty)}; the count now says ${signed(r.variance_qty)}` : `Entered in the ERP by ${r.erp.by || 'a supervisor'} on ${new Date(r.erp.at).toLocaleString()}`;
+      } else te.textContent = '—';
+      tr.appendChild(te);
       return tr;
     }, pnSide === 'negative' ? 'Nothing to take off.' : pnSide === 'positive' ? 'Nothing to add.' : 'The count matches the report so far.');
+    const e = d.erp || { entered: 0, total: 0, changed: 0 };
+    $('erpChip').hidden = !e.total;
+    $('erpChip').textContent = `${e.entered} of ${e.total} entered${e.changed ? ` · ${e.changed} changed since` : ''}`;
+    $('erpChip').className = 'chip ' + (e.changed ? 'warn' : e.total && e.entered === e.total ? 'online' : '');
     $('pnNote').textContent = d.closed ? ''
       : 'The count is still open: a pallet nobody has reached yet is not counted as missing. Once the count is closed, pallets never found are added to Negative.';
   }
@@ -1166,11 +1193,42 @@
       if (pnData) renderPositiveNegative();
     };
   }
+  $('fPnHideEntered').onchange = () => { if (pnData) renderPositiveNegative(); };
+  /* entered in the ERP: a few lines at a time from the table, or the worksheet brought back */
+  async function erpMark(on) {
+    if (!needSession($('erpMsg'))) return;
+    if (!erpPicked.size) { msg($('erpMsg'), 'err', 'Nothing selected', 'Tick the lines you keyed into the ERP first.'); return; }
+    try {
+      const out = await postJson(`/api/admin/sessions/${sessionId}/erp-entries`, { pallets: [...erpPicked], on });
+      erpPicked.clear();
+      msg($('erpMsg'), 'ok', on ? `${out.marked} line${out.marked === 1 ? '' : 's'} marked as entered in the ERP.` : `The mark is off ${out.unmarked} line${out.unmarked === 1 ? '' : 's'}.`, `${out.entered} of ${out.total} entered.`);
+      await refreshPositiveNegative();
+    } catch (err) { msg($('erpMsg'), 'err', err.message); }
+  }
+  $('btnErpMark').onclick = () => erpMark(true);
+  $('btnErpUnmark').onclick = () => erpMark(false);
+  $('btnErpAll').onclick = () => { for (const r of pnRows()) erpPicked.add(r.pallet_id); renderPositiveNegative(); };
+  $('btnErpNone').onclick = () => { erpPicked.clear(); renderPositiveNegative(); };
+  $('btnErpWorksheet').onclick = () => { if (needSession($('erpMsg'))) api.download(`/api/admin/sessions/${sessionId}/export/erp-worksheet.csv`, `erp-worksheet-session-${sessionId}.csv`); };
+  $('fErpFile').onchange = async () => {
+    const file = $('fErpFile').files[0];
+    if (!file || !needSession($('erpMsg'))) return;
+    try {
+      const text = await window.appUi.fileToCsv(file);
+      const res = await fetch(`/api/admin/sessions/${sessionId}/erp-entries/upload`, { method: 'POST', headers: { 'content-type': 'text/csv', authorization: 'Bearer ' + api.token }, body: text });
+      const out = await res.json();
+      if (!res.ok) throw new Error(out.error || 'the upload failed');
+      msg($('erpMsg'), 'ok', `From the worksheet: ${out.marked} marked as entered, ${out.unmarked} unmarked, ${out.skipped} left alone.`,
+        `${out.entered} of ${out.total} entered.${out.unknown.length ? ` Not on this count, ignored: ${out.unknown.slice(0, 5).join(', ')}${out.unknown.length > 5 ? '…' : ''}.` : ''}`);
+      await refreshPositiveNegative();
+    } catch (err) { msg($('erpMsg'), 'err', 'Not applied', err.message); }
+    $('fErpFile').value = '';
+  };
   $('btnPnCsv').onclick = () => {
     const rows = pnRows();
-    const head = ['Pallet', 'Item', 'Bin', 'Why', 'System qty', 'Counted qty', 'Adjustment', 'Approval'];
+    const head = ['Pallet', 'Item', 'Bin', 'Why', 'System qty', 'Counted qty', 'Adjustment', 'Approval', 'In ERP'];
     const q = (v) => (/[",\n]/.test(String(v ?? '')) ? `"${String(v).replace(/"/g, '""')}"` : String(v ?? ''));
-    const lines = [head, ...rows.map((r) => [r.pallet_id, r.sku, r.location, r.why, r.expected_qty ?? '', r.counted_qty, r.variance_qty, r.status])]
+    const lines = [head, ...rows.map((r) => [r.pallet_id, r.sku, r.location, r.why, r.expected_qty ?? '', r.counted_qty, r.variance_qty, r.status, r.erp ? 'yes' : ''])]
       .map((l) => l.map(q).join(',')).join('\r\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob(['\ufeff' + lines], { type: 'text/csv' }));

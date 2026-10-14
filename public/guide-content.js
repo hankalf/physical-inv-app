@@ -469,6 +469,20 @@
           ask: [],
         },
         {
+          title: 'Mark what you keyed into the ERP',
+          do: 'Dashboard → Adjustments → Entered in the ERP, for a site that keys the adjustments in by hand. Download the ERP worksheet, key from it, fill its In ERP column as you go (a yes, an x, a date or your initials; no takes a mark off; blank leaves it) and upload it back — or tick lines in the table and Mark as entered. The column shows who entered what and when; Hide lines already in the ERP leaves only what is still to key.',
+          where: S('/admin', 'adjust', 'Dashboard → Adjustments'),
+          watch: [
+            { see: 'the file has no "In ERP" column', means: 'The file uploaded is not the ERP worksheet.', fix: 'Download the ERP worksheet, fill its In ERP column, upload that one.' },
+            { see: 'A line is tagged CHANGED', means: 'It was counted again after it was keyed into the ERP, so the ERP has the old number.', fix: 'Correct it in the ERP to the adjustment shown; the tag says what the ERP was given.' },
+            { see: 'Not on this count, ignored: …', means: 'The worksheet had a pallet this count does not have an adjustment for.', fix: 'Nothing; the rest of the file was applied.' },
+          ],
+          ask: [
+            { q: 'Can I mark lines a few at a time?', a: 'Yes: tick them in the table and press Mark as entered; Take the mark off undoes it.' },
+            { q: 'Does the mark reach the exports?', a: 'The adjustments CSV and the Adjustments sheet of Export everything carry In ERP, Entered by and Entered at.' },
+          ],
+        },
+        {
           title: 'Send it to the ERP',
           do: 'Reports → ERP export. The file carries the approved adjustments in the ERP’s format, one file per system if the site uses several. Export everything gives the whole count as a workbook.',
           where: S('/admin', 'reports', 'Dashboard → Reports'),

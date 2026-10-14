@@ -89,6 +89,8 @@
   .coach.below .coachbox::before { top: -7px; left: 22px; }
   .coach.above .coachbox::before { bottom: -7px; left: 22px; }
   .coach.left .coachbox::before { right: -7px; top: 18px; }
+  .coach.docked .coachbox::before { display: none; }
+  .coach.docked .coachbox { box-shadow: 0 10px 30px rgba(0,0,0,.55), 0 0 0 2px rgba(255,255,255,.25); }
   .coachstep { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; opacity: .75; }
   .coachtext { font-size: 14px; font-weight: 600; line-height: 1.45; margin-top: 3px; }
   .coachtext b { font-weight: 900; }
@@ -362,6 +364,15 @@
             <div class="checks" id="checks"></div>
           </div>
 
+          <div class="card" id="shelvesCard">
+            <h2>3 · What is on the shelves <span class="muted" id="shelfCount"></span></h2>
+            <div class="hint" style="margin-top:0">
+              This is what a counter would find — the <b>report</b> is what the system thinks, and it is wrong in places on purpose.
+              The gun asks for the pallet, then the quantity, then the bin. A green edge means the bin has been counted.
+            </div>
+            <div id="shelves"></div>
+          </div>
+
           <div class="card" id="optionsCard">
             <h2>Try the features that ship turned off <span class="muted">on your practice count only</span></h2>
             <div class="hint" style="margin-top:0">
@@ -452,14 +463,6 @@
             <div class="scroll"><table id="historyTable"></table></div>
           </div>
 
-          <div class="card" id="shelvesCard">
-            <h2>3 · What is on the shelves <span class="muted" id="shelfCount"></span></h2>
-            <div class="hint" style="margin-top:0">
-              This is what a counter would find — the <b>report</b> is what the system thinks, and it is wrong in places on purpose.
-              The gun asks for the pallet, then the quantity, then the bin. A green edge means the bin has been counted.
-            </div>
-            <div id="shelves"></div>
-          </div>
         </div>
       </div>
     </section>
@@ -472,6 +475,7 @@
     <div class="coachstep" id="coachStep"></div>
     <div class="coachtext" id="coachText"></div>
     <div class="coachacts">
+      <button type="button" class="sm" id="coachGo" hidden>Show me</button>
       <button type="button" class="sm" id="coachOff">I've got it — hide tips</button>
     </div>
   </div>
