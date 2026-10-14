@@ -438,6 +438,7 @@
       } catch (err) { msg($('modeMsg'), 'err', err.message); return; }
     }
     modeSel = key;
+    walked.clear(); inHand = '';              // another lesson: what was just counted in the last one does not carry over
     try { localStorage.setItem(MODE_KEY(), key); } catch { /* private window */ }
     modeDrawn = '';
     renderModes();
@@ -858,6 +859,10 @@
   let tipsOff = false;
   let lastTarget = null;
   let lastKey = '';
+  let lastSaves = false;
+  let settleUntil = 0;                     // a new step's target is being scrolled into view until then
+  /* the office header is sticky: anything under it is as good as off the screen */
+  const HEAD = () => { const h = document.querySelector('header'); return h ? Math.max(0, h.getBoundingClientRect().bottom) : 64; };
 
   function gunPeek() {
     try {
@@ -872,6 +877,9 @@
         // the job the gun is signed on to, once it is past the sign-on screen
         signedJob: d.documentElement.dataset.job || '',
         prompt: (q('#prompt') || {}).textContent || '',
+        // "Step 2 of 4": where the gun is in one pallet's questions - the bin may come first or last
+        stepNo: Number((((q('#stepLabel') || {}).textContent || '').match(/Step (\d+)/) || [])[1] || 0),
+        stepCount: Number((((q('#stepLabel') || {}).textContent || '').match(/of (\d+)/) || [])[1] || 0),
         team: (q('#fTeam') || {}).value || '',
         crew: (q('#employeeChips') || {}).textContent || '',
         override: scr && scr.id === 'scrOverride' && !!q('#ovYesNo:not([hidden])'),
@@ -887,6 +895,16 @@
       };
     } catch { return { up: false, screen: '' }; }
   }
+  /* The gun's questions for one pallet wrapped round to the first: a line was
+     saved. The pallet it was for is taken as counted on the sheet until the
+     server says so, whichever question the bin is asked at. */
+  let lastStepNo = 0;
+  let inHand = '';
+  function noteLineSaved(g) {
+    if (g.stepNo === 1 && lastStepNo > 1 && inHand) { walked.set(inHand, Date.now() + 30000); inHand = ''; scheduleRefresh(); }
+    lastStepNo = g.stepNo || 0;
+    if (g.screen === 'scrSignon' && walked.size) { walked.clear(); inHand = ''; }   // signed off: nothing is "just counted" any more
+  }
 
   /** The next thing to do: a target to point at, and what to say. */
   function nextTip() {
@@ -896,6 +914,7 @@
     const job = modeTip(g);
     if (job) return job;
     if (g.screen === 'scrSignon') {
+      if (g.job && g.job !== 'full') return { key: 'full:pick', target: GUN(), step: 'Step 1 · sign on', pos: 'left', text: 'On the gun, tap <b>Full count</b> at the top of the sign-on screen.' };
       if (!g.team) return { key: 'team', target: $('teamVals').querySelector('.scan'), step: 'Step 1 · sign on', text: 'Click <b>99</b>. Every click on this sheet is a <b>scan</b> — it types into the gun as if you had pulled the trigger.' };
       if (!g.crew.trim()) return { key: 'crew', target: $('crewVals').querySelector('.scan'), step: 'Step 1 · sign on', text: 'Now a clock-in number. Click <b>T1001</b> — that scans a badge in.' };
       return { key: 'start', target: $('gunFrame').closest('.gun'), step: 'Step 1 · sign on', text: 'Now on the gun itself: tap <b>Sign on &amp; load list</b>.', pos: 'left' };
@@ -907,10 +926,15 @@
       const row = (lost && $('shelves').querySelector(`tr[data-pallet="${lost.pallet}"][data-done="0"]`))
         || [...$('shelves').querySelectorAll('tr[data-pallet][data-done="0"]')].find((r) => !justCounted(r.dataset.pallet)) || null;
       const p = /PALLET/i.test(g.prompt), q = /QUANTITY/i.test(g.prompt), b = /BIN/i.test(g.prompt), c = /Comments/i.test(g.prompt);
+      const binFirst = b && g.stepNo === 1;
+      if ((p || binFirst) && !row) return { key: 'done', target: $('checks'), step: 'All counted', text: api.can('dashboard')
+        ? 'Every pallet on the sheet is counted. See what is left under <b>Things to try</b> — then look at the dashboard at the top: the office side of what you just did.'
+        : 'Every pallet on the sheet is counted. See what is left under <b>Things to try</b>.' };
       if (p && row) return { key: 'pallet:' + row.dataset.pallet, target: row.querySelector(`.scan[data-code="${row.dataset.pallet}"]`), step: lines ? 'Next pallet' : 'Step 3 · count a pallet',
         text: `The gun wants a <b>pallet</b>. Click <b>${row.dataset.pallet}</b> — that is the pallet on this shelf.${lines ? '' : ' Then it will ask for the quantity, then the bin.'}` };
       if (q && row) return { key: 'qty:' + row.dataset.pallet, target: row.querySelector('.scan.qty'), step: 'Step 3 · count a pallet', text: 'Now the <b>quantity</b>. Click the number — on a real gun the counter keys it in.' };
-      if (b && row) return { key: 'bin:' + row.dataset.pallet, target: row.querySelector(`.scan[data-code="${row.dataset.bin}"]`) || $('shelves').querySelector(`.scan[data-code="${row.dataset.bin}"]`), step: 'Step 3 · count a pallet', text: `Last, the <b>bin</b> — click <b>${row.dataset.bin}</b>, the rack label. That saves the line.` };
+      if (b && row) return { key: 'bin:' + row.dataset.pallet, target: row.querySelector(`.scan[data-code="${row.dataset.bin}"]`) || $('shelves').querySelector(`.scan[data-code="${row.dataset.bin}"]`), step: 'Step 3 · count a pallet', saves: g.stepNo === g.stepCount,
+        text: binFirst ? `First, the <b>bin</b> — click <b>${row.dataset.bin}</b>, the rack label. Then the pallet and its quantity.` : `Last, the <b>bin</b> — click <b>${row.dataset.bin}</b>, the rack label. That saves the line.` };
       const lotQ = /LOT/i.test(g.prompt), expQ = /EXPIRY/i.test(g.prompt);
       if (lotQ && row) return { key: 'lot:' + row.dataset.pallet, target: row.querySelector('.scan.lot') || $('gunFrame').closest('.gun'), step: 'Lot codes are on',
         text: row.querySelector('.scan.lot') ? 'The gun asks for the <b>lot code</b> — click it. A lot that does not match the report is called out on the spot.' : 'The gun asks for the <b>lot code</b>. This pallet has none — tap <b>Skip</b> on the gun.', pos: row.querySelector('.scan.lot') ? '' : 'left' };
@@ -979,13 +1003,19 @@
         if (!b) return null;
         const next = b.shelf.find((p) => !p.counted && !justCounted(p.id));
         const p = /PALLET/i.test(g.prompt), q = /QUANTITY/i.test(g.prompt), bn = /BIN/i.test(g.prompt), c = /Comments/i.test(g.prompt);
+        const first = g.stepNo === 1;
         const row = next ? $('modePane').querySelector(`tr[data-pallet="${next.id}"]`) : null;
-        if (p && next && row) return { key: 'cyc:pal:' + next.id, target: row.querySelector(`.scan[data-code="${next.id}"]`), step: `Cycle count · bin ${b.bin}`, text: `The gun is on bin <b>${b.bin}</b>. Click <b>${next.id}</b>, the pallet on that shelf.` };
-        if (q && next && row) return { key: 'cyc:qty:' + next.id, target: row.querySelector('.scan.qty'), step: `Cycle count · bin ${b.bin}`, text: 'Now the <b>quantity</b>.' };
-        if (bn && next) return { key: 'cyc:bin:' + next.id, target: paneChip(b.bin), step: `Cycle count · bin ${b.bin}`, text: `And the <b>bin</b> — click <b>${b.bin}</b>.` };
         if (c) return { key: 'comments', target: GUN(), step: 'Comments', pos: 'left', text: 'Optional. Tap a reason on the gun, or <b>Skip</b> — or just wait, it moves on by itself.' };
-        if (p && !b.shelf.length && !b.recordedEmpty) return { key: 'cyc:empty:' + b.bin, target: paneChip(b.bin), step: `Cycle count · bin ${b.bin}`, text: `Nothing is in <b>${b.bin}</b>. On the gun tap <b>Bin is EMPTY — scan the bin</b>, then click <b>${b.bin}</b>.` };
-        if (p) return { key: 'cyc:done:' + b.bin, target: GUN(), step: `Cycle count · bin ${b.bin}`, pos: 'left', text: `Everything in <b>${b.bin}</b> is counted. Tap <b>Bin done — nothing more here</b> on the gun; it moves to the next bin on the list.` };
+        if (!next) {
+          if (b.shelf.length) return { key: 'cyc:done:' + b.bin, target: GUN(), step: `Cycle count · bin ${b.bin}`, pos: 'left', text: `Everything in <b>${b.bin}</b> is counted. Tap <b>Bin done — nothing more here</b> on the gun; it moves to the next bin on the list.` };
+          if (p && !b.recordedEmpty) return { key: 'cyc:empty:' + b.bin, target: paneChip(b.bin), step: `Cycle count · bin ${b.bin}`, text: `Nothing is in <b>${b.bin}</b>. On the gun tap <b>Bin is EMPTY — scan the bin</b>, then click <b>${b.bin}</b>.` };
+          if (bn && !b.recordedEmpty) return { key: 'cyc:bin:' + b.bin, target: paneChip(b.bin), step: `Cycle count · bin ${b.bin}`, text: `Click <b>${b.bin}</b>, the bin. Nothing is in it: at the pallet step the gun offers <b>Bin is EMPTY</b>.` };
+          return null;
+        }
+        if (p && row) return { key: 'cyc:pal:' + next.id, target: row.querySelector(`.scan[data-code="${next.id}"]`), step: `Cycle count · bin ${b.bin}`, text: `The gun is on bin <b>${b.bin}</b>. Click <b>${next.id}</b>, the pallet on that shelf.` };
+        if (q && row) return { key: 'cyc:qty:' + next.id, target: row.querySelector('.scan.qty'), step: `Cycle count · bin ${b.bin}`, text: 'Now the <b>quantity</b>.' };
+        if (bn) return { key: 'cyc:bin:' + next.id, target: paneChip(b.bin), step: `Cycle count · bin ${b.bin}`, saves: g.stepNo === g.stepCount,
+          text: first ? `First, the <b>bin</b> — click <b>${b.bin}</b>. Then the pallet on that shelf.` : `And the <b>bin</b> — click <b>${b.bin}</b>.` };
       }
       if (g.screen === 'scrScan' && !g.recountBin) return { key: 'cyc:back', target: GUN(), step: 'Cycle count', pos: 'left', text: 'Tap <b>My list</b> on the gun, then <b>Start counting the list</b>, to count off today\'s list.' };
       return null;
@@ -1011,13 +1041,19 @@
         if (g.screen !== 'scrScan') return null;
         const next = b.shelf.find((p) => !p.counted && !justCounted(p.id));
         const p = /PALLET/i.test(g.prompt), q = /QUANTITY/i.test(g.prompt), bn = /BIN/i.test(g.prompt), c = /Comments/i.test(g.prompt);
+        const first = g.stepNo === 1;
         const row = next ? $('modePane').querySelector(`tr[data-pallet="${next.id}"]`) : null;
-        if (p && next && row) return { key: 'sc:pal:' + next.id, target: row.querySelector(`.scan[data-code="${next.id}"]`), step: `Second count · bin ${b.bin}`, text: `The gun says why <b>${b.bin}</b> came back — never the numbers. Click <b>${next.id}</b>, the pallet on that shelf.` };
-        if (q && next && row) return { key: 'sc:qty:' + next.id, target: row.querySelector('.scan.qty'), step: `Second count · bin ${b.bin}`, text: 'Now the <b>quantity</b> — what is actually there, not what the other crew keyed.' };
-        if (bn && next) return { key: 'sc:bin:' + next.id, target: paneChip(b.bin), step: `Second count · bin ${b.bin}`, text: `And the <b>bin</b> — click <b>${b.bin}</b>. A second count takes its own bin and no other.` };
         if (c) return { key: 'comments', target: GUN(), step: 'Comments', pos: 'left', text: 'Optional. Tap a reason on the gun, or <b>Skip</b> — or just wait, it moves on by itself.' };
-        if (p && !b.shelf.length && !b.recordedEmpty) return { key: 'sc:empty:' + b.bin, target: paneChip(b.bin), step: `Second count · bin ${b.bin}`, text: `Nothing is in <b>${b.bin}</b>. On the gun tap <b>Bin is EMPTY — scan the bin</b>, then click <b>${b.bin}</b>.` };
-        if (p) return { key: 'sc:done:' + b.bin, target: GUN(), step: `Second count · bin ${b.bin}`, pos: 'left', text: `Everything in <b>${b.bin}</b> is counted. Tap <b>Bin done — nothing more here</b>; the gun moves to the next bin.` };
+        if (!next) {
+          if (b.shelf.length) return { key: 'sc:done:' + b.bin, target: GUN(), step: `Second count · bin ${b.bin}`, pos: 'left', text: `Everything in <b>${b.bin}</b> is counted. Tap <b>Bin done — nothing more here</b>; the gun moves to the next bin.` };
+          if (p && !b.recordedEmpty) return { key: 'sc:empty:' + b.bin, target: paneChip(b.bin), step: `Second count · bin ${b.bin}`, text: `Nothing is in <b>${b.bin}</b>. On the gun tap <b>Bin is EMPTY — scan the bin</b>, then click <b>${b.bin}</b>.` };
+          if (bn && !b.recordedEmpty) return { key: 'sc:bin:' + b.bin, target: paneChip(b.bin), step: `Second count · bin ${b.bin}`, text: `Click <b>${b.bin}</b>, the bin. Nothing is in it: at the pallet step the gun offers <b>Bin is EMPTY</b>.` };
+          return null;
+        }
+        if (p && row) return { key: 'sc:pal:' + next.id, target: row.querySelector(`.scan[data-code="${next.id}"]`), step: `Second count · bin ${b.bin}`, text: `The gun says why <b>${b.bin}</b> came back — never the numbers. Click <b>${next.id}</b>, the pallet on that shelf.` };
+        if (q && row) return { key: 'sc:qty:' + next.id, target: row.querySelector('.scan.qty'), step: `Second count · bin ${b.bin}`, text: 'Now the <b>quantity</b> — what is actually there, not what the other crew keyed.' };
+        if (bn) return { key: 'sc:bin:' + next.id, target: paneChip(b.bin), step: `Second count · bin ${b.bin}`, saves: g.stepNo === g.stepCount,
+          text: first ? `First, the <b>bin</b> — click <b>${b.bin}</b>. A second count takes its own bin and no other; then the pallet.` : `And the <b>bin</b> — click <b>${b.bin}</b>. A second count takes its own bin and no other.` };
         return null;
       }
       if (g.screen === 'scrScan') return { key: 'sc:back', target: GUN(), step: 'Second counts', pos: 'left', text: 'Tap <b>My aisle</b> on the gun, then <b>Start second counts</b>.' };
@@ -1076,11 +1112,13 @@
     if (secs > 20 && secs % 10 === 0) scheduleRefresh();
   }
   const justCounted = (pallet) => { const t = walked.get(pallet); if (t && t > Date.now()) return true; walked.delete(pallet); return false; };
-  function leftTip(key) {
+  function leftTip(key, saves) {
     if (key.startsWith('feat:')) shownFeat.add(key.slice(5));
-    if (key.startsWith('bin:')) { walked.set(key.slice(4), Date.now() + 30000); awaiting.set(key.slice(4), Date.now()); scheduleRefresh(); }
-    if (key.startsWith('cyc:bin:')) { walked.set(key.slice(8), Date.now() + 30000); scheduleRefresh(); }
-    if (key.startsWith('mv:bin:') || key.startsWith('mv:skip:') || key.startsWith('cyc:done:') || key.startsWith('cyc:empty:')) scheduleRefresh();
+    if (key.startsWith('bin:') && saves) { walked.set(key.slice(4), Date.now() + 30000); awaiting.set(key.slice(4), Date.now()); scheduleRefresh(); }
+    if (key.startsWith('cyc:bin:') && saves) { walked.set(key.slice(8), Date.now() + 30000); scheduleRefresh(); }
+    if (key.startsWith('sc:bin:') && saves) { walked.set(key.slice(7), Date.now() + 30000); scheduleRefresh(); }
+    if (/^(pallet|cyc:pal|sc:pal):/.test(key)) inHand = key.slice(key.lastIndexOf(':') + 1);
+    if (key.startsWith('mv:bin:') || key.startsWith('mv:skip:') || key.startsWith('cyc:done:') || key.startsWith('cyc:empty:') || key.startsWith('sc:done:') || key.startsWith('sc:empty:')) scheduleRefresh();
   }
   /* A tip only changes once the gun has settled on it: the screens flick past
      between scans, and a bubble that chased every one of them would jump all
@@ -1090,23 +1128,29 @@
   function placeCoach(t) {
     const box = $('coach');
     // switching off, or nothing to point at: at once - the wait is only between two live tips
-    if (!t || !t.target) { box.hidden = true; if (lastTarget) lastTarget.classList.remove('spot'); if (lastKey) leftTip(lastKey); lastTarget = null; lastKey = ''; proposed = { key: '', since: 0 }; return; }
+    if (!t || !t.target) { box.hidden = true; if (lastTarget) lastTarget.classList.remove('spot'); if (lastKey) leftTip(lastKey, lastSaves); lastTarget = null; lastKey = ''; proposed = { key: '', since: 0 }; return; }
     if (t.key !== lastKey && lastKey) {
       if (proposed.key !== t.key) proposed = { key: t.key, since: Date.now() };
       if (Date.now() - proposed.since < SETTLE_MS) { if (lastTarget && !lastTarget.isConnected) box.hidden = true; return; }
     }
     if (t.key !== lastKey) {
-      leftTip(lastKey);
+      leftTip(lastKey, lastSaves);
       // a new step: light the target, bring it on screen, and say so
       if (lastTarget) lastTarget.classList.remove('spot');
       t.target.classList.add('spot');
       lastTarget = t.target;
       lastKey = t.key;
+      lastSaves = !!t.saves;
       $('coachStep').textContent = t.step;
       $('coachText').innerHTML = t.text;
-      // bring it on screen only when it is off the screen altogether; a nudge, not a leap
+      // bring it into the middle of the screen when it is off the screen, or under the sticky header
       const r = t.target.getBoundingClientRect();
-      if (r.bottom < 70 || r.top > window.innerHeight - 40) t.target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      if (r.top < HEAD() + 8 || r.bottom > window.innerHeight - 40) { t.target.scrollIntoView({ block: 'center', behavior: 'smooth' }); settleUntil = Date.now() + 700; }
+    } else if (t.target !== lastTarget) {
+      // the sheet was redrawn under the same step: light the new element, not the one that went
+      if (lastTarget) lastTarget.classList.remove('spot');
+      t.target.classList.add('spot');
+      lastTarget = t.target;
     }
     box.hidden = false;
     const r = t.target.getBoundingClientRect();
@@ -1116,7 +1160,8 @@
     /* The thing to click has been scrolled off the screen: the box sits in the
        corner, says which way it is, and offers to take them there - rather
        than being placed off the screen too, which reads as no tip at all. */
-    const away = r.width > 0 && (r.bottom < 0 || r.top > window.innerHeight);
+    const away = r.width > 0 && (r.bottom < HEAD() || r.top > window.innerHeight);
+    if (away && Date.now() < settleUntil) { box.hidden = true; return; }     // on its way into view: no flash of the docked box
     $('coachGo').hidden = !away;
     if (away) {
       box.classList.add('docked');
@@ -1146,6 +1191,7 @@
     renderStepper();
     renderSync();
     if (tipsOff || !data || $('scrMain').classList.contains('active') === false) { placeCoach(null); return; }
+    noteLineSaved(gunPeek());
     placeCoach(nextTip());
   }
 
