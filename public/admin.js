@@ -1483,7 +1483,16 @@
         if (r.id && r.status === 'open') act.appendChild(button('Fixed', 'sm primary', () => fixItem(r.id, false)));
         else if (r.id) act.appendChild(button('Reopen', 'sm', () => fixItem(r.id, true)));
         else act.appendChild(Object.assign(document.createElement('span'), { className: 'muted', textContent: 'print the label' }));
-        tr.append(k, cell(r.bin || '—'), cell(r.aisle || '—'), cell(r.pallet_id || '—'), cell(r.note ? `${r.reason} — ${r.note}` : r.reason, 'wrap'),
+        /* what the counter scanned to say which one it is - typed when the label would not scan */
+        const conf = (what) => {
+          const td = cell((what === 'bin' ? r.bin : r.pallet_id) || '—');
+          if (r.confirmed && r.confirmed_as === what) {
+            td.appendChild(Object.assign(document.createElement('div'), { className: 'muted', textContent: r.confirmed_how === 'typed' ? '✓ typed on the gun' : '✓ scanned' }));
+            td.title = r.confirmed_how === 'typed' ? 'The counter typed this one in: its label would not scan' : 'The counter scanned this to confirm it';
+          }
+          return td;
+        };
+        tr.append(k, conf('bin'), cell(r.aisle || '—'), conf('pallet'), cell(r.note ? `${r.reason} — ${r.note}` : r.reason, 'wrap'),
           cell(r.team ? `team ${r.team}${r.device_id ? ' · ' + r.device_id : ''}` : r.device_id || '—'), cell(r.created_at ? new Date(r.created_at).toLocaleString() : '—'), st, act);
         return tr;
       },

@@ -89,7 +89,9 @@ it first. Count the bin fully, then **Bin done — nothing more here**.
 
 - **Cannot reach the bins — blocked**: a trailer, a forklift. Tap it; the office knows; come
   back later.
-- **Report a problem**: damage, a leak, unsafe racking, with a reason and a note.
+- **Report a problem**: damage, a leak, unsafe racking, with a reason and a note. Then **scan
+  the bin** (or the pallet, or either, for a leaning or tipped pallet) so the office goes to the right
+  one. A label that will not scan: **Label will not scan — type it**.
 - **SOS — I need help**: equipment broke down, you need a supervisor, someone is hurt or
   trapped. Pick the reason. *Sent* means the office has it; the gun tells you when they
   have seen it. *No signal — this has NOT been sent*: walk ten meters, it sends itself.

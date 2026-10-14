@@ -37,19 +37,86 @@ CREATE TABLE IF NOT EXISTS issues (
 );
 CREATE INDEX IF NOT EXISTS idx_issues_session ON issues(session_id, status, id);
 `);
+/* what the counter scanned to say which bin or pallet it is, and how: a report
+   about a bin or a pallet is only worth sending somebody to if it is the right one */
+const cols = new Set(db.prepare('PRAGMA table_info(issues)').all().map((c) => c.name));
+if (!cols.has('confirmed')) db.exec('ALTER TABLE issues ADD COLUMN confirmed TEXT');
+if (!cols.has('confirmed_as')) db.exec('ALTER TABLE issues ADD COLUMN confirmed_as TEXT');     // bin | pallet
+if (!cols.has('confirmed_how')) db.exec('ALTER TABLE issues ADD COLUMN confirmed_how TEXT');   // scanned | typed
 
 const now = () => new Date().toISOString();
 const KINDS = new Set(['damage', 'blocked', 'other']);
 const TARGETS = new Set(['pallet', 'rack', 'product', 'bin', '']);
 
-/** What the gun offers, so the words are the same on every scanner and in the list. */
+/*
+ * What the gun offers, so the words are the same on every scanner and in the
+ * list - the shipped set, and the site's own once an admin has edited it
+ * (Settings → Scanners → What the scanners offer → Report a problem).
+ *
+ * Each kind of problem says what the counter must scan before it is sent:
+ *   bin     - the bin's label: racking, a blocked bay
+ *   pallet  - the pallet's label
+ *   either  - the pallet, or the bin it is in: a leaning or tipped pallet whose
+ *             own label may be out of reach
+ *   none    - nothing to scan: a light out, a spill in the aisle
+ */
+export const CONFIRMS = ['bin', 'pallet', 'either', 'none'];
 export const ISSUE_MENU = [
-  { kind: 'damage', target: 'pallet', label: 'Damaged pallet', reasons: ['Broken boards', 'Leaning or unstable', 'Wrap torn or open', 'Crushed cases'] },
-  { kind: 'damage', target: 'rack', label: 'Damaged rack or bin', reasons: ['Beam bent', 'Upright hit', 'Beam or clip missing', 'Decking broken', 'Ice build-up'] },
-  { kind: 'damage', target: 'product', label: 'Damaged product', reasons: ['Leaking', 'Thawed or soft', 'Crushed', 'Open cases'] },
-  { kind: 'blocked', target: 'bin', label: 'Bin blocked — come back later', reasons: ['Trailer in the way', 'Forklift or equipment in the aisle', 'Spill on the floor', 'Locked or caged'] },
-  { kind: 'other', target: '', label: 'Something else', reasons: ['Wrong product on the pallet', 'Pallet on the floor, not in a bin', 'Light out', 'Needs a supervisor to look'] },
+  { kind: 'damage', target: 'pallet', label: 'Damaged pallet', confirm: 'either', reasons: ['Broken boards', 'Leaning or unstable', 'Tipped over', 'Wrap torn or open', 'Crushed cases'] },
+  { kind: 'damage', target: 'rack', label: 'Damaged rack or bin', confirm: 'bin', reasons: ['Beam bent', 'Upright hit', 'Beam or clip missing', 'Decking broken', 'Ice build-up'] },
+  { kind: 'damage', target: 'product', label: 'Damaged product', confirm: 'either', reasons: ['Leaking', 'Thawed or soft', 'Crushed', 'Open cases'] },
+  { kind: 'blocked', target: 'bin', label: 'Bin blocked — come back later', confirm: 'bin', reasons: ['Trailer in the way', 'Forklift or equipment in the aisle', 'Spill on the floor', 'Locked or caged'] },
+  { kind: 'other', target: '', label: 'Something else', confirm: 'none', reasons: ['Wrong product on the pallet', 'Pallet on the floor, not in a bin', 'Light out', 'Needs a supervisor to look'] },
 ];
+const MENU_KEY = 'issueMenu';
+const clip = (v, n) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
+
+/** One kind of problem, checked: a name, what it is about, what to scan, its reasons. */
+function cleanItem(raw, i) {
+  const label = clip(raw && raw.label, 40);
+  if (!label) throw Object.assign(new Error(`problem ${i + 1} needs a name`), { status: 400 });
+  const target = TARGETS.has(raw.target) ? raw.target : '';
+  const kind = KINDS.has(raw.kind) ? raw.kind : target === 'bin' ? 'blocked' : target ? 'damage' : 'other';
+  const confirm = CONFIRMS.includes(raw.confirm) ? raw.confirm : 'none';
+  const seen = new Set();
+  const reasons = (Array.isArray(raw.reasons) ? raw.reasons : []).map((r) => clip(r, 60)).filter((r) => r && !seen.has(r.toLowerCase()) && seen.add(r.toLowerCase())).slice(0, 12);
+  if (!reasons.length) throw Object.assign(new Error(`"${label}" needs at least one reason to pick`), { status: 400 });
+  return { kind, target, label, confirm, reasons };
+}
+
+/** The menu the guns offer: the site's own, else the shipped one. */
+export function issueMenu() {
+  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(MENU_KEY);
+  if (!row) return { menu: ISSUE_MENU, isDefault: true };
+  try {
+    const menu = JSON.parse(row.value).map(cleanItem);
+    return menu.length ? { menu, isDefault: false } : { menu: ISSUE_MENU, isDefault: true };
+  } catch { return { menu: ISSUE_MENU, isDefault: true }; }
+}
+
+/** An admin's edit. An empty list puts the shipped menu back. */
+export function saveIssueMenu(list) {
+  if (!Array.isArray(list)) throw Object.assign(new Error('send the list of problems'), { status: 400 });
+  if (!list.length) { db.prepare('DELETE FROM settings WHERE key = ?').run(MENU_KEY); return issueMenu(); }
+  if (list.length > 10) throw Object.assign(new Error('ten kinds of problem at most - the gun has to fit them on one screen'), { status: 400 });
+  const menu = list.map(cleanItem);
+  const names = new Set();
+  for (const m of menu) {
+    if (names.has(m.label.toLowerCase())) throw Object.assign(new Error(`"${m.label}" is on the list twice`), { status: 400 });
+    names.add(m.label.toLowerCase());
+  }
+  db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(MENU_KEY, JSON.stringify(menu));
+  return issueMenu();
+}
+
+/* What a report must carry, by the kind picked on the gun. A gun from before
+   the scan was asked for sends no "confirm" at all, and its queued reports
+   still go through - nobody loses a report to an update. */
+function confirmFor(body) {
+  if (!('confirm' in body)) return null;
+  const item = issueMenu().menu.find((m) => m.label === clip(body.label, 40)) || null;
+  return item ? item.confirm : (CONFIRMS.includes(body.confirm) ? body.confirm : 'none');
+}
 
 export function raiseIssue(sessionId, body = {}) {
   const id = Number(sessionId);
@@ -63,16 +130,29 @@ export function raiseIssue(sessionId, body = {}) {
   const target = TARGETS.has(body.target) ? body.target : '';
   const reason = String(body.reason || '').replace(/\s+/g, ' ').trim().slice(0, 120);
   if (!reason) throw Object.assign(new Error('say what the problem is'), { status: 400 });
+  /* the scan that says which bin or pallet it is: a bin scanned is the bin of
+     the report, a pallet scanned is its pallet */
+  const need = confirmFor(body);
+  const scanned = norm(body.confirmed);
+  let as = ['bin', 'pallet'].includes(body.confirmedAs) ? body.confirmedAs : '';
+  if (scanned && !as) as = db.prepare('SELECT 1 FROM locations WHERE session_id = ? AND code = ?').get(id, scanned) ? 'bin' : 'pallet';
+  if (need && need !== 'none') {
+    if (!scanned) throw Object.assign(new Error(need === 'bin' ? 'scan the bin to confirm which one' : need === 'pallet' ? 'scan the pallet to confirm which one' : 'scan the pallet or the bin to confirm which one'), { status: 400 });
+    if (need !== 'either' && as !== need) throw Object.assign(new Error(`that is ${as === 'bin' ? 'a bin' : 'a pallet'} - scan the ${need}`), { status: 400 });
+  }
+  const how = scanned ? (body.confirmedHow === 'typed' ? 'typed' : 'scanned') : null;
   // the aisle is the bin's, when the gun did not know it (a count with no aisle plan)
-  const bin = norm(body.bin);
+  const bin = as === 'bin' && scanned ? scanned : norm(body.bin);
+  const palletId = as === 'pallet' && scanned ? scanned : norm(body.palletId);
   let aisle = norm(body.aisle);
   if (!aisle && bin) aisle = db.prepare('SELECT aisle FROM locations WHERE session_id = ? AND code = ?').get(id, bin)?.aisle || '';
   const info = db.prepare(
-    `INSERT INTO issues (session_id, kind, target, pallet_id, bin, aisle, reason, note, team, device_id, employees, created_at, client_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-    .run(id, kind, target, norm(body.palletId) || null, bin || null, aisle || null, reason,
+    `INSERT INTO issues (session_id, kind, target, pallet_id, bin, aisle, reason, note, team, device_id, employees, created_at, client_id, confirmed, confirmed_as, confirmed_how)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .run(id, kind, target, palletId || null, bin || null, aisle || null, reason,
       body.note ? String(body.note).slice(0, 500) : null, norm(body.team) || null, norm(body.deviceId) || null,
-      Array.isArray(body.employees) ? body.employees.map(norm).filter(Boolean).join(', ') : null, now(), clientId);
+      Array.isArray(body.employees) ? body.employees.map(norm).filter(Boolean).join(', ') : null, now(), clientId,
+      scanned || null, scanned ? as : null, how);
   return { issue: db.prepare('SELECT * FROM issues WHERE id = ?').get(info.lastInsertRowid), already: false };
 }
 
@@ -102,7 +182,7 @@ export function fixList(sessionId, { status = '' } = {}) {
     rows,
     summary: { open: rows.filter((r) => r.status === 'open').length, fixed: rows.filter((r) => r.status === 'fixed').length,
       damage: open('damage'), blocked: open('blocked'), labels: open('label'), other: open('other') },
-    menu: ISSUE_MENU,
+    menu: issueMenu().menu,
   };
 }
 

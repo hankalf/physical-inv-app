@@ -399,6 +399,16 @@ the change up the next time they are online. The practice gun in the Testing Sui
 
 *Settings &rarr; Scanners &rarr; What the scanners offer: the full count alone ticked, for count day.*
 
+**What Report a problem offers.** *Settings → Scanners → What the scanners offer → Report a
+problem.* One box per kind of problem the gun offers: its name on the gun, what it is about (it
+sorts the fix list), **what the counter must scan to confirm it** — *Scan the bin*, *Scan the
+pallet*, *Scan the pallet or the bin*, or *No scan needed* — and its reasons (× takes one off; type a
+new one and press Enter). **Add** a kind of your own (a pest sighting, a door left open), **↑**
+moves one up the gun's list, **Remove** takes it off, **Restore the shipped list** puts the five
+shipped kinds back. Up to ten kinds, each with at least one reason. Saved with **Save everything the
+scanners offer**, or its own **Save**; a gun picks it up the next time Report a problem is opened
+with signal. Admins only.
+
 ### Step 8a — A barcode test book, to practice on
 
 **Settings → Scanners → Barcode test book.** A page of real **Code 128** labels to print, cut up
@@ -998,9 +1008,14 @@ to find before they walk on.
   once; the second tag is saved beside it with no quantity, so neither label comes up as uncounted.
   (**Second label on the same pallet**, on the pallet screen, does the same after the line is saved.)
 - **Report a problem** — damage (a pallet, the racking, the product), a bin **blocked** by a trailer
-  or a forklift to come back to, or something else. Pick what, then why, add a word if it helps. It
-  goes on the office's **Fix list** against the bin and pallet in hand, with no bar and no chime —
-  it is not an emergency, that is what **SOS** is for. With no signal it is kept and sent later.
+  or a forklift to come back to, or something else. Pick what, then why, add a word if it helps.
+  Then **scan to confirm** which one it is: the **bin** for racking or a blocked bay, the pallet
+  **or** its bin for a damaged, leaning or tipped pallet (its own label may be out of reach), the
+  pallet for a problem with the pallet's label; *Something else* needs no scan. A pallet scanned
+  where a bin is wanted (or the other way round) is refused with a word on what to scan; **Label
+  will not scan — type it** takes it by hand and the fix list says *typed*. It goes on the office's
+  **Fix list** against what was scanned, with no bar and no chime — it is not an emergency, that is
+  what **SOS** is for. With no signal it is kept and sent later.
 - **Several empty bins in a row** — for a stretch of an aisle with nothing in it. Scan the
   **first** empty bin and the **last**; the gun lists every bin between them in walking order,
   already ticked. Untick any that are not empty, then **Mark N bins EMPTY**. Each is recorded as
@@ -1456,7 +1471,8 @@ the dashboard, with the tips following each step (Step 8c).
 not scan** (pallet or rack — rack first, every counter after walks up to that bin), **damage** reported
 from the gun's *Report a problem* button (a pallet, the racking, the product, each with a reason and
 a note), and **bins blocked** by a trailer or a forklift that a team said it would come back to. Each
-shows the bin, the pallet, who saw it and when. **Fixed** ticks it off with a word on what was done;
+shows the bin, the pallet (marked **✓ scanned**, or **✓ typed on the gun**, when that is what the
+counter confirmed it with), who saw it and when. **Fixed** ticks it off with a word on what was done;
 *Still open* is the walk-round list. It downloads as a CSV and has its own sheet in the export.
 
 **Filed as the count goes.** The moment a team hands an aisle back, the app writes that aisle to

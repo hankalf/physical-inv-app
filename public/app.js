@@ -2303,15 +2303,23 @@
      through. Reported against the pallet and bin in hand, sent like an SOS -
      kept and re-sent if there is no signal - but with no bar and no chime,
      because none of it is an emergency. That is what SOS is for. */
+  /* The site's own list comes from the server (Settings → Scanners → What the
+     scanners offer → Report a problem); this is what a gun offers before it has
+     heard. Each kind says what has to be scanned before it is sent - the bin,
+     the pallet, either one (a leaning or tipped pallet whose label is out of
+     reach), or nothing (a light out). */
   const ISSUE_FALLBACK = [
-    { kind: 'damage', target: 'pallet', label: 'Damaged pallet', reasons: ['Broken boards', 'Leaning or unstable', 'Wrap torn or open', 'Crushed cases'] },
-    { kind: 'damage', target: 'rack', label: 'Damaged rack or bin', reasons: ['Beam bent', 'Upright hit', 'Beam or clip missing', 'Decking broken', 'Ice build-up'] },
-    { kind: 'damage', target: 'product', label: 'Damaged product', reasons: ['Leaking', 'Thawed or soft', 'Crushed', 'Open cases'] },
-    { kind: 'blocked', target: 'bin', label: 'Bin blocked — come back later', reasons: ['Trailer in the way', 'Forklift or equipment in the aisle', 'Spill on the floor', 'Locked or caged'] },
-    { kind: 'other', target: '', label: 'Something else', reasons: ['Wrong product on the pallet', 'Pallet on the floor, not in a bin', 'Light out', 'Needs a supervisor to look'] },
+    { kind: 'damage', target: 'pallet', label: 'Damaged pallet', confirm: 'either', reasons: ['Broken boards', 'Leaning or unstable', 'Tipped over', 'Wrap torn or open', 'Crushed cases'] },
+    { kind: 'damage', target: 'rack', label: 'Damaged rack or bin', confirm: 'bin', reasons: ['Beam bent', 'Upright hit', 'Beam or clip missing', 'Decking broken', 'Ice build-up'] },
+    { kind: 'damage', target: 'product', label: 'Damaged product', confirm: 'either', reasons: ['Leaking', 'Thawed or soft', 'Crushed', 'Open cases'] },
+    { kind: 'blocked', target: 'bin', label: 'Bin blocked — come back later', confirm: 'bin', reasons: ['Trailer in the way', 'Forklift or equipment in the aisle', 'Spill on the floor', 'Locked or caged'] },
+    { kind: 'other', target: '', label: 'Something else', confirm: 'none', reasons: ['Wrong product on the pallet', 'Pallet on the floor, not in a bin', 'Light out', 'Needs a supervisor to look'] },
   ];
   let issueMenu = ISSUE_FALLBACK;
   let issuePick = null;
+  let issueReason = '';
+  let issueTyped = false;
+  const SCAN_WORD = { bin: 'the bin', pallet: 'the pallet', either: 'the pallet or the bin' };
 
   function issueContext() {
     return {
@@ -2324,6 +2332,8 @@
 
   function openIssue() {
     issuePick = null;
+    issueReason = '';
+    $('issueConfirm').hidden = true;
     $('fIssueNote').value = '';
     clearFeedback($('issueMsg'));
     const c = issueContext();
@@ -2341,7 +2351,7 @@
       const b = document.createElement('button');
       b.className = 'chip-btn big' + (issuePick === k ? ' selected' : '');
       b.textContent = k.label;
-      b.onclick = () => { issuePick = k; renderIssueKinds(); renderIssueReasons(); };
+      b.onclick = () => { issuePick = k; issueReason = ''; $('issueConfirm').hidden = true; renderIssueKinds(); renderIssueReasons(); };
       box.appendChild(b);
     }
   }
@@ -2355,21 +2365,75 @@
       const b = document.createElement('button');
       b.className = 'chip-btn big';
       b.textContent = r;
-      b.onclick = () => sendIssue(r);
+      b.onclick = () => pickIssueReason(r);
       box.appendChild(b);
     }
   }
 
-  async function sendIssue(reason) {
+  /* A reason picked: sent at once if nothing needs scanning, else the gun asks
+     for the scan first - the bin, the pallet, or either. */
+  function pickIssueReason(reason) {
+    issueReason = reason;
+    const need = issuePick.confirm || 'none';
+    if (need === 'none') { sendIssue(reason, null); return; }
+    clearFeedback($('issueMsg'));
+    $('issueKinds').hidden = true;
+    $('issueDetail').hidden = true;
+    $('issueConfirm').hidden = false;
+    $('issueChosen').textContent = `${issuePick.label} · ${reason}`;
+    const c = issueContext();
+    const hint = need === 'bin' ? c.bin : need === 'pallet' ? c.pallet : (c.pallet || c.bin);
+    $('issueScanLabel').textContent = `Scan ${SCAN_WORD[need]} to confirm${hint ? ` (${hint}?)` : ''}`;
+    const f = $('fIssueScan');
+    f.value = '';
+    f.inputMode = 'none';
+    issueTyped = false;
+    try { f.focus({ preventScroll: true }); } catch { f.focus(); }
+  }
+
+  /* What was scanned, checked against what this kind of problem asks for. */
+  async function confirmIssueScan(raw) {
+    const value = String(raw || '').trim().toUpperCase();
+    const f = $('fIssueScan');
+    if (!value || !issuePick) return;
+    const need = issuePick.confirm || 'none';
+    const c = issueContext();
+    const isBin = !!(await lookupLocation(value).catch(() => null));
+    const isPallet = !isBin && (!!(await lookupPallet(value).catch(() => null)) || value === c.pallet);
+    let as = isBin ? 'bin' : 'pallet';
+    if (need === 'bin' && !isBin) {
+      beep('err');
+      feedback($('issueMsg'), 'err', isPallet ? `${value} is a pallet, not a bin` : `${value} is not a bin on this count`, 'Scan the label on the rack for this bin.');
+      f.value = ''; return;
+    }
+    if (need === 'pallet' && isBin) {
+      beep('err');
+      feedback($('issueMsg'), 'err', `${value} is a bin, not a pallet`, 'Scan the label on the pallet.');
+      f.value = ''; return;
+    }
+    if (need === 'either' && !isBin && !isPallet && !/\d/.test(value)) {
+      beep('err');
+      feedback($('issueMsg'), 'err', `${value} is not a pallet or a bin`, 'Scan the pallet\'s label, or the bin\'s on the rack.');
+      f.value = ''; return;
+    }
+    f.value = '';
+    await sendIssue(issueReason, { code: value, as, how: issueTyped ? 'typed' : 'scanned' });
+  }
+
+  async function sendIssue(reason, scan) {
     const c = issueContext();
     const line = {
-      clientId: uuid(), kind: issuePick.kind, target: issuePick.target, reason, note: $('fIssueNote').value.trim(),
-      palletId: c.pallet, bin: c.bin, aisle: c.aisle, team: state.team, deviceId: state.deviceId, employees: state.employees,
+      clientId: uuid(), kind: issuePick.kind, target: issuePick.target, label: issuePick.label, confirm: issuePick.confirm || 'none',
+      reason, note: $('fIssueNote').value.trim(),
+      palletId: scan && scan.as === 'pallet' ? scan.code : c.pallet, bin: scan && scan.as === 'bin' ? scan.code : c.bin, aisle: c.aisle,
+      confirmed: scan ? scan.code : '', confirmedAs: scan ? scan.as : '', confirmedHow: scan ? scan.how : '',
+      team: state.team, deviceId: state.deviceId, employees: state.employees,
     };
     state.issuesPending = [...(state.issuesPending || []), line];
     await metaSet('issuesPending', state.issuesPending);
     beep('ok');
-    feedback($('issueMsg'), 'ok', 'On the fix list', `${reason}${c.bin ? ' · ' + c.bin : ''}. Carry on counting — a supervisor will see it.`);
+    const where = scan ? scan.code : c.bin;
+    feedback($('issueMsg'), 'ok', 'On the fix list', `${reason}${where ? ' · ' + where : ''}. Carry on counting — a supervisor will see it.`);
     flushIssues();
     setTimeout(() => { if ($('scrIssue').classList.contains('active')) backFromIssue(); }, 1800);
   }
@@ -2387,6 +2451,8 @@
   }
 
   function backFromIssue() {
+    $('issueKinds').hidden = false;
+    $('issueConfirm').hidden = true;
     showScreen('scrScan');
     renderStep();
   }
@@ -2996,6 +3062,9 @@
   $('btnMoveSos').onclick = () => { state.sosReturn = 'scrMove'; openSos(); };
   $('btnIssue').onclick = openIssue;
   $('btnIssueBack').onclick = backFromIssue;
+  $('fIssueScan').addEventListener('keydown', (e) => { if (SCAN_ENTER.has(e.key)) { e.preventDefault(); confirmIssueScan($('fIssueScan').value); } });
+  $('btnIssueScanKeyboard').onclick = () => { issueTyped = true; const f = $('fIssueScan'); f.inputMode = 'text'; try { f.focus(); f.click(); } catch { /* ignore */ } };
+  $('btnIssueRepick').onclick = () => { $('issueConfirm').hidden = true; $('issueKinds').hidden = false; clearFeedback($('issueMsg')); renderIssueKinds(); renderIssueReasons(); };
   $('btnIssueKeyboard').onclick = () => { $('fIssueNote').inputMode = 'text'; try { $('fIssueNote').focus(); $('fIssueNote').click(); } catch { /* ignore */ } };
   $('btnMoveSignoff').onclick = () => $('btnSignoff').click();
   $('btnEmptyRun').onclick = openEmptyRun;
@@ -3136,7 +3205,7 @@
        is only the second guess. */
     const boxes = [...screenEl.querySelectorAll('input, textarea')].filter(usable);
     let f = fieldId ? $(fieldId) : scanning() ? $('fScan') : document.activeElement;
-    if (!usable(f)) f = boxes.find((b) => !b.value) || boxes[0];
+    if (!usable(f)) f = boxes.find((b) => b.dataset.scanTarget) || boxes.find((b) => !b.value) || boxes[0];
     if (!f) return false;
     try { f.focus({ preventScroll: true }); } catch { f.focus(); }
     f.value = String(text);

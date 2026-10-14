@@ -176,6 +176,18 @@
           ],
         },
         {
+          title: 'Set what Report a problem offers',
+          do: 'Settings → Scanners → What the scanners offer → Report a problem. One box per kind of problem the gun offers, each with its reasons and what the counter must scan before it is sent: the bin (racking, a blocked bay), the pallet, the pallet or the bin (a leaning or tipped pallet whose own label is out of reach), or nothing (a light out). Add your own kinds and reasons, take any off, Save. Restore the shipped list puts the five shipped kinds back.',
+          where: S('/settings', 'gun', 'Settings → Scanners'),
+          watch: [
+            { see: 'The gun says "is a pallet, not a bin"', means: 'That kind of problem asks for the bin, and the counter scanned the pallet.', fix: 'Scan the label on the rack. If the problem is the pallet, set that kind to "Scan the pallet or the bin".' },
+            { see: 'A fix-list line says "typed on the gun"', means: 'The label would not scan, so the counter typed it.', fix: 'Check it is the right one when you go; the label may need replacing too.' },
+          ],
+          ask: [
+            { q: 'Why make them scan?', a: 'So whoever goes to fix it goes to the right bin or pallet. The scan replaces the bin or pallet the gun assumed with the one the counter is standing at.' },
+          ],
+        },
+        {
           title: 'Choose which jobs the scanners offer',
           do: 'Settings → Scanners → What the scanners offer → Jobs: the sign-on screen shows exactly what is ticked — Full count, Cycle count, Front2Back, Not in Location. Day to day tick the last three; on count day untick them and tick the full count alone; swap back afterwards. The practice gun has its own ticks in the Testing Suite sandbox.',
           where: S('/settings', 'gun', 'Settings → Scanners'),

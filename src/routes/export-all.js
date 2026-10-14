@@ -192,10 +192,11 @@ export function exportEverything(sessionId, { by = '' } = {}) {
     })));
 
   const KIND = { label: 'Label to replace', damage: 'Damage', blocked: 'Blocked bin', other: 'Other' };
-  const fixes = sheet('Fix list', ['Kind', 'What', 'Bin', 'Aisle', 'Pallet', 'Problem', 'Note', 'Reported by team', 'Reported', 'Status', 'Fixed by', 'Fixed', 'Outcome'],
+  const fixes = sheet('Fix list', ['Kind', 'What', 'Bin', 'Aisle', 'Pallet', 'Problem', 'Note', 'Reported by team', 'Reported', 'Confirmed', 'Status', 'Fixed by', 'Fixed', 'Outcome'],
     fixList(id).rows.map((r) => ({
       'Kind': KIND[r.kind] || r.kind, 'What': r.target ? r.target[0].toUpperCase() + r.target.slice(1) : '', 'Bin': r.bin || '', 'Aisle': r.aisle || '',
       'Pallet': r.pallet_id || '', 'Problem': r.reason, 'Note': r.note || '', 'Reported by team': r.team || '', 'Reported': when(r.created_at),
+      'Confirmed': (r.confirmed ? `${r.confirmed_how === 'typed' ? 'typed' : 'scanned'} ${r.confirmed_as || ''} ${r.confirmed}`.replace(/\s+/g, ' ') : ''),
       'Status': r.status === 'fixed' ? 'Fixed' : 'Open', 'Fixed by': r.fixed_by || '', 'Fixed': when(r.fixed_at), 'Outcome': r.outcome || '',
     })));
 

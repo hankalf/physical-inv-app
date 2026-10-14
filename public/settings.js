@@ -738,12 +738,13 @@
     $('btnJobsSave').click();
     $('btnSavePrompts').click();
     $('btnSaveSos').click();
+    if (!$('btnSaveIssues').hidden) $('btnSaveIssues').click();
     await new Promise((r) => setTimeout(r, 900));
-    const bad = ['jobsMsg', 'promptMsg', 'sosMsg'].filter((id) => $(id).classList.contains('err'));
+    const bad = ['jobsMsg', 'promptMsg', 'sosMsg', 'issueMenuMsg'].filter((id) => $(id).classList.contains('err'));
     // one summary at the bottom; a part keeps its own message only when it refused
-    for (const id of ['jobsMsg', 'promptMsg', 'sosMsg']) if (!bad.includes(id)) clearMsg($(id));
+    for (const id of ['jobsMsg', 'promptMsg', 'sosMsg', 'issueMenuMsg']) if (!bad.includes(id)) clearMsg($(id));
     if (bad.length) msg($('offersMsg'), 'err', 'Not everything saved', 'See the message under the part that refused.');
-    else msg($('offersMsg'), 'ok', 'Saved: the jobs, the comments, the override reasons and the SOS list.', 'Scanners pick the reasons up within about half a minute, between pallets; the jobs the next time they are online.');
+    else msg($('offersMsg'), 'ok', 'Saved: the jobs, the comments, the override reasons, the SOS list and Report a problem.', 'Scanners pick the reasons up within about half a minute, between pallets; the jobs the next time they are online.');
   };
   $('btnSaveIdle').onclick = async () => {
     try {
@@ -1155,6 +1156,110 @@
       ? `Posting to ${teamsState.masked}`
       : 'No Teams channel set — alerts stay on the dashboard.';
   }
+
+  /* ------------------------------------------------- Report a problem
+     The kinds of problem the gun offers, each with its reasons and what the
+     counter must scan to confirm it: the bin, the pallet, either, or nothing. */
+  let issueState = { menu: [], isDefault: true, defaults: [] };
+  const ISSUE_CONFIRM = [['bin', 'Scan the bin to confirm'], ['pallet', 'Scan the pallet to confirm'], ['either', 'Scan the pallet or the bin'], ['none', 'No scan needed']];
+  const ISSUE_ABOUT = [['pallet', 'a pallet'], ['rack', 'racking or a bin'], ['product', 'product'], ['bin', 'a blocked bin'], ['', 'something else']];
+  const kindOf = (target) => (target === 'bin' ? 'blocked' : target ? 'damage' : 'other');
+  function issueDirty() { $('btnSaveIssues').hidden = false; }
+  function renderIssueMenu() {
+    const box = $('issueList');
+    box.innerHTML = '';
+    issueState.menu.forEach((k, i) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'ikind';
+      wrap.dataset.i = i;
+      const head = document.createElement('div');
+      head.className = 'ihead';
+      const name = Object.assign(document.createElement('input'), { value: k.label, maxLength: 40, className: 'sm iname' });
+      name.setAttribute('aria-label', 'Name on the gun');
+      name.oninput = () => { k.label = name.value; issueDirty(); };
+      const about = document.createElement('select');
+      about.className = 'sm iabout';
+      about.title = 'What it is about — sorts it on the fix list';
+      for (const [v, l] of ISSUE_ABOUT) about.appendChild(Object.assign(document.createElement('option'), { value: v, textContent: `About ${l}` }));
+      about.value = k.target || '';
+      about.onchange = () => { k.target = about.value; k.kind = kindOf(about.value); issueDirty(); };
+      const conf = document.createElement('select');
+      conf.className = 'sm iconfirm';
+      for (const [v, l] of ISSUE_CONFIRM) conf.appendChild(Object.assign(document.createElement('option'), { value: v, textContent: l }));
+      conf.value = k.confirm || 'none';
+      conf.onchange = () => { k.confirm = conf.value; issueDirty(); };
+      const up = button('↑', 'sm', () => { if (i > 0) { issueState.menu.splice(i - 1, 0, issueState.menu.splice(i, 1)[0]); issueDirty(); renderIssueMenu(); } });
+      up.title = 'Move it up the list on the gun';
+      up.disabled = i === 0;
+      const del = button('Remove', 'sm danger', () => { issueState.menu.splice(i, 1); issueDirty(); renderIssueMenu(); });
+      head.append(name, about, conf, up, del);
+      const rs = document.createElement('div');
+      rs.className = 'ireasons';
+      for (const r of k.reasons) {
+        const b = button(r, 'chip-btn remove', () => { k.reasons = k.reasons.filter((x) => x !== r); issueDirty(); renderIssueMenu(); });
+        b.title = 'Remove this reason';
+        rs.appendChild(b);
+      }
+      const add = Object.assign(document.createElement('input'), { className: 'sm inew', maxLength: 60, placeholder: 'Add a reason, then Enter' });
+      add.onkeydown = (e) => {
+        if (e.key !== 'Enter') return;
+        const v = add.value.replace(/\s+/g, ' ').trim();
+        if (!v || k.reasons.some((x) => x.toLowerCase() === v.toLowerCase())) { add.value = ''; return; }
+        k.reasons = [...k.reasons, v];
+        issueDirty(); renderIssueMenu();
+        const again = $('issueList').querySelector(`.ikind[data-i="${i}"] .inew`);
+        if (again) again.focus();
+      };
+      rs.appendChild(add);
+      wrap.append(head, rs);
+      box.appendChild(wrap);
+    });
+    const chip = $('issueChip');
+    chip.hidden = false;
+    chip.className = 'chip' + (issueState.isDefault ? '' : ' online');
+    chip.textContent = issueState.isDefault ? 'the shipped list' : 'set for this site';
+  }
+  async function refreshIssueMenu() {
+    issueState = await api.json('/api/admin/issue-menu');
+    issueState.menu = issueState.menu.map((k) => ({ ...k, reasons: [...k.reasons] }));
+    $('btnSaveIssues').hidden = true;
+    renderIssueMenu();
+  }
+  $('btnAddIssue').onclick = () => {
+    const v = $('fNewIssue').value.replace(/\s+/g, ' ').trim().slice(0, 40);
+    if (!v) return;
+    if (issueState.menu.some((k) => k.label.toLowerCase() === v.toLowerCase())) { msg($('issueMenuMsg'), 'warn', `"${v}" is already there`); return; }
+    issueState.menu.push({ kind: 'other', target: '', label: v, confirm: 'bin', reasons: [] });
+    $('fNewIssue').value = '';
+    clearMsg($('issueMenuMsg'));
+    issueDirty();
+    renderIssueMenu();
+    const last = $('issueList').querySelector('.ikind:last-child .inew');
+    if (last) last.focus();
+  };
+  $('fNewIssue').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnAddIssue').click(); });
+  $('btnSaveIssues').onclick = async () => {
+    try {
+      const empty = issueState.menu.find((k) => !k.reasons.length);
+      if (empty) { msg($('issueMenuMsg'), 'err', `"${empty.label || 'A new kind'}" needs at least one reason`, 'Type a reason in its box and press Enter, or remove it.'); return; }
+      if (!issueState.menu.length) { msg($('issueMenuMsg'), 'err', 'Keep at least one kind of problem', 'Or press Restore the shipped list.'); return; }
+      issueState = await api.post('/api/admin/issue-menu', { menu: issueState.menu });
+      issueState.menu = issueState.menu.map((k) => ({ ...k, reasons: [...k.reasons] }));
+      $('btnSaveIssues').hidden = true;
+      renderIssueMenu();
+      msg($('issueMenuMsg'), 'ok', 'Saved.', 'A gun picks the list up the next time Report a problem is opened with signal.');
+    } catch (err) { msg($('issueMenuMsg'), 'err', err.message); }
+  };
+  $('btnResetIssues').onclick = async () => {
+    if (!confirm('Put Report a problem back to the shipped list?')) return;
+    try {
+      issueState = await api.post('/api/admin/issue-menu', { menu: [] });
+      issueState.menu = issueState.menu.map((k) => ({ ...k, reasons: [...k.reasons] }));
+      $('btnSaveIssues').hidden = true;
+      renderIssueMenu();
+      msg($('issueMenuMsg'), 'ok', 'Back to the shipped list.');
+    } catch (err) { msg($('issueMenuMsg'), 'err', err.message); }
+  };
 
   async function refreshSosSettings() {
     const [reasons, teams, idle] = await Promise.all([
@@ -1911,7 +2016,7 @@
 
   async function load() {
     await refreshMe();
-    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshJobs().catch(() => {}), refreshReasons(), refreshSosSettings(), refreshLogo(), refreshPalletSystem().catch(() => {}), refreshOnedrive().catch(() => {})]);
+    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshJobs().catch(() => {}), refreshReasons(), refreshSosSettings(), refreshIssueMenu().catch(() => {}), refreshLogo(), refreshPalletSystem().catch(() => {}), refreshOnedrive().catch(() => {})]);
     await refreshFeatures().catch(() => {});
     await refreshGun().catch(() => {});
     await loadLayouts().catch(() => {});

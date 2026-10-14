@@ -53,7 +53,9 @@ check('…then what is wrong with it', reasons.includes('Broken boards') && reas
 await gun.fill('#fIssueNote', 'bottom deck gone');
 await gun.click('#issueReasons button:has-text("Broken boards")');
 await gun.waitForTimeout(300);
-check('One tap sends it, and says so without any fuss', /On the fix list/.test(await gun.textContent('#issueMsg')) && /Broken boards/.test(await gun.textContent('#issueMsg')));
+check('A damaged pallet is not sent until the pallet or its bin is scanned', await gun.isVisible('#fIssueScan') && /Scan the pallet or the bin to confirm/.test(await gun.textContent('#issueScanLabel')) && !/On the fix list/.test(await gun.textContent('#issueMsg')), clean(await gun.textContent('#issueScanLabel')));
+await gun.fill('#fIssueScan', 'X-1'); await gun.press('#fIssueScan', 'Enter'); await gun.waitForTimeout(400);
+check('The scan sends it, and says so without any fuss', /On the fix list/.test(await gun.textContent('#issueMsg')) && /Broken boards/.test(await gun.textContent('#issueMsg')));
 await gun.waitForTimeout(2200);
 check('…and goes back to counting by itself, where it was', await gun.isVisible('#scrScan') && /QUANTITY/.test(await gun.textContent('#prompt')));
 await scan('40'); await scan('F01A001');
@@ -62,6 +64,7 @@ let list = await get(`/api/admin/sessions/${sess.id}/fixlist`);
 const first = list.rows.find((r) => r.kind === 'damage');
 check('It is on the fix list with the pallet, the bin, the note and who saw it', first && first.pallet_id === 'X-1' && first.reason === 'Broken boards' && first.note === 'bottom deck gone' && first.team === '2' && first.device_id === 'FIX-01',
   JSON.stringify(first));
+check('…and the pallet that was scanned to confirm it', first.confirmed === 'X-1' && first.confirmed_as === 'pallet' && first.confirmed_how === 'scanned', JSON.stringify([first.confirmed, first.confirmed_as, first.confirmed_how]));
 
 /* a blocked bin, reported with no signal */
 await ctx.setOffline(true);
@@ -70,6 +73,9 @@ await scan('X-2');
 await gun.click('#btnIssue'); await gun.waitForTimeout(300);
 await gun.click('#issueKinds button:has-text("blocked")'); await gun.waitForTimeout(200);
 await gun.click('#issueReasons button:has-text("Trailer")'); await gun.waitForTimeout(300);
+await gun.fill('#fIssueScan', 'X-2'); await gun.press('#fIssueScan', 'Enter'); await gun.waitForTimeout(400);
+check('A blocked bin wants the bin: a pallet scanned instead is refused', /X-2 is a pallet, not a bin/.test(await gun.textContent('#issueMsg')), clean(await gun.textContent('#issueMsg')));
+await gun.fill('#fIssueScan', 'F01A002'); await gun.press('#fIssueScan', 'Enter'); await gun.waitForTimeout(400);
 check('With no signal it is still taken, and kept', /On the fix list/.test(await gun.textContent('#issueMsg')));
 await gun.waitForTimeout(2200);
 list = await get(`/api/admin/sessions/${sess.id}/fixlist`);
@@ -111,6 +117,7 @@ await page.waitForTimeout(500);
 check('The list can show only what is still open', (await page.$$('#fixTable tbody tr')).length === 2);
 const csvText = await (await fetch(`${BASE}/api/admin/sessions/${sess.id}/export/fixlist.csv`, { headers: A })).text();
 check('It downloads as a readable CSV', /Kind,What,Bin,Aisle,Pallet,Problem/.test(csvText) && /Damage,Pallet,F01A001,F01,X-1,Broken boards,bottom deck gone/.test(csvText), csvText.split('\n')[1]);
+check('…with what was scanned to confirm each', /,Confirmed,/.test(csvText.split('\n')[0]) && /scanned pallet X-1/.test(csvText) && /scanned bin F01A002/.test(csvText), csvText.split('\n').slice(0, 3).join(' | '));
 const ev = await get(`/api/admin/sessions/${sess.id}/export/everything`);
 check('…and has a sheet in Export everything', ev.sheets.some((s) => s.name === 'Fix list' && s.rows.length === 3));
 check('No script errors', errors.length === 0, errors.join(' | '));

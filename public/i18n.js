@@ -240,6 +240,9 @@
     'Scan it. It is recorded with no quantity of its own. Tap Back to cancel.': 'Escanéala. Se registra sin cantidad propia. Toca Atrás para cancelar.',
     'Report a problem — damage, blocked bin': 'Reportar un problema — daño, ubicación bloqueada',
     'What did you find?': '¿Qué encontraste?', 'What is wrong': 'Qué está mal', 'On the fix list': 'En la lista de arreglos',
+    'Tipped over': 'Volcada', 'Label will not scan — type it': 'La etiqueta no escanea — escríbela', 'Pick another reason': 'Elegir otro motivo',
+    'Scan it': 'Escanéala', 'Scan the label on the rack for this bin.': 'Escanea la etiqueta del rack de esta ubicación.', 'Scan the label on the pallet.': 'Escanea la etiqueta de la tarima.',
+    "Scan the pallet's label, or the bin's on the rack.": 'Escanea la etiqueta de la tarima, o la de la ubicación en el rack.',
     'Damaged pallet': 'Tarima dañada', 'Damaged rack or bin': 'Rack o ubicación dañada', 'Damaged product': 'Producto dañado',
     'Bin blocked — come back later': 'Ubicación bloqueada — volver después', 'Something else': 'Otra cosa',
     'Broken boards': 'Tablas rotas', 'Leaning or unstable': 'Inclinada o inestable', 'Wrap torn or open': 'Emplaye roto o abierto', 'Crushed cases': 'Cajas aplastadas',
@@ -277,6 +280,13 @@
   const T = (s) => tr(s);
   const PATTERNS = [
     [/^Step (\d+) of (\d+)$/, (m) => `Paso ${m[1]} de ${m[2]}`],
+    [/^Scan the bin to confirm(.*)$/, (m) => `Escanea la ubicación para confirmar${m[1]}`],
+    [/^Scan the pallet to confirm(.*)$/, (m) => `Escanea la tarima para confirmar${m[1]}`],
+    [/^Scan the pallet or the bin to confirm(.*)$/, (m) => `Escanea la tarima o la ubicación para confirmar${m[1]}`],
+    [/^(\S+) is a pallet, not a bin$/, (m) => `${m[1]} es una tarima, no una ubicación`],
+    [/^(\S+) is a bin, not a pallet$/, (m) => `${m[1]} es una ubicación, no una tarima`],
+    [/^(\S+) is not a bin on this count$/, (m) => `${m[1]} no es una ubicación de este conteo`],
+    [/^(\S+) is not a pallet or a bin$/, (m) => `${m[1]} no es una tarima ni una ubicación`],
     [/^Counted (.+)$/, (m) => `Contada ${m[1]}`],
     [/^Pallet (.+)$/, (m) => `Tarima ${m[1]}`],
     [/^Qty (.+)$/, (m) => `Cant. ${m[1]}`],

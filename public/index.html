@@ -193,6 +193,15 @@
       <input id="fIssueNote" autocomplete="off" inputmode="none" placeholder="Tap to type">
       <button class="ghost" id="btnIssueKeyboard">Type it instead — show the keyboard</button>
     </div>
+    <!-- a report about a bin or a pallet is sent only once the counter has scanned
+         it, so the office goes to the right one -->
+    <div id="issueConfirm" hidden>
+      <div class="chosen" id="issueChosen"></div>
+      <label for="fIssueScan" id="issueScanLabel">Scan the bin to confirm</label>
+      <input id="fIssueScan" data-scan-target="1" autocomplete="off" autocapitalize="characters" inputmode="none" placeholder="Scan it">
+      <button class="ghost" id="btnIssueScanKeyboard">Label will not scan — type it</button>
+      <button class="ghost" id="btnIssueRepick">Pick another reason</button>
+    </div>
     <div class="feedback" id="issueMsg"></div>
     <button class="ghost" id="btnIssueBack">Back to counting</button>
   </section>

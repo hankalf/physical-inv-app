@@ -19,7 +19,7 @@ import { listAdjustments, adjustmentView, decideAdjustments, adjustmentReasons, 
 import { setupState } from './routes/setup.js';
 import { searchAll } from './routes/search.js';
 import { importMissing, addMissing, listMissing, missingForGun, markFound, foundByHand, closeMissing, deleteMissing } from './routes/missing.js';
-import { raiseIssue, fixIssue, fixList, ISSUE_MENU } from './routes/issues.js';
+import { raiseIssue, fixIssue, fixList, issueMenu, saveIssueMenu, ISSUE_MENU } from './routes/issues.js';
 import { buildMoves, importMoves, listMoves, movesForGun, finishMove, clearOpenMoves, referenceSession } from './routes/moves.js';
 import { autoPlan, applyPlan } from './routes/auto-plan.js';
 import { endTrial, setTrial } from './routes/trial.js';
@@ -440,7 +440,7 @@ async function handleHandheld(req, res, url, m) {
 
   // --- the fix list: a problem seen on the floor, reported from the gun
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/issues$/)) && method === 'GET') {
-    return sendJson(req, res, 200, { menu: ISSUE_MENU });
+    return sendJson(req, res, 200, { menu: issueMenu().menu });
   }
   if ((m = p.match(/^\/api\/sessions\/(\d+)\/issues$/)) && method === 'POST') {
     openSession(m[1]);
@@ -1626,6 +1626,14 @@ async function handleAdmin(req, res, url, m) {
     audit(actor, 'removed the site logo');
     return sendJson(req, res, 200, out);
   }
+  // --- what Report a problem offers on the gun, and what each kind makes the counter scan
+  if (p === '/api/admin/issue-menu' && method === 'GET') return sendJson(req, res, 200, { ...issueMenu(), defaults: ISSUE_MENU });
+  if (p === '/api/admin/issue-menu' && method === 'POST') {
+    const body = await readJson(req);
+    const out = saveIssueMenu(body.menu);
+    audit(actor, out.isDefault ? 'put Report a problem back to the shipped list' : 'changed what Report a problem offers', out.menu.map((x) => `${x.label} (${x.confirm})`).join(', '));
+    return sendJson(req, res, 200, { ...out, defaults: ISSUE_MENU });
+  }
   if (p === '/api/admin/sos-reasons' && method === 'GET') {
     return sendJson(req, res, 200, { ...sosReasons(), defaults: DEFAULT_REASONS });
   }
@@ -1803,9 +1811,10 @@ async function handleAdmin(req, res, url, m) {
     const rows = fixList(m[1]).rows.map((r) => ({
       Kind: KIND[r.kind] || r.kind, What: r.target ? r.target[0].toUpperCase() + r.target.slice(1) : '', Bin: r.bin || '', Aisle: r.aisle || '', Pallet: r.pallet_id || '',
       Problem: r.reason, Note: r.note || '', 'Reported by team': r.team || '', Scanner: r.device_id || '', Reported: r.created_at || '',
+      Confirmed: (r.confirmed ? `${r.confirmed_how === 'typed' ? 'typed' : 'scanned'} ${r.confirmed_as || ''} ${r.confirmed}`.replace(/\s+/g, ' ') : ''),
       Status: r.status === 'fixed' ? 'Fixed' : 'Open', 'Fixed by': r.fixed_by || '', 'Fixed at': r.fixed_at || '', Outcome: r.outcome || '',
     }));
-    return sendCsv(req, res, `fix-list-session-${m[1]}.csv`, toCsv(rows, ['Kind', 'What', 'Bin', 'Aisle', 'Pallet', 'Problem', 'Note', 'Reported by team', 'Scanner', 'Reported', 'Status', 'Fixed by', 'Fixed at', 'Outcome']));
+    return sendCsv(req, res, `fix-list-session-${m[1]}.csv`, toCsv(rows, ['Kind', 'What', 'Bin', 'Aisle', 'Pallet', 'Problem', 'Note', 'Reported by team', 'Scanner', 'Reported', 'Confirmed', 'Status', 'Fixed by', 'Fixed at', 'Outcome']));
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/labels$/)) && method === 'GET') {
     return sendJson(req, res, 200, { labels: labelsToReplace(m[1]) });

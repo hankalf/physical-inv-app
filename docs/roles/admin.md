@@ -149,6 +149,9 @@ office side as its own app (*FH Office*), with a Menu button in place of the sid
   Suite's sandbox, all four to start with.
 - **The picker opens on the right count.** An open full count first (the one the scanners land
   on, else the newest), else an open cycle count; and it lists only the kinds the site has switched on.
+- **Report a problem** (Settings → Scanners → What the scanners offer): the kinds of problem the
+  gun offers, their reasons, and what each makes the counter scan to confirm — the bin, the pallet,
+  either, or nothing. Add your own, take any off, or restore the shipped list.
 - **Practice counts stay out of the picker.** Nobody's practice count from the Testing Suite is
   in a dashboard's picker, yours included. **Learn → Practice data** — admins only — lists every
   login's practice in one place: who has practiced, each run with what was tried and how far it

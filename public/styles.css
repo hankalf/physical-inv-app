@@ -382,3 +382,6 @@ body.big-text .nextbin .nb-code { font-size: 30px; }
 #modePick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 #modePick > button { margin: 0; min-width: 0; padding: 12px 8px; font-size: 16px; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
 #modePick > button[hidden] { display: none; }
+
+/* Report a problem: the kind and reason picked, above the scan that confirms it */
+#issueConfirm .chosen { font-weight: 800; font-size: 1.1em; margin: 6px 0 10px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2, #1b2230); border: 1px solid var(--line, #2a3446); }

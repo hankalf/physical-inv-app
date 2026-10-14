@@ -354,9 +354,29 @@
       </div>
 
       <hr>
+      <h3>Report a problem <span class="chip" id="issueChip" hidden></span></h3>
+      <div class="hint" style="margin-top:0">
+        The gun's <b>Report a problem</b> button offers these kinds of problem, each with its reasons; what the counter
+        picks goes on the dashboard's <b>Fix list</b>. Each kind says what the counter must <b>scan to confirm</b> before
+        it is sent, so the office goes to the right place: the <b>bin</b> for racking or a blocked bay, the <b>pallet</b>,
+        <b>the pallet or the bin</b> for a leaning or tipped pallet whose own label may be out of reach, or nothing for a
+        light out. A label that will not scan can be typed, and the fix list says so.
+      </div>
+      <div id="issueList" class="issuelist" style="margin-top:10px"></div>
+      <div class="row" style="margin-top:10px">
+        <input id="fNewIssue" placeholder="A new kind of problem, e.g. Pest sighting" maxlength="40">
+        <button class="fit" id="btnAddIssue">Add</button>
+      </div>
+      <div class="inline" style="margin-top:8px">
+        <button class="primary" id="btnSaveIssues" hidden>Save</button>
+        <div class="auto"><button class="fit sm" id="btnResetIssues">Restore the shipped list</button></div>
+      </div>
+      <div class="feedback" id="issueMenuMsg"></div>
+
+      <hr>
       <div class="toolbar">
         <button class="primary" id="btnSaveOffers">Save everything the scanners offer</button>
-        <span class="muted">jobs, comments, override reasons and the SOS list, in one go</span>
+        <span class="muted">jobs, comments, override reasons, the SOS list and Report a problem, in one go</span>
       </div>
       <div class="feedback" id="sosMsg"></div>
       <div class="feedback" id="offersMsg"></div>
