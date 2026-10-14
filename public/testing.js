@@ -879,8 +879,9 @@
         const o = (data.options && data.options.values) || {};
         const x = data.extras || {};
         const feat = (key, t) => (shownFeat.has(key) ? null : { key: 'feat:' + key, ...t });
-        const f = (x.openSecondCounts > 0 && (o.autoRecount || modeOn('second')) && feat('second', { target: $('dashCard'), step: 'Second counts',
-            text: modeOn('second')
+        const lessonOpen = modeOn('second') && data.modes.second.open > 0;
+        const f = (x.openSecondCounts > 0 && (o.autoRecount || lessonOpen) && feat('second', { target: $('dashCard'), step: 'Second counts',
+            text: lessonOpen
               ? 'Second counts are waiting on the gun — the ones under <b>What to practise → Second counts</b>. Finish this pallet, then <b>My aisle → Start second counts</b>.'
               : 'A pallet you counted disagreed with the report, so the gun raised a <b>second count</b> — for another team: the crew that made the first count is never offered the second. See it in the dashboard at the top under <b>Second counts</b>; to do one on the gun, pick <b>Second counts</b> under What to practise.' }))
           || (x.pendingApprovals > 0 && api.can('approve') && feat('approve', { target: $('dashCard'), step: 'Approvals are on',

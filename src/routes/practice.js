@@ -674,7 +674,7 @@ const SECOND_BINS = [
     try: 'Scan both pallets, then the bin for each. The one they missed comes off the missing list.' },
   { bin: 'F03A003', shelf: [P('F34513-111', 32, 'blue', 'F34513', 200)], report: [], first: [['F34513-111', 32]],
     why: 'The report has this pallet in F03A004; they found it here',
-    try: 'It really is here. Scan it, then this bin; the gun says the report had it elsewhere - accept it. Two counts agree: it moved.' },
+    try: 'It really is here. Scan it, then this bin; the gun notes that the report had it elsewhere and carries on. Two counts agree: it moved.' },
   { bin: 'F03A004', shelf: [], report: [P('F34513-111', 32, 'blue', 'F34513', 200)], first: 'empty', manual: true,
     why: 'They recorded it empty - nothing is raised for that',
     try: 'Raise this one yourself: in the dashboard above, Second counts, type F03A004 in Bin, Request second count. On the gun tap Refresh, Start second counts, then Bin is EMPTY - scan the bin.' },

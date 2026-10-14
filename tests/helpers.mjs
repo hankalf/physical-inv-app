@@ -88,7 +88,7 @@ export async function fakeAspx() {
     if (u.pathname === '/Move.aspx') {
       if (cookies['.ASPXAUTH'] !== 'ok') { res.statusCode = 302; res.setHeader('Location', `/Login.aspx?ReturnUrl=${encodeURIComponent(u.pathname + u.search)}`); return res.end(); }
       res.setHeader('content-type', 'text/html; charset=utf-8');
-      return res.end(`<!doctype html><html><body><h1 id="welcome">Welcome dana - move ${u.searchParams.get('pallet') || '?'} to ${u.searchParams.get('to') || '?'}</h1><img src="/img/logo.png"></body></html>`);
+      return res.end(`<!doctype html><html><body><h1 id="welcome">Welcome dana - move ${u.searchParams.get('pallet') || '?'} to ${u.searchParams.get('to') || '?'}</h1><img src="/img/logo.png"><img src="${origin.replace(/^https?:/, '')}/img/mark.png"><a href="https://example.com/x">elsewhere</a></body></html>`);
     }
     res.statusCode = 404; res.end('not here');
   });

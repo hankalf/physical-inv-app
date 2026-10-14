@@ -109,6 +109,8 @@ await fr.fill('#user', 'dana'); await fr.fill('#pw', 'secret'); await fr.click('
 await page.waitForFunction(() => { const f = document.getElementById('deskFrame'); try { return !!(f.contentDocument && f.contentDocument.querySelector('#welcome')); } catch { return false; } }, null, { timeout: 8000 }).catch(() => {});
 fr = await wmsFrame();
 check('Signing in inside the frame sticks: the system lands on the pallet, signed in, under the strip', !!fr && /Welcome dana - move F12313-111 to F01A002/.test(await fr.textContent('body')), fr && (await fr.textContent('body')).slice(0, 120));
+const landed = fr ? await fr.content() : '';
+check('Links back to the system are turned round - root-relative and //host alike - and a link elsewhere is left alone', /src="\/ps\/img\/logo\.png"/.test(landed) && /src="\/ps\/img\/mark\.png"/.test(landed) && /href="https:\/\/example\.com\/x"/.test(landed), (landed.match(/<img[^>]*>|<a [^>]*>/g) || []).join(' '));
 const jar = (await page.context().cookies(`${BASE}/ps/Move.aspx`)).filter((c) => /ASPXAUTH|ASP\.NET_SessionId|psTicket/.test(c.name));
 check('The system\'s cookies live under this site, on the /ps path only', jar.length === 3 && jar.every((c) => c.path === '/ps'), JSON.stringify(jar.map((c) => [c.name, c.path])));
 wms.close();
