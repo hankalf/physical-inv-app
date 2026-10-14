@@ -37,7 +37,7 @@ Everything on the **Settings** page, which no other profile opens. It has six se
 - upload the **bin list**, pair the **racking blocks**, upload the **inventory report**;
 - create the **count session**, set its options and thresholds, run and end a **trial**,
   **close** and **delete** counts;
-- the **ERP layouts** and the ERP file; **backups** and the **OneDrive** copy; the **adjustment reasons**; **the log**;
+- the **ERP layouts** and the ERP file; **backups** and the **Google Drive** or **OneDrive** copy; the **adjustment reasons**; **the log**;
 - run the **Ready for count day** check before every wall-to-wall.
 
 A *supervisor* login does everything else. Keep the admin logins to the few who need them: an
@@ -238,8 +238,9 @@ say when they will come to you.
   `exports` folder beside the backups, and the **final report** every sheet of Export everything
   once the count is whole. Copy that folder off the server with the backup.
 - **Back up now** before and after anything large; the app also keeps a daily backup and the
-  last fourteen on its volume. A volume is not an archive: connect **Off-site copy: OneDrive**
-  once (the steps are on the card) and every backup is copied there too — with each daily
+  last fourteen on its volume. A volume is not an archive: connect **Off-site copy: Google
+  Drive** (an Apps Script in your own Google account — nothing for IT) or **OneDrive** (needs an
+  Azure app registration) once — the steps are on each card — and every backup is copied there too — with each daily
   backup, or every 12, 6, 2 hours or every hour during a count. Without it, **Download** one
   after every count.
 - **Export the log** for an auditor: every supervisor action, who and when.

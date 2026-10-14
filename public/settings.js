@@ -1705,6 +1705,96 @@
     odDo('/api/admin/onedrive/disconnect', {}, 'Disconnected — backups stay on this server only until it is connected again.');
   };
 
+  /* ------------------------------------------------------------ the off-site copy: Google Drive
+     Through an Apps Script the admin deploys in their own Google account: no
+     app registration, nothing for IT. The script, with this server's key in it,
+     comes with the status. */
+  let gdTimer = null;
+  let gdScript = '';
+  function drawGdrive(st) {
+    gdScript = st.script || '';
+    $('gdScript').value = gdScript;
+    const state = $('gdState');
+    state.textContent = st.connected ? 'connected' : st.configured ? 'not connected' : 'not set up';
+    state.className = 'tag ' + (st.connected ? (st.lastError ? 'queued' : 'MATCH') : 'off');
+    if (document.activeElement !== $('fGdUrl')) $('fGdUrl').value = st.url || '';
+    if (document.activeElement !== $('fGdFolder')) $('fGdFolder').value = st.folder || '';
+    if (document.activeElement !== $('fGdKeep')) $('fGdKeep').value = st.keep || '';
+    if (document.activeElement !== $('fGdEvery')) $('fGdEvery').value = String(st.every || 24);
+    const status = $('gdStatus');
+    status.replaceChildren();
+    let kind = 'warn';
+    const line = (t, cls) => { const d = document.createElement('div'); if (cls) d.className = cls; d.textContent = t; status.appendChild(d); return d; };
+    if (st.connected) {
+      kind = st.lastError ? 'err' : 'ok';
+      const l = line(`Backups go to ${st.account}'s Google Drive, folder "${st.folder}" — the newest ${st.keep} are kept there. `);
+      if (st.folderUrl) { const a = document.createElement('a'); a.href = st.folderUrl; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Open the folder ↗'; l.appendChild(a); }
+      line(st.every >= 24
+        ? 'A copy goes with each daily backup, and with any backup taken by hand — squeezed (gzip), so it is small. Unzip it to get the database back.'
+        : `A fresh copy every ${st.every === 1 ? 'hour' : `${st.every} hours`}${st.nextAt ? `, the next around ${new Date(st.nextAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}, as well as each daily backup.`, 'detail');
+      if (st.uploading) line('Sending a backup now…', 'detail');
+      if (st.lastUpload) line(`Last copy: ${st.lastUpload.name} (${kb(st.lastUpload.bytes)}${st.lastUpload.rawBytes ? `, ${kb(st.lastUpload.rawBytes)} unzipped` : ''}), ${new Date(st.lastUpload.at).toLocaleString()}.`, 'detail');
+      else line('No copy sent yet — it goes in a moment, or press Back up to Google Drive now.', 'detail');
+      if (st.lastError) line(`The last try failed (${new Date(st.lastError.at).toLocaleString()}): ${st.lastError.message}. It is tried again every half hour.`, 'detail');
+    } else if (st.configured) {
+      line('The address is saved but not checked: press Save and check the connection.');
+      if (st.lastError) { kind = 'err'; line(st.lastError.message, 'detail'); }
+    } else {
+      line('Not set up. Follow the steps below — a Google account and ten minutes, nothing for IT to do.');
+    }
+    status.className = `feedback show ${kind}`;
+    $('gdHow').open = !st.connected;
+    $('btnGdUpload').hidden = !st.connected;
+    $('btnGdDisconnect').hidden = !st.configured;
+    clearTimeout(gdTimer);
+    if (st.uploading) gdTimer = setTimeout(() => refreshGdrive().catch(() => {}), 3000);
+  }
+  async function refreshGdrive() {
+    if (!api.me || api.me.role !== 'admin') { $('gdriveCard').hidden = true; return; }
+    $('gdriveCard').hidden = false;
+    drawGdrive(await api.json('/api/admin/gdrive'));
+  }
+  const gdDo = async (path, body, okText) => {
+    try {
+      const st = await api.post(path, body || {});
+      drawGdrive(st);
+      if (okText) msg($('gdMsg'), 'ok', typeof okText === 'function' ? okText(st) : okText); else clearMsg($('gdMsg'));
+      return st;
+    } catch (err) { msg($('gdMsg'), 'err', err.message); await refreshGdrive().catch(() => {}); return null; }
+  };
+  $('btnGdSave').onclick = async () => {
+    const st = await gdDo('/api/admin/gdrive/config', {
+      url: $('fGdUrl').value, folder: $('fGdFolder').value, keep: Number($('fGdKeep').value) || undefined, every: Number($('fGdEvery').value),
+    });
+    if (!st) return;
+    if (!st.url) { msg($('gdMsg'), 'ok', 'Saved.'); return; }
+    msg($('gdMsg'), 'warn', 'Checking with Google…');
+    await gdDo('/api/admin/gdrive/check', {}, (s) => `Connected to ${s.account}. The newest backup is on its way to "${s.folder}".`);
+  };
+  $('btnGdUpload').onclick = async () => {
+    $('btnGdUpload').disabled = true;
+    msg($('gdMsg'), 'warn', 'Sending the newest backup…');
+    await gdDo('/api/admin/gdrive/upload', {}, (st) => `Sent — ${st.sent.name} (${kb(st.sent.bytes)}) is in Google Drive.`);
+    $('btnGdUpload').disabled = false;
+  };
+  $('btnGdDisconnect').onclick = () => {
+    if (!confirm('Stop sending backups to Google Drive? The copies already there stay where they are.')) return;
+    gdDo('/api/admin/gdrive/disconnect', {}, 'Disconnected — backups stay on this server only until it is connected again.');
+  };
+  $('btnGdNewKey').onclick = () => {
+    if (!confirm('Make a new key? The script deployed now stops working: you paste the new one over it and deploy a new version.')) return;
+    gdDo('/api/admin/gdrive/disconnect', { newKey: true }, 'A new key is in the script below. Copy it, paste it over the old one, deploy, and paste the address again.');
+  };
+  $('btnGdShow').onclick = () => { $('gdScript').hidden = !$('gdScript').hidden; $('btnGdShow').textContent = $('gdScript').hidden ? 'Show it' : 'Hide it'; };
+  $('btnGdCopy').onclick = async () => {
+    try { await navigator.clipboard.writeText(gdScript); msg($('gdMsg'), 'ok', 'The script is copied.', 'Paste it into the script.google.com editor, over what is there.'); }
+    catch {
+      $('gdScript').hidden = false; $('btnGdShow').textContent = 'Hide it';
+      $('gdScript').focus(); $('gdScript').select();
+      msg($('gdMsg'), 'warn', 'This browser would not copy it by itself.', 'The script is selected below: press Ctrl+C.');
+    }
+  };
+
   /* ------------------------------------------------------------ session scope */
   async function loadSessions() {
     sessions = await api.json('/api/admin/sessions');
@@ -2016,7 +2106,7 @@
 
   async function load() {
     await refreshMe();
-    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshJobs().catch(() => {}), refreshReasons(), refreshSosSettings(), refreshIssueMenu().catch(() => {}), refreshLogo(), refreshPalletSystem().catch(() => {}), refreshOnedrive().catch(() => {})]);
+    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshJobs().catch(() => {}), refreshReasons(), refreshSosSettings(), refreshIssueMenu().catch(() => {}), refreshLogo(), refreshPalletSystem().catch(() => {}), refreshOnedrive().catch(() => {}), refreshGdrive().catch(() => {})]);
     await refreshFeatures().catch(() => {});
     await refreshGun().catch(() => {});
     await loadLayouts().catch(() => {});

@@ -17,6 +17,7 @@ import { idleConfig } from './idle.js';
 import { listEmployees } from './people.js';
 import { listBackups } from './admin-ops.js';
 import { onedriveStatus } from './onedrive.js';
+import { gdriveStatus } from './gdrive.js';
 import { teamsConfig } from '../util/teams.js';
 import { passwordIs } from './users.js';
 
@@ -91,10 +92,19 @@ export function readiness(sessionId) {
   if (!newest) add('warn', 'No backup yet', 'One is taken each day; take one now to be sure it works.', fix('backups', 'backupsCard', 'Backups & log'));
   else if (Date.now() - Date.parse(newest.at) > 1.5 * DAY) add('warn', 'The newest backup is more than a day old', `${newest.name}. Take one now.`, fix('backups', 'backupsCard', 'Backups & log'));
   else add('ok', 'Backed up in the last day', newest.name);
+  /* off-site: Google Drive or OneDrive, either will do */
   const od = onedriveStatus();
-  if (!od.connected) add('warn', 'Backups are only on this server', 'If the server is lost, so are they. Connect OneDrive so each one is copied off-site.', fix('backups', 'onedriveCard', 'Off-site copy'));
-  else if (od.lastError) add('warn', 'The last OneDrive copy failed', od.lastError.message, fix('backups', 'onedriveCard', 'Off-site copy'));
-  else add('ok', 'Each backup is copied to OneDrive', od.lastUpload ? `Last copy ${od.lastUpload.name}.` : 'The next backup is the first copy.');
+  const gd = gdriveStatus();
+  const where = [gd.connected ? ['Google Drive', gd, 'gdriveCard'] : null, od.connected ? ['OneDrive', od, 'onedriveCard'] : null].filter(Boolean);
+  if (!where.length) add('warn', 'Backups are only on this server', 'If the server is lost, so are they. Connect Google Drive (no IT needed) or OneDrive so each one is copied off-site.', fix('backups', 'gdriveCard', 'Off-site copy'));
+  else {
+    const failed = where.filter(([, s]) => s.lastError);
+    if (failed.length === where.length) add('warn', `The last ${failed[0][0]} copy failed`, failed[0][1].lastError.message, fix('backups', failed[0][2], 'Off-site copy'));
+    else {
+      const [name, s] = where.find(([, x]) => !x.lastError);
+      add('ok', `Each backup is copied to ${where.map((w) => w[0]).join(' and ')}`, s.lastUpload ? `Last ${name} copy ${s.lastUpload.name}.` : 'The next backup is the first copy.');
+    }
+  }
 
   /* ---- the way in */
   const su = process.env.SUPERADMIN_USER;

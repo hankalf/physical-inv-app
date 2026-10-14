@@ -616,6 +616,59 @@
       <div class="scroll" style="max-height:420px"><table id="auditTable"></table></div>
     </div>
 
+    <div class="card" id="gdriveCard">
+      <h2>Off-site copy: Google Drive <span class="tag" id="gdState">not set up</span>
+        <span class="muted">every backup also goes to a Google Drive folder — set up in ten minutes, nothing for IT to do</span></h2>
+      <div class="feedback show" id="gdStatus"></div>
+      <div class="inline" style="margin-top:12px">
+        <div>
+          <label for="fGdUrl">Web app URL, from the script</label>
+          <input id="fGdUrl" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec">
+        </div>
+        <div>
+          <label for="fGdFolder">Drive folder</label>
+          <input id="fGdFolder" autocomplete="off" placeholder="Full Harvest Inventory backups">
+        </div>
+        <div class="auto">
+          <label for="fGdEvery">Send a copy</label>
+          <select id="fGdEvery">
+            <option value="24">With each daily backup</option>
+            <option value="12">Every 12 hours</option>
+            <option value="6">Every 6 hours</option>
+            <option value="2">Every 2 hours</option>
+            <option value="1">Every hour</option>
+          </select>
+        </div>
+        <div class="auto">
+          <label for="fGdKeep">Keep the newest</label>
+          <input id="fGdKeep" type="number" min="3" max="365" step="1" placeholder="30" style="width:110px">
+        </div>
+      </div>
+      <div class="inline" style="margin-top:12px">
+        <div class="auto"><button class="primary fit" id="btnGdSave">Save and check the connection</button></div>
+        <div class="auto"><button class="fit" id="btnGdUpload" hidden>Back up to Google Drive now</button></div>
+        <div class="auto"><button class="ghost danger fit" id="btnGdDisconnect" hidden>Disconnect</button></div>
+      </div>
+      <div class="feedback" id="gdMsg"></div>
+      <details class="hint" id="gdHow" style="margin-top:12px">
+        <summary><b>One-time set-up in Google (about ten minutes)</b></summary>
+        <ol style="margin:8px 0 0 18px; padding:0">
+          <li>On any computer, sign in to Google with the account whose Drive should hold the backups, and open <b>script.google.com</b> → <b>New project</b>.</li>
+          <li>Press <b>Copy the script</b> below. In the editor, select everything that is there, paste over it, and press <b>Save</b> (the disk icon). Name the project <i>Full Harvest backups</i>.</li>
+          <li><b>Deploy → New deployment</b>. Click the gear by <i>Select type</i> and pick <b>Web app</b>. Set <b>Execute as: Me</b> and <b>Who has access: Anyone</b>, then <b>Deploy</b>.</li>
+          <li>Google asks to <b>Authorize access</b>: pick the account. It warns <i>Google hasn't verified this app</i> — it is your own script, so press <b>Advanced → Go to Full Harvest backups (unsafe)</b> → <b>Allow</b>.</li>
+          <li>Copy the <b>Web app URL</b> (it ends in <b>/exec</b>), paste it in the box above, and press <b>Save and check the connection</b>. The account and the folder show here, and the newest backup goes at once.</li>
+        </ol>
+        <div class="inline" style="margin-top:10px">
+          <div class="auto"><button class="fit" id="btnGdCopy">Copy the script</button></div>
+          <div class="auto"><button class="ghost fit" id="btnGdShow">Show it</button></div>
+          <div class="auto"><button class="ghost fit" id="btnGdNewKey" title="The old script stops working; paste the new one and deploy it again">Make a new key</button></div>
+        </div>
+        <textarea id="gdScript" readonly spellcheck="false" hidden style="width:100%;min-height:260px;margin-top:8px;font:12px ui-monospace,Menlo,Consolas,monospace"></textarea>
+        <div style="margin-top:8px">No Google password is stored here. The script runs as that Google account and does one thing: save the backups this server sends into the one folder, keeping the newest few. It only answers a request carrying this server's key, which is written into the script. Anyone who has the web app address and the key could put files in that folder, so treat the address like a password. <b>Disconnect</b> stops sending; <b>Make a new key</b> also stops the old script. A Google Workspace account whose admin blocks "Anyone" web apps cannot do this — use OneDrive, or a personal Google account.</div>
+      </details>
+    </div>
+
     <div class="card" id="onedriveCard">
       <h2>Off-site copy: OneDrive <span class="tag" id="odState">not set up</span>
         <span class="muted">every backup also goes to a OneDrive folder, so a lost server does not take the backups with it</span></h2>

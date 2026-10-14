@@ -150,7 +150,7 @@ check('Shell: clicking a sub-tab swaps the pane and marks the tab',
     && await page.$eval('#subTabs button:text-is("Scanners")', (b) => b.classList.contains('current')));
 check('Shell: the scanner cards all live under Scanners, the barcode book with them',
   await page.$eval('[data-sub="gun"]', (el) => !!el.querySelector('#btnAddDevice') && !!el.querySelector('#fNewSos') && !!el.querySelector('#promptChip') && !!el.querySelector('#btnBookPrint')));
-check('Shell: Integrations holds the ERP file, the adjustment reasons, the pallet system and Teams; Backups & log the backups and OneDrive',
+check('Shell: Integrations holds the ERP file, the adjustment reasons, the pallet system and Teams; Backups & log the backups, Google Drive and OneDrive',
   !!(await page.$('[data-sub="erp"] #reasonChip')) && !!(await page.$('[data-sub="erp"] #btnErpDownload')) && !!(await page.$('[data-sub="erp"] #fPalletSystemUrl')) && !!(await page.$('[data-sub="erp"] #fTeamsUrl'))
     && !!(await page.$('[data-sub="backups"] #btnBackupNow')) && !!(await page.$('[data-sub="backups"] #onedriveCard')) && !!(await page.$('[data-sub="start"] #sessionCard')) && !!(await page.$('[data-sub="start"] #readyCard')));
 check('Shell: every section opens with a line on what is in it',

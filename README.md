@@ -634,9 +634,11 @@ is on the dashboard and exports as CSV.
 **Backups.** A copy of the database is taken automatically once a day and kept for
 `BACKUP_KEEP` days (14), plus a **Back up now** button. Each one is a consistent snapshot
 taken with `VACUUM INTO`, downloadable from Settings → Backups & log. A volume is not a backup:
-connect **OneDrive** on the same page and every backup is also copied to a OneDrive folder
-(device-code sign-in, no password kept; chunked uploads; the newest 30 kept there), with
-each daily backup or as often as every hour.
+connect **Google Drive** or **OneDrive** on the same page and every backup is also copied
+off-site, with each daily backup or as often as every hour. Google Drive goes through an Apps
+Script the admin pastes into their own Google account (the card writes it, key included) — no
+Google Cloud project and nothing for IT; copies are gzipped. OneDrive uses a device-code sign-in
+against an Azure app registration (chunked uploads). The newest 30 are kept in either.
 
 **Ready for count day.** Settings → Count setup opens on a check of the site's settings
 against a count day — the jobs on the scanners, scanners enrolled, the crew list, alerts,

@@ -57,6 +57,7 @@ import { readiness } from './routes/readiness.js';
 import { palletSystem, savePalletSystem, probePalletSystem } from './routes/pallet-system.js';
 import { proxyPalletSystem, makeTicket, ticketCookie, PREFIX as PS_PREFIX } from './routes/pallet-proxy.js';
 import { onedriveStatus, setOnedriveConfig, startSignIn, cancelSignIn, disconnect, uploadNow, startOnedrive } from './routes/onedrive.js';
+import { gdriveStatus, setGdriveConfig, checkConnection, disconnectGdrive, uploadToGdrive, startGdrive } from './routes/gdrive.js';
 import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, unlockPlace, PER_LOGIN, PER_PLACE } from './routes/login-limit.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards, barcodeBook } from './routes/printing.js';
@@ -1346,6 +1347,35 @@ async function handleAdmin(req, res, url, m) {
     if (whoNow.role !== 'admin') throw httpError(403, 'only an admin can see the count-day check');
     return sendJson(req, res, 200, readiness(url.searchParams.get('session')));
   }
+  /* --- the off-site copy: Google Drive, through an Apps Script the admin
+     deploys themselves. Admins only, reads included - the status carries the
+     script with this server's key in it. */
+  if (p === '/api/admin/gdrive' || p.startsWith('/api/admin/gdrive/')) {
+    if (whoNow.role !== 'admin') throw httpError(403, 'only an admin can see or change where the backups go');
+    if (p === '/api/admin/gdrive' && method === 'GET') return sendJson(req, res, 200, gdriveStatus());
+    if (p === '/api/admin/gdrive/config' && method === 'POST') {
+      const st = setGdriveConfig(await readJson(req));
+      audit(actor, 'changed the Google Drive backup settings', `folder "${st.folder}", keeping ${st.keep}, every ${st.every} h${st.url ? '' : ', no address'}`);
+      return sendJson(req, res, 200, st);
+    }
+    if (p === '/api/admin/gdrive/check' && method === 'POST') {
+      const st = await checkConnection(actor);
+      audit(actor, 'connected Google Drive for backups', st.account);
+      return sendJson(req, res, 200, st);
+    }
+    if (p === '/api/admin/gdrive/disconnect' && method === 'POST') {
+      const body = await readJson(req);
+      audit(actor, body.newKey ? 'disconnected Google Drive backups and made a new key' : 'disconnected Google Drive backups', gdriveStatus().account);
+      return sendJson(req, res, 200, disconnectGdrive({ newKey: !!body.newKey }));
+    }
+    if (p === '/api/admin/gdrive/upload' && method === 'POST') {
+      const sent = await uploadToGdrive();
+      audit(actor, 'sent a backup to Google Drive', `${sent.name} (${Math.round(sent.bytes / 1024)} KB)`);
+      return sendJson(req, res, 200, { ...gdriveStatus(), sent });
+    }
+    throw httpError(404, 'unknown Google Drive endpoint');
+  }
+
   /* --- the off-site copy: OneDrive. Admins only, reads included - the
      status names the Microsoft account the backups go to. */
   if (p === '/api/admin/onedrive' || p.startsWith('/api/admin/onedrive/')) {
@@ -2017,6 +2047,7 @@ setInterval(() => {
 startBackupSchedule().unref();
 // and each one copied to OneDrive, once an admin has connected it
 startOnedrive();
+startGdrive();
 
 server.listen(PORT, HOST, () => {
   console.log(`physical-inv-app listening on http://${HOST}:${PORT}`);

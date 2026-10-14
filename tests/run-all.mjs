@@ -13,14 +13,19 @@ const HERE = new URL('.', import.meta.url).pathname;
 const BASE_PORT = Number(process.env.PORT || 3111);
 const SUITES = process.argv.slice(2).length
   ? process.argv.slice(2).map((n) => (n.endsWith('.mjs') ? n : `${n}.mjs`))
-  : ['full-count.mjs', 'cycle-count.mjs', 'roster.mjs', 'ops.mjs', 'scanner-auth.mjs', 'settings.mjs', 'board.mjs', 'search.mjs', 'barcodes.mjs', 'superadmin.mjs', 'setup-guide.mjs', 'recount-threshold.mjs', 'scanner-prompts.mjs', 'gun-guidance.mjs', 'gun-layout.mjs', 'gun-portrait.mjs', 'self-update.mjs', 'durability.mjs', 'delete-session.mjs', 'lot-expiry.mjs', 'multi-tag-bins.mjs', 'messages.mjs', 'sos.mjs', 'approvals.mjs', 'labels-notes.mjs', 'testing-tab.mjs', 'clocks-shifts.mjs', 'gun-floor.mjs', 'office-batch.mjs', 'auto-plan.mjs', 'moves.mjs', 'fix-list.mjs', 'missing.mjs', 'comment-timeout-upgrade.mjs', 'load-15-teams.mjs', 'access.mjs', 'sources.mjs', 'desk.mjs', 'practice-modes.mjs', 'site-report.mjs', 'guide.mjs', 'branding.mjs', 'scanner-jobs.mjs', 'archive.mjs', 'wrong-field.mjs', 'full-counts.mjs', 'login-limit.mjs', 'phone-app.mjs', 'onedrive.mjs', 'readiness.mjs', 'invites.mjs', 'features.mjs', 'practice-second.mjs', 'picker.mjs', 'erp-entries.mjs', 'tips-order.mjs', 'count-clock.mjs', 'practice-data.mjs', 'report-problem.mjs', 'team-sheet.mjs'];
+  : ['full-count.mjs', 'cycle-count.mjs', 'roster.mjs', 'ops.mjs', 'scanner-auth.mjs', 'settings.mjs', 'board.mjs', 'search.mjs', 'barcodes.mjs', 'superadmin.mjs', 'setup-guide.mjs', 'recount-threshold.mjs', 'scanner-prompts.mjs', 'gun-guidance.mjs', 'gun-layout.mjs', 'gun-portrait.mjs', 'self-update.mjs', 'durability.mjs', 'delete-session.mjs', 'lot-expiry.mjs', 'multi-tag-bins.mjs', 'messages.mjs', 'sos.mjs', 'approvals.mjs', 'labels-notes.mjs', 'testing-tab.mjs', 'clocks-shifts.mjs', 'gun-floor.mjs', 'office-batch.mjs', 'auto-plan.mjs', 'moves.mjs', 'fix-list.mjs', 'missing.mjs', 'comment-timeout-upgrade.mjs', 'load-15-teams.mjs', 'access.mjs', 'sources.mjs', 'desk.mjs', 'practice-modes.mjs', 'site-report.mjs', 'guide.mjs', 'branding.mjs', 'scanner-jobs.mjs', 'archive.mjs', 'wrong-field.mjs', 'full-counts.mjs', 'login-limit.mjs', 'phone-app.mjs', 'onedrive.mjs', 'readiness.mjs', 'invites.mjs', 'features.mjs', 'practice-second.mjs', 'picker.mjs', 'erp-entries.mjs', 'tips-order.mjs', 'count-clock.mjs', 'practice-data.mjs', 'report-problem.mjs', 'team-sheet.mjs', 'gdrive.mjs'];
 
 mkdirSync(join(HERE, 'screenshots'), { recursive: true });
 
 /* A suite that needs the server started differently says so here: the
    OneDrive suite points the app at a stand-in for Microsoft it runs itself. */
 const ONEDRIVE_MOCK = Number(process.env.ONEDRIVE_MOCK_PORT || 3989);
+const GDRIVE_MOCK = Number(process.env.GDRIVE_MOCK_PORT || 3988);
 const SUITE_ENV = {
+  'gdrive.mjs': {
+    GDRIVE_ALLOW_URL_PREFIX: `http://127.0.0.1:${GDRIVE_MOCK}/macros/s/`,   // the stand-in for Google
+    GDRIVE_MOCK_PORT: String(GDRIVE_MOCK),
+  },
   'onedrive.mjs': {
     ONEDRIVE_LOGIN_BASE: `http://127.0.0.1:${ONEDRIVE_MOCK}`,
     ONEDRIVE_GRAPH_BASE: `http://127.0.0.1:${ONEDRIVE_MOCK}/v1.0`,

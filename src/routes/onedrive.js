@@ -287,7 +287,8 @@ export async function uploadNow(name) {
 export async function catchUp() {
   const c = load();
   if (!c.refreshToken || busy) return null;
-  const newest = listBackups()[0];
+  // never the hourly copy another off-site sender took for itself and is about to delete
+  const newest = listBackups().find((b) => !/-offsite(-\d+)?\.db$/.test(b.name));
   if (!newest) return null;
   if (c.lastUpload && (c.lastUpload.name === newest.name || Date.parse(c.lastUpload.at) >= Date.parse(newest.at))) return null;
   return uploadNow(newest.name);

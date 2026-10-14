@@ -802,7 +802,7 @@ puts it right. It looks at:
 - the scanners — registered, each one's link opened on its device, seen lately;
 - the crew list — without one any clock-in number can sign on;
 - the stopped-scanning alert, the override reasons, the Teams channel;
-- the backups — taken in the last day, and copied to OneDrive;
+- the backups — taken in the last day, and copied off-site (Google Drive or OneDrive);
 - the site admin's password — still *changeme* is red.
 
 Run it the afternoon before, and again first thing. **Check again** re-reads it after a change.
@@ -1665,6 +1665,36 @@ against it goes with it. Close counts; delete only the ones created by mistake.
 ![](images/settings-backups.png)
 
 *The backups kept on the server, and the log under them. Both export.*
+
+**Off-site copy: Google Drive — nothing for IT to do.** The same, to a folder in a Google
+Drive, through a small **Apps Script** the admin deploys in that Google account: no Google Cloud
+project, no app registration, no IT ticket. *Settings → Backups & log → Off-site copy: Google
+Drive.*
+
+*One-time set-up (about ten minutes):*
+
+1. Sign in to Google with the account whose Drive should hold the backups, and open
+   **script.google.com → New project**.
+2. On the card, press **Copy the script**. In the editor, select everything, paste over it, and
+   **Save**. (The script carries a key only this server knows; a request without it is turned
+   away.)
+3. **Deploy → New deployment →** gear by *Select type* **→ Web app**. **Execute as: Me**, **Who
+   has access: Anyone**. **Deploy**.
+4. **Authorize access**, pick the account. Google warns *Google hasn't verified this app* — it is
+   your own script: **Advanced → Go to Full Harvest backups (unsafe) → Allow**.
+5. Copy the **Web app URL** (it ends in **/exec**) into the card and press **Save and check the
+   connection**. The card names the account, links the folder, and the newest backup goes at once.
+
+Each copy is the backup **gzipped** — a database shrinks five to ten times — named
+*inventory-…db.gz*; unzip it (7-Zip, or double-click on a Mac) to get the database back. **Send a
+copy** and **Keep the newest** work as for OneDrive. A failed copy shows on the card in Google's
+words and is tried again every half hour. **Disconnect** stops the copies; **Make a new key** also
+stops the old script (paste the new one and deploy again). Treat the web app address like a
+password. A Google Workspace account whose admin blocks *Anyone* web apps cannot do this — use a
+personal Google account, or OneDrive. One copy can be up to 30 MB squeezed, far more than a
+site's database; the card says so if it is ever passed.
+
+Either off-site copy will do, and both can run at once.
 
 **Off-site copy: OneDrive.** The daily backups live on the same Railway volume as the
 database, so a lost volume takes them with it. Connected once, the app copies every backup to
