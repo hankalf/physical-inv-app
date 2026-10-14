@@ -546,9 +546,12 @@ it needs (*✓ 25 of 25 pallets have a lot code*) and, when it does not, what to
 — when it started, how many of the twelve things you tried, how much you counted — so you can
 see your own progress. The last ten are kept. Nothing on a real count is touched.
 
-**What to practise.** A count is not the only thing a scanner does, so the card under the guide
-offers the other jobs, each set up on your practice the first time you pick it — and only the jobs
-your login may do for real (a login without Cycle counts is not offered the cycle count):
+**Practise — pick the job.** The first card after *Before you start* lists the jobs a scanner does,
+and the page follows the one picked: the full count keeps its sheet and sign-on chips; the others
+bring their own pane in their place, and *Things to try* lists only that job's. Each is set up on
+your practice the first time you pick it — and only the jobs your login may do for real are offered
+(a login without Cycle counts is not offered the cycle count; the card says which are missing and
+why, whether they are not on the login or switched off for the site):
 
 | Pick | What is set up | What the gun does |
 |---|---|---|
@@ -567,7 +570,7 @@ never reach the real Not in Location page or a scanner on the floor. **Start ove
 
 ![](images/testing-modes.png)
 
-*What to practise: the cycle count picked, its five-bin list under the card.*
+*Practise, as inventory control sees it: the full count and its second counts, and a line saying which jobs are not on this login.*
 
 ![](images/testing-second-counts.png)
 

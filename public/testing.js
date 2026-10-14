@@ -83,11 +83,20 @@
     $('crewVals').replaceChildren(...data.crew.map((c) => chip(c, { title: 'Scan this clock-in number into the gun', field: 'fEmployee' })));
   }
 
+  /* Each job's things to try. The full count has the sheet's list and the
+     features switched on; Not in Location rides on the full count, so it keeps
+     those and adds its own. */
+  const MODE_CHECKS = { cycle: ['cycle'], moves: ['move', 'moveSkip'], second: ['second', 'secondRaise', 'secondAll'] };
+  const OTHER_CHECKS = new Set([...MODE_CHECKS.cycle, ...MODE_CHECKS.moves, ...MODE_CHECKS.second, 'found']);
+  const checksFor = (mode) => (MODE_CHECKS[mode]
+    ? data.checklist.filter((c) => MODE_CHECKS[mode].includes(c.key))
+    : data.checklist.filter((c) => !OTHER_CHECKS.has(c.key) || (mode === 'missing' && c.key === 'found')));
   function renderChecks() {
-    const done = data.checklist.filter((c) => c.done).length;
-    $('checkCount').textContent = `${done} of ${data.checklist.length} done`;
-    $('checkMeter').style.width = Math.round((done / data.checklist.length) * 100) + '%';
-    $('checks').replaceChildren(...data.checklist.map((c) => {
+    const list = checksFor(modeSel);
+    const done = list.filter((c) => c.done).length;
+    $('checkCount').textContent = `${done} of ${list.length} done`;
+    $('checkMeter').style.width = Math.round((done / Math.max(1, list.length)) * 100) + '%';
+    $('checks').replaceChildren(...list.map((c) => {
       const row = el('div', 'check' + (c.done ? ' done' : ''));
       row.dataset.key = c.key;
       row.append(el('i', '', c.done ? '✓' : ''), el('span', '', c.label));
@@ -380,16 +389,34 @@
     // a job that is not set up (a new run) is not the one you are on
     if (modeSel !== 'full' && !modeOn(modeSel)) modeSel = 'full';
   }
+  /* The page follows the job: the full count's sheet and sign-on chips for the
+     full count (and Not in Location, which rides on it); the other jobs bring
+     their own pane in their place. */
+  function scopePage() {
+    const own = modeSel === 'cycle' || modeSel === 'moves' || modeSel === 'second';
+    $('shelvesCard').hidden = own;
+    $('signonCard').hidden = modeSel === 'cycle' || modeSel === 'moves';
+    if (data) renderChecks();
+  }
   function renderModes() {
     const m = data && data.modes;
     const card = $('modesCard');
     if (!m) { card.hidden = true; return; }
     const offered = MODES.filter((x) => x.key === 'full' || (m[x.key] && m[x.key].allowed));
-    card.hidden = offered.length < 2;
-    if (card.hidden) return;
+    card.hidden = false;
+    scopePage();
     const sig = JSON.stringify([m, modeSel]);
     if (sig === modeDrawn) return;
     modeDrawn = sig;
+    // the jobs this login is not offered, and why
+    const off = MODES.filter((x) => x.key !== 'full' && m[x.key] && !m[x.key].allowed);
+    const byLogin = off.filter((x) => !m[x.key].switchedOff).map((x) => x.title);
+    const bySite = off.filter((x) => m[x.key].switchedOff).map((x) => x.title);
+    const note = [];
+    if (byLogin.length) note.push(`<b>Not on your login:</b> ${byLogin.join(', ')} — a login practises only what it may do for real; an admin can add it under Settings → Logins & site.`);
+    if (bySite.length) note.push(`<b>Switched off for the site:</b> ${bySite.join(', ')} (Settings → Logins & site → What is switched on).`);
+    $('modeNote').hidden = !note.length;
+    $('modeNote').innerHTML = note.join('<br>');
     $('modeList').replaceChildren(...offered.map((x) => {
       const b = el('button', (x.key === modeSel ? 'now' : '') + (x.key !== 'full' && modeOn(x.key) ? ' set' : ''));
       b.type = 'button';
@@ -495,7 +522,16 @@
       const mv = m.moves;
       how.innerHTML = 'On the gun: tap <b>Front2Back</b> at the top of the sign-on screen, sign on with a clock-in number alone, and pick the aisle. The gun shows the office\'s move desk: the pallet, the bin it is in, the bin it goes to, and the pallet system framed under it. Move it, book it in that screen, tap <b>Moved — next</b>. A bin behind that turns out not to be empty is skipped from the office\'s Front bins page with the reason.';
       pane.appendChild(how);
-      pane.appendChild(el('div', 'muted', `${mv.done} moved · ${mv.skipped} skipped · ${mv.list.length - mv.done - mv.skipped} to move`));
+      const so = el('div', 'signon');
+      const crewBox = el('div');
+      crewBox.append(el('div', 'lbl', 'Clock-in number'));
+      const vals = el('div', 'vals');
+      vals.append(...data.crew.map((x) => chip(x, { title: 'Scan this clock-in number into the gun', field: 'fEmployee' })));
+      crewBox.appendChild(vals);
+      const prog = el('div');
+      prog.append(el('div', 'lbl', 'The list'), el('div', 'muted', `${mv.done} moved · ${mv.skipped} skipped · ${mv.list.length - mv.done - mv.skipped} to move`));
+      so.append(crewBox, prog);
+      pane.appendChild(so);
       const { wrap, tbody } = binTable([['Pallet', 'c-bin'], ['From → to', ''], ['Try this', ''], ['State', 'c-state']]);
       wrap.style.marginTop = '10px';
       for (const x of mv.list) {
@@ -985,7 +1021,7 @@
       if (g.screen === 'scrSignon') {
         if (!g.offers.move) { restartGun(); return { key: 'mv:restart', target: GUN(), step: 'Front2Back', pos: 'left', text: 'Restarting the gun so it sees the pallets to move…' }; }
         if (g.job !== 'move') return { key: 'mv:pick', target: GUN(), step: 'Front2Back', pos: 'left', text: 'On the gun, tap <b>Front2Back</b> at the top of the sign-on screen.' };
-        if (!g.crew.trim()) return { key: 'mv:crew', target: $('crewVals').querySelector('.scan'), step: 'Front2Back · sign on', text: 'Front2Back is one person with a gun: just a clock-in number, no team — click <b>T1001</b>.' };
+        if (!g.crew.trim()) return { key: 'mv:crew', target: paneChip(data.crew[0]) || $('crewVals').querySelector('.scan'), step: 'Front2Back · sign on', text: 'Front2Back is one person with a gun: just a clock-in number, no team — click <b>T1001</b>.' };
         return { key: 'mv:start', target: GUN(), step: 'Front2Back · sign on', pos: 'left', text: 'Now on the gun: tap <b>Sign on &amp; load list</b>.' };
       }
       if (g.screen === 'scrMove') {

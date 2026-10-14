@@ -784,11 +784,11 @@ export function practiceModes(who, owner, s) {
   const out = {
     available: !!s && s.practice_source !== 'upload',
     // second counts are the full count's own: anyone who may count may practise them
-    second: { allowed: allowed(who, 'full'), on: false, team: PRACTICE_OTHER_TEAM, bins: [], done: 0, open: 0, raised: false },
+    second: { allowed: allowed(who, 'full'), switchedOff: false, on: false, team: PRACTICE_OTHER_TEAM, bins: [], done: 0, open: 0, raised: false },
     // a job this login may do for real, and that the site has switched on at all
-    cycle: { allowed: allowed(who, 'cycle') && on.cycle, on: false, session: null, bins: [], done: 0, signedOn: false },
-    moves: { allowed: allowed(who, 'front') && on.front, on: false, list: [], done: 0, skipped: 0 },
-    missing: { allowed: allowed(who, 'missing') && on.missing, on: false, rows: [], found: 0 },
+    cycle: { allowed: allowed(who, 'cycle') && on.cycle, switchedOff: !on.cycle, on: false, session: null, bins: [], done: 0, signedOn: false },
+    moves: { allowed: allowed(who, 'front') && on.front, switchedOff: !on.front, on: false, list: [], done: 0, skipped: 0 },
+    missing: { allowed: allowed(who, 'missing') && on.missing, switchedOff: !on.missing, on: false, rows: [], found: 0 },
   };
   if (secondSetUp(s)) {
     const tasks = db.prepare("SELECT id, bin, reason, status, source FROM recounts WHERE session_id = ? AND bin LIKE 'F03%' ORDER BY id").all(s.id);

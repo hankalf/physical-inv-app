@@ -316,20 +316,22 @@
             </div>
           </div>
 
-          <!-- the other jobs a scanner does, each ready to practise here on the
-               same two aisles: a cycle count, pallets to move back, the Not in
-               Location list - only the jobs this login may do for real -->
-          <div class="card" id="modesCard" hidden>
-            <h2>What to practise <span class="muted">the full count, its second counts, or the other jobs a scanner does</span></h2>
-            <div class="modes" id="modeList"></div>
-            <div class="feedback" id="modeMsg"></div>
-            <div class="modepane" id="modePane" hidden></div>
-          </div>
-
           <div class="card" id="readyCard">
             <h2>Before you start <span class="muted" id="readySum"></span></h2>
             <div class="checks ready" id="readyList"></div>
           </div>
+
+          <!-- the job to practise, first: the full count, its second counts, or the
+               other jobs a scanner does - only the jobs this login may do for real,
+               and the page below follows the one picked -->
+          <div class="card" id="modesCard" hidden>
+            <h2>Practise <span class="muted">pick the job — the sheet, the tips and the things to try follow it</span></h2>
+            <div class="modes" id="modeList"></div>
+            <div class="hint" id="modeNote" hidden style="margin-top:8px"></div>
+            <div class="feedback" id="modeMsg"></div>
+            <div class="modepane" id="modePane" hidden></div>
+          </div>
+
 
           <div class="card">
             <h2>Try the scanner on test data</h2>

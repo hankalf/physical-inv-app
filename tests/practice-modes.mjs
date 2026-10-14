@@ -145,6 +145,7 @@ await wait(9000);                      // past the restart throttle, so the next
 await modeBtn('cycle').click();
 await wait(600);
 check('Picking Cycle count opens its pane: the clock-in number and today\'s list', await page.isVisible('#modePane') && (await page.$$('#modePane tr[data-cycle-bin]')).length >= 5 && await paneChip('T1001').isVisible());
+check('…and the page follows the job: the full count\'s shelves and sign-on chips step aside, the things to try are the cycle count\'s', await page.isHidden('#shelvesCard') && await page.isHidden('#signonCard') && (await page.$$eval('#checks .check', (cs) => cs.map((c) => c.dataset.key))).join(',') === 'cycle', (await page.$$eval('#checks .check', (cs) => cs.map((c) => c.dataset.key))).join(','));
 check('…and the gun on its sign-on screen is restarted so it sees the cycle count', await waitScreen('scrSignon', 10000));
 gun = await gunFrame();
 for (let t = 0; t < 8000 && !(await gun.isVisible('#btnModeCycle')); t += 200) await wait(200);
@@ -191,7 +192,7 @@ check('The tip says to tap Front2Back on the gun', await waitTip(/tap Front2Back
 await gun.click('#btnModeMove');
 await wait(400);
 check('Front2Back asks for a badge alone, and the tip says so', await gun.isHidden('#teamBlock') && await waitTip(/just a clock-in number/i), await tip());
-await click(page.locator('#crewVals .scan').first());
+await click(paneChip('T1001'));
 await gun.click('#btnStart');
 check('The badge signs on to Front2Back', await waitScreen('scrMove'));
 check('…and the tip says to pick an aisle', await waitTip(/Pick an aisle/i), await tip());
@@ -244,6 +245,18 @@ await wait(1500);
 const fresh = await get('/api/admin/practice');
 check('Start over clears the cycle count, the moves and the lost list', !fresh.modes.cycle.on && !fresh.modes.moves.on && !fresh.modes.missing.on && fresh.checklist.length === 12, fresh.checklist.map((c) => c.key).join(','));
 check('…back on the full count', await modeBtn('full').evaluate((b) => b.classList.contains('now')) && await page.isHidden('#modePane'));
+check('…with its shelves, its sign-on chips and its own things to try back', await page.isVisible('#shelvesCard') && await page.isVisible('#signonCard') && (await page.$$eval('#checks .check', (cs) => cs.map((c) => c.dataset.key))).includes('signon') && !(await page.$$eval('#checks .check', (cs) => cs.map((c) => c.dataset.key))).includes('cycle'));
+check('The card says nothing about jobs an admin is not offered - there are none', await page.isHidden('#modeNote'));
+/* inventory control sees only what it may do, and is told why the rest is missing */
+const ivyCtx = await browser.newContext({ viewport: { width: 1440, height: 950 } });
+const ivyPage = await ivyCtx.newPage();
+await ivyPage.goto(BASE + '/testing');
+await ivyPage.fill('#fUser', 'IVY-CHEN'); await ivyPage.fill('#fPassword', 'cold-room-11'); await ivyPage.click('#btnLogin');
+await ivyPage.waitForSelector('#modeList button'); await wait(800);
+const ivyJobs = (await ivyPage.$$eval('#modeList button', (bs) => bs.map((b) => b.dataset.mode))).join(',');
+check('Inventory control is offered the full count and its second counts, and nothing it may not do', ivyJobs === 'full,second', ivyJobs);
+check('…and the card says which jobs are not on the login', await ivyPage.isVisible('#modeNote') && /Not on your login:.*Cycle count.*Front2Back.*Not in Location/.test(clean(await ivyPage.textContent('#modeNote'))), clean(await ivyPage.textContent('#modeNote')));
+await ivyCtx.close();
 check('…and the history holds the run, not its companions', fresh.history.length === 1);
 check('No script errors on the page', errors.length === 0, errors.join(' | '));
 
