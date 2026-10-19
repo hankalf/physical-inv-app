@@ -23,7 +23,7 @@ make it up, with what is specific to holding all of them at once. Read it with:
 ## 1 — What this login can and cannot do
 
 **Can**: everything on the Dashboard (progress, map, team plan, alerts, second counts,
-adjustments, reports), Teams & crew (crew, teams, equipment rules, the counting plan),
+adjustments, reports), Teams & crew (crew, teams, gear sizes, equipment rules, the counting plan),
 Cycle counts, Front bins and the move desk, Not in Location, the Testing Suite, every
 download, every approval, messages and SOS, raising second counts, the board note.
 

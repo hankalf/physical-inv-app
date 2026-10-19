@@ -299,7 +299,8 @@
       <div class="feedback" id="jobsMsg"></div>
 
       <hr>
-      <h3>Comments</h3>
+      <div class="foldsec" id="offComments" data-fold>
+      <h3>Comments <span class="muted">the reasons offered after the bin, and how long the step waits</span></h3>
       <div class="hint" style="margin-top:0">Offered on the last step, after the bin is scanned. Tick what the scanners do with them; the one-tap reasons are the chips below.</div>
       <div class="inline" style="margin-top:8px">
         <div class="auto"><label class="cb" title="Untick and no scanner asks for comments on any count, whatever the count's own setting says."><input type="checkbox" id="fCommentsAsk" checked> Ask for comments after the bin</label></div>
@@ -321,9 +322,11 @@
         <input id="fNewComment" placeholder="e.g. Frozen to the rack" maxlength="48">
         <button class="fit" id="btnAddComment">Add</button>
       </div>
+      </div>
 
       <hr>
-      <h3>Override reasons</h3>
+      <div class="foldsec" id="offOverride" data-fold>
+      <h3>Override reasons <span class="muted">for a pallet that is not on the list</span></h3>
       <div class="hint" style="margin-top:0">Offered when a pallet ID is not on the list and the counter is allowed to accept it anyway. Click a chip to remove it; add one below. <b>Other</b> is always offered on the gun as well.</div>
       <div class="chips" id="overrideList" style="margin-top:10px"></div>
       <div class="row" style="margin-top:10px">
@@ -335,9 +338,11 @@
         <div class="auto"><button class="fit sm" id="btnResetPrompts">Restore the shipped reasons</button></div>
       </div>
       <div class="feedback" id="promptMsg"></div>
+      </div>
 
       <hr>
-      <h3>SOS <span class="chip" id="sosChip" hidden></span></h3>
+      <div class="foldsec" id="offSos" data-fold>
+      <h3>SOS <span class="chip" id="sosChip" hidden></span> <span class="muted">what the SOS button offers</span></h3>
       <div class="hint" style="margin-top:0">
         Every gun has an <b>SOS</b> button. Pressing it offers this list, and whichever one the counter picks lands on the
         dashboard within seconds — with their team, aisle and last bin — and in a Teams channel if one is set up under
@@ -352,9 +357,11 @@
         <button class="primary" id="btnSaveSos" hidden>Save</button>
         <div class="auto"><button class="fit sm" id="btnResetSos">Restore the shipped SOS list</button></div>
       </div>
+      </div>
 
       <hr>
-      <h3>Report a problem <span class="chip" id="issueChip" hidden></span></h3>
+      <div class="foldsec" id="offIssues" data-fold>
+      <h3>Report a problem <span class="chip" id="issueChip" hidden></span> <span class="muted">the kinds of problem, and what must be scanned</span></h3>
       <div class="hint" style="margin-top:0">
         The gun's <b>Report a problem</b> button offers these kinds of problem, each with its reasons; what the counter
         picks goes on the dashboard's <b>Fix list</b>. Each kind says what the counter must <b>scan to confirm</b> before
@@ -372,6 +379,7 @@
         <div class="auto"><button class="fit sm" id="btnResetIssues">Restore the shipped list</button></div>
       </div>
       <div class="feedback" id="issueMenuMsg"></div>
+      </div>
 
       <hr>
       <div class="toolbar">
@@ -382,7 +390,7 @@
       <div class="feedback" id="offersMsg"></div>
     </div>
 
-    <div class="card" id="layoutCard">
+    <div class="card" id="layoutCard" data-fold>
       <h2>How the counting screen is put together <span class="chip" id="gunChip" hidden></span> <span class="muted">the order of the questions, and how much the gun shows</span></h2>
       <div class="hint" style="margin-top:0">
         The order the questions are asked, and how much the gun shows. Changes reach a scanner
@@ -449,7 +457,7 @@
       </div>
     </div>
 
-    <div class="card" id="idleCard">
+    <div class="card" id="idleCard" data-fold>
       <h2>When a team stops scanning <span class="muted">the amber bar on the dashboard when a team goes quiet</span></h2>
       <div class="hint" style="margin-top:0">
         A team that is signed on and still has an aisle, but has not scanned for this long, gets an amber bar on the
@@ -465,7 +473,7 @@
       <div class="feedback" id="idleMsg"></div>
     </div>
 
-    <div class="card" id="bookCard">
+    <div class="card" id="bookCard" data-fold>
       <h2>Barcode test book <span class="muted">bin, pallet and quantity — real Code 128 to practice on</span></h2>
       <div class="hint" style="margin-top:0">
         A printable sheet of practice lines — <b>bin</b>, <b>pallet</b>, <b>quantity</b>, one row each — in real Code 128,
@@ -533,7 +541,7 @@
       <pre id="erpSample" class="hint" style="white-space:pre;overflow-x:auto;margin-top:8px;display:none;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px"></pre>
     </div>
 
-    <div class="card" id="reasonsCard">
+    <div class="card" id="reasonsCard" data-fold>
       <h2>Adjustment reasons <span class="chip" id="reasonChip" hidden></span>
         <span class="muted">why a count differs from the system — picked when an adjustment is approved</span></h2>
       <div class="hint" style="margin-top:0">
@@ -553,7 +561,7 @@
       <div class="feedback" id="reasonMsg"></div>
     </div>
 
-    <div class="card" id="palletSystemCard">
+    <div class="card" id="palletSystemCard" data-fold>
       <h2>Pallet system <span class="muted">the web address of the system the pallets live in, and how the move and find desks open it</span></h2>
       <div class="hint" style="margin-top:0">
         On the <b>Front bins</b> and <b>Not in Location</b> desks, and on the scanners, the pallet and bins sit at the top and this
@@ -576,7 +584,7 @@
       <div class="feedback" id="palletSystemMsg"></div>
     </div>
 
-    <div class="card" id="teamsCard">
+    <div class="card" id="teamsCard" data-fold>
       <h2>Microsoft Teams channel <span class="muted">where an SOS and a stopped-scanning alert go, besides the dashboard</span></h2>
       <div class="hint" style="margin-top:0">
         In Teams: <b>⋯</b> beside the channel → <b>Workflows</b> → <i>Post to a channel when a webhook request is
@@ -669,7 +677,7 @@
       </details>
     </div>
 
-    <div class="card" id="onedriveCard">
+    <div class="card" id="onedriveCard" data-fold>
       <h2>Off-site copy: OneDrive <span class="tag" id="odState">not set up</span>
         <span class="muted">every backup also goes to a OneDrive folder, so a lost server does not take the backups with it</span></h2>
       <div class="feedback show" id="odStatus"></div>
@@ -723,7 +731,7 @@
 
       <div data-sub="advanced" data-sub-label="Logins &amp; site">
     <p class="pane-intro">Which parts of the app the site shows at all, who can sign in and what they may use, and how the app names and presents itself.</p>
-    <div class="card" id="systemsCard" hidden>
+    <div class="card" id="systemsCard" data-fold hidden>
       <h2>Systems <span class="chip" id="sysChip"></span>
         <span class="muted">LIVE, TEST and any other — each at its own address, reached from one sign-in and one scanner link</span></h2>
       <div class="feedback show" id="sysStatus"></div>
@@ -773,7 +781,7 @@
       </details>
     </div>
 
-    <div class="card" id="featuresCard">
+    <div class="card" id="featuresCard" data-fold>
       <h2>What is switched on <span class="chip" id="featuresChip" hidden></span>
         <span class="muted">hide the parts nobody here needs yet — for every login, on the office pages and the scanners</span></h2>
       <div class="hint" style="margin-top:0">
@@ -848,7 +856,7 @@
       <div class="feedback" id="passMsg"></div>
     </div>
 
-    <div class="card" id="siteNameCard">
+    <div class="card" id="siteNameCard" data-fold>
       <h2>Site name <span class="muted">what the app calls itself, and the location under it</span></h2>
       <div class="hint" style="margin-top:0">
         Shown at the top of the sidebar on every supervisor page, on the sign-in screen, in the scanner app's header and
@@ -863,7 +871,7 @@
       <div class="feedback" id="siteNameMsg"></div>
     </div>
 
-    <div class="card" id="logoCard">
+    <div class="card" id="logoCard" data-fold>
       <h2>Logo <span class="muted">your company's mark at the top of the sidebar, and on the scanners if you like</span></h2>
       <div class="hint" style="margin-top:0">
         PNG, JPEG, WebP, GIF or SVG, under about 400 KB. A wide mark on a clear or dark background sits best;
@@ -883,7 +891,7 @@
       </div>
     </div>
 
-    <div class="card" id="lookCard">
+    <div class="card" id="lookCard" data-fold>
       <h2>Appearance <span class="muted">how the supervisor pages look on this computer</span></h2>
       <div class="hint" style="margin-top:0">A theme, an accent color, the text size, how tightly the tables sit, the corners, the sidebar's width and the strength of the lines. Kept in this browser, so each person's computer can be set its own way; the scanners are not affected.</div>
       <div id="lookPick"></div>

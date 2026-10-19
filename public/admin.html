@@ -402,7 +402,7 @@
       <div class="scroll" style="margin-top:10px"><table id="fixTable"></table></div>
     </div>
 
-    <div class="card" id="archiveCard">
+    <div class="card" id="archiveCard" data-fold>
       <h2>Filed as the count goes <span class="muted">every aisle handed back is written to disk at once; the final report when the count is whole</span></h2>
       <div class="hint" style="margin-top:0">
         The moment a team hands an aisle back, the app files that aisle — its count lines, the pallets expected or found in it,
@@ -418,7 +418,7 @@
       <div class="scroll" style="margin-top:10px"><table id="archiveTable"></table></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="lotCard" data-fold>
       <h2>Find a lot <span class="muted">after a recall notice: where is every case of it</span></h2>
       <div class="hint" style="margin-top:0">
         Searches what was actually counted, and what the inventory report expected — so it answers
@@ -466,7 +466,7 @@
       <div class="scroll" style="margin-top:10px"><table id="palletTable"></table></div>
       <div class="muted" id="palletNote"></div>
     </div>
-    <div class="card">
+    <div class="card" id="sheetsCard" data-fold>
       <h2>Count sheets <span class="muted">paper, for a dead battery or an auditor</span></h2>
       <div class="inline">
         <div class="auto"><label for="fPrintAisle">Aisles</label><input id="fPrintAisle" class="sm" placeholder="F03 or F03,F04"></div>

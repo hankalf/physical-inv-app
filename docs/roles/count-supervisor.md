@@ -54,6 +54,11 @@ control's.
   Equipment*, a row per seat. *S1-DS01* reads as 1st shift, dock stocker, truck 01. Names on the
   crew list go on the team; a blank name is an open seat (Production, on the day) and its machine
   still counts toward the team's reach. Names not on the crew list yet are marked on the card.
+- **Departments and gear sizes**: each card shows the person's department as a chip and their
+  jacket, bibs and boots sizes; **Dept & sizes** on the card changes them. **Gear sizes** (its own
+  tab) is everyone in one table — pick a size and it saves — with the total of each size above
+  it, a filter for people missing a size, and **Export names and sizes**: an Excel workbook of
+  names and sizes, grand totals and totals by department, for the order.
 - **Equipment rules** (the other tab): which levels need which equipment. A team without a
   reach truck is not given levels D to F; the rules are enforced when aisles are queued.
 

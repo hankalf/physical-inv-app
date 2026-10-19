@@ -882,3 +882,23 @@ html:not(.signed-in) .sysbanner { display: none; }
 .syscheck-row { font-size: 13.5px; }
 .syscheck-row i { font-style: normal; font-weight: 900; display: inline-block; width: 1.4em; }
 .syscheck-row .fix { margin: 2px 0 0 1.4em; color: var(--text-dim); font-size: 12.5px; }
+
+/* ---- folding cards (nav.js foldCards): the heading alone until it is wanted */
+.foldhead { cursor: pointer; }
+.foldbtn {
+  flex: 0 0 auto; width: 22px; height: 22px; padding: 0; margin: 0 6px 0 -4px; border: 0; background: none;
+  color: var(--muted); font-size: 13px; line-height: 22px; border-radius: 6px; cursor: pointer; display: inline-grid; place-items: center;
+}
+.foldbtn span { display: inline-block; transition: transform .15s ease; }
+.foldbtn:hover, .foldhead:hover .foldbtn { color: var(--text); background: var(--surface-2); }
+[data-fold]:not(.folded) > .foldhead .foldbtn span { transform: rotate(90deg); }
+.folded > :not(.foldhead) { display: none !important; }
+.card.folded > h2.foldhead, .card.folded > .guidehead.foldhead { padding-bottom: 0; border-bottom: 0; margin-bottom: 0; }
+.card.folded > .guidehead.foldhead h2 { margin-bottom: 0; }
+.card.folded { padding-top: 14px; padding-bottom: 14px; }
+.card.folded > h2.foldhead > .muted { font-size: 12.5px; }
+/* a section of a card: its h3 is the heading */
+.foldsec > h3.foldhead { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.foldsec.folded > h3.foldhead { margin-bottom: 0; }
+.foldsec > h3.foldhead .muted { font-weight: 400; font-size: 12.5px; }
+@media (prefers-reduced-motion: reduce) { .foldbtn span { transition: none; } }

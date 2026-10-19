@@ -852,6 +852,7 @@
     if (st.go === 'dash') { dashShow('progress'); return; }
     const card = $(st.go);
     if (!card) return;
+    window.appApi.unfold(card);
     card.scrollIntoView({ block: 'start', behavior: 'smooth' });
     card.classList.add('found');
     setTimeout(() => card.classList.remove('found'), 2200);
@@ -1143,6 +1144,7 @@
       leftTip(lastKey, lastSaves);
       // a new step: light the target, bring it on screen, and say so
       if (lastTarget) lastTarget.classList.remove('spot');
+      window.appApi.unfold(t.target);                // a coach step is never inside a folded card
       t.target.classList.add('spot');
       lastTarget = t.target;
       lastKey = t.key;

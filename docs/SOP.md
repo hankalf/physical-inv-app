@@ -69,6 +69,18 @@ at once; scanners choose which one they are working on at sign-on.
   be active in a block at a time, so two crews never work opposite faces of the same
   racking. Pairing aisles into blocks is a one-time job (Part 2, step 7).
 
+**Folded cards.** The cards a site sets once and then leaves — the counting-screen layout, the
+barcode test book, the site name and logo, the SOS and comment lists, OneDrive, *Find a lot* and
+the like — show their heading alone, with a **▸** in front of it. Click the heading to open one;
+click it again to fold it away. Each computer remembers which ones you keep open. The heading
+still carries the card's status chip (*the defaults*, *connected*, *not set up*), so a folded page
+still says what is set. A search hit, a *Ready for count day* link or the Testing Suite's coach
+opens the card it sends you to.
+
+![](images/settings-folded.png)
+
+*Settings → Scanners with the set-once cards folded: what the scanners offer stays open, the rest is one click away.*
+
 **Bin codes.** A code like `F01A001` reads as zone `F`, aisle `01`, level `A`,
 position `001`. Four positions per bay; odd positions are the front face, even are the
 back. The app derives the aisle from the code when your file has no aisle column.
@@ -769,7 +781,9 @@ Press **Save**. Scanners pick the change up within about half a minute, between 
 ### Step 10 — Set the one-tap reasons
 
 **Settings → Scanners → What the scanners offer.** One section for everything a counter
-is offered on the gun, with one **Save everything the scanners offer** button at the bottom:
+is offered on the gun, with one **Save everything the scanners offer** button at the bottom.
+The jobs are open; **Comments**, **Override reasons**, **SOS** and **Report a problem** are folded
+under their headings — click one to open it:
 
 - **Jobs on the sign-on screen** — the full count, the cycle count, Front2Back, Not in Location
   (see step 8).
@@ -782,6 +796,8 @@ is offered on the gun, with one **Save everything the scanners offer** button at
   to accept it anyway. Click a chip to remove one, type and **Add** for a new one. **Other** is
   always offered on the gun as well, whatever you configure.
 - **SOS** — the list a counter picks from when they press SOS.
+- **Report a problem** — the kinds of problem on the gun's Report a problem button, and what
+  must be scanned to confirm each (see step 8).
 
 Counters wearing gloves in a freezer will not type. These are the buttons they tap instead, and
 the reasons a site needs are its own — "Blocked by a trailer" means something here and nothing
@@ -1013,6 +1029,38 @@ keeps, one row per seat on each team: **Team #**, **Department**, **Employee**, 
 **1st and 2nd shift.** Each team on Teams & crew has a **shift** — set it when you add the team,
 or on the team's card (a team from the team sheet takes it from the S1 / S2 in its number). The page can show one shift at a time, and so can the team table on the
 dashboard, so the 2nd-shift lead sees only their crews.
+
+**Departments and gear sizes.** Every crew card shows the person's **department** as a blue chip
+beside their name (*No department* when it is blank), and their **jacket**, **bibs (overalls)**
+and **boots** sizes under their equipment. **Dept & sizes** on the card opens a small form for the
+four of them; **Save** keeps them. The department filter above the crew list uses the same field.
+
+![](images/teams-gear-card.png)
+
+*A crew card with Dept & sizes open: department, jacket, bibs and boots, saved in one go.*
+
+**Teams & crew → Gear sizes** is everyone at once, for ordering:
+
+1. Pick a size in the table and it is saved — the cell flashes green. Jackets and bibs run
+   XS–5XL; boots 5–16 in half sizes.
+2. The three boxes above the table are the **totals**: how many of each size, the **total** of each
+   item, and how many people have no size entered yet (amber).
+3. Narrow it with **Department**, **Find** (name or clock-in number) or **Only people missing a
+   size** — the list to chase before the order goes in.
+4. **Export names and sizes** downloads an Excel workbook: *Names and sizes* (everyone, by
+   department), *Grand totals* (each size of each item, the not-entered count, a grand total per
+   item and the head count) and *By department*. With a department picked, the export is that
+   department alone.
+
+Sizes can also come in on the crew-list upload, in **Jacket**, **Bibs** (or *Overalls*) and
+**Boots** columns, written any common way — *xx-large* and *XXL* read as **2XL**, *10 1/2* as
+**10.5**, a wide boot keeps its **W**. A crew list with no size columns leaves the sizes already
+entered alone. **Gear sizes** is its own tick under a login's *May use*, so the person who orders
+the gear can have it without the rest of the page.
+
+![](images/teams-gear-sizes.png)
+
+*Teams &amp; crew → Gear sizes: totals per size above, everyone's sizes below, and the Excel export.*
 
 ---
 
@@ -1998,6 +2046,18 @@ the template (Type / Code) are still read.
 | Team | team, team number, crew, group |
 | Aisle | aisle, row, aisle no |
 | Levels | level, levels, tier, shelf — e.g. `A-C`, `D-F`, `A-F` |
+
+**Crew list** — one row per person.
+
+| What | Accepted column names |
+|---|---|
+| Clock in number (required) | clock in number, badge, badge id, employee id, emp id, employee number, id |
+| Name | name, employee name, full name, employee |
+| Department | dept, department, area |
+| Equipment | equipment, certifications, certified, licenses, can operate, machines — a list, e.g. `Scissor lift; High reach` |
+| Jacket | jacket, jacket size, coat, coat size |
+| Bibs | bibs, bib size, overalls, overall size, pants |
+| Boots | boots, boot size, shoe, shoe size |
 
 Dates are read in either order — `2027-03-15` and `03/15/2027` both work.
 

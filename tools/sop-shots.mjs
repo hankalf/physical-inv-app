@@ -112,8 +112,14 @@ try {
     ['E1163', 'Luis Ferreira', ['HIGH REACH', 'SCISSOR LIFT'], '3'], ['E1190', 'Grace Kim', ['DOCK TRUCK', 'FOOT'], '3'],
     ['E1204', 'Nadia Haddad', ['FOOT'], ''], ['E1219', 'Owen Blackwell', ['DOCK TRUCK'], ''],
   ];
+  /* the departments and gear sizes the Gear sizes tab adds up; one left blank, as there always is */
+  const SIZES = { E1043: ['Warehouse', 'XL', 'XL', '11'], E1088: ['Warehouse', 'M', 'M', '8.5'], E1102: ['Warehouse', '2XL', 'XL', '12'],
+    E1157: ['Production', 'S', 'M', '7'], E1163: ['Warehouse', 'L', 'L', '10.5'], E1190: ['Production', 'M', 'S', '8'],
+    E1204: ['Production', 'L', 'L', '9'], E1219: ['Warehouse', 'XL', '2XL', ''] };
   for (const [badge, name, equipment] of CREW) {
     await post('/api/admin/people/employees', { badge, name, dept: 'Warehouse', equipment }).catch(() => {});
+    const [dept, jacket, bibs, boots] = SIZES[badge] || [];
+    if (dept) await post(`/api/admin/people/employees/${badge}/gear`, { dept, jacket, bibs, boots }).catch(() => {});
   }
   for (const name of ['1', '2', '3']) {
     const team = await post('/api/admin/people/teams', { name }).catch(() => null);
@@ -432,6 +438,12 @@ try {
   await desk.goto(BASE + '/teams');
   await desk.waitForSelector('#scrMain.active', { state: 'attached' }); await wait(1800);
   await save(desk, 'teams-and-crew');
+  /* a crew card with its department and sizes open, then the Gear sizes tab */
+  await desk.click('.person[data-badge="E1204"] [data-gear-edit]').catch(() => {}); await wait(400);
+  { const c = await desk.$('.person[data-badge="E1204"]'); if (c) await save(c, 'teams-gear-card'); }
+  await sub('gear'); await wait(800);
+  await saveCard(desk, '#gearTable', 'teams-gear-sizes', 8);
+  await sub('crew');
   await desk.goto(BASE + '/cycle');
   await desk.waitForSelector('#scrMain.active', { state: 'attached' }); await wait(2400);
   await save(desk, 'cycle-counts');
@@ -491,6 +503,20 @@ try {
       await saveCard(desk, '#modePane', 'testing-second-counts', 8);
     }
   }
+  /* ---------- folded cards: Settings → Scanners the way a person sees it ---------- */
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1400, height: 1000 } });
+    await ctx.addInitScript(() => { try { localStorage.setItem('fold:test', '1'); } catch { /* */ } });
+    const fp = await ctx.newPage();
+    await fp.goto(BASE + '/settings#gun');
+    await fp.fill('#fUser', 'DANA-WHITFIELD'); await fp.fill('#fPassword', 'changeme');
+    await fp.click('#btnLogin'); await fp.waitForSelector('#scrMain.active'); await wait(1800);
+    await fp.evaluate(() => window.appApi.showSub('gun')); await wait(800);
+    const pane = await fp.$('[data-sub="gun"]');
+    if (pane) await save(pane, 'settings-folded');
+    await ctx.close();
+  }
+
   /* ---------- Practice data: every login's practice, for an admin ---------- */
   await desk.goto(BASE + '/practice');
   await desk.waitForSelector('#pdTable tbody tr', { timeout: 15000 }).catch(() => {}); await wait(1200);

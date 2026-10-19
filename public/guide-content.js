@@ -46,6 +46,7 @@
             { q: 'Where is the Count session card?', a: 'Under Settings → Count setup. The list of full counts, with Open on the dashboard, Close and Scanners land here, is the Full Counts page.', goto: S('/full', 'counts', 'Full Counts') },
             { q: 'Why is a count missing from the picker?', a: 'The picker shows only the kinds of count your login may work: no Cycle counts page, no cycle counts in the picker; a cycle-counter login sees no full count.' },
             { q: 'What is the office board?', a: 'A read-only page at /board for the office TV: progress, teams, alerts and notes. It needs no login.', goto: S('/board', '', 'Open the board') },
+            { q: 'Why do some cards show only their heading?', a: 'They are folded: the ones a site sets once and then leaves, like the counting-screen layout, the barcode test book or the site logo. Click the heading (or the ▸) to open one and again to fold it; this computer remembers. A search hit or a Ready for count day link opens the card it takes you to.' },
           ],
         },
         {
@@ -706,6 +707,7 @@
     { q: 'How do I change the look?', a: 'Settings → Logins & site → Appearance sets the theme, accent and text size for your computer; the site logo is in the same section.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },
     { q: 'How do I rename the app, or change the location under the name?', a: 'Settings → Logins & site → Site name. The name and the location change at once on every page, the sign-in screen, the scanners, the board and the installed app. A blank name goes back to Full Harvest Inventory.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },
     { q: 'What time zone are the scan times in?', a: 'The server’s. A scanner with a wrong clock is corrected by its own send time, so the times on the dashboard are right either way.' },
+    { q: 'Where do I put jacket, bibs and boot sizes?', a: 'Teams & crew → Gear sizes: everyone in one table, a size saved as soon as it is picked, the total of each size above it, and Export names and sizes for an Excel workbook with grand totals and totals by department. Each crew card also shows the department and sizes, with Dept & sizes to change them.', goto: S('/teams', 'gear', 'Teams & crew → Gear sizes') },
     { q: 'Can I export everything?', a: 'Reports → Export everything gives a workbook with every sheet: counts, pallets, teams, adjustments, alerts, the log.', goto: S('/admin', 'reports', 'Dashboard → Reports') },
     { q: 'Who did what?', a: 'The log under Settings → Backups & log records every change with the login that made it.', goto: S('/settings', 'backups', 'Settings → Backups & log') },
     { q: 'How do I invite someone by email?', a: 'Settings → Logins & site → Supervisor logins: type their name, username and email (the invite box ticks itself) and Add login. Email the invite opens a ready-made message in your own email; Copy link is for a text. The link works once, for three days, and they choose their own password on it. Invite again on their row makes a new link.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },

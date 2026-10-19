@@ -43,6 +43,12 @@ Everything on the **Settings** page, which no other profile opens. It has six se
 A *supervisor* login does everything else. Keep the admin logins to the few who need them: an
 admin can delete a count.
 
+The cards you set once — the counting-screen layout, the barcode test book, the comment, override,
+SOS and Report a problem lists, the adjustment reasons, the pallet system, Teams, OneDrive, What
+is switched on, Systems, site name, logo and look — are **folded** to their headings (a **▸** in
+front). Click a heading to open it; each computer remembers what you keep open, and a *Ready for
+count day* link or a search hit opens the card it points at.
+
 ## 2 — Deploying and keeping the server
 
 - The app runs from one Docker image on **Railway** (or on a PC in the warehouse with

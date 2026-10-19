@@ -634,6 +634,57 @@
     }
   };
 
+  /* Folding cards. A card (or a section of one) marked data-fold shows its
+     heading alone until it is wanted: the settings a site sets once and then
+     leaves, the tools used now and then. The heading still says what the card
+     is and carries its status chip, so a folded page reads as a list of what
+     is there. A click on the heading opens it - the buttons and boxes in the
+     heading still do their own job - and this computer remembers which ones
+     you keep open. data-fold="open" starts open. A card someone is sent to
+     (the search, a readiness link, the coach) opens itself.
+     Automated runs - the test suites and the SOP screenshots - see every card
+     open, as they always have; fold-cards.mjs switches folding on for itself. */
+  const foldKey = (el) => `fold:${here}:${el.id}`;
+  function setFold(el, open, remember) {
+    el.classList.toggle('folded', !open);
+    const btn = el.querySelector(':scope > .foldhead .foldbtn');
+    if (btn) { btn.setAttribute('aria-expanded', String(open)); btn.title = open ? 'Fold this away' : 'Open this'; }
+    if (remember) { try { localStorage.setItem(foldKey(el), open ? '1' : '0'); } catch { /* private window */ } }
+  }
+  api.foldCards = function foldCards(root = document) {
+    let on = !navigator.webdriver;
+    try { if (localStorage.getItem('fold:test') === '1') on = true; } catch { /* private window */ }
+    if (!on) return;
+    for (const el of root.querySelectorAll('[data-fold]')) {
+      if (el.dataset.foldReady || !el.id) continue;
+      const head = el.querySelector(':scope > h2, :scope > h3, :scope > .guidehead');
+      if (!head) continue;
+      el.dataset.foldReady = '1';
+      head.classList.add('foldhead');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'foldbtn';
+      btn.innerHTML = '<span aria-hidden="true">▸</span>';
+      btn.setAttribute('aria-label', (head.querySelector('h2') || head).firstChild?.textContent?.trim() || 'Section');
+      const title = head.matches('.guidehead') ? head.querySelector('h2') || head : head;
+      title.prepend(btn);
+      let saved = null;
+      try { saved = localStorage.getItem(foldKey(el)); } catch { /* private window */ }
+      setFold(el, saved == null ? el.dataset.fold === 'open' : saved === '1', false);
+      const toggle = () => setFold(el, el.classList.contains('folded'), true);
+      btn.onclick = (e) => { e.stopPropagation(); toggle(); };
+      head.addEventListener('click', (e) => {
+        if (e.target.closest('button, a, input, select, textarea, label') || String(getSelection() || '')) return;
+        toggle();
+      });
+    }
+  };
+  /** Open whatever folded card or section holds this element, for someone sent to it. */
+  api.unfold = function unfold(target) {
+    let f = target && target.closest ? target.closest('[data-fold]') : null;
+    for (; f; f = f.parentElement ? f.parentElement.closest('[data-fold]') : null) if (f.classList.contains('folded')) setFold(f, true, false);
+  };
+
   function announce() {
     renderTabs();
     renderSubTabs();
@@ -643,7 +694,7 @@
     box.hidden = true;
     box.classList.remove('active');     // so the DOM does not claim a screen that is not showing
     document.dispatchEvent(new CustomEvent('auth', { detail: api.me }));
-    setTimeout(() => api.foldHints(), 0);           // once the page's own markup is on screen
+    setTimeout(() => { api.foldHints(); api.foldCards(); }, 0);   // once the page's own markup is on screen
   }
 
   function setPasswordPanel() {
@@ -987,9 +1038,9 @@
     ['Second counts', '/admin', 'second', 'recount second count variance go back check again task'],
     ['Adjustments and approvals', '/admin', 'adjust', 'adjustment approve approval reason code sign off erp variance write off'],
     ['Pallet report', '/admin', 'reports', 'pallet report variance exceptions missing wrong bin counted twice status'],
-    ['Find a lot', '/admin', 'reports', 'lot batch recall find trace expiry'],
+    ['Find a lot', '/admin', 'reports', 'lot batch recall find trace expiry', 'lotCard'],
     ['Labels to replace', '/admin', 'reports', 'label barcode unreadable relabel print rack tag damaged'],
-    ['Printable count sheets', '/admin', 'reports', 'print paper count sheet blind auditor pen'],
+    ['Printable count sheets', '/admin', 'reports', 'print paper count sheet blind auditor pen', 'sheetsCard'],
     ['Cycle count program', '/cycle', '', 'cycle batch schedule daily weekly oldest coverage program'],
     ['Crew list and equipment', '/teams', 'crew', 'crew employee badge clock in number people roster equipment forklift scissor reach'],
     ['Teams and who is on them', '/teams', 'teams', 'team member crew drag assign people'],
@@ -997,22 +1048,22 @@
     ['Level rules for equipment', '/teams', 'rules', 'level rules reach equipment which levels forklift high reach'],
     ['Count setup checklist', '/settings', 'start', 'getting started count setup checklist setup first time what next'],
     ['Ready for count day check', '/settings', 'start', 'ready count day check readiness before count settings checklist go live'],
-    ['Scanner screen layout', '/settings', 'gun', 'scanner screen questions order keyboard text size upright portrait update comments countdown gun handheld'],
+    ['Scanner screen layout', '/settings', 'gun', 'scanner screen questions order keyboard text size upright portrait update comments countdown gun handheld', 'layoutCard'],
     ['Supervisor logins', '/settings', 'advanced', 'login user password account supervisor admin access advanced'],
-    ['Microsoft Teams channel', '/settings', 'erp', 'teams channel webhook alerts sos notify card integrations'],
-    ['Appearance: theme, accent, text size, density', '/settings', 'advanced', 'theme dark light color color accent look appearance text size density compact corners sidebar contrast advanced'],
-    ['Pallet system address (move desk)', '/settings', 'erp', 'pallet system url address frame move desk erp wms link integrations'],
-    ['Site name and location', '/settings', 'advanced', 'site name location place rename title company brand header sidebar advanced'],
-    ['Site logo', '/settings', 'advanced', 'logo brand image picture upload company header scanner advanced'],
+    ['Microsoft Teams channel', '/settings', 'erp', 'teams channel webhook alerts sos notify card integrations', 'teamsCard'],
+    ['Appearance: theme, accent, text size, density', '/settings', 'advanced', 'theme dark light color color accent look appearance text size density compact corners sidebar contrast advanced', 'lookCard'],
+    ['Pallet system address (move desk)', '/settings', 'erp', 'pallet system url address frame move desk erp wms link integrations', 'palletSystemCard'],
+    ['Site name and location', '/settings', 'advanced', 'site name location place rename title company brand header sidebar advanced', 'siteNameCard'],
+    ['Site logo', '/settings', 'advanced', 'logo brand image picture upload company header scanner advanced', 'logoCard'],
     ['Scanner setup and links', '/settings', 'gun', 'scanner device link qr register enrol setup card handheld gun'],
-    ['One-tap reasons on the gun', '/settings', 'gun', 'reason comment override one tap chips damaged'],
-    ['Adjustment reasons', '/settings', 'erp', 'adjustment reason code write off why'],
-    ['Back up to OneDrive', '/settings', 'backups', 'onedrive off site offsite cloud backup microsoft copy restore'],
+    ['One-tap reasons on the gun', '/settings', 'gun', 'reason comment override one tap chips damaged', 'offComments'],
+    ['Adjustment reasons', '/settings', 'erp', 'adjustment reason code write off why', 'reasonsCard'],
+    ['Back up to OneDrive', '/settings', 'backups', 'onedrive off site offsite cloud backup microsoft copy restore', 'onedriveCard'],
     ['Back up to Google Drive', '/settings', 'backups', 'google drive gdrive off site offsite cloud backup apps script copy restore'],
-    ['Barcode test book', '/settings', 'gun', 'barcode test book practice print code 128 training'],
+    ['Barcode test book', '/settings', 'gun', 'barcode test book practice print code 128 training', 'bookCard'],
     ['Upload the bin list', '/settings', 'lists', 'bin list locations upload import csv excel master file racking'],
     ['Upload the inventory report', '/settings', 'lists', 'inventory report pallets upload import csv excel expected quantity erp export'],
-    ['Upload a counting plan', '/teams', 'crew', 'plan counting plan teams aisles upload csv'],
+    ['Upload a counting plan', '/teams', 'crew', 'plan counting plan teams aisles upload csv', 'planCard'],
     ['Racking blocks', '/settings', 'lists', 'racking block back to back pair aisles conflict'],
     ['Send to the ERP', '/settings', 'erp', 'erp export send file layout columns adjustments posting'],
     ['Backups and the log', '/settings', 'backups', 'backup restore log audit who did what download'],
@@ -1025,7 +1076,7 @@
     ['Trial run — rehearse, then clear', '/settings', 'start', 'trial run rehearsal dry run practice clear reset start fresh'],
     ['Positive and negative adjustments', '/admin', 'adjust', 'adjustments positive negative found more less add take off net variance'],
     ['Team clocks and stopped scanning', '/admin', 'progress', 'timer clock time on count idle stopped scanning quiet break lunch alert'],
-    ['Stopped-scanning alert setting', '/settings', 'gun', 'idle stopped scanning minutes alert teams break'],
+    ['Stopped-scanning alert setting', '/settings', 'gun', 'idle stopped scanning minutes alert teams break', 'idleCard'],
     ['1st and 2nd shift teams', '/teams', 'crew', 'shift first second 1st 2nd night day team'],
     ['Front bins — the list, and pallets to move back', '/front', 'bins', 'front back face placed bins list cycle aisle side move pallets behind empty'],
     ['Not in Location — pallets the system has lost track of', '/missing', '', 'not in location missing lost pallets find locate last known location where is written off'],
@@ -1033,9 +1084,9 @@
     ['Pallets to move back — front bins with an empty bin behind', '/front', 'moves', 'move pallets back front behind empty double deep relocate'],
     ['Auto-assign the aisles — a staggered plan', '/admin', 'teams', 'auto assign plan stagger staggered aisles teams spread automatic queue every team'],
     ['Test with your own pallets, and try features that are off', '/testing', '', 'testing upload own pallets file lot expiry approval try features off practice'],
-    ['Systems — LIVE and TEST, and who may use each', '/settings', 'advanced', 'system systems dev live environment switch staging test deploy url address link key'],
+    ['Systems — LIVE and TEST, and who may use each', '/settings', 'advanced', 'system systems dev live environment switch staging test deploy url address link key', 'systemsCard'],
     ['Practice data — every login\'s runs in the Testing Suite', '/practice', '', 'practice data runs testing suite users who practiced history tried export delete admin learn'],
-  ].map(([title, page, sub, words]) => ({ title, page, sub, words }));
+  ].map(([title, page, sub, words, card]) => ({ title, page, sub, words, card }));   // card: the one to open and light, when it folds
 
   const PENDING = 'searchGoto';
   let searchTimer = null;
@@ -1139,7 +1190,7 @@
       .map((x) => ({
         title: x.pl.title,
         detail: `${x.pl.page.replace('/', '')}${x.pl.sub ? ' → ' + x.pl.sub : ''}`,
-        goto: { page: x.pl.page, sub: x.pl.sub },
+        goto: { page: x.pl.page, sub: x.pl.sub, ...(x.pl.card ? { focus: x.pl.card } : {}) },
       }));
   }
 
@@ -1223,6 +1274,7 @@
       const el = g.focus && document.getElementById(g.focus);
       if (el) {
         if (g.value != null) el.value = g.value;
+        api.unfold(el);
         el.scrollIntoView({ block: 'center', behavior: 'smooth' });
         el.focus();
         const card = el.closest('.card');

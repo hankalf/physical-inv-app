@@ -2205,6 +2205,7 @@
     api.showSub(f.sub);
     const card = f.card && document.getElementById(f.card);
     if (!card) return;
+    api.unfold(card);
     card.scrollIntoView({ behavior: 'smooth', block: 'start' });
     card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash');
   }
