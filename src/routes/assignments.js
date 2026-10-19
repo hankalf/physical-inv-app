@@ -13,6 +13,14 @@ import { reachShortfall } from './people.js';
 
 const now = () => new Date().toISOString();
 
+/* Which end of the aisle a team starts at: "up" from the 001 end, as always, or
+   "down" from the far end. Two teams may share one aisle on the same levels only
+   when they start at opposite ends - one up, one down - and meet in the middle. */
+if (!db.prepare("PRAGMA table_info('assignments')").all().some((c) => c.name === 'direction')) {
+  db.exec("ALTER TABLE assignments ADD COLUMN direction TEXT NOT NULL DEFAULT 'up'");
+}
+export const cleanDirection = (d) => (String(d || '').toLowerCase() === 'down' ? 'down' : 'up');
+
 export function aisleOverview(sessionId) {
   const id = Number(sessionId);
   return db
@@ -69,19 +77,31 @@ export const blockOf = (sessionId, aisle) =>
 
 // Which other team, if any, holds this aisle's block on levels that overlap `levels`.
 // Two teams may share a block (even an aisle) as long as their levels don't overlap -
-// that is how a forklift crew and a crew on foot work the same racking.
-export function blockHolder(sessionId, aisle, exceptTeam, levels = '') {
+// that is how a forklift crew and a crew on foot work the same racking. And two
+// may share the very same aisle and levels when they start at opposite ends.
+export function blockHolder(sessionId, aisle, exceptTeam, levels = '', direction = 'up') {
   const block = blockOf(sessionId, aisle);
   const rows = db
     .prepare(
-      `SELECT s.team, s.aisle, s.levels
+      `SELECT s.team, s.aisle, s.levels, s.direction
          FROM assignments s
          LEFT JOIN aisles a ON a.session_id = s.session_id AND a.aisle = s.aisle
         WHERE s.session_id = ? AND s.status = 'active'
           AND COALESCE(a.block, s.aisle) = ?`
     )
     .all(Number(sessionId), block);
-  return rows.find((r) => r.team !== norm(exceptTeam) && levelsOverlap(r.levels, levels)) || null;
+  const a = norm(aisle);
+  const dir = cleanDirection(direction);
+  return rows.find((r) => r.team !== norm(exceptTeam) && levelsOverlap(r.levels, levels)
+    && !(r.aisle === a && cleanDirection(r.direction) !== dir)) || null;
+}
+
+/** The other team in this aisle from the other end, if there is one. */
+export function partnerOf(sessionId, row) {
+  if (!row) return null;
+  return db.prepare("SELECT team, levels, direction FROM assignments WHERE session_id = ? AND aisle = ? AND status = 'active' AND team != ?")
+    .all(Number(sessionId), row.aisle, row.team)
+    .find((r) => levelsOverlap(r.levels, row.levels) && cleanDirection(r.direction) !== cleanDirection(row.direction)) || null;
 }
 
 export function setBlock(sessionId, aisle, block) {
@@ -127,7 +147,8 @@ export function autoBlock(sessionId, size = 2, offset = 0) {
   return aisleOverview(id);
 }
 
-export function queueAssignments(sessionId, team, aisles, levelsRaw = '', { force = false } = {}) {
+export function queueAssignments(sessionId, team, aisles, levelsRaw = '', { force = false, direction = 'up' } = {}) {
+  const dir = cleanDirection(direction);
   const id = Number(sessionId);
   const t = norm(team);
   const levels = normLevels(levelsRaw);
@@ -164,10 +185,10 @@ export function queueAssignments(sessionId, team, aisles, levelsRaw = '', { forc
       if (existing) { skipped.push({ aisle, reason: `already ${existing.status} for team ${t}` }); continue; }
       pos += 1;
       db.prepare(
-        `INSERT INTO assignments (session_id, team, aisle, levels, position, status, created_at)
-         VALUES (?, ?, ?, ?, ?, 'queued', ?)`
-      ).run(id, t, aisle, levels, pos, now());
-      added.push(levels ? `${aisle} (${levels})` : aisle);
+        `INSERT INTO assignments (session_id, team, aisle, levels, position, status, created_at, direction)
+         VALUES (?, ?, ?, ?, ?, 'queued', ?, ?)`
+      ).run(id, t, aisle, levels, pos, now(), dir);
+      added.push(`${levels ? `${aisle} (${levels})` : aisle}${dir === 'down' ? ' from the far end' : ''}`);
     }
     db.exec('COMMIT');
   } catch (err) {
@@ -201,7 +222,7 @@ export function autoActivate(sessionId) {
       )
       .get(id, team);
     if (!next) continue;
-    if (blockHolder(id, next.aisle, team, next.levels)) continue; // another team holds those levels of the racking
+    if (blockHolder(id, next.aisle, team, next.levels, next.direction)) continue; // another team holds those levels of the racking
     db.prepare("UPDATE assignments SET status = 'active', started_at = ? WHERE id = ?").run(now(), next.id);
     activated.push({ team, aisle: next.aisle, levels: next.levels });
   }
@@ -218,7 +239,7 @@ export function setAssignmentStatus(sessionId, assignmentId, status) {
   } else if (status === 'queued') {
     db.prepare("UPDATE assignments SET status = 'queued', started_at = NULL WHERE id = ?").run(row.id);
   } else if (status === 'active') {
-    const holder = blockHolder(id, row.aisle, row.team, row.levels);
+    const holder = blockHolder(id, row.aisle, row.team, row.levels, row.direction);
     if (holder) {
       const where = holder.aisle === row.aisle ? `aisle ${row.aisle}` : `aisle ${holder.aisle}, which shares racking with ${row.aisle}`;
       const lv = holder.levels ? ` on levels ${holder.levels}` : '';
@@ -260,6 +281,8 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
     bins = db
       .prepare('SELECT code, level FROM locations WHERE session_id = ? AND aisle = ? ORDER BY code')
       .all(id, active.aisle).filter((r) => inLevels(r.level)).map((r) => r.code);
+    // from the far end: the walk starts at the last bin
+    if (cleanDirection(active.direction) === 'down') bins.reverse();
     /* How many pallet tags each bin already has, from any scanner, so a second
        device on the same team sees the same picture - and so the handheld knows
        a bin with four tags in it is not finished after the first one. */
@@ -290,7 +313,7 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
   // If nothing is active, say who the team is waiting on rather than just "none".
   let waitingOn = null;
   if (!active && queued.length) {
-    const holder = blockHolder(id, queued[0].aisle, t, queued[0].levels);
+    const holder = blockHolder(id, queued[0].aisle, t, queued[0].levels, queued[0].direction);
     waitingOn = holder
       ? { aisle: queued[0].aisle, levels: queued[0].levels, blockedByTeam: holder.team, blockedByAisle: holder.aisle, blockedByLevels: holder.levels }
       : { aisle: queued[0].aisle, levels: queued[0].levels, blockedByTeam: null, blockedByAisle: null };
@@ -305,11 +328,16 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
   return {
     team: t,
     zones,
-    active: active ? { id: active.id, aisle: active.aisle, levels: active.levels, zone: zoneOf(active.aisle), startedAt: active.started_at } : null,
+    active: active ? {
+      id: active.id, aisle: active.aisle, levels: active.levels, zone: zoneOf(active.aisle), startedAt: active.started_at,
+      direction: cleanDirection(active.direction),
+      // the team coming the other way, when two share the aisle
+      partner: (() => { const p = partnerOf(id, active); return p ? { team: p.team, direction: cleanDirection(p.direction) } : null; })(),
+    } : null,
     bins,
     progress,
     queued: queued.map((q) => q.aisle),
-    queuedDetail: queued.map((q) => ({ aisle: q.aisle, levels: q.levels })),
+    queuedDetail: queued.map((q) => ({ aisle: q.aisle, levels: q.levels, direction: cleanDirection(q.direction) })),
     done,
     waitingOn,
   };

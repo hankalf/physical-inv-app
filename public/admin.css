@@ -873,3 +873,12 @@ html.signed-in .splashbrand { display: none; }
 .c-red.syschip, .sysbanner.c-red { background: #e5484d; color: #fff; }
 .c-gray.syschip, .sysbanner.c-gray { background: #6b7385; color: #fff; }
 html:not(.signed-in) .sysbanner { display: none; }
+
+/* Systems → Check the link: each answer from the other system, and its fix */
+.syscheck { margin-top: 10px; display: grid; gap: 6px; }
+.syscheck-head { font-weight: 800; }
+.syscheck-head.ok, .syscheck-row.ok i { color: var(--ok); }
+.syscheck-head.err, .syscheck-row.err i { color: var(--err); }
+.syscheck-row { font-size: 13.5px; }
+.syscheck-row i { font-style: normal; font-weight: 900; display: inline-block; width: 1.4em; }
+.syscheck-row .fix { margin: 2px 0 0 1.4em; color: var(--text-dim); font-size: 12.5px; }

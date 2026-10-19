@@ -767,7 +767,8 @@ function buildSecondPractice(s) {
   }
   saveCounts(s.id, rows);
   // and the second counts their count raises - for this aisle alone, whatever the run has done so far
-  const raised = generateFromVariances(s.id, { onlyPallets: SECOND_PALLETS, includeMissing: true });
+  // the lesson's empty bin is the one the learner raises by hand: no duplicate-label check is put on it for them
+  const raised = generateFromVariances(s.id, { onlyPallets: SECOND_PALLETS, includeMissing: true, labelChecks: false });
   db.prepare('UPDATE sessions SET master_version = master_version + 1 WHERE id = ?').run(s.id);   // the gun re-reads the count: it has an aisle more
   return raised;
 }

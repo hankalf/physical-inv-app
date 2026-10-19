@@ -164,6 +164,14 @@
       <button id="btnSkip" class="primary" hidden>Skip</button>
     </div>
     <button id="btnEmpty" class="ghost" hidden>Bin is EMPTY — scan the bin</button>
+    <!-- the bin already scanned on this line: no second scan, just a yes -->
+    <div class="emptyconfirm" id="emptyConfirm" hidden>
+      <div class="ecq" id="emptyConfirmText">Mark this bin EMPTY?</div>
+      <div class="row">
+        <button class="primary" id="btnEmptyYes">Yes — it is empty</button>
+        <button class="ghost" id="btnEmptyNo">No</button>
+      </div>
+    </div>
     <button id="btnEmptyRun" class="ghost" hidden>Several empty bins in a row</button>
     <button id="btnMoreLabels" class="ghost" hidden>This pallet has another label</button>
     <button id="btnSameLabel" class="ghost" hidden>Second label on the same pallet</button>

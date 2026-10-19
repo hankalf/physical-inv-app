@@ -35,7 +35,7 @@ import { features, saveFeatures, FEATURES, PRESETS, offNames } from './routes/fe
 import { withEntries, markEntered, markFromFile, worksheetRows, WORKSHEET_COLUMNS } from './routes/erp-entries.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
-  setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks,
+  setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks, partnerOf,
 } from './routes/assignments.js';
 import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot, labelsToReplace } from './routes/reports.js';
 import {
@@ -58,7 +58,7 @@ import { palletSystem, savePalletSystem, probePalletSystem } from './routes/pall
 import { proxyPalletSystem, makeTicket, ticketCookie, PREFIX as PS_PREFIX } from './routes/pallet-proxy.js';
 import { onedriveStatus, setOnedriveConfig, startSignIn, cancelSignIn, disconnect, uploadNow, startOnedrive } from './routes/onedrive.js';
 import { gdriveStatus, setGdriveConfig, checkConnection, disconnectGdrive, uploadToGdrive, startGdrive } from './routes/gdrive.js';
-import { selfSystem, systemsConfig, saveSystems, systemsFor, systemAccess, setSystemAccess, makeTicket as makeHandoff, readTicket as readHandoff, provisionUser, provisionDevice, publicSystems, otherSystems } from './routes/systems.js';
+import { selfSystem, systemsConfig, saveSystems, systemsFor, systemAccess, setSystemAccess, makeTicket as makeHandoff, readTicket as readHandoff, checkTicket, checkLink, provisionUser, provisionDevice, publicSystems, otherSystems } from './routes/systems.js';
 import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, unlockPlace, PER_LOGIN, PER_PLACE } from './routes/login-limit.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards, barcodeBook } from './routes/printing.js';
@@ -536,11 +536,15 @@ async function handleHandheld(req, res, url, m) {
     const row = db.prepare('SELECT * FROM assignments WHERE id = ? AND session_id = ?').get(Number(m[2]), Number(m[1]));
     if (!row) throw httpError(404, 'assignment not found');
     if (row.team !== norm(body.team)) throw httpError(403, 'that aisle belongs to another team');
+    // two teams from opposite ends: the aisle is only finished when the second one hands it back
+    const partner = partnerOf(m[1], row);
     setAssignmentStatus(m[1], m[2], 'done');
-    autoAfterAisle(m[1], row.aisle, row.levels, row.team);
-    // the aisle is filed the moment it is handed back
-    const filed = archiveAisle(m[1], row.aisle, { team: row.team, by: `team ${row.team}` });
-    if (filed) audit(`team ${row.team}`, 'aisle filed', `${filed.aisle}: ${filed.lines} lines → ${filed.name}`, m[1]);
+    if (!partner) {
+      autoAfterAisle(m[1], row.aisle, row.levels, row.team);
+      // the aisle is filed the moment it is handed back
+      const filed = archiveAisle(m[1], row.aisle, { team: row.team, by: `team ${row.team}` });
+      if (filed) audit(`team ${row.team}`, 'aisle filed', `${filed.aisle}: ${filed.lines} lines → ${filed.name}`, m[1]);
+    }
     return sendJson(req, res, 200, teamStatus(m[1], body.team));
   }
 
@@ -594,7 +598,7 @@ async function handleHandheld(req, res, url, m) {
     if (!Array.isArray(rows)) throw httpError(400, 'expected an array of counts');
     // the device is whoever the token says, not whatever the payload claims
     const result = saveCounts(m[1], device ? rows.map((r) => ({ ...r, deviceId: device.name })) : rows);
-    if (result.firstCountPallets.length) result.recounts = autoAfterCounts(m[1], result.firstCountPallets);
+    if (result.firstCountPallets.length || result.firstCountBins.length) result.recounts = autoAfterCounts(m[1], result.firstCountPallets, result.firstCountBins);
     /* a pallet on the Not in Location list, scanned anywhere, is found */
     const ok = new Set(result.accepted);
     result.found = [];
@@ -1041,7 +1045,7 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments$/)) && method === 'POST') {
     const body = await readJson(req);
     const aisles = Array.isArray(body.aisles) ? body.aisles : String(body.aisles || '').split(/[,\s]+/);
-    const queued = queueAssignments(m[1], body.team, aisles, body.levels || '', { force: !!body.force });
+    const queued = queueAssignments(m[1], body.team, aisles, body.levels || '', { force: !!body.force, direction: body.direction });
     audit(actor, body.force ? 'assigned aisles OVERRIDING the equipment check' : 'assigned aisles',
       `team ${body.team}: ${queued.added.join(', ') || 'nothing'} (levels ${body.levels})`, m[1]);
     return sendJson(req, res, 200, queued);
@@ -1093,6 +1097,13 @@ async function handleAdmin(req, res, url, m) {
       const st = saveSystems(body);
       audit(actor, body.newKey ? 'made a new link key for the systems' : 'changed the systems', [st.self.name, ...st.systems.map((s) => `${s.name} ${s.url}`)].join(' · '));
       return sendJson(req, res, 200, { ...st, access: systemAccess() });
+    }
+    if (p === '/api/admin/systems/check' && method === 'POST') {
+      const body = await readJson(req);
+      const origin = `${String(req.headers['x-forwarded-proto'] || 'http').split(',')[0].trim()}://${req.headers['x-forwarded-host'] || req.headers.host}`;
+      const out = await checkLink(body.name, origin);
+      audit(actor, `checked the link to ${out.system}`, out.ok ? 'all good' : (out.steps.find((s) => !s.ok) || {}).text || '');
+      return sendJson(req, res, 200, out);
     }
     if (p === '/api/admin/systems/access' && method === 'POST') {
       const body = await readJson(req);
@@ -2049,6 +2060,11 @@ const server = http.createServer(async (req, res) => {
       return sendJson(req, res, 200, { ok: true, username: who.username });
     }
     if (p === '/api/system' && req.method === 'GET') return sendJson(req, res, 200, publicSystems());
+    // the home's link check: would this hand-off be taken? Nothing is used up
+    if (p === '/api/system/verify' && req.method === 'GET') {
+      try { const b = checkTicket(url.searchParams.get('t')); return sendJson(req, res, 200, { ok: true, name: b.aud }); }
+      catch (err) { return sendJson(req, res, 200, { ok: false, error: err.message }); }
+    }
     /* A hand-off from the home system: the ticket checked, the login or the
        scanner made here, and on into the page. */
     if (p === '/handoff' && req.method === 'GET') {

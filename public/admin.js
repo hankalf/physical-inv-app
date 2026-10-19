@@ -356,7 +356,7 @@
   let planShown = null;
   const planBody = () => ({
     teams: $('fPlanTeams').value, shift: $('fPlanShift').value, levels: $('fPlanLevels').value,
-    order: $('fPlanOrder').value, replace: $('fPlanReplace').checked,
+    order: $('fPlanOrder').value, replace: $('fPlanReplace').checked, pairs: $('fPlanPairs').checked,
   });
 
   function renderRules(r) {
@@ -429,7 +429,7 @@
       await refreshAssignments();
     } catch (err) { msg($('planMsg'), 'err', err.message); }
   };
-  for (const id of ['fPlanTeams', 'fPlanShift', 'fPlanLevels', 'fPlanOrder', 'fPlanReplace']) {
+  for (const id of ['fPlanTeams', 'fPlanShift', 'fPlanLevels', 'fPlanOrder', 'fPlanReplace', 'fPlanPairs']) {
     $(id).addEventListener('change', () => { $('btnPlanApply').disabled = true; });    // a changed form needs a fresh preview
   }
 
@@ -467,11 +467,13 @@
       for (const it of items.sort((a, b) => a.position - b.position || a.id - b.id)) {
         const a = document.createElement('span');
         a.className = 'a ' + it.status;
-        const holder = (activeInBlock.get(blockOf.get(it.aisle) || it.aisle) || []).find((h) => h.team !== team && overlap(h.levels, it.levels));
+        // a team coming the other way down the same aisle is a partner, not a hold
+        const holder = (activeInBlock.get(blockOf.get(it.aisle) || it.aisle) || []).find((h) => h.team !== team && overlap(h.levels, it.levels)
+          && !(h.aisle === it.aisle && (h.direction || 'up') !== (it.direction || 'up')));
         const blocked = it.status === 'queued' && !!holder;
         if (blocked) a.classList.add('blocked');
         a.title = blocked ? `Held: team ${holder.team} is active in this block on ${levelsLabel(holder.levels)}` : it.status;
-        a.append(`${aisleLabel(it.aisle, zoneByAisle.get(it.aisle))} · ${levelsLabel(it.levels)}`);
+        a.append(`${aisleLabel(it.aisle, zoneByAisle.get(it.aisle))} · ${levelsLabel(it.levels)}${it.direction === 'down' ? ' · from the far end ↩' : ''}`);
         if (blocked) a.append(' ⏳');
         const act = (label, status) => {
           const b = document.createElement('button');
@@ -1779,7 +1781,7 @@
 
   async function queueAisles(force) {
     const r = await postJson(`/api/admin/sessions/${sessionId}/assignments`,
-      { team: $('fAssignTeam').value, aisles: $('fAssignAisles').value, levels: $('fAssignLevels').value, force });
+      { team: $('fAssignTeam').value, aisles: $('fAssignAisles').value, levels: $('fAssignLevels').value, direction: $('fAssignFrom').value, force });
     return r;
   }
 

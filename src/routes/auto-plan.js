@@ -80,21 +80,36 @@ export function autoPlan(sessionId, opts = {}) {
     throw Object.assign(new Error(`nothing to plan: ${why}`), { status: 400 });
   }
 
-  /* one continuous stretch per team, about the same racking each */
+  /* One continuous stretch per team, about the same racking each - or, with
+     "two teams per aisle", per pair of teams: both count every aisle of the
+     pair's stretch, the first from the 001 end and the second from the far
+     end, and they meet in the middle. An odd team out works alone. */
+  const pairs = !!opts.pairs;
+  const units = [];
+  if (pairs) for (let i = 0; i < teams.length; i += 2) units.push(teams.slice(i, i + 2));
+  else for (const t of teams) units.push([t]);
   const total = aisles.reduce((n, a) => n + a.bins, 0);
-  const per = total / teams.length;
+  const per = total / units.length;
   let acc = 0;
   let k = 0;
   const leftover = [];                                  // levels a team cannot reach in its own stretch
   for (let i = 0; i < aisles.length; i++) {
     const a = aisles[i];
-    // move to the next team once this one has its share - but never leave a team with nothing
-    while (k < teams.length - 1 && acc >= per * (k + 1) && aisles.length - i >= teams.length - k) k++;
-    const t = teams[k];
-    const mine = t.reach ? inter(a.want, t.reach) : a.want;
-    if (mine) { t.aisles.push({ aisle: a.aisle, levels: mine, bins: a.bins, block: a.block }); t.bins += a.bins; }
-    const rest = minus(a.want, mine);
-    if (rest) leftover.push({ aisle: a.aisle, levels: rest, bins: a.bins, block: a.block, from: t.team });
+    // move to the next unit once this one has its share - but never leave one with nothing
+    while (k < units.length - 1 && acc >= per * (k + 1) && aisles.length - i >= units.length - k) k++;
+    const unit = units[k];
+    let reached = '';
+    // the first of a pair from the 001 end, the second from the far end; where their levels overlap they meet in the middle
+    unit.forEach((t, n) => {
+      const mine = t.reach ? inter(a.want, t.reach) : a.want;
+      if (!mine) return;
+      const share = unit.length > 1 ? Math.ceil(a.bins / 2) : a.bins;
+      t.aisles.push({ aisle: a.aisle, levels: mine, bins: share, block: a.block, direction: n === 1 ? 'down' : 'up' });
+      t.bins += share;
+      reached = sortLevels(reached + mine);
+    });
+    const rest = minus(a.want, reached);
+    if (rest) leftover.push({ aisle: a.aisle, levels: rest, bins: a.bins, block: a.block, from: unit[0].team });
     acc += a.bins;
   }
 
@@ -106,7 +121,7 @@ export function autoPlan(sessionId, opts = {}) {
     for (const t of able) {
       const take = t.reach ? inter(left, t.reach) : left;
       if (!take) continue;
-      t.aisles.push({ aisle: l.aisle, levels: take, bins: l.bins, block: l.block, extra: true });
+      t.aisles.push({ aisle: l.aisle, levels: take, bins: l.bins, block: l.block, extra: true, direction: 'up' });
       t.bins += l.bins;
       left = minus(left, take);
       if (!left) break;
@@ -119,17 +134,21 @@ export function autoPlan(sessionId, opts = {}) {
   const starts = new Map();
   for (const t of teams) {
     if (!t.aisles.length) { warnings.push(`Team ${t.team} gets nothing - ${t.known && !t.reach ? 'its crew has no equipment for any level' : 'there are more teams than aisles'}.`); continue; }
+    if (t.aisles[0].direction === 'down') continue;      // the second of a pair starts in its partner's aisle, by design
     const b = t.aisles[0].block;
     if (starts.has(b)) warnings.push(`Teams ${starts.get(b)} and ${t.team} both start in racking block ${b}; the second waits until the first is clear.`);
     else starts.set(b, t.team);
   }
+  if (pairs && teams.length % 2) warnings.push(`Team ${teams[teams.length - 1].team} has no partner, so it counts its aisles alone from the 001 end.`);
+  const unpaired = pairs ? units.filter((u) => u.length === 2 && u[0].reach && u[1].reach && !inter(u[0].reach, u[1].reach)).map((u) => `${u[0].team} and ${u[1].team}`) : [];
+  if (unpaired.length) warnings.push(`Teams ${unpaired.join('; ')} reach no level in common, so they never meet in an aisle; each counts the levels it reaches.`);
   return {
     teams: teams.map((t) => ({
       team: t.team, shift: t.shift, reach: t.reach, known: t.known, bins: t.bins,
-      aisles: t.aisles.map((a) => ({ aisle: a.aisle, levels: a.levels, bins: a.bins, extra: !!a.extra })),
-      text: t.aisles.map((a) => `${a.aisle} (${levelsLabel(a.levels)})${a.extra ? '*' : ''}`).join(' → '),
+      aisles: t.aisles.map((a) => ({ aisle: a.aisle, levels: a.levels, bins: a.bins, extra: !!a.extra, direction: a.direction || 'up' })),
+      text: t.aisles.map((a) => `${a.aisle} (${levelsLabel(a.levels)})${a.direction === 'down' ? ' from the far end' : ''}${a.extra ? '*' : ''}`).join(' → '),
     })),
-    unassigned, skipped, warnings,
+    unassigned, skipped, warnings, pairs,
     rules: planRules(id, roster),
   };
 }
@@ -159,7 +178,7 @@ export function applyPlan(sessionId, opts = {}) {
   for (const t of plan.teams) {
     for (const a of t.aisles) {
       // queueing releases a team's first free aisle on the spot; keep the list of who started
-      const r = queueAssignments(id, t.team, [a.aisle], a.levels, { force: true });
+      const r = queueAssignments(id, t.team, [a.aisle], a.levels, { force: true, direction: a.direction });
       queued += r.added.length;
       activated.push(...r.activated);
     }

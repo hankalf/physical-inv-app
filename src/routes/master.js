@@ -205,11 +205,14 @@ export function importMaster(sessionId, kind, text, { replace = false, source = 
         const pos = db
           .prepare('SELECT COALESCE(MAX(position), -1) + 1 AS p FROM assignments WHERE session_id = ? AND team = ?')
           .get(id, team).p;
+        // an optional "Start" column: "far end" (or back, end, down, reverse) starts the team at the far end of the aisle
+        const from = String(pick(rec, ['start', 'startfrom', 'from', 'direction', 'end', 'startat'])).trim().toLowerCase();
+        const direction = /^(far|far end|back|end|down|reverse|high|last|z)/.test(from) ? 'down' : 'up';
         db.prepare(
-          `INSERT INTO assignments (session_id, team, aisle, levels, position, status, created_at)
-           VALUES (?, ?, ?, ?, ?, 'queued', ?)
+          `INSERT INTO assignments (session_id, team, aisle, levels, position, status, created_at, direction)
+           VALUES (?, ?, ?, ?, ?, 'queued', ?, ?)
            ON CONFLICT(session_id, team, aisle, levels) DO NOTHING`
-        ).run(id, team, aisle, levels, pos, new Date().toISOString());
+        ).run(id, team, aisle, levels, pos, new Date().toISOString(), direction);
         stats.planned++;
         continue;
       }

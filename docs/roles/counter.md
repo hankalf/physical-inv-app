@@ -57,7 +57,8 @@ you the next one. You do not wait for a supervisor.
 
 ## 4 — Empty bins
 
-- One empty bin: **Bin is EMPTY — scan the bin.** Scan the rack label.
+- One empty bin: **Bin is EMPTY — scan the bin.** Scan the rack label. If you scanned the bin
+  first, the gun just asks *Mark it EMPTY?* — tap **Yes**.
 - A run of them: **Mark a run empty**: scan the **FIRST** empty location and the **LAST**,
   untick any that are not empty, confirm.
 

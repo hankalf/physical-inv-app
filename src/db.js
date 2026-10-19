@@ -758,6 +758,7 @@ export function saveCounts(sessionId, rows) {
   const accepted = [];
   const rejected = [];
   const firstCountPallets = new Set();
+  const firstCountBins = new Set();             // empty bins included: a bin counted is a bin looked in
   const countedBins = new Set();
   /* A handheld's clock can be wrong by hours - nobody sets it, and a cradle in
      a freezer does not keep time. Each line says when it was scanned by that
@@ -812,6 +813,7 @@ export function saveCounts(sessionId, rows) {
       );
       accepted.push(r.clientId);
       if (!empty && Number(r.pass) !== 2) firstCountPallets.add(norm(r.palletId));
+      if (Number(r.pass) !== 2) firstCountBins.add(norm(r.location));
       countedBins.add(norm(r.location));
     }
     db.exec('COMMIT');
@@ -825,7 +827,7 @@ export function saveCounts(sessionId, rows) {
     const stamp = db.prepare('UPDATE locations SET last_counted = ? WHERE session_id = ? AND code = ?');
     for (const bin of countedBins) stamp.run(now, id, bin);
   }
-  return { accepted, rejected, firstCountPallets: [...firstCountPallets] };
+  return { accepted, rejected, firstCountPallets: [...firstCountPallets], firstCountBins: [...firstCountBins] };
 }
 
 // Pallets already counted, so a device can warn before the same pallet is

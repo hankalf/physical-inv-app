@@ -436,9 +436,9 @@
   }
 
   /* ------------------------------------------------------------- systems
-     LIVE, DEV and any other, each at its own address. The sidebar says which
+     LIVE, TEST and any other, each at its own address. The sidebar says which
      one this is and offers the others this login may use; a system that is not
-     the home wears a banner on every page, so nobody counts into DEV thinking
+     the home wears a banner on every page, so nobody counts into TEST thinking
      it is LIVE. Switching goes through the home: see src/routes/systems.js. */
   function renderSystem() {
     const me = api.me;
@@ -1032,7 +1032,7 @@
     ['Pallets to move back — front bins with an empty bin behind', '/front', 'moves', 'move pallets back front behind empty double deep relocate'],
     ['Auto-assign the aisles — a staggered plan', '/admin', 'teams', 'auto assign plan stagger staggered aisles teams spread automatic queue every team'],
     ['Test with your own pallets, and try features that are off', '/testing', '', 'testing upload own pallets file lot expiry approval try features off practice'],
-    ['Systems — LIVE and DEV, and who may use each', '/settings', 'advanced', 'system systems dev live environment switch staging test deploy url address link key'],
+    ['Systems — LIVE and TEST, and who may use each', '/settings', 'advanced', 'system systems dev live environment switch staging test deploy url address link key'],
     ['Practice data — every login\'s runs in the Testing Suite', '/practice', '', 'practice data runs testing suite users who practiced history tried export delete admin learn'],
   ].map(([title, page, sub, words]) => ({ title, page, sub, words }));
 

@@ -725,7 +725,7 @@
     <p class="pane-intro">Which parts of the app the site shows at all, who can sign in and what they may use, and how the app names and presents itself.</p>
     <div class="card" id="systemsCard" hidden>
       <h2>Systems <span class="chip" id="sysChip"></span>
-        <span class="muted">LIVE, DEV and any other — each at its own address, reached from one sign-in and one scanner link</span></h2>
+        <span class="muted">LIVE, TEST and any other — each at its own address, reached from one sign-in and one scanner link</span></h2>
       <div class="feedback show" id="sysStatus"></div>
       <div class="inline" style="margin-top:10px">
         <div class="auto"><label for="fSysName">This system's name</label><input id="fSysName" class="sm" style="width:120px" maxlength="16" placeholder="LIVE"></div>
@@ -743,6 +743,7 @@
         <h3>The other systems</h3>
         <div class="hint" style="margin-top:0">Each one is the app deployed again at its own address, with its own database. Its address is what people and scanners are sent to when they switch.</div>
         <div class="scroll"><table id="sysTable"></table></div>
+        <div id="sysCheck" class="syscheck" hidden></div>
         <div class="inline" style="margin-top:8px"><div class="auto"><button class="fit sm" id="btnSysAdd">Add a system</button></div></div>
         <h3>The link key</h3>
         <div class="hint" style="margin-top:0">The other systems take people this system sends only when the hand-off is signed with this key. Put it in each of them (Settings → Logins &amp; site → Systems there, or its <code>SYSTEM_LINK_KEY</code> variable).</div>
@@ -761,14 +762,14 @@
         <div class="scroll"><table id="sysAccess"></table></div>
       </div>
       <details class="hint" style="margin-top:12px" id="sysHow">
-        <summary><b>Setting up DEV next to LIVE</b></summary>
+        <summary><b>Setting up TEST next to LIVE</b></summary>
         <ol style="margin:8px 0 0 18px; padding:0">
-          <li>In Railway, deploy this app a second time as its own service, with its <b>own volume</b> (its own database), from the branch you want DEV to run.</li>
-          <li>Give that service three variables: <code>SYSTEM_NAME</code> = <b>DEV</b>, <code>SYSTEM_HOME_URL</code> = this system's address, and <code>SYSTEM_LINK_KEY</code> = the link key above.</li>
-          <li>Here, <b>Add a system</b>: name <b>DEV</b>, its Railway address, and tick <b>Scanners may switch</b> if the guns should be able to go there. <b>Save</b>.</li>
-          <li>Tick who may use DEV in the table. They see <b>Switch to…</b> in the sidebar, and <b>Sign in to</b> on the sign-in box.</li>
+          <li>In Railway, deploy this app a second time as its own service, with its <b>own volume</b> (its own database), from the branch you want TEST to run.</li>
+          <li>Give that service three variables: <code>SYSTEM_NAME</code> = <b>TEST</b>, <code>SYSTEM_HOME_URL</code> = this system's address, and <code>SYSTEM_LINK_KEY</code> = the link key above — no spaces or quotes. Redeploy it.</li>
+          <li>Here, <b>Add a system</b>: name <b>TEST</b> (the same name as its <code>SYSTEM_NAME</code>), its Railway address, and tick <b>Scanners may switch</b> if the guns should be able to go there. <b>Save</b>, then <b>Check the link</b>: every line should come back ✓.</li>
+          <li>Tick who may use TEST in the table. They see <b>Switch to…</b> in the sidebar, and <b>Sign in to</b> on the sign-in box.</li>
         </ol>
-        <div style="margin-top:8px">Logins live here, on the home system: DEV takes them from the hand-off, with the same role and pages, and nobody has a second password. A scanner keeps its own link: switching hands it to DEV under the same link, and DEV's counts stay in DEV's own storage on the gun. The way back is a button, on the gun and on every DEV page.</div>
+        <div style="margin-top:8px">Logins live here, on the home system: TEST takes them from the hand-off, with the same role and pages, and nobody has a second password. A scanner keeps its own link: switching hands it to TEST under the same link, and TEST's counts stay in TEST's own storage on the gun. The way back is a button, on the gun and on every TEST page.</div>
       </details>
     </div>
 

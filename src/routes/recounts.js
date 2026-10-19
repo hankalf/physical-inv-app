@@ -19,6 +19,8 @@ const now = () => new Date().toISOString();
 export const REASONS = {
   'QTY VARIANCE': 'Quantity differs from the inventory report',
   'WRONG BIN': 'Pallet found in an unexpected bin',
+  // the bin the report had a pallet in, when it turned up elsewhere: is there a second pallet carrying the same label?
+  'LABEL CHECK': 'Check for a pallet with a duplicate label',
   'NOT IN MASTER': 'Pallet not on the inventory report',
   'COUNTED TWICE': 'Pallet counted in more than one bin',
   'MISSING': 'Expected pallet not found here',
@@ -91,7 +93,7 @@ const openRecounts = (id) =>
  * real exceptions - so a pallet counts as missing only once its bin has been
  * counted or its aisle has been handed back.
  */
-export function generateFromVariances(sessionId, { onlyPallets = null, includeMissing = true } = {}) {
+export function generateFromVariances(sessionId, { onlyPallets = null, includeMissing = true, labelChecks = true } = {}) {
   const id = Number(sessionId);
   const session = getSession(id) || {};
   const cap = Number(session.recount_cap || 0);
@@ -147,15 +149,55 @@ export function generateFromVariances(sessionId, { onlyPallets = null, includeMi
       if (!room()) break;
       if (createRecount(id, { bin, palletId: r.pallet_id, reason: r.status, detail, source: 'auto', firstTeam }).created) created++;
     }
+    /* Found somewhere other than the report said: the report's own bin is
+       counted again too, in case a second pallet there carries the same label -
+       one label printed twice is the thing this catches. Once that bin has been
+       counted (or its aisle handed back), so a second count never runs ahead
+       of the first. */
+    if (labelChecks && r.status === 'WRONG BIN' && r.expected_location && !bins.includes(r.expected_location)) {
+      if (!lookedIn(r.expected_location)) { skippedUnworked++; continue; }
+      if (!room()) break;
+      if (labelCheck(id, r).created) created++;
+    }
   }
   return { created, considered: rows.length, skippedSmall, skippedUnworked, cappedAt };
 }
 
+/* The report's bin, counted again: a blind count, by a team other than the one that first counted it. */
+function labelCheck(id, r) {
+  /* once: a bin that has had a second count already - this check, or one for
+     another reason, done or still open - has been looked at by a second team */
+  if (db.prepare('SELECT 1 FROM recounts WHERE session_id = ? AND bin = ?').get(id, norm(r.expected_location))) return { created: false };
+  const firstTeam = db.prepare(
+    'SELECT team FROM counts WHERE session_id = ? AND location_code = ? AND voided = 0 AND pass = 1 ORDER BY id LIMIT 1').get(id, r.expected_location)?.team || null;
+  return createRecount(id, { bin: r.expected_location, palletId: r.pallet_id, reason: 'LABEL CHECK',
+    detail: `the report had ${r.pallet_id} here; it was found in ${r.found_location} - is there a second pallet with the same label?`, source: 'auto', firstTeam });
+}
+
+/* Pallets found in the wrong bin whose report bin has now been counted: the label check, raised then. */
+function labelChecksForBins(id, bins) {
+  const want = [...new Set([...bins].map(norm).filter(Boolean))];
+  if (!want.length) return 0;
+  // one read, not the whole pallet report on every batch: report pallets of these bins counted only somewhere else
+  const rows = db.prepare(
+    `SELECT p.pallet_id, p.expected_location, GROUP_CONCAT(DISTINCT c.location_code) AS found_location
+       FROM pallets p JOIN counts c ON c.session_id = p.session_id AND c.pallet_id = p.pallet_id AND c.voided = 0 AND c.empty_bin = 0
+      WHERE p.session_id = ? AND p.expected_location IN (SELECT value FROM json_each(?))
+      GROUP BY p.pallet_id
+     HAVING SUM(c.location_code = p.expected_location) = 0`).all(id, JSON.stringify(want));
+  let created = 0;
+  for (const r of rows) if (labelCheck(id, r).created) created++;
+  return created;
+}
+
 /** Called after a batch of first-count lines lands, when the session auto-recounts. */
-export function autoAfterCounts(sessionId, palletIds) {
+export function autoAfterCounts(sessionId, palletIds, bins = []) {
   const s = getSession(sessionId);
-  if (!s || !s.auto_recount || !palletIds.length) return { created: 0 };
-  return generateFromVariances(sessionId, { onlyPallets: new Set(palletIds.map(norm)), includeMissing: false });
+  if (!s || !s.auto_recount || (!palletIds.length && !bins.length)) return { created: 0 };
+  const out = palletIds.length ? generateFromVariances(sessionId, { onlyPallets: new Set(palletIds.map(norm)), includeMissing: false }) : { created: 0 };
+  // a bin just counted may be the report's bin of a pallet already found elsewhere
+  out.created += labelChecksForBins(Number(sessionId), bins);
+  return out;
 }
 
 /** Called when an aisle is handed back: expected pallets in it that nobody saw. */
@@ -177,6 +219,10 @@ export function autoAfterAisle(sessionId, aisle, levels, team) {
     if (createRecount(id, { bin: r.expected_location, palletId: r.pallet_id, reason: 'MISSING',
       detail: `expected ${r.expected_qty ?? '?'} in ${r.expected_location}, not seen when aisle ${aisle} was completed`, source: 'auto', firstTeam: team }).created) created++;
   }
+  // the aisle handed back: its bins are looked in, so pallets found elsewhere get their label check here
+  const binsHere = db.prepare('SELECT code FROM locations WHERE session_id = ? AND aisle = ?').all(id, norm(aisle)).map((x) => x.code)
+    .filter((b) => !levels || levels.includes(b.replace(/^[A-Z]+\d+/, '')[0] || ''));
+  created += labelChecksForBins(id, binsHere);
   return { created };
 }
 

@@ -43,7 +43,7 @@ const mins = (a, b) => {
 const STATUS = {
   'MATCH': 'Matches', 'QTY VARIANCE': 'Quantity differs', 'WRONG BIN': 'In a different bin', 'MISSING': 'Not found',
   'NOT IN MASTER': 'Not on the report', 'COUNTED TWICE': 'Counted twice', 'SECOND LABEL': 'Second label on a pallet',
-  'NOT COUNTED': 'Not counted yet',
+  'NOT COUNTED': 'Not counted yet', 'LABEL CHECK': 'Duplicate-label check (pallet found in another bin)',
 };
 const LABEL = { typed: 'Unreadable — typed in', none: 'Nothing readable', assumed: 'Unreadable — bin confirmed by the counter' };
 

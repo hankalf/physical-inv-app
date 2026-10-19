@@ -1795,7 +1795,7 @@
     }
   };
 
-  /* ------------------------------------------------------------ systems: LIVE, DEV
+  /* ------------------------------------------------------------ systems: LIVE, TEST
      Each at its own address. On the home: the others, the link key, and who may
      use which. On another system: its name, and the home it takes people from. */
   let sysState = null;
@@ -1842,7 +1842,7 @@
     table(t, [{ label: 'Name' }, { label: 'Address' }, { label: 'Color' }, { label: 'Scanners may switch' }, { label: '' }], sysRows, (s, i) => {
       const idx = sysRows.indexOf(s);
       const tr = document.createElement('tr');
-      const name = Object.assign(document.createElement('input'), { value: s.name, className: 'sm sysname', maxLength: 16, placeholder: 'DEV' });
+      const name = Object.assign(document.createElement('input'), { value: s.name, className: 'sm sysname', maxLength: 16, placeholder: 'TEST' });
       name.oninput = () => { s.name = name.value; };
       const url = Object.assign(document.createElement('input'), { value: s.url, className: 'sysurl', placeholder: 'https://full-harvest-dev.up.railway.app', spellcheck: false });
       url.oninput = () => { s.url = url.value; };
@@ -1853,9 +1853,14 @@
       sc.onchange = () => { s.scanners = sc.checked; };
       const scl = document.createElement('label'); scl.className = 'cb'; scl.append(sc, document.createTextNode(' the guns can go there'));
       const td = (el) => { const c = document.createElement('td'); c.appendChild(el); return c; };
-      tr.append(td(name), td(url), td(col), td(scl), td(button('Remove', 'sm ghost', () => { sysRows.splice(idx, 1); drawSysRows(); })));
+      const acts = document.createElement('td');
+      const chk = button('Check the link', 'sm', () => checkSystem(s.name));
+      chk.dataset.check = s.name;
+      chk.title = 'Ask the other system, server to server, whether a hand-off from here would work - and what to change if not';
+      acts.append(chk, button('Remove', 'sm ghost', () => { sysRows.splice(idx, 1); drawSysRows(); }));
+      tr.append(td(name), td(url), td(col), td(scl), acts);
       return tr;
-    }, 'None yet — Add a system for DEV.');
+    }, 'None yet — Add a system for TEST.');
   }
   function drawSysAccess(st) {
     const names = st.systems.map((s) => s.name);
@@ -1879,12 +1884,31 @@
       return tr;
     }, 'No logins yet.');
   }
+  /* Is the other system set up to take people from here? Each check in words, with the fix. */
+  async function checkSystem(name) {
+    const box = $('sysCheck');
+    box.hidden = false;
+    box.replaceChildren(Object.assign(document.createElement('div'), { className: 'muted', textContent: `Checking ${name}…` }));
+    try {
+      const out = await api.post('/api/admin/systems/check', { name });
+      box.replaceChildren(Object.assign(document.createElement('div'), { className: 'syscheck-head ' + (out.ok ? 'ok' : 'err'),
+        textContent: out.ok ? `${out.system}: the link works — people and scanners can switch.` : `${out.system}: the link is not working yet.` }));
+      for (const s of out.steps) {
+        const row = document.createElement('div');
+        row.className = 'syscheck-row ' + (s.ok ? 'ok' : 'err');
+        row.append(Object.assign(document.createElement('i'), { textContent: s.ok ? '✓' : '✗' }), document.createTextNode(s.text));
+        if (s.fix) row.appendChild(Object.assign(document.createElement('div'), { className: 'fix', textContent: s.fix }));
+        box.appendChild(row);
+      }
+    } catch (err) { box.replaceChildren(Object.assign(document.createElement('div'), { className: 'syscheck-head err', textContent: err.message })); }
+  }
+
   async function refreshSystems() {
     if (!api.me || api.me.role !== 'admin') { $('systemsCard').hidden = true; return; }
     $('systemsCard').hidden = false;
     drawSystems(await api.json('/api/admin/systems'));
   }
-  $('btnSysAdd').onclick = () => { sysRows.push({ name: sysRows.length ? '' : 'DEV', url: '', color: 'orange', scanners: false }); drawSysRows(); const last = $('sysTable').querySelector('tbody tr:last-child .sysurl'); if (last) last.focus(); };
+  $('btnSysAdd').onclick = () => { sysRows.push({ name: sysRows.length ? '' : 'TEST', url: '', color: 'orange', scanners: false }); drawSysRows(); const last = $('sysTable').querySelector('tbody tr:last-child .sysurl'); if (last) last.focus(); };
   $('btnSysSave').onclick = async () => {
     try {
       const home = sysState.self.role === 'home';

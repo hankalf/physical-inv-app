@@ -359,8 +359,8 @@
   (() => {
     const box = $('colGuide-plan');
     box.innerHTML = '<div><b>Columns</b> — matched by name, any order, extra columns ignored. &nbsp; <a href="/templates/plan-template.csv" download="plan-template.csv">⬇ Download a sample plan-template.csv</a></div>'
-      + '<div class="cols"><code class="req" title="team number">Team (required)</code><code class="req" title="the full aisle code from the bin list">Aisle (required)</code><code class="req" title="A-C, D-F, or A-F">Levels (required)</code></div>'
-      + '<div class="note"><b>Team</b>: team number · <b>Aisle</b>: the full aisle code from the bin list, e.g. F01 — a bare number is refused when it could mean two aisles (A01 / F01) · <b>Levels</b>: which levels the team counts, by equipment: A-C, D-F, or A-F for every level. Upload the count\'s bin list first (Settings → Lists & racking).</div>';
+      + '<div class="cols"><code class="req" title="team number">Team (required)</code><code class="req" title="the full aisle code from the bin list">Aisle (required)</code><code class="req" title="A-C, D-F, or A-F">Levels (required)</code><code title="001 end, or far end">Start</code></div>'
+      + '<div class="note"><b>Team</b>: team number · <b>Aisle</b>: the full aisle code from the bin list, e.g. F01 — a bare number is refused when it could mean two aisles (A01 / F01) · <b>Levels</b>: which levels the team counts, by equipment: A-C, D-F, or A-F for every level. · <b>Start</b> (optional): <i>far end</i> starts the team at the far end of the aisle — two teams on the same aisle and levels, one from each end, meet in the middle. Upload the count\'s bin list first (Settings → Lists & racking).</div>';
   })();
   $('btnUpload-plan').onclick = async () => {
     const out = $('uploadMsg-plan');

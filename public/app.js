@@ -962,7 +962,9 @@
       box.className = 'assign';
       box.innerHTML = `<div class="sub">Team ${a.team} — your aisle</div><div class="aisle"></div><div class="sub zone-sub"></div><div class="sub bins-sub"></div><div class="bins"></div>`;
       box.querySelector('.aisle').textContent = a.active.aisle;
-      box.querySelector('.zone-sub').textContent = `${aisleLabel(a.active.aisle, a.active.zone)} · ${levelsLabel(a.active.levels)}`;
+      box.querySelector('.zone-sub').textContent = `${aisleLabel(a.active.aisle, a.active.zone)} · ${levelsLabel(a.active.levels)}`
+        + (a.active.direction === 'down' ? ' · start at the far end' : '')
+        + (a.active.partner ? ` · team ${a.active.partner.team} from the other end` : '');
       box.querySelector('.bins-sub').textContent = `${counted.size} of ${total} bins have a count` +
         (a.queued.length ? ` · next: ${a.queued.map((q) => aisleLabel(q, zoneFor(q)) + (levelsFor(q) ? ' ' + levelsFor(q) : '')).join(', ')}` : ' · last aisle in your plan');
       const grid = box.querySelector('.bins');
@@ -1009,7 +1011,8 @@
     await syncQueue();
     const counted = new Set([...(a.progress?.countedBins || []), ...(await localCountedBins(a.active.aisle))]);
     const left = a.bins.filter((b) => !counted.has(b)).length;
-    if (left > 0 && !confirm(tr(`${left} bin(s) in ${a.active.aisle} have no count. Empty bins are fine — complete the aisle anyway?`))) return;
+    const partnerNote = a.active.partner ? ` Team ${a.active.partner.team} is still counting from the other end.` : '';
+    if (left > 0 && !confirm(tr(`${left} bin(s) in ${a.active.aisle} have no count.${partnerNote} Empty bins are fine — complete the aisle anyway?`))) return;
     if (!online()) { feedback($('assignMsg'), 'err', 'Need Wi-Fi to complete an aisle', 'The next aisle is released by the server.'); return; }
     try {
       state.assignment = await api(`/api/sessions/${state.session.id}/assignments/${a.active.id}/complete`, {
@@ -1342,6 +1345,10 @@
     // lot and expiry can be missing on a real pallet, so they are skippable
     $('btnSkip').hidden = !['comments', 'lot', 'expiry'].includes(step) || (step === 'comments' && prompts().commentsRequired === true);
     $('btnEmpty').hidden = step !== 'pallet';
+    /* the bin is already scanned on this line (the bin comes first): EMPTY needs
+       a yes, not the same bin scanned again */
+    $('btnEmpty').textContent = state.draft.location && !state.draft.emptyBin ? 'Bin is EMPTY' : 'Bin is EMPTY — scan the bin';
+    $('emptyConfirm').hidden = !(step === 'pallet' && state.emptyAsk && state.emptyAsk === state.draft.location);
     $('btnEmptyRun').hidden = step !== 'pallet' || !!state.recount;
     // a second label belongs to the pallet just counted, so it is offered at the
     // start of the next line rather than in the middle of this one
@@ -1504,8 +1511,9 @@
   function nextBinCode() {
     const a = state.assignment;
     if (!a || !a.active || !Array.isArray(a.bins)) return null;
-    // a.bins is the assigned aisle and levels already; code order is 001, 002, 003 ...
+    // a.bins is the assigned aisle and levels already; code order is 001, 002, 003 ... - or from the far end back
     const ordered = [...a.bins].sort((x, y) => String(x).localeCompare(String(y), undefined, { numeric: true }));
+    if (a.active.direction === 'down') ordered.reverse();
     return ordered.find((b) => !binFinished(b)) || null;
   }
 
@@ -3131,12 +3139,28 @@
     }
   });
   $('btnEmpty').onclick = () => {
+    /* The bin was scanned first on this line: ask, do not make them scan it again.
+       Everything the bin scan settled (the bin, a flag on it) stays on the line. */
+    if (state.draft.location && !state.draft.palletId) {
+      state.emptyAsk = state.draft.location;
+      $('emptyConfirmText').textContent = `Mark ${state.draft.location} EMPTY? Nothing at all is in it.`;
+      renderStep();
+      try { $('btnEmptyYes').focus(); } catch { /* fine */ }
+      return;
+    }
     // jump straight to the bin scan; the line is saved with no pallet and qty 0
     state.draft = { emptyBin: 1 };
     state.stepIndex = state.steps.indexOf('bin');
     renderStep();
     feedback($('scanMsg'), 'warn', 'Empty bin', 'Scan the location of the empty bin.');
   };
+  $('btnEmptyYes').onclick = async () => {
+    if (!state.emptyAsk || state.emptyAsk !== state.draft.location) { state.emptyAsk = null; renderStep(); return; }
+    state.emptyAsk = null;
+    state.draft = { ...state.draft, emptyBin: 1, palletId: '', qty: 0 };
+    await commitLine();
+  };
+  $('btnEmptyNo').onclick = () => { state.emptyAsk = null; renderStep(); focusScan(); };
   $('btnSkip').onclick = () => { stopMoveOn(); $('fScan').value = ''; handleEntry(''); };
   $('fScan').addEventListener('input', () => { if (state.steps[state.stepIndex] === 'comments') holdMoveOn(); });
   $('btnToAssign').onclick = async () => { state.recount = null; await refreshAssignment(true); renderAssignment(); showScreen('scrAssign'); };

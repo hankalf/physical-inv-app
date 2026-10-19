@@ -63,6 +63,8 @@ control's.
    only takes part of an aisle (`A-C`). A file with *Team, Aisle, Levels* uploads the whole
    plan at once.
 2. **Stagger** spreads the plan so no two teams start side by side on one racking block.
+   To put two teams in one aisle from opposite ends, tick **Two teams per aisle, from opposite
+   ends** (they pair up and meet in the middle), or queue one team with **Start from: the far end**.
 3. Aisles that share a rack are one **block**: a team that holds one side holds both. The gun
    says *Team N is counting aisle X* to anybody else; that is the block working.
 4. The gun hands out the **next aisle** by itself when a team hands one back. You do not have

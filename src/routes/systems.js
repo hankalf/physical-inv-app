@@ -55,7 +55,7 @@ const cleanUrl = (v) => {
 export function selfSystem(c = load()) {
   const homeUrl = cleanUrl(process.env.SYSTEM_HOME_URL || c.homeUrl || '');
   return {
-    name: cleanName(process.env.SYSTEM_NAME || c.name) || (homeUrl ? 'DEV' : 'LIVE'),
+    name: cleanName(process.env.SYSTEM_NAME || c.name) || (homeUrl ? 'TEST' : 'LIVE'),
     color: cleanColor(process.env.SYSTEM_COLOR || c.color, homeUrl ? 'orange' : 'green'),
     role: homeUrl ? 'linked' : 'home',
     homeUrl,
@@ -66,7 +66,8 @@ export function selfSystem(c = load()) {
 
 /* The link key: the home makes one; a linked system is given it. */
 function linkKey() {
-  if (process.env.SYSTEM_LINK_KEY) return String(process.env.SYSTEM_LINK_KEY);
+  // a key pasted into a variable often comes with a space or quotes around it
+  if (process.env.SYSTEM_LINK_KEY) return String(process.env.SYSTEM_LINK_KEY).trim().replace(/^["']|["']$/g, '');
   const c = load();                     // always the stored one: never a copy read before a key was made
   if (c.key) return c.key;
   if (selfSystem(c).role === 'linked') return '';
@@ -104,14 +105,14 @@ export function saveSystems(body = {}) {
   const next = { ...c };
   if (body.name !== undefined) {
     const n = cleanName(body.name);
-    if (!n) throw Object.assign(new Error('give this system a short name, like LIVE or DEV'), { status: 400 });
+    if (!n) throw Object.assign(new Error('give this system a short name, like LIVE or TEST'), { status: 400 });
     next.name = n;
   }
   if (body.color !== undefined) next.color = cleanColor(body.color, 'green');
   if (body.homeUrl !== undefined) next.homeUrl = cleanUrl(body.homeUrl);
   if (body.homeName !== undefined) next.homeName = cleanName(body.homeName) || 'LIVE';
   if (body.key !== undefined) {
-    const k = String(body.key || '').trim();
+    const k = String(body.key || '').trim().replace(/^["']|["']$/g, '');
     if (k && k.length < 24) throw Object.assign(new Error('that link key is too short - copy the whole key from the home system'), { status: 400 });
     next.key = k;
   }
@@ -199,7 +200,20 @@ function safePath(p) {
 }
 
 /** On a linked system: the ticket checked, once. Returns what it carries. */
-export function readTicket(t, { homeUrl } = {}) {
+export function readTicket(t) {
+  const body = checkTicket(t);
+  db.prepare('DELETE FROM handoff_nonces WHERE exp < ?').run(new Date().toISOString());
+  try { db.prepare('INSERT INTO handoff_nonces (n, exp) VALUES (?, ?)').run(String(body.n), new Date(Number(body.exp)).toISOString()); }
+  catch { throw Object.assign(new Error('that hand-off has been used already - switch again from the home system'), { status: 403 }); }
+  // remember what the home said about itself and the others, for the way back
+  const c = load();
+  save({ ...c, homeName: cleanName(body.iss) || c.homeName || 'LIVE', homeColor: cleanColor(body.home && body.home.color, 'green'),
+    seen: (body.systems || []).map((s) => ({ name: cleanName(s.name), url: String(s.url || ''), color: cleanColor(s.color, 'orange') })) });
+  return body;
+}
+
+/** The checks alone - signature, which system it is for, still in date - with nothing used up. */
+export function checkTicket(t) {
   const me = selfSystem();
   if (me.role !== 'linked') throw Object.assign(new Error('this is the home system - it does not take hand-offs'), { status: 409 });
   const key = linkKey();
@@ -213,14 +227,57 @@ export function readTicket(t, { homeUrl } = {}) {
   try { body = JSON.parse(Buffer.from(payload, 'base64url').toString()); } catch { throw Object.assign(new Error('that hand-off link is not whole'), { status: 400 }); }
   if (body.v !== 1 || cleanName(body.aud) !== me.name) throw Object.assign(new Error(`that hand-off was for ${body.aud || 'another system'}, and this is ${me.name}`), { status: 403 });
   if (!(Number(body.exp) > Date.now())) throw Object.assign(new Error('that hand-off ran out - switch again from the home system'), { status: 403 });
-  db.prepare('DELETE FROM handoff_nonces WHERE exp < ?').run(new Date().toISOString());
-  try { db.prepare('INSERT INTO handoff_nonces (n, exp) VALUES (?, ?)').run(String(body.n), new Date(Number(body.exp)).toISOString()); }
-  catch { throw Object.assign(new Error('that hand-off has been used already - switch again from the home system'), { status: 403 }); }
-  // remember what the home said about itself and the others, for the way back
-  const c = load();
-  save({ ...c, homeName: cleanName(body.iss) || c.homeName || 'LIVE', homeColor: cleanColor(body.home && body.home.color, 'green'),
-    seen: (body.systems || []).map((s) => ({ name: cleanName(s.name), url: String(s.url || ''), color: cleanColor(s.color, 'orange') })) });
   return body;
+}
+
+/* ------------------------------------------------------------ checking the link
+   From the home, server to server: can the other system be reached, is it
+   running a version that has systems, does it know it is linked to this one,
+   is it called what this one calls it, and does it hold the same key. Each
+   answer in words, with what to change and where. */
+export async function checkLink(name, homeOrigin = '') {
+  const me = selfSystem();
+  if (me.role !== 'home') throw Object.assign(new Error('the link is checked from the home system'), { status: 409 });
+  const to = otherSystems().find((s) => s.name === cleanName(name));
+  if (!to) throw Object.assign(new Error(`there is no system called ${name}`), { status: 404 });
+  const steps = [];
+  const say = (ok, text, fix = '') => { steps.push({ ok, text, fix }); return ok; };
+  const get = async (path) => {
+    const r = await fetch(to.url + path, { signal: AbortSignal.timeout(12000), headers: { accept: 'application/json' } });
+    const text = await r.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch { /* a page, not an answer */ }
+    return { status: r.status, json };
+  };
+  let pub;
+  try { pub = await get('/api/system'); }
+  catch (err) { say(false, `${to.url} could not be reached (${err.name === 'TimeoutError' ? 'no answer in 12 seconds' : err.message})`, `Check the address, and that the ${to.name} service is running in Railway.`); return { system: to.name, ok: false, steps }; }
+  if (!pub.json || !pub.json.self) {
+    say(false, `${to.url} answered, but not with this app's systems (${pub.status})`, `${to.name} is running an older version of the app, or the address is another site. Deploy the same branch as here to ${to.name}.`);
+    return { system: to.name, ok: false, steps };
+  }
+  say(true, `${to.url} answers, and runs a version with systems`);
+  const them = pub.json.self;
+  const ok1 = say(them.role === 'linked', them.role === 'linked' ? `${to.url} knows it is linked to a home system` : `${to.url} thinks it is a home system itself`,
+    them.role === 'linked' ? '' : `On ${to.name}'s Railway service, set SYSTEM_HOME_URL to ${homeOrigin || "this system's address"} (or put it in ${to.name}'s Settings → Logins & site → Systems), then redeploy.`);
+  if (ok1 && pub.json.home && homeOrigin) {
+    const same = cleanUrl(pub.json.home.url) === cleanUrl(homeOrigin);
+    say(same, same ? `…and that home is this system (${homeOrigin})` : `…but its home is set to ${pub.json.home.url}, not ${homeOrigin}`, same ? '' : `Set SYSTEM_HOME_URL on ${to.name} to ${homeOrigin}.`);
+  }
+  const named = cleanName(them.name) === to.name;
+  say(named, named ? `It calls itself ${them.name}, as it is listed here` : `It calls itself ${them.name}, but it is listed here as ${to.name}`,
+    named ? '' : `Either rename it here to ${them.name}, or set SYSTEM_NAME=${to.name} on its Railway service.`);
+  if (!ok1) return { system: to.name, ok: false, steps };
+  // a hand-off it can check but never use: the key, the name and the clock, all at once
+  const body = { v: 1, iss: me.name, aud: to.name, exp: Date.now() + TICKET_SECONDS() * 1000, n: randomBytes(12).toString('base64url'), kind: 'probe' };
+  const payload = b64(JSON.stringify(body));
+  try {
+    const v = await get(`/api/system/verify?t=${payload}.${sign(payload, linkKey())}`);
+    if (v.json && v.json.ok) say(true, 'It holds the same link key: a hand-off from here is accepted');
+    else if (v.status === 404 || !v.json) say(false, `${to.name} cannot check a hand-off yet (${v.status})`, `Deploy the same branch as here to ${to.name}.`);
+    else say(false, `It refuses a hand-off from here: ${v.json.error}`, /link key/.test(v.json.error) ? `Copy the link key from this card into ${to.name}'s SYSTEM_LINK_KEY variable (no spaces or quotes) and redeploy it.` : '');
+  } catch (err) { say(false, `The key check could not reach ${to.name}: ${err.message}`); }
+  return { system: to.name, ok: steps.every((s) => s.ok), steps };
 }
 
 /** Make or bring up to date the login a ticket carries. The home decides the role and the pages. */

@@ -277,48 +277,54 @@ What it is and is not:
 - **When it takes effect:** a page already open sees the change when it next loads; a scanner the
   next time it is online. The log records who switched what off.
 
-### Step 4b — Systems: LIVE and DEV, from one sign-in and one scanner link
+### Step 4b — Systems: LIVE and TEST, from one sign-in and one scanner link
 
-A **DEV** system is the app deployed a second time, with its own database: the place to try new
+A **TEST** system is the app deployed a second time, with its own database: the place to try new
 code, new settings or a practice count on real guns without touching the live stock. Each system
 is at its own address; people and scanners switch between them from inside the app, so nobody
 needs a second password and no scanner needs a second link.
 
-**LIVE is the home.** It keeps the logins and decides who may use which system. DEV is *linked*
+**LIVE is the home.** It keeps the logins and decides who may use which system. TEST is *linked*
 to it: it takes the people and the scanners LIVE hands over, and nothing else.
 
-*Setting DEV up (once):*
+*Setting TEST up (once):*
 
-1. In Railway, deploy the app again as its own service with its **own volume**, from the branch DEV
+1. In Railway, deploy the app again as its own service with its **own volume**, from the branch TEST
    should run.
-2. Give that service three variables: `SYSTEM_NAME` = **DEV**, `SYSTEM_HOME_URL` = LIVE's address
+2. Give that service three variables: `SYSTEM_NAME` = **TEST**, `SYSTEM_HOME_URL` = LIVE's address
    (for example `https://full-harvest.up.railway.app`), and `SYSTEM_LINK_KEY` = LIVE's link key
-   (on LIVE: **Settings → Logins & site → Systems → The link key → Copy**). Or sign in on DEV with its
+   (on LIVE: **Settings → Logins & site → Systems → The link key → Copy**). Or sign in on TEST with its
    own superadmin and paste the same two into its Systems card.
-3. On LIVE, **Systems → Add a system**: name **DEV**, DEV's Railway address, a color, and tick
+3. On LIVE, **Systems → Add a system**: name **TEST**, TEST's Railway address, a color, and tick
    **Scanners may switch** if the guns should be able to go there. **Save**.
-4. In **Who may use each system**, tick DEV for each login that should have it. Admins always may.
+4. In **Who may use each system**, tick TEST for each login that should have it. Admins always may.
 
 *Switching:*
 
-- **In the office.** A login with DEV ticked sees **Switch to…** at the bottom of the sidebar, and
-  **Sign in to** on LIVE's sign-in box. DEV opens on the same page, signed in as the same person
-  with the same role and pages. Every DEV page has an orange **DEV — not the live system** bar
+- **In the office.** A login with TEST ticked sees **Switch to…** at the bottom of the sidebar, and
+  **Sign in to** on LIVE's sign-in box. TEST opens on the same page, signed in as the same person
+  with the same role and pages. Every TEST page has an orange **TEST — not the live system** bar
   with **Back to LIVE**.
 - **On a scanner.** With *Scanners may switch* ticked, the sign-on screen shows **System: LIVE |
-  DEV**. One tap moves the gun to DEV under its own name; **Back to LIVE** brings it home. The
+  TEST**. One tap moves the gun to TEST under its own name; **Back to LIVE** brings it home. The
   header always says which system the gun is on. A gun with counts still waiting to send is not
   allowed to switch until they have gone — they belong to the system they were counted in. Each
   system keeps its own storage on the gun, so nothing mixes.
 
 *What to know:*
 
-- DEV has its own everything: counts, bin lists, crew, settings, backups. A count made on DEV is
+- TEST has its own everything: counts, bin lists, crew, settings, backups. A count made on TEST is
   never on LIVE.
-- A switch is a hand-off signed with the link key, good for two minutes and once. DEV believes
-  LIVE; LIVE believes nobody, so DEV can never sign anyone in to LIVE. A login handed to DEV
-  lasts twelve hours there, so taking DEV away from someone takes effect within a shift.
+- A switch is a hand-off signed with the link key, good for two minutes and once. TEST believes
+  LIVE; LIVE believes nobody, so TEST can never sign anyone in to LIVE. A login handed to TEST
+  lasts twelve hours there, so taking TEST away from someone takes effect within a shift.
 - **Make a new link key** on LIVE stops every switch until each other system is given the new key.
+- **Check the link** (a button on each system's row, on LIVE) asks TEST, server to server, whether a
+  switch would work, and says what to change if not: TEST cannot be reached; it runs an older
+  version; it thinks it is a home itself (set `SYSTEM_HOME_URL`); its home is set to another
+  address; it calls itself something other than it is listed as (match `SYSTEM_NAME` and the name
+  here); or it refuses the key (copy the link key into its `SYSTEM_LINK_KEY`, with no spaces or
+  quotes, and redeploy). Run it after setting TEST up, and whenever a switch fails.
 
 ### Step 5 — Change the superadmin's password
 
@@ -935,6 +941,14 @@ or queue aisles by hand here.
   foot, they will not be queued onto level D. A supervisor can override this.
 - Two teams **can** share one aisle as long as their levels do not overlap — a forklift
   crew high and a crew on foot low.
+- **Two teams on the same aisle and levels, from opposite ends.** Queue one team as usual (*Start
+  from: the 001 end*) and the other with **Start from: the far end**. Both start at once; the
+  far-end team's gun walks the bins backwards (F01A010, F01A009 …) and says *start at the far end ·
+  team 1 from the other end*. Each gun sees the bins the other has counted, so they meet in the
+  middle. At most one team each way. The aisle is checked for missing pallets only when the second
+  of the two hands it back. **Auto-assign the aisles → Two teams per aisle, from opposite ends**
+  pairs the teams (1 with 2, 3 with 4 …) and plans it for every aisle; an odd team out works alone.
+  A counting-plan file takes the same thing in an optional **Start** column: *far end* or *001 end*.
 
 **Auto-assign the aisles.** The card above the queue does the whole plan at once, staggered:
 
@@ -1081,7 +1095,10 @@ to find before they walk on.
 - A bin the report lists nothing for stays open after a count, for the same reason — there
   may be a second pallet in it that the ERP has never heard of. Tap **Nothing more here →**
   when it is clear.
-- **Bin is EMPTY** closes a bin outright.
+- **Bin is EMPTY** closes a bin outright. When the gun asks for the **bin first**, the bin is
+  already scanned by then: the gun asks *Mark F01A004 EMPTY?* — **Yes** records it, **No** goes
+  back — and never asks for the same bin twice. When the pallet comes first, it is **Bin is EMPTY
+  — scan the bin**: one scan of the rack label.
 - **This pallet has another label** — on the quantity screen, right after the pallet scan. A pallet
   wearing two tags: tap it, scan the other tag, and carry on with the quantity. The pallet is counted
   once; the second tag is saved beside it with no quantity, so neither label comes up as uncounted.
@@ -1217,7 +1234,7 @@ still live underneath it.*
 | **Keyboard** | Brings the on-screen keyboard up to type an entry by hand — a number pad on the quantity step. It never appears on its own: the scanner is the keyboard, and a keypad covers half the screen. Tap it again to put it away |
 | **Back** | Wrong entry — steps back one question |
 | **Skip** | Lot, expiry or comments the pallet does not have |
-| **Bin is EMPTY** | The bin is genuinely empty. Scan the bin; it is recorded as counted and empty |
+| **Bin is EMPTY** | The bin is genuinely empty. If the bin is already scanned (bin first), answer **Yes** to *Mark it EMPTY?*; otherwise scan the bin. It is recorded as counted and empty |
 | **My aisle** | Back to the assignment screen |
 | **History** | The last 50 lines from this scanner. **Void** removes a wrong line from the totals |
 | **Aisle complete — next aisle** | Only when the aisle is finished. It frees the racking block and releases the team's next aisle |
@@ -1530,6 +1547,12 @@ supervisor.
   list is **nearest first**: the aisle the team is in, then its racking block, then the aisles
   nearest by number, so a team finishing F11 is not sent to F01.
 - A second count that agrees with the first settles the line.
+- **A pallet found in another bin than the report's** brings back the bin it was found in, as
+  always — and also **the report's own bin**, once that bin has been counted (or its aisle handed
+  back): reason *LABEL CHECK*, told on the gun as *Check for a pallet with a duplicate label*. It is
+  counted blind by a team other than the one that counted it first; a second pallet there wearing
+  the same label shows up as *Counted twice*. A bin already second-counted for another reason is not
+  sent back a second time; the one count covers both.
 
 Work these down before you close the count. A count closed with open second counts is a
 count with known-wrong numbers in it.

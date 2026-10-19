@@ -217,6 +217,7 @@
         <div class="auto"><label for="fPlanLevels">Levels</label><input id="fPlanLevels" class="sm" style="width:90px" placeholder="all"></div>
         <div class="auto"><label for="fPlanOrder">Walk the aisles</label>
           <select id="fPlanOrder" class="sm"><option value="asc">Low to high</option><option value="desc">High to low</option></select></div>
+        <div class="auto"><label class="cb" title="Teams go in pairs: both count every aisle of the pair's stretch, the first from the 001 end and the second from the far end, and they meet in the middle."><input type="checkbox" id="fPlanPairs"> Two teams per aisle, from opposite ends</label></div>
         <div class="auto"><label class="cb" title="Drop every aisle still queued and plan again. Aisles being counted, or done, are left alone."><input type="checkbox" id="fPlanReplace"> Replace what is queued</label></div>
         <div class="auto"><button id="btnPlanPreview">Preview</button></div>
         <div class="auto"><button class="primary fit" id="btnPlanApply" disabled>Queue this plan</button></div>
@@ -227,11 +228,14 @@
 
     <div class="card" id="teamPlanCard">
       <h2>Team assignments</h2>
-      <div class="hint">Queue aisles per team in counting order, with the <b>levels</b> that team's equipment covers (A–C on foot, D–F with the lift, A–F for all). Levels are required. Two teams can share an aisle on different levels. A team's next aisle waits while another team holds those levels in its racking block — that is what staggers them. Which aisles share racking is set under <a href="/settings" style="color:var(--accent)">Settings</a>.</div>
+      <div class="hint">Queue aisles per team in counting order, with the <b>levels</b> that team's equipment covers (A–C on foot, D–F with the lift, A–F for all). Levels are required. Two teams can share an aisle on different levels — or on the same levels from <b>opposite ends</b>: queue one from the 001 end and the other from the far end, and they meet in the middle. A team's next aisle waits while another team holds those levels in its racking block — that is what staggers them. Which aisles share racking is set under <a href="/settings" style="color:var(--accent)">Settings</a>.</div>
       <div class="inline" style="margin-top:8px">
         <div class="auto"><label for="fAssignTeam">Team</label><input id="fAssignTeam" class="sm" style="width:70px" placeholder="3"></div>
         <div><label for="fAssignAisles">Aisles, in order</label><input id="fAssignAisles" placeholder="F01, F03, F05"></div>
         <div class="auto"><label for="fAssignLevels">Levels (required)</label><input id="fAssignLevels" class="sm" placeholder="A-C" required title="Which levels this team counts, by equipment: A-C on foot, D-F with the lift, A-F for every level."></div>
+        <div class="auto"><label for="fAssignFrom">Start from</label>
+          <select id="fAssignFrom" class="sm" title="From the far end, a second team can count the same aisle and levels as one starting at the 001 end: they meet in the middle.">
+            <option value="up">The 001 end</option><option value="down">The far end</option></select></div>
         <div class="auto"><button class="primary fit" id="btnAssign">Queue</button></div>
       </div>
       <div class="feedback" id="assignMsg"></div>

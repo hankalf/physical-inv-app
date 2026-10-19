@@ -131,6 +131,19 @@ check('On DEV the gun is offered the way back to LIVE', sys.self.name === 'DEV' 
 r = await post(DEV, '/api/systems/handoff', { to: 'LIVE' }, TD);
 check('…which is LIVE\'s own address, where its link still holds', r.status === 200 && (await j(r)).url === `${BASE.replace(/\/$/, '')}/`);
 
+/* ---- Check the link: LIVE asks the other system, server to server */
+let ck = await j(await post(BASE, '/api/admin/systems/check', { name: 'DEV' }, A));
+check('Check the link: DEV answers, is linked to this LIVE, is called DEV, and takes a hand-off', ck.ok && ck.steps.length >= 4 && ck.steps.every((x) => x.ok), JSON.stringify(ck.steps.map((x) => x.text)));
+check('…and checking used nothing up: the probe is not a sign-in', (await get(DEV, '/api/admin/users', H((await login(DEV, { username: 'DEV-ADMIN', password: 'dev-only-pass' })).token))).users.length === devLogins.users.length);
+await post(BASE, '/api/admin/systems', { systems: [{ name: 'DEV', url: DEV, color: 'orange', scanners: true }, { name: 'GHOST', url: 'http://127.0.0.1:1' }, { name: 'SELF', url: BASE }, { name: 'STAGE', url: DEV }] }, A);
+ck = await j(await post(BASE, '/api/admin/systems/check', { name: 'GHOST' }, A));
+check('An address nothing answers on says so, and what to check', !ck.ok && /could not be reached/.test(ck.steps[0].text) && /running in Railway/.test(ck.steps[0].fix), JSON.stringify(ck.steps[0]));
+ck = await j(await post(BASE, '/api/admin/systems/check', { name: 'SELF' }, A));
+check('A system that thinks it is the home is told to set SYSTEM_HOME_URL - to this address', !ck.ok && ck.steps.some((x) => !x.ok && /thinks it is a home/.test(x.text) && /SYSTEM_HOME_URL/.test(x.fix) && x.fix.includes(BASE.replace(/\/$/, ''))), JSON.stringify(ck.steps));
+ck = await j(await post(BASE, '/api/admin/systems/check', { name: 'STAGE' }, A));
+check('Listed under another name than it calls itself: both ways to fix it are named', !ck.ok && ck.steps.some((x) => !x.ok && /calls itself DEV, but it is listed here as STAGE/.test(x.text) && /SYSTEM_NAME=STAGE/.test(x.fix)), JSON.stringify(ck.steps.filter((x) => !x.ok)));
+await post(BASE, '/api/admin/systems', { systems: [{ name: 'DEV', url: DEV, color: 'orange', scanners: true }] }, A);
+
 /* ---- in the browser: the office */
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -170,6 +183,10 @@ await gun.waitForURL(`${BASE.replace(/\/$/, '')}/**`, { timeout: 10000 }).catch(
 await gun.waitForTimeout(2500);
 check('Back to LIVE: LIVE again, still signed in as itself', gun.url().startsWith(BASE) && /LIVE/.test(await gun.textContent('#chipSystem')) && /MC93-07/.test(await gun.textContent('#chipDevice')), gun.url());
 check('No script errors', errors.length === 0, errors.join(' | '));
+/* a new key here, and DEV still holding the old one: the check says which key to copy where */
+await post(BASE, '/api/admin/systems', { newKey: true }, A);
+ck = await j(await post(BASE, '/api/admin/systems/check', { name: 'DEV' }, A));
+check('After a new key here, Check the link says DEV refuses it, and to copy the key into SYSTEM_LINK_KEY', !ck.ok && ck.steps.some((x) => !x.ok && /link key/.test(x.text) && /SYSTEM_LINK_KEY/.test(x.fix)), JSON.stringify(ck.steps.filter((x) => !x.ok)));
 await browser.close();
 stopDev();
 const passed = results.filter(Boolean).length;

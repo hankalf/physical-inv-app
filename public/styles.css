@@ -395,3 +395,8 @@ header .chip.system.c-red { background: #e5484d; }
 header .chip.system.c-gray { background: #6b7385; }
 #systemPick button { flex: 1; }
 #systemPick button.selected { background: var(--accent, #3b82f6); color: #fff; border-color: transparent; opacity: 1; }
+
+/* EMPTY with the bin already scanned: a yes, not a second scan */
+.emptyconfirm { margin: 8px 0; padding: 12px; border-radius: 12px; border: 2px solid #f0b429; background: rgba(240,180,41,.12); }
+.emptyconfirm .ecq { font-weight: 800; font-size: 1.15em; margin-bottom: 8px; }
+.emptyconfirm .row button { flex: 1; }
