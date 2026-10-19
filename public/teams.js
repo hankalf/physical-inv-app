@@ -47,9 +47,10 @@
     div.addEventListener('dragend', () => div.classList.remove('dragging'));
 
     const left = document.createElement('div');
-    const who = document.createElement('div'); who.className = 'who'; who.textContent = e.name;
+    const who = document.createElement('div'); who.className = 'who';
+    who.append(Object.assign(document.createElement('span'), { textContent: e.name }), deptChip(e.dept));
     const meta = document.createElement('div'); meta.className = 'meta';
-    meta.textContent = [e.badge, e.dept].filter(Boolean).join(' · ') + ` · reaches ${levelsLabel(e.reach)}`;
+    meta.textContent = `${e.badge} · reaches ${levelsLabel(e.reach)}`;
     left.append(who, meta);
     const kit = document.createElement('div'); kit.className = 'kitrow';
     if (e.equipment.length) for (const k of e.equipment) { const s = document.createElement('span'); s.textContent = kitName(k); kit.appendChild(s); }
@@ -57,6 +58,11 @@
     left.appendChild(kit);
     /* on a team from the team sheet: the job the sheet gives them on this team */
     if (seatRole) left.appendChild(Object.assign(document.createElement('div'), { className: 'meta seatrole', textContent: `On this team: ${seatRole}` }));
+    const sized = GEAR_KEYS.some(([k]) => e[k]);
+    left.appendChild(Object.assign(document.createElement('div'), {
+      className: 'gearline' + (sized ? '' : ' none'),
+      textContent: sized ? GEAR_KEYS.map(([k, l]) => `${l} ${e[k] || '—'}`).join(' · ') : 'No gear sizes yet',
+    }));
 
     const right = document.createElement('div');
     const sel = document.createElement('select');
@@ -76,11 +82,196 @@
       try { await apiJson(`/api/admin/people/employees/${encodeURIComponent(e.badge)}`, { method: 'DELETE' }); await refresh(); }
       catch (err) { msg($('personMsg'), 'err', err.message); }
     };
-    right.append(sel, del);
+    right.append(sel);
+    /* department and sizes, on the card itself: opened under the name, saved in one go */
+    if (api.canTab('/teams', 'gear')) {
+      const edit = document.createElement('button');
+      edit.className = 'sm'; edit.textContent = 'Dept & sizes'; edit.title = `Department and gear sizes for ${e.name}`;
+      edit.style.marginTop = '6px'; edit.style.width = '100%';
+      edit.dataset.gearEdit = e.badge;
+      edit.onclick = () => {
+        const open = div.querySelector('.gearedit');
+        if (open) { open.remove(); div.draggable = true; return; }
+        div.draggable = false;                      // typing in a box should not start a drag
+        div.appendChild(gearEditor(e, () => { div.draggable = true; }));   // under the whole card, not squeezed beside the menu
+      };
+      right.appendChild(edit);
+    }
+    right.appendChild(del);
 
     div.append(left, right);
     return div;
   }
+
+  /* ------------------------------------------------------------ gear sizes */
+  const GEAR_KEYS = [['jacket', 'Jacket'], ['bibs', 'Bibs'], ['boots', 'Boots']];
+  let gearSizes = null;                              // the size lists, from the server
+  const CLOTHES = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL'];
+  const sizesFor = (key) => {
+    const g = gearSizes && gearSizes.find((x) => x.key === key);
+    if (g) return g.sizes;
+    if (key !== 'boots') return CLOTHES;
+    const out = []; for (let n = 5; n <= 16; n += 0.5) out.push(String(n)); return out;
+  };
+  function deptChip(dept) {
+    return Object.assign(document.createElement('span'), {
+      className: 'deptchip' + (dept ? '' : ' none'), textContent: dept || 'No department', title: 'Department',
+    });
+  }
+  function sizeSelect(key, value) {
+    const sel = document.createElement('select');
+    sel.dataset.gear = key;
+    const list = sizesFor(key);
+    sel.append(Object.assign(document.createElement('option'), { value: '', textContent: '—' }));
+    for (const v of list) sel.append(Object.assign(document.createElement('option'), { value: v, textContent: v }));
+    // a size written some other way on an upload (11W, L TALL) stays choosable
+    if (value && !list.includes(value)) sel.append(Object.assign(document.createElement('option'), { value, textContent: value }));
+    sel.value = value || '';
+    return sel;
+  }
+  function deptInput(value) {
+    const inp = Object.assign(document.createElement('input'), { value: value || '', placeholder: 'e.g. Freezer', className: 'dept' });
+    inp.setAttribute('list', 'deptList');
+    inp.dataset.gear = 'dept';
+    return inp;
+  }
+  function gearEditor(e, done) {
+    const box = document.createElement('div');
+    box.className = 'gearedit';
+    const field = (label, el) => {
+      const w = document.createElement('div');
+      w.append(Object.assign(document.createElement('label'), { textContent: label }), el);
+      return w;
+    };
+    const dept = deptInput(e.dept);
+    const sels = GEAR_KEYS.map(([k]) => sizeSelect(k, e[k]));
+    box.append(field('Department', dept), field('Jacket', sels[0]), field('Bibs (overalls)', sels[1]), field('Boots', sels[2]));
+    const row = document.createElement('div'); row.className = 'full';
+    const save = Object.assign(document.createElement('button'), { className: 'sm primary', textContent: 'Save' });
+    const cancel = Object.assign(document.createElement('button'), { className: 'sm ghost', textContent: 'Cancel' });
+    save.onclick = async () => {
+      try {
+        const body = { dept: dept.value };
+        GEAR_KEYS.forEach(([k], i) => { body[k] = sels[i].value; });
+        const saved = await postJson(`/api/admin/people/employees/${encodeURIComponent(e.badge)}/gear`, body);
+        msg($('personMsg'), 'ok', `${saved.name} saved`, [saved.dept || 'No department', ...GEAR_KEYS.map(([k, l]) => `${l} ${saved[k] || '—'}`)].join(' · '));
+        await refresh();
+      } catch (err) { msg($('personMsg'), 'err', err.message); }
+    };
+    cancel.onclick = () => { box.remove(); done(); };
+    row.append(save, cancel);
+    box.appendChild(row);
+    return box;
+  }
+
+  /* The Gear sizes tab: everyone in a table, a size saved the moment it is
+     picked, and the totals that an order is placed from. */
+  let gearDept = '';
+  let gear = null;
+  async function loadGear() {
+    gear = await apiJson(`/api/admin/people/gear?dept=${encodeURIComponent(gearDept)}`);
+    gearSizes = gear.gear;
+    const dsel = $('fGearDept');
+    const have = gear.depts.join('|');
+    if (dsel.dataset.have !== have) {
+      dsel.dataset.have = have;
+      dsel.innerHTML = '<option value="">Every department</option>';
+      for (const d of gear.depts) dsel.append(Object.assign(document.createElement('option'), { value: d, textContent: d }));
+    }
+    dsel.value = gearDept;
+    renderGearTotals();
+    renderGearTable();
+  }
+  function renderGearTotals() {
+    const box = $('gearTotals');
+    box.innerHTML = '';
+    for (const t of gear.totals) {
+      const b = document.createElement('div');
+      b.className = 'gearbox';
+      b.dataset.item = t.key;
+      const head = document.createElement('div'); head.className = 't';
+      head.append(Object.assign(document.createElement('div'), { textContent: t.plural }),
+        Object.assign(document.createElement('span'), { className: 'grand', textContent: `Total ${t.entered}` }));
+      const sizes = document.createElement('div'); sizes.className = 'sizes';
+      for (const s of t.sizes) {
+        const chip = document.createElement('span'); chip.textContent = s.size;
+        chip.append(Object.assign(document.createElement('b'), { textContent: s.count }));
+        sizes.appendChild(chip);
+      }
+      if (t.missing) {
+        const chip = document.createElement('span'); chip.className = 'miss'; chip.textContent = 'Not entered';
+        chip.append(Object.assign(document.createElement('b'), { textContent: t.missing }));
+        sizes.appendChild(chip);
+      }
+      if (!t.sizes.length && !t.missing) sizes.append(Object.assign(document.createElement('span'), { textContent: 'Nobody on the list', className: 'muted' }));
+      b.append(head, sizes);
+      box.appendChild(b);
+    }
+  }
+  function renderGearTable() {
+    const q = norm($('fGearFind').value);
+    const missingOnly = $('fGearMissing').checked;
+    const rows = gear.people.filter((e) => (!q || norm(e.name).includes(q) || norm(e.badge).includes(q))
+      && (!missingOnly || GEAR_KEYS.some(([k]) => !e[k])));
+    window.appUi.table('gearTable', [
+      { label: 'Clock in number' }, { label: 'Name' }, { label: 'Department' }, { label: 'Team' },
+      { label: 'Jacket' }, { label: 'Bibs (overalls)' }, { label: 'Boots' },
+    ], rows, (e) => {
+      const tr = document.createElement('tr');
+      tr.dataset.badge = e.badge;
+      const td = (content) => { const c = document.createElement('td'); if (typeof content === 'string') c.textContent = content; else c.appendChild(content); tr.appendChild(c); return c; };
+      td(e.badge); td(e.name);
+      const dept = deptInput(e.dept);
+      td(dept);
+      td(e.team ? 'Team ' + e.team : '—');
+      const sels = GEAR_KEYS.map(([k]) => { const s = sizeSelect(k, e[k]); td(s); return s; });
+      const save = async (el, key) => {
+        const cell = el.parentElement;
+        try {
+          const saved = await postJson(`/api/admin/people/employees/${encodeURIComponent(e.badge)}/gear`, { [key]: el.value });
+          Object.assign(e, saved);
+          cell.classList.remove('saved'); void cell.offsetWidth; cell.classList.add('saved');
+          setTimeout(() => cell.classList.remove('saved'), 900);
+          clearMsg($('gearMsg'));
+          // the totals follow; the table stays put, so the next box is still where you left it
+          const fresh = await apiJson(`/api/admin/people/gear?dept=${encodeURIComponent(gearDept)}`);
+          gear.totals = fresh.totals;
+          if (key === 'dept' && fresh.depts.join('|') !== gear.depts.join('|')) { gear.depts = fresh.depts; $('fGearDept').dataset.have = ''; }
+          renderGearTotals();
+          stale = true;                              // the crew cards show sizes too
+        } catch (err) { msg($('gearMsg'), 'err', `${e.name}: ${err.message}`); }
+      };
+      dept.onchange = () => save(dept, 'dept');
+      sels.forEach((s, i) => { s.onchange = () => save(s, GEAR_KEYS[i][0]); });
+      return tr;
+    }, missingOnly ? 'Everyone has all three sizes.' : 'Nobody on the crew list yet — add people under Crew & teams.');
+  }
+  let stale = false;
+  $('fGearDept').onchange = () => { gearDept = $('fGearDept').value; loadGear().catch((err) => msg($('gearMsg'), 'err', err.message)); };
+  $('fGearFind').oninput = () => gear && renderGearTable();
+  $('fGearMissing').onchange = () => gear && renderGearTable();
+  $('btnGearExport').onclick = async () => {
+    const b = $('btnGearExport'); const was = b.textContent;
+    b.disabled = true; b.textContent = 'Building…';
+    try {
+      const [data, XLSX] = await Promise.all([apiJson(`/api/admin/people/gear?dept=${encodeURIComponent(gearDept)}`), window.appUi.loadXlsx()]);
+      const wb = XLSX.utils.book_new();
+      for (const sh of data.sheets) {
+        const ws = XLSX.utils.json_to_sheet(sh.rows, { header: sh.columns });
+        ws['!cols'] = sh.columns.map((c) => ({ wch: Math.min(40, Math.max(String(c).length, ...sh.rows.map((r) => String(r[c] ?? '').length)) + 2) }));
+        if (sh.rows.length && sh.name === 'Names and sizes') ws['!autofilter'] = { ref: ws['!ref'] };
+        XLSX.utils.book_append_sheet(wb, ws, sh.name.slice(0, 31));
+      }
+      XLSX.writeFile(wb, data.filename);
+      msg($('gearMsg'), 'ok', `Exported ${data.people.length} people`, data.filename);
+    } catch (err) { msg($('gearMsg'), 'err', 'Could not build the export', err.message); }
+    finally { b.disabled = false; b.textContent = was; }
+  };
+  document.addEventListener('subshow', (ev) => {
+    if (!api.me) return;
+    if (ev.detail === 'gear') loadGear().catch((err) => msg($('gearMsg'), 'err', err.message));
+    else if (ev.detail === 'crew' && stale) { stale = false; refresh().catch(() => {}); }
+  });
 
   async function move(badge, teamId) {
     try { await postJson('/api/admin/people/assign', { badge, teamId: teamId || null }); await refresh(); }
@@ -110,6 +301,7 @@
       if (!depts.includes(deptView)) deptView = '';
       dsel.value = deptView;
     }
+    $('deptList').innerHTML = depts.map((d) => `<option value="${d.replace(/[<&"]/g, '')}">`).join('');
     const inDept = (e) => !deptView || (e.dept || '').trim() === deptView;
     const pool = state.employees.filter((e) => !assigned.has(e.badge) && inDept(e));
     $('deptNote').textContent = deptView ? `${state.employees.filter(inDept).length} in ${deptView}` : '';
@@ -405,7 +597,9 @@
   document.addEventListener('auth', (e) => {
     if (!e.detail) return show('login');
     show('main');
-    refresh().catch(() => show('login'));
+    // a login with only the Gear sizes tab has no crew list to load
+    if (api.canTab('/teams', 'crew') || api.canTab('/teams', 'rules')) refresh().catch(() => show('login'));
+    if (document.querySelector('[data-sub="gear"].active')) loadGear().catch((err) => msg($('gearMsg'), 'err', err.message));
     loadPlanSessions().catch(() => {});
   });
   document.addEventListener('DOMContentLoaded', () => { api.start().catch(() => show('login')); });

@@ -132,12 +132,128 @@ export function missingForLevels(levels, equipmentList, cfg = getConfig()) {
 
 /* ------------------------------------------------------------- employees */
 
+/*
+ * Gear sizes: the jacket, bibs (overalls) and boots each person wears in the
+ * freezer, so an order can be placed from the list rather than by asking round.
+ * Kept on the person, not the count, and never touched by a crew-list upload
+ * that has no size columns.
+ */
+{
+  const have = new Set(db.prepare("PRAGMA table_info('employees')").all().map((c) => c.name));
+  for (const c of ['jacket', 'bibs', 'boots']) if (!have.has(c)) db.exec(`ALTER TABLE employees ADD COLUMN ${c} TEXT`);
+}
+const CLOTHES = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL'];
+const BOOTS = [];
+for (let n = 5; n <= 16; n += 0.5) BOOTS.push(String(n));
+export const GEAR = [
+  { key: 'jacket', label: 'Jacket', plural: 'Jackets', sizes: CLOTHES },
+  { key: 'bibs', label: 'Bibs', plural: 'Bibs (overalls)', sizes: CLOTHES },
+  { key: 'boots', label: 'Boots', plural: 'Boots', sizes: BOOTS },
+];
+/* looked up with spaces and dashes taken out: "X-Large", "extra large" and "XL" are one size */
+const CLOTHING_WORDS = {
+  XSMALL: 'XS', EXTRASMALL: 'XS', SMALL: 'S', SM: 'S', MEDIUM: 'M', MED: 'M', MD: 'M',
+  LARGE: 'L', LG: 'L', XLARGE: 'XL', EXTRALARGE: 'XL', XXLARGE: '2XL', XXXLARGE: '3XL',
+  XXL: '2XL', XXXL: '3XL', XXXXL: '4XL', XXXXXL: '5XL', '1X': 'XL', '2X': '2XL', '3X': '3XL', '4X': '4XL', '5X': '5XL',
+};
+/** "xx-large", "XXL", "2x" -> 2XL; "10 1/2", "10.5" -> 10.5; a size it does not know is kept as written. */
+export function cleanSize(key, raw) {
+  let v = String(raw == null ? '' : raw).trim().toUpperCase().replace(/\s+/g, ' ');
+  if (!v) return '';
+  if (key === 'boots') {
+    v = v.replace(/^(SIZE|SZ)\s*/, '').replace(/\s*(½|1\/2)$/, '.5').replace(/\s+\.5$/, '.5');
+    const n = Number(v.replace(/\s*(W|WIDE|M|MEDIUM|R|REGULAR)$/, ''));
+    if (Number.isFinite(n) && n > 0) {
+      const wide = /\s*(W|WIDE)$/.test(v) ? 'W' : '';
+      return String(Math.round(n * 2) / 2) + wide;
+    }
+    return v.slice(0, 12);
+  }
+  v = v.replace(/^(SIZE|SZ)\s*/, '');
+  const words = v.replace(/ ?(TALL|T)$/, '');
+  const tall = words !== v ? ' TALL' : '';
+  const tight = words.replace(/[-\s]/g, '');
+  const base = CLOTHING_WORDS[tight] || tight.replace(/^(\d)XL$/, '$1XL');
+  return (base + tall).slice(0, 12);
+}
+
 const shape = (r) => ({
   badge: r.badge, name: r.name, dept: r.dept || '',
   equipment: JSON.parse(r.equipment || '[]'),
   reach: reachOf(JSON.parse(r.equipment || '[]')),
   active: !!r.active, team: r.team || null,
+  jacket: r.jacket || '', bibs: r.bibs || '', boots: r.boots || '',
 });
+
+/** Change someone's department or sizes; a key left out is left alone, an empty one clears it. */
+export function setGear(badge, body = {}) {
+  const b = norm(badge);
+  if (!db.prepare('SELECT 1 FROM employees WHERE badge = ?').get(b)) throw Object.assign(new Error(`${b} is not on the crew list`), { status: 404 });
+  const sets = []; const vals = [];
+  if ('dept' in body) { sets.push('dept = ?'); vals.push(String(body.dept || '').trim().slice(0, 60)); }
+  for (const g of GEAR) if (g.key in body) { sets.push(`${g.key} = ?`); vals.push(cleanSize(g.key, body[g.key])); }
+  if (sets.length) db.prepare(`UPDATE employees SET ${sets.join(', ')} WHERE badge = ?`).run(...vals, b);
+  return getEmployee(b);
+}
+
+/* sizes in the order they are worn, then anything written some other way */
+const sizeOrder = (g) => (a, b) => {
+  const ia = g.sizes.indexOf(a.replace(/W$| TALL$/, '')); const ib = g.sizes.indexOf(b.replace(/W$| TALL$/, ''));
+  if (ia !== ib) return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
+  return a.localeCompare(b);
+};
+
+/**
+ * The size list and its totals: everyone (or one department), how many of each
+ * size of each item, and the sheets for the Excel download.
+ */
+export function gearReport({ dept = '' } = {}) {
+  const d = String(dept || '').trim();
+  const everyone = listEmployees().filter((e) => e.active);
+  const people = d ? everyone.filter((e) => e.dept.trim() === d) : everyone;
+  const count = (list, g) => {
+    const by = new Map();
+    for (const e of list) if (e[g.key]) by.set(e[g.key], (by.get(e[g.key]) || 0) + 1);
+    const sizes = [...by.keys()].sort(sizeOrder(g)).map((size) => ({ size, count: by.get(size) }));
+    const entered = list.filter((e) => e[g.key]).length;
+    return { key: g.key, label: g.label, plural: g.plural, sizes, entered, missing: list.length - entered };
+  };
+  const totals = GEAR.map((g) => count(people, g));
+  const depts = [...new Set(people.map((e) => e.dept.trim() || 'No department'))].sort((a, b) => a.localeCompare(b));
+  const byDept = depts.map((name) => {
+    const list = people.filter((e) => (e.dept.trim() || 'No department') === name);
+    return { dept: name, people: list.length, totals: GEAR.map((g) => count(list, g)) };
+  });
+
+  const sheetPeople = {
+    name: 'Names and sizes',
+    columns: ['Clock in number', 'Name', 'Department', 'Team', 'Jacket', 'Bibs', 'Boots'],
+    rows: [...people].sort((a, b) => (!a.dept.trim() - !b.dept.trim()) || a.dept.localeCompare(b.dept) || a.name.localeCompare(b.name)).map((e) => ({
+      'Clock in number': e.badge, Name: e.name, Department: e.dept, Team: e.team || '',
+      Jacket: e.jacket, Bibs: e.bibs, Boots: e.boots,
+    })),
+  };
+  const totalRows = [];
+  for (const t of totals) {
+    for (const s of t.sizes) totalRows.push({ Item: t.plural, Size: s.size, Count: s.count });
+    if (t.missing) totalRows.push({ Item: t.plural, Size: 'Not entered', Count: t.missing });
+    totalRows.push({ Item: `${t.plural} — grand total`, Size: '', Count: t.entered });
+    totalRows.push({ Item: '', Size: '', Count: '' });
+  }
+  totalRows.push({ Item: 'People on the list', Size: '', Count: people.length });
+  const deptRows = [];
+  for (const g of byDept) {
+    for (const t of g.totals) for (const s of t.sizes) deptRows.push({ Department: g.dept, Item: t.plural, Size: s.size, Count: s.count });
+    deptRows.push({ Department: `${g.dept} — people`, Item: '', Size: '', Count: g.people });
+  }
+  const stamp = new Date().toISOString().slice(0, 10);
+  return {
+    gear: GEAR, dept: d, people, totals, byDept, depts: [...new Set(everyone.map((e) => e.dept.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    filename: `gear-sizes${d ? '-' + d.replace(/[^\w-]+/g, '-').toLowerCase() : ''}-${stamp}.xlsx`,
+    sheets: [sheetPeople, { name: 'Grand totals', columns: ['Item', 'Size', 'Count'], rows: totalRows },
+      { name: 'By department', columns: ['Department', 'Item', 'Size', 'Count'], rows: deptRows }],
+  };
+}
 
 export function listEmployees() {
   return db
@@ -174,7 +290,12 @@ export function deleteEmployee(badge) {
   return db.prepare('DELETE FROM employees WHERE badge = ?').run(norm(badge)).changes;
 }
 
-/** Import a roster CSV: badge, name, department, equipment. */
+const SIZE_COLUMNS = [
+  ['jacket', ['jacket', 'jacketsize', 'coat', 'coatsize', 'freezerjacket']],
+  ['bibs', ['bibs', 'bib', 'bibsize', 'bibssize', 'overalls', 'overall', 'overallsize', 'overallssize', 'bibsoveralls', 'pants']],
+  ['boots', ['boots', 'boot', 'bootsize', 'bootssize', 'shoe', 'shoesize']],
+];
+/** Import a roster CSV: badge, name, department, equipment, and sizes when it has them. */
 export function importEmployees(text, { replace = false } = {}) {
   const { parseRecords, pick } = importHelpers;
   const { headers, records } = parseRecords(text);
@@ -198,6 +319,10 @@ export function importEmployees(text, { replace = false } = {}) {
         dept: pick(rec, ['dept', 'department', 'area', 'shift', 'team']),
         equipment: parseEquipment(rawEquip, known),
       });
+      /* sizes only when the sheet has them: a list without size columns leaves what was entered */
+      const sizes = {};
+      for (const [key, names] of SIZE_COLUMNS) { const v = pick(rec, names); if (String(v || '').trim()) sizes[key] = v; }
+      if (Object.keys(sizes).length) { setGear(badge, sizes); stats.sizes = (stats.sizes || 0) + 1; }
       stats.imported++;
     }
     db.exec('COMMIT');

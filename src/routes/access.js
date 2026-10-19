@@ -26,7 +26,7 @@ export const ACCESS = [
 export const TABS = {
   dashboard: [['progress', 'Progress'], ['map', 'Map'], ['teams', 'Team plan'], ['alerts', 'Alerts'], ['second', 'Second counts'], ['adjust', 'Adjustments'], ['reports', 'Reports']],
   cycle: [['today', 'Today'], ['open', 'Still open'], ['coverage', 'Coverage'], ['setup', 'Program & data']],
-  teams: [['crew', 'Crew & teams'], ['rules', 'Equipment rules']],
+  teams: [['crew', 'Crew & teams'], ['gear', 'Gear sizes'], ['rules', 'Equipment rules']],
   front: [['moves', 'Pallets to move back'], ['desk', 'Move desk'], ['bins', 'Front-placed bins']],
 };
 export const TAB_KEYS = Object.entries(TABS).flatMap(([page, subs]) => subs.map(([sub]) => `${page}.${sub}`));
@@ -92,6 +92,7 @@ function tabOf(p, method) {
   }
   if (p === '/api/admin/pallet-system' && !w) return null;     // both desks read it: Front bins and Not in Location
   if (p === '/api/admin/people/equipment') return 'teams.rules';
+  if (p === '/api/admin/people/gear' || /^\/api\/admin\/people\/employees\/[^/]+\/gear$/.test(p)) return 'teams.gear';
   if (p.startsWith('/api/admin/people')) return 'teams.crew';
   return null;
 }

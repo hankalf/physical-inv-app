@@ -44,7 +44,7 @@ import {
 } from './routes/recounts.js';
 import { generateBatch, previewBatch, binList, listBatches, deleteBatch, coverage, runSchedules, STRATEGIES, levelsOnOpenTasks } from './routes/cycles.js';
 import {
-  listEmployees, upsertEmployee, deleteEmployee, importEmployees, importHelpers,
+  listEmployees, upsertEmployee, setGear, gearReport, deleteEmployee, importEmployees, importHelpers,
   listTeams, createTeam, deleteTeam, setTeamShift, assignMember, getConfig, setConfig, getEmployee,
   crewCheck, crewShortfall, importTeamSheet,
 } from './routes/people.js';
@@ -1198,6 +1198,14 @@ async function handleAdmin(req, res, url, m) {
     audit(actor, 'uploaded the team sheet', `${st.teams} teams, ${st.seats} seats (${st.matched} of ${st.people} people on the crew list, ${st.open} open)${st.removed ? `, ${st.removed} teams not on it removed` : ''}`);
     return sendJson(req, res, 200, st);
   }
+  if ((m = p.match(/^\/api\/admin\/people\/employees\/([^/]+)\/gear$/)) && method === 'POST') {
+    const e = setGear(decodeURIComponent(m[1]), await readJson(req));
+    audit(actor, 'changed a department or gear sizes', `${e.badge} ${e.name}: ${e.dept || 'no department'} · jacket ${e.jacket || '-'} · bibs ${e.bibs || '-'} · boots ${e.boots || '-'}`);
+    return sendJson(req, res, 200, e);
+  }
+  if (p === '/api/admin/people/gear' && method === 'GET') {
+    return sendJson(req, res, 200, gearReport({ dept: url.searchParams.get('dept') || '' }));
+  }
   if ((m = p.match(/^\/api\/admin\/people\/employees\/([^/]+)$/)) && method === 'DELETE') {
     return sendJson(req, res, 200, { deleted: deleteEmployee(decodeURIComponent(m[1])) });
   }
@@ -1228,7 +1236,7 @@ async function handleAdmin(req, res, url, m) {
   }
   if (p === '/api/admin/people/export/employees.csv') {
     const rows = listEmployees().map((e) => ({ ...e, equipment: e.equipment.join('; '), team: e.team || '' }));
-    return sendCsv(req, res, 'employees.csv', toCsv(rows, ['badge', 'name', 'dept', 'equipment', 'reach', 'team', 'active']));
+    return sendCsv(req, res, 'employees.csv', toCsv(rows, ['badge', 'name', 'dept', 'equipment', 'reach', 'team', 'jacket', 'bibs', 'boots', 'active']));
   }
 
   // --- the file that goes back into the ERP

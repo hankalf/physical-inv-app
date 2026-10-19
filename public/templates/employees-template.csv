@@ -1,6 +1,6 @@
-Clock In Number,Name,Department,Equipment
-E1001,Alex Romero,Freezer,Scissor lift; High reach
-E1002,Jordan Blake,Freezer,Scissor lift; Dock truck
-E1003,Sam Ortiz,Dry Dock,Dock truck
-E1004,Riley Chen,Freezer,
-E1005,Morgan Diaz,Shipping,High reach; Scissor lift
+Clock In Number,Name,Department,Equipment,Jacket,Bibs,Boots
+E1001,Alex Romero,Freezer,Scissor lift; High reach,L,L,10
+E1002,Jordan Blake,Freezer,Scissor lift; Dock truck,XL,2XL,11.5
+E1003,Sam Ortiz,Dry Dock,Dock truck,M,M,9
+E1004,Riley Chen,Freezer,,S,M,8.5
+E1005,Morgan Diaz,Shipping,High reach; Scissor lift,2XL,XL,12

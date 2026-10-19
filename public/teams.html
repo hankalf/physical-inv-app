@@ -62,6 +62,31 @@
   .rule .lv { font-weight: 800; min-width: 88px; }
   .bucket .shiftrow { margin-top: 8px; }
   .bucket .shiftrow select { width: auto; }
+  /* the department, where it can be seen across the room, and the sizes under the equipment */
+  .person .who { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .deptchip { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--accent-ink); color: var(--accent); border: 1px solid var(--accent-dim); white-space: nowrap; }
+  .deptchip.none { background: none; color: var(--muted); border-style: dashed; border-color: var(--line); font-weight: 600; }
+  .person .gearline { font-size: 12px; color: var(--text-dim); margin-top: 5px; }
+  .person .gearline.none { color: var(--muted); font-style: italic; }
+  .person { flex-wrap: wrap; }
+  .person > div:first-child { flex: 1; min-width: 0; }
+  .person > div:nth-child(2) { flex: 0 0 132px; }
+  .person > div:nth-child(2) select { width: 100%; }
+  .gearedit { flex-basis: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 8px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
+  .gearedit label { margin: 0; font-size: 11px; }
+  .gearedit input, .gearedit select { padding: 4px 7px; font-size: 12.5px; width: 100%; }
+  .gearedit .full { grid-column: 1 / -1; display: flex; gap: 6px; }
+  .geartotals { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 12px; }
+  .gearbox { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--surface-2); }
+  .gearbox .t { font-weight: 800; display: flex; justify-content: space-between; gap: 8px; }
+  .gearbox .t span { font-weight: 600; color: var(--muted); font-size: 12px; }
+  .gearbox .sizes { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .gearbox .sizes span { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); }
+  .gearbox .sizes b { font-weight: 800; margin-left: 4px; }
+  .gearbox .sizes .miss { color: var(--warn); border-color: #5c4813; }
+  #gearTable select, #gearTable input { padding: 4px 7px; font-size: 13px; width: auto; min-width: 70px; }
+  #gearTable input.dept { min-width: 120px; }
+  #gearTable td.saved { box-shadow: inset 0 0 0 2px var(--ok); }
 </style>
 </head>
 <body class="app">
@@ -99,7 +124,7 @@
     <section class="screen" id="scrMain">
       <div data-sub="crew" data-sub-label="Crew &amp; teams">
     <div class="card">
-      <h2>Crew list <span class="muted">clock in number, name, department, equipment</span></h2>
+      <h2>Crew list <span class="muted">clock in number, name, department, equipment, gear sizes</span></h2>
       <div class="inline">
         <div><label for="fFile">CSV or Excel file</label><input type="file" id="fFile" accept=".csv,.tsv,.txt,.xlsx,.xlsm"></div>
         <div class="auto"><label class="cb"><input type="checkbox" id="fReplace"> Replace the whole list</label></div>
@@ -108,7 +133,7 @@
         <div class="auto"><button id="btnExport">Export current list</button></div>
       </div>
       <div class="hint" style="margin-top:8px">
-        Columns matched by name: <b>Clock In Number</b> (also accepts Badge, Employee ID), then Name, Department, Equipment. Equipment can be a list —
+        Columns matched by name: <b>Clock In Number</b> (also accepts Badge, Employee ID), then Name, Department, Equipment, and — if you have them — Jacket, Bibs, Boots. Equipment can be a list —
         <code>Scissor lift; High reach</code>. Spellings like <i>forklift</i>, <i>reach truck</i>, <i>pallet jack</i> are understood.
       </div>
       <div class="feedback" id="uploadMsg"></div>
@@ -181,6 +206,25 @@
     </div>
       </div>
 
+      <div data-sub="gear" data-sub-label="Gear sizes">
+    <div class="card" id="gearCard">
+      <h2>Gear sizes <span class="muted">jacket, bibs (overalls) and boots for everyone on the crew list</span></h2>
+      <div class="inline">
+        <div class="auto"><label for="fGearDept">Department</label><select id="fGearDept" class="sm"><option value="">Every department</option></select></div>
+        <div><label for="fGearFind">Find</label><input id="fGearFind" placeholder="Name or clock in number"></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fGearMissing"> Only people missing a size</label></div>
+        <div class="auto"><button class="primary" id="btnGearExport">⬇ Export names and sizes</button></div>
+      </div>
+      <div class="hint" style="margin-top:6px">
+        Pick a size and it is saved. The export is an Excel workbook: everyone's name, department and sizes, the grand total of each size,
+        and the same totals by department — what to order. Sizes can also come in on the crew-list upload, in <b>Jacket</b>, <b>Bibs</b> and <b>Boots</b> columns.
+      </div>
+      <div class="feedback" id="gearMsg"></div>
+      <div class="geartotals" id="gearTotals"></div>
+      <div class="scroll" style="margin-top:12px"><table id="gearTable"></table></div>
+    </div>
+      </div>
+
       <div data-sub="rules" data-sub-label="Equipment rules">
     <div class="card">
       <h2>What each level needs <span class="muted">a team must have all of it between them</span></h2>
@@ -202,6 +246,7 @@
   </main>
 </div>
 
+<datalist id="deptList"></datalist>
 <script src="/nav.js"></script>
 <script src="/teams.js"></script>
 </body>
