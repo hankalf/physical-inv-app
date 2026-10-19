@@ -16,6 +16,7 @@
   <span class="title" id="hdrTitle" data-no-i18n>Full Harvest</span>
   <span class="chip practice" id="chipPractice" hidden>PRACTICE</span>
   <span class="chip practice" id="chipTrial" hidden>TRIAL RUN</span>
+  <span class="chip system" id="chipSystem" hidden data-no-i18n></span>
   <span class="chip" id="chipDevice" hidden></span>
   <span class="chip" id="chipNet">…</span>
   <span class="chip queued" id="chipQueue" hidden>0</span>
@@ -57,6 +58,11 @@
   </button>
 
   <section class="screen" id="scrSignon">
+    <!-- LIVE, DEV: the systems this scanner may switch to, when there are any -->
+    <div id="systemBlock" hidden>
+      <label>System</label>
+      <div class="row" id="systemPick"></div>
+    </div>
     <div id="modeBlock">
       <label>What are you doing?</label>
       <div class="row" id="modePick">

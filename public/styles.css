@@ -385,3 +385,13 @@ body.big-text .nextbin .nb-code { font-size: 30px; }
 
 /* Report a problem: the kind and reason picked, above the scan that confirms it */
 #issueConfirm .chosen { font-weight: 800; font-size: 1.1em; margin: 6px 0 10px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2, #1b2230); border: 1px solid var(--line, #2a3446); }
+
+/* the system this gun is on, when there is more than one: LIVE green, DEV orange */
+header .chip.system { font-weight: 900; letter-spacing: .06em; color: #fff; background: #2f9e57; border-color: transparent; }
+header .chip.system.c-orange { background: #f08c2e; color: #1a1300; }
+header .chip.system.c-purple { background: #8a5cf5; }
+header .chip.system.c-blue { background: #3b82f6; }
+header .chip.system.c-red { background: #e5484d; }
+header .chip.system.c-gray { background: #6b7385; }
+#systemPick button { flex: 1; }
+#systemPick button.selected { background: var(--accent, #3b82f6); color: #fff; border-color: transparent; opacity: 1; }

@@ -894,19 +894,21 @@ CREATE TABLE IF NOT EXISTS admin_tokens (
   last_seen  TEXT NOT NULL
 );`);
 const TOKEN_DAYS = 30;
-export function saveAdminToken(token, { username, name }) {
+// a sign-in handed over from another system lasts a shift, not a month (see systems.js)
+if (!hasCol('admin_tokens', 'until')) db.exec('ALTER TABLE admin_tokens ADD COLUMN until TEXT');
+export function saveAdminToken(token, { username, name, until = null }) {
   const at = new Date().toISOString();
-  db.prepare('INSERT OR REPLACE INTO admin_tokens (token_hash, username, name, created_at, last_seen) VALUES (?, ?, ?, ?, ?)')
-    .run(hashToken(token), String(username), String(name), at, at);
+  db.prepare('INSERT OR REPLACE INTO admin_tokens (token_hash, username, name, created_at, last_seen, until) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(hashToken(token), String(username), String(name), at, at, until);
 }
 export function adminTokenInfo(token) {
   if (!token) return null;
   const row = db.prepare('SELECT * FROM admin_tokens WHERE token_hash = ?').get(hashToken(token));
   if (!row) return null;
   const age = Date.now() - Date.parse(row.last_seen);
-  if (age > TOKEN_DAYS * 86400000) { db.prepare('DELETE FROM admin_tokens WHERE token_hash = ?').run(row.token_hash); return null; }
+  if (age > TOKEN_DAYS * 86400000 || (row.until && Date.parse(row.until) < Date.now())) { db.prepare('DELETE FROM admin_tokens WHERE token_hash = ?').run(row.token_hash); return null; }
   if (age > 3600000) db.prepare('UPDATE admin_tokens SET last_seen = ? WHERE token_hash = ?').run(new Date().toISOString(), row.token_hash);
-  return { username: row.username, name: row.name };
+  return { username: row.username, name: row.name, until: row.until ? Date.parse(row.until) : null };
 }
 export const dropAdminToken = (token) => db.prepare('DELETE FROM admin_tokens WHERE token_hash = ?').run(hashToken(token)).changes;
 export const dropAdminTokensFor = (username) => db.prepare('DELETE FROM admin_tokens WHERE username = ?').run(String(username)).changes;

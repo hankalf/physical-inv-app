@@ -1795,6 +1795,122 @@
     }
   };
 
+  /* ------------------------------------------------------------ systems: LIVE, DEV
+     Each at its own address. On the home: the others, the link key, and who may
+     use which. On another system: its name, and the home it takes people from. */
+  let sysState = null;
+  let sysRows = [];
+  function drawSystems(st) {
+    sysState = st;
+    const me = st.self;
+    const home = me.role === 'home';
+    $('sysChip').textContent = `${me.name} · ${home ? 'home' : `linked to ${me.homeName}`}`;
+    $('sysChip').className = `chip syschip c-${me.color}`;
+    const colors = $('fSysColor');
+    if (!colors.options.length) for (const c of st.colors) colors.appendChild(Object.assign(document.createElement('option'), { value: c, textContent: c[0].toUpperCase() + c.slice(1) }));
+    if (document.activeElement !== $('fSysName')) $('fSysName').value = me.name;
+    $('fSysName').disabled = me.nameFromEnv;
+    colors.value = me.color;
+    $('sysHomeFields').hidden = home;
+    $('sysKeyField').hidden = home;
+    $('sysHomeOnly').hidden = !home;
+    $('sysAccessBox').hidden = !home;
+    $('sysHow').hidden = !home;
+    if (!home) {
+      if (document.activeElement !== $('fSysHomeUrl')) $('fSysHomeUrl').value = me.homeUrl || '';
+      $('fSysHomeUrl').disabled = me.homeFromEnv;
+      $('fSysKey').placeholder = st.keySet ? 'a key is set — paste a new one to change it' : 'paste the key';
+      $('fSysKey').disabled = me.keyFromEnv;
+    }
+    const status = $('sysStatus');
+    status.replaceChildren();
+    const line = (t) => status.appendChild(Object.assign(document.createElement('div'), { textContent: t }));
+    if (home) {
+      line(st.systems.length ? `This is ${me.name}, the home system. People and scanners can switch to ${st.systems.map((s) => s.name).join(', ')} from here.` : `This is ${me.name}, the home system. No other system is listed yet.`);
+      status.className = 'feedback show ' + (st.systems.length ? 'ok' : 'warn');
+      sysRows = st.systems.map((s) => ({ ...s }));
+      drawSysRows();
+      $('fSysKeyShow').value = st.key || '';
+      drawSysAccess(st);
+    } else {
+      line(st.keySet && me.homeUrl ? `This is ${me.name}, linked to ${me.homeName} at ${me.homeUrl}. People arrive from there.` : `This is ${me.name}. Put in the home system's address and its link key so people can switch here.`);
+      status.className = 'feedback show ' + (st.keySet && me.homeUrl ? 'ok' : 'warn');
+    }
+  }
+  function drawSysRows() {
+    const t = $('sysTable');
+    table(t, [{ label: 'Name' }, { label: 'Address' }, { label: 'Color' }, { label: 'Scanners may switch' }, { label: '' }], sysRows, (s, i) => {
+      const idx = sysRows.indexOf(s);
+      const tr = document.createElement('tr');
+      const name = Object.assign(document.createElement('input'), { value: s.name, className: 'sm sysname', maxLength: 16, placeholder: 'DEV' });
+      name.oninput = () => { s.name = name.value; };
+      const url = Object.assign(document.createElement('input'), { value: s.url, className: 'sysurl', placeholder: 'https://full-harvest-dev.up.railway.app', spellcheck: false });
+      url.oninput = () => { s.url = url.value; };
+      const col = document.createElement('select'); col.className = 'sm syscolor';
+      for (const c of sysState.colors) col.appendChild(Object.assign(document.createElement('option'), { value: c, textContent: c }));
+      col.value = s.color || 'orange'; col.onchange = () => { s.color = col.value; };
+      const sc = Object.assign(document.createElement('input'), { type: 'checkbox', className: 'sysscan', checked: !!s.scanners });
+      sc.onchange = () => { s.scanners = sc.checked; };
+      const scl = document.createElement('label'); scl.className = 'cb'; scl.append(sc, document.createTextNode(' the guns can go there'));
+      const td = (el) => { const c = document.createElement('td'); c.appendChild(el); return c; };
+      tr.append(td(name), td(url), td(col), td(scl), td(button('Remove', 'sm ghost', () => { sysRows.splice(idx, 1); drawSysRows(); })));
+      return tr;
+    }, 'None yet — Add a system for DEV.');
+  }
+  function drawSysAccess(st) {
+    const names = st.systems.map((s) => s.name);
+    table($('sysAccess'), [{ label: 'Login' }, ...names.map((n) => ({ label: n }))], st.access.filter((u) => u.active), (u) => {
+      const tr = document.createElement('tr');
+      tr.dataset.user = u.username;
+      tr.appendChild(cell(`${u.name} · ${u.username}${u.role === 'admin' ? ' (admin)' : ''}`));
+      for (const n of names) {
+        const td = document.createElement('td');
+        const box = Object.assign(document.createElement('input'), { type: 'checkbox', checked: u.systems.includes(n), disabled: u.role === 'admin' });
+        box.dataset.system = n;
+        box.title = u.role === 'admin' ? 'An admin may use every system' : `May ${u.name} switch to ${n}?`;
+        box.onchange = async () => {
+          const want = [...tr.querySelectorAll('input[data-system]')].filter((b) => b.checked).map((b) => b.dataset.system);
+          try { drawSystems(await api.post('/api/admin/systems/access', { username: u.username, systems: want })); msg($('sysMsg'), 'ok', `${u.name}: ${want.length ? want.join(', ') : `${st.self.name} only`}.`); }
+          catch (err) { box.checked = !box.checked; msg($('sysMsg'), 'err', err.message); }
+        };
+        td.appendChild(box);
+        tr.appendChild(td);
+      }
+      return tr;
+    }, 'No logins yet.');
+  }
+  async function refreshSystems() {
+    if (!api.me || api.me.role !== 'admin') { $('systemsCard').hidden = true; return; }
+    $('systemsCard').hidden = false;
+    drawSystems(await api.json('/api/admin/systems'));
+  }
+  $('btnSysAdd').onclick = () => { sysRows.push({ name: sysRows.length ? '' : 'DEV', url: '', color: 'orange', scanners: false }); drawSysRows(); const last = $('sysTable').querySelector('tbody tr:last-child .sysurl'); if (last) last.focus(); };
+  $('btnSysSave').onclick = async () => {
+    try {
+      const home = sysState.self.role === 'home';
+      const body = { color: $('fSysColor').value };
+      if (!$('fSysName').disabled) body.name = $('fSysName').value;
+      if (home) body.systems = sysRows;
+      else {
+        if (!$('fSysHomeUrl').disabled) body.homeUrl = $('fSysHomeUrl').value;
+        if (!$('fSysKey').disabled && $('fSysKey').value) body.key = $('fSysKey').value;
+      }
+      drawSystems(await api.post('/api/admin/systems', body));
+      $('fSysKey').value = '';
+      msg($('sysMsg'), 'ok', 'Saved.', home ? 'People with a system ticked see Switch to… in the sidebar after their next page load.' : '');
+    } catch (err) { msg($('sysMsg'), 'err', err.message); }
+  };
+  $('btnSysKeyShow').onclick = () => { const f = $('fSysKeyShow'); f.type = f.type === 'password' ? 'text' : 'password'; $('btnSysKeyShow').textContent = f.type === 'password' ? 'Show' : 'Hide'; };
+  $('btnSysKeyCopy').onclick = async () => {
+    try { await navigator.clipboard.writeText($('fSysKeyShow').value); msg($('sysMsg'), 'ok', 'The link key is copied.'); }
+    catch { const f = $('fSysKeyShow'); f.type = 'text'; f.select(); msg($('sysMsg'), 'warn', 'Press Ctrl+C to copy it.'); }
+  };
+  $('btnSysKeyNew').onclick = async () => {
+    if (!confirm('Make a new link key? Until each other system is given it, nobody can switch there.')) return;
+    try { drawSystems(await api.post('/api/admin/systems', { newKey: true })); msg($('sysMsg'), 'ok', 'A new key is made.', 'Put it in each other system now.'); }
+    catch (err) { msg($('sysMsg'), 'err', err.message); }
+  };
+
   /* ------------------------------------------------------------ session scope */
   async function loadSessions() {
     sessions = await api.json('/api/admin/sessions');
@@ -2106,7 +2222,7 @@
 
   async function load() {
     await refreshMe();
-    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshJobs().catch(() => {}), refreshReasons(), refreshSosSettings(), refreshIssueMenu().catch(() => {}), refreshLogo(), refreshPalletSystem().catch(() => {}), refreshOnedrive().catch(() => {}), refreshGdrive().catch(() => {})]);
+    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshJobs().catch(() => {}), refreshReasons(), refreshSosSettings(), refreshIssueMenu().catch(() => {}), refreshLogo(), refreshPalletSystem().catch(() => {}), refreshOnedrive().catch(() => {}), refreshGdrive().catch(() => {}), refreshSystems().catch(() => {})]);
     await refreshFeatures().catch(() => {});
     await refreshGun().catch(() => {});
     await loadLayouts().catch(() => {});

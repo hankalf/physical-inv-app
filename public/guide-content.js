@@ -104,6 +104,20 @@
           ],
         },
         {
+          title: 'Run DEV beside LIVE',
+          do: 'Settings → Logins & site → Systems. DEV is the app deployed again with its own database, at its own address. On LIVE, add DEV and its address, tick who may use it and whether the scanners may switch, and give DEV LIVE\'s address and link key (its SYSTEM_HOME_URL and SYSTEM_LINK_KEY variables). People then switch from the sidebar or the sign-in box, scanners from the sign-on screen, with no second password and no second link.',
+          where: S('/settings', 'advanced', 'Settings → Logins & site'),
+          watch: [
+            { see: '"that hand-off was not signed with this system\'s link key"', means: 'DEV has a different link key from LIVE, or LIVE made a new one.', fix: 'Copy the key from LIVE\'s Systems card into DEV (its SYSTEM_LINK_KEY variable, or its Systems card).' },
+            { see: '"this login may not use DEV"', means: 'The login has not been given DEV.', fix: 'Tick DEV for them in Who may use each system on LIVE.' },
+            { see: 'The gun will not switch: counts still on this scanner', means: 'Lines counted on this system have not been sent yet.', fix: 'Let them send (Wi-Fi), then switch; they belong to the system they were counted in.' },
+          ],
+          ask: [
+            { q: 'Do counts on DEV touch LIVE?', a: 'No. DEV has its own database: its counts, lists, crew and settings are its own.' },
+            { q: 'Can DEV sign someone in to LIVE?', a: 'No. LIVE hands people to DEV; the way back is LIVE\'s own address, where the browser or the gun is still signed in.' },
+          ],
+        },
+        {
           title: 'See how everyone is getting on in the Testing Suite',
           do: 'Learn → Practice data, admins only. Every login’s practice in one place: who has practiced, each run with the things tried (open a run for the list) and how far it got, when they last did anything. Export gives one workbook of a person’s runs; Delete takes their practice away so the Testing Suite starts them fresh. Practice counts never appear in a dashboard’s count picker.',
           where: S('/practice', '', 'Learn → Practice data'),

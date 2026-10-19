@@ -149,6 +149,10 @@ office side as its own app (*FH Office*), with a Menu button in place of the sid
   Suite's sandbox, all four to start with.
 - **The picker opens on the right count.** An open full count first (the one the scanners land
   on, else the newest), else an open cycle count; and it lists only the kinds the site has switched on.
+- **Systems** (Settings → Logins & site → Systems): LIVE is the home; add DEV with its address,
+  tick who may use it, and whether the scanners may switch. DEV is the app deployed again with its
+  own database and three variables (`SYSTEM_NAME`, `SYSTEM_HOME_URL`, `SYSTEM_LINK_KEY`) — the steps
+  are on the card. People switch from the sidebar; scanners from the sign-on screen.
 - **Report a problem** (Settings → Scanners → What the scanners offer): the kinds of problem the
   gun offers, their reasons, and what each makes the counter scan to confirm — the bin, the pallet,
   either, or nothing. Add your own, take any off, or restore the shipped list.

@@ -198,6 +198,7 @@
     // SOS
     'What is wrong?': '¿Qué pasa?',
     'Anything else (optional)': 'Algo más (opcional)', 'Tap to type': 'Toca para escribir',
+    'System': 'Sistema', 'No signal': 'Sin señal',
     'Back to counting': 'Volver a contar', 'Back to Front2Back': 'Volver a Front2Back', 'Back to Not in Location': 'Volver a Not in Location',
     'Sending…': 'Enviando…',
     'Sent — a supervisor has been told': 'Enviado — ya se avisó a un supervisor',
@@ -280,6 +281,10 @@
   const T = (s) => tr(s);
   const PATTERNS = [
     [/^Step (\d+) of (\d+)$/, (m) => `Paso ${m[1]} de ${m[2]}`],
+    [/^Back to (\S+)$/, (m) => `Volver a ${m[1]}`],
+    [/^Switching to (\S+)…$/, (m) => `Cambiando a ${m[1]}…`],
+    [/^Could not switch to (\S+)$/, (m) => `No se pudo cambiar a ${m[1]}`],
+    [/^(\d+) counts? (is|are) still on this scanner$/, (m) => `${m[1]} conteo${m[1] === '1' ? '' : 's'} sigue${m[1] === '1' ? '' : 'n'} en este escáner`],
     [/^Scan the bin to confirm(.*)$/, (m) => `Escanea la ubicación para confirmar${m[1]}`],
     [/^Scan the pallet to confirm(.*)$/, (m) => `Escanea la tarima para confirmar${m[1]}`],
     [/^Scan the pallet or the bin to confirm(.*)$/, (m) => `Escanea la tarima o la ubicación para confirmar${m[1]}`],

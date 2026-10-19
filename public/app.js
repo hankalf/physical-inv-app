@@ -596,9 +596,60 @@
     } catch { /* offline: the saved one stands */ }
   }
 
+  /* ------------------------------------------------------------ systems
+     LIVE and DEV, each at its own address. The sign-on screen offers the ones
+     the office lets the scanners use; switching hands this scanner over under
+     its own link, and each address keeps its own storage on the gun - so a
+     count queued here is never sent to the other. The header says which. */
+  async function loadSystems() {
+    if (PRACTICE) return;
+    let d = null;
+    try { d = await api('/api/systems'); await metaSet('systems', d); } catch { d = await metaGet('systems'); }
+    renderSystems(d);
+  }
+  function renderSystems(d) {
+    const chip = $('chipSystem');
+    const box = $('systemBlock');
+    if (!d || !d.self) { chip.hidden = true; box.hidden = true; return; }
+    const others = d.systems || [];
+    chip.hidden = !(others.length || d.self.role === 'linked');
+    chip.textContent = d.self.name;
+    chip.className = `chip system c-${d.self.color}`;
+    box.hidden = !others.length;
+    const pick = $('systemPick');
+    pick.replaceChildren();
+    const here = document.createElement('button');
+    here.className = 'selected';
+    here.textContent = d.self.name;
+    here.disabled = true;
+    pick.appendChild(here);
+    for (const s of others) {
+      const b = document.createElement('button');
+      b.className = 'ghost';
+      b.dataset.system = s.name;
+      b.textContent = s.home ? `Back to ${s.name}` : s.name;
+      b.onclick = () => switchSystem(s.name);
+      pick.appendChild(b);
+    }
+  }
+  async function switchSystem(name) {
+    const q = await queueAge();
+    if (q.count) {
+      feedback($('signonMsg'), 'err', `${q.count} count${q.count === 1 ? ' is' : 's are'} still on this scanner`, `Let ${q.count === 1 ? 'it' : 'them'} send before switching to ${name} — they belong to this system.`);
+      return;
+    }
+    if (!online()) { feedback($('signonMsg'), 'err', 'No signal', `Switching to ${name} needs Wi-Fi.`); return; }
+    try {
+      const out = await api('/api/systems/handoff', { method: 'POST', body: JSON.stringify({ to: name }) });
+      feedback($('signonMsg'), 'ok', `Switching to ${name}…`);
+      location.href = out.url;
+    } catch (err) { feedback($('signonMsg'), 'err', `Could not switch to ${name}`, err.message); }
+  }
+
   async function loadSessions() {
     const sel = $('fSession');
     sel.innerHTML = '';
+    loadSystems().catch(() => {});
     try {
       const sessions = await api(PRACTICE ? '/api/sessions?practice=1' : '/api/sessions');
       // which jobs the office has switched on for the scanners; the last answer stands offline

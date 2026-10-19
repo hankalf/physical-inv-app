@@ -58,6 +58,7 @@ import { palletSystem, savePalletSystem, probePalletSystem } from './routes/pall
 import { proxyPalletSystem, makeTicket, ticketCookie, PREFIX as PS_PREFIX } from './routes/pallet-proxy.js';
 import { onedriveStatus, setOnedriveConfig, startSignIn, cancelSignIn, disconnect, uploadNow, startOnedrive } from './routes/onedrive.js';
 import { gdriveStatus, setGdriveConfig, checkConnection, disconnectGdrive, uploadToGdrive, startGdrive } from './routes/gdrive.js';
+import { selfSystem, systemsConfig, saveSystems, systemsFor, systemAccess, setSystemAccess, makeTicket as makeHandoff, readTicket as readHandoff, provisionUser, provisionDevice, publicSystems, otherSystems } from './routes/systems.js';
 import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, unlockPlace, PER_LOGIN, PER_PLACE } from './routes/login-limit.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards, barcodeBook } from './routes/printing.js';
@@ -249,9 +250,10 @@ function currentUser(req, url) {
   if (!t && token) {
     // a sign-in from before the last restart: the row remembers it
     const saved = adminTokenInfo(token);
-    if (saved) { t = { name: saved.name, username: saved.username }; adminTokens.set(token, t); }
+    if (saved) { t = { name: saved.name, username: saved.username, until: saved.until }; adminTokens.set(token, t); }
   }
   if (!t) return null;
+  if (t.until && Date.now() > t.until) { adminTokens.delete(token); dropAdminToken(token); return null; }
   /* The role and the access list come from the account every time, not from
      the sign-in: a change an admin makes applies to the next request, and a
      deactivated account is out at once. */
@@ -386,6 +388,25 @@ async function handleHandheld(req, res, url, m) {
 
   // past this point a scanner must prove which scanner it is
   const device = requireDevice(req);
+
+  /* --- a scanner switching system: the home hands it over, if that system takes scanners */
+  if (p === '/api/systems/handoff' && method === 'POST') {
+    const body = await readJson(req);
+    const to = otherSystems().find((s) => s.name === String(body.to || '').toUpperCase());
+    if (!to) throw httpError(404, `there is no system called ${body.to}`);
+    if (!device) throw httpError(403, 'only a registered scanner can switch system - open its link from Settings → Scanners');
+    if (device.practice_owner) throw httpError(403, 'a test scanner stays in the Testing Suite');
+    if (selfSystem().role === 'linked') return sendJson(req, res, 200, { url: `${to.url}/`, to: to.name });
+    if (!to.scanners) throw httpError(403, `the scanners may not switch to ${to.name} - an admin can allow it under Settings → Logins & site → Systems`);
+    const t = makeHandoff(to.name, { device });
+    audit(device.name, `scanner switched to ${to.name}`, to.url);
+    return sendJson(req, res, 200, { url: t.url, to: to.name });
+  }
+  if (p === '/api/systems' && method === 'GET') {
+    const pub = publicSystems();
+    const linked = pub.self.role === 'linked';
+    return sendJson(req, res, 200, { ...pub, systems: device && device.practice_owner ? [] : otherSystems().filter((s) => linked || s.scanners).map((s) => ({ name: s.name, url: s.url, color: s.color, home: !!s.home })) });
+  }
 
   if (p === '/api/sessions' && method === 'GET') {
     /* A gun on the floor never sees the Testing tab's practice count, and the
@@ -1048,7 +1069,38 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, {
       ...who, role: whoNow.role, access: whoNow.access, accessKeys: ACCESS, tabs: TABS, profiles: PROFILES.map(([key, label, list]) => ({ key, label, access: list === undefined ? null : list })), mustChange: !!(account && account.must_change),
       accounts: countUsers(), admins: countAdmins(), features: features(),
+      system: publicSystems().self, systems: systemsFor(whoNow).map((s) => ({ name: s.name, url: s.url, color: s.color, home: !!s.home })),
     });
+  }
+
+  /* --- systems: LIVE, DEV and any other, each at its own address (see systems.js) */
+  if (p === '/api/admin/systems/handoff' && method === 'POST') {
+    const body = await readJson(req);
+    const to = otherSystems().find((s) => s.name === String(body.to || '').toUpperCase());
+    if (!to) throw httpError(404, `there is no system called ${body.to}`);
+    if (!systemsFor(whoNow).some((s) => s.name === to.name)) throw httpError(403, `this login may not use ${to.name} - an admin can give it under Settings → Logins & site → Systems`);
+    // the way home is just the home's own address: the browser still has its sign-in there
+    if (selfSystem().role === 'linked') return sendJson(req, res, 200, { url: to.url + (/^\/[a-z]*(#[\w-]*)?$/.test(String(body.path || '')) ? body.path : '/admin'), to: to.name });
+    const t = makeHandoff(to.name, { user: whoNow, path: body.path });
+    audit(actor, `switched to ${to.name}`, to.url);
+    return sendJson(req, res, 200, { url: t.url, to: to.name });
+  }
+  if (p === '/api/admin/systems' || p.startsWith('/api/admin/systems/')) {
+    if (whoNow.role !== 'admin') throw httpError(403, 'only an admin can see or change the systems');
+    if (p === '/api/admin/systems' && method === 'GET') return sendJson(req, res, 200, { ...systemsConfig(), access: systemAccess() });
+    if (p === '/api/admin/systems' && method === 'POST') {
+      const body = await readJson(req);
+      const st = saveSystems(body);
+      audit(actor, body.newKey ? 'made a new link key for the systems' : 'changed the systems', [st.self.name, ...st.systems.map((s) => `${s.name} ${s.url}`)].join(' · '));
+      return sendJson(req, res, 200, { ...st, access: systemAccess() });
+    }
+    if (p === '/api/admin/systems/access' && method === 'POST') {
+      const body = await readJson(req);
+      const row = setSystemAccess(body.username, body.systems);
+      audit(actor, 'changed which systems a login may use', `${row.username}: ${row.systems.join(', ') || 'this one only'}`);
+      return sendJson(req, res, 200, { ...systemsConfig(), access: systemAccess() });
+    }
+    throw httpError(404, 'unknown systems endpoint');
   }
   /* The site admin - the login the site started with - is nobody else's to
      change: another admin cannot reset its password, take its pages or switch
@@ -1995,6 +2047,34 @@ const server = http.createServer(async (req, res) => {
       const who = acceptInvite(body.token, body.password);
       audit(who.name, 'took up an invite and chose a password', who.username);
       return sendJson(req, res, 200, { ok: true, username: who.username });
+    }
+    if (p === '/api/system' && req.method === 'GET') return sendJson(req, res, 200, publicSystems());
+    /* A hand-off from the home system: the ticket checked, the login or the
+       scanner made here, and on into the page. */
+    if (p === '/handoff' && req.method === 'GET') {
+      let body;
+      try { body = readHandoff(url.searchParams.get('t')); }
+      catch (err) {
+        const msg = String(err.message).replace(/[<&]/g, '');
+        return send(req, res, err.status || 400, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Could not switch</title><body style="font:16px system-ui;padding:24px;background:#0b0e14;color:#e8edf5"><h2>Could not switch system</h2><p>${msg}.</p><p><a style="color:#7cb4ff" href="/admin">Sign in here</a></p>`, { 'content-type': 'text/html; charset=utf-8' });
+      }
+      if (body.kind === 'device') {
+        const d = provisionDevice(body.device);
+        audit(d.name, 'scanner arrived from the home system', body.iss);
+        res.writeHead(302, { location: `/?d=${encodeURIComponent(d.uid)}`, 'set-cookie': 'gun=1; Path=/; Max-Age=31536000; SameSite=Lax' });
+        return res.end();
+      }
+      const u = provisionUser(body.user);
+      const token = randomUUID();
+      const until = Date.now() + 12 * 3600000;
+      adminTokens.set(token, { name: u.name, username: u.username, until });
+      saveAdminToken(token, { username: u.username, name: u.name, until: new Date(until).toISOString() });
+      audit(u.name, `arrived from ${body.iss}`, `as ${u.username} (${u.role})`);
+      const path = /^\/[a-z]*(#[\w-]*)?$/.test(body.path || '') ? body.path : '/admin';
+      return send(req, res, 200, `<!doctype html><meta charset="utf-8"><title>Switching…</title><body style="background:#0b0e14"><script>
+try { sessionStorage.setItem('admToken', ${JSON.stringify(token)}); sessionStorage.setItem('lastUser', ${JSON.stringify(u.username)}); } catch (e) {}
+location.replace(${JSON.stringify(path)});
+</script>`, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' });
     }
     if (p === '/api/board' && req.method === 'GET') {
       return sendJson(req, res, 200, memo(`board:${url.searchParams.get('session') || ''}`, () => boardData(url.searchParams.get('session'))));

@@ -277,6 +277,49 @@ What it is and is not:
 - **When it takes effect:** a page already open sees the change when it next loads; a scanner the
   next time it is online. The log records who switched what off.
 
+### Step 4b — Systems: LIVE and DEV, from one sign-in and one scanner link
+
+A **DEV** system is the app deployed a second time, with its own database: the place to try new
+code, new settings or a practice count on real guns without touching the live stock. Each system
+is at its own address; people and scanners switch between them from inside the app, so nobody
+needs a second password and no scanner needs a second link.
+
+**LIVE is the home.** It keeps the logins and decides who may use which system. DEV is *linked*
+to it: it takes the people and the scanners LIVE hands over, and nothing else.
+
+*Setting DEV up (once):*
+
+1. In Railway, deploy the app again as its own service with its **own volume**, from the branch DEV
+   should run.
+2. Give that service three variables: `SYSTEM_NAME` = **DEV**, `SYSTEM_HOME_URL` = LIVE's address
+   (for example `https://full-harvest.up.railway.app`), and `SYSTEM_LINK_KEY` = LIVE's link key
+   (on LIVE: **Settings → Logins & site → Systems → The link key → Copy**). Or sign in on DEV with its
+   own superadmin and paste the same two into its Systems card.
+3. On LIVE, **Systems → Add a system**: name **DEV**, DEV's Railway address, a color, and tick
+   **Scanners may switch** if the guns should be able to go there. **Save**.
+4. In **Who may use each system**, tick DEV for each login that should have it. Admins always may.
+
+*Switching:*
+
+- **In the office.** A login with DEV ticked sees **Switch to…** at the bottom of the sidebar, and
+  **Sign in to** on LIVE's sign-in box. DEV opens on the same page, signed in as the same person
+  with the same role and pages. Every DEV page has an orange **DEV — not the live system** bar
+  with **Back to LIVE**.
+- **On a scanner.** With *Scanners may switch* ticked, the sign-on screen shows **System: LIVE |
+  DEV**. One tap moves the gun to DEV under its own name; **Back to LIVE** brings it home. The
+  header always says which system the gun is on. A gun with counts still waiting to send is not
+  allowed to switch until they have gone — they belong to the system they were counted in. Each
+  system keeps its own storage on the gun, so nothing mixes.
+
+*What to know:*
+
+- DEV has its own everything: counts, bin lists, crew, settings, backups. A count made on DEV is
+  never on LIVE.
+- A switch is a hand-off signed with the link key, good for two minutes and once. DEV believes
+  LIVE; LIVE believes nobody, so DEV can never sign anyone in to LIVE. A login handed to DEV
+  lasts twelve hours there, so taking DEV away from someone takes effect within a shift.
+- **Make a new link key** on LIVE stops every switch until each other system is given the new key.
+
 ### Step 5 — Change the superadmin's password
 
 Sign in as the superadmin, press **Change my password** at the foot of the sidebar, and

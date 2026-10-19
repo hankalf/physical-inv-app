@@ -100,6 +100,10 @@ Scanners need internet access for this option, not just warehouse Wi-Fi.
 | `SUPERADMIN_USER` | `ADMIN` | Username of the admin login created at startup, e.g. `SITEADMIN` |
 | `SUPERADMIN_NAME` | the username | The name shown for it, e.g. `Site Administrator` |
 | `SITE_TIMEZONE` | `America/New_York` | The warehouse's clock — dates a cycle batch is due, and the hour a schedule fires |
+| `SYSTEM_NAME` | `LIVE` | This system's name in the switcher and on its banner — `DEV` on the DEV deployment |
+| `SYSTEM_HOME_URL` | — | On DEV (or any other linked system): the home (LIVE) system's address. Unset means this is the home |
+| `SYSTEM_LINK_KEY` | — | The key the home signs hand-offs with: copy it from LIVE's Settings → Logins & site → Systems |
+| `SYSTEM_COLOR` | `green` / `orange` | The system's color: green, orange, purple, blue, red or gray |
 | `ONEDRIVE_CLIENT_ID` | — | The Azure app registration's Application (client) ID for backups to OneDrive; can be set in Settings instead |
 | `ONEDRIVE_TENANT` | `common` | Microsoft tenant for that sign-in; leave as `common` unless IT says otherwise |
 
@@ -124,6 +128,7 @@ sign-in covers all of them.
 | **Settings → Logins & site → What is switched on** | hide the parts of the app nobody needs yet, for every login and the scanners: *Full counts and second counts only* leaves the count, its second counts, the alerts and the Testing Suite; *Everything on* brings the rest back; or tick by part. Hidden, not forbidden — roles still apply, nothing is deleted, a bookmark to a hidden page says so |
 | **Settings → Logins & site → Site name** | the app's own name and the location under it, out of the box *Full Harvest Inventory · Front Royal*; a change lands on every page, the guns, the board and the installed app's manifest |
 | **Practice data** (`/practice`) | admins only: every login's practice from the Testing Suite — who has practiced, each run with what was tried and how far it got, export one person's lot, delete it to start them fresh. Practice counts are never in a dashboard's picker |
+| **Settings → Logins & site → Systems** | LIVE, DEV and any other, each its own deployment at its own address. The home (LIVE) lists the others, says which logins may use each and whether the scanners may switch; people switch from the sidebar or the sign-in box and scanners from the sign-on screen, handed over with a signed one-time ticket, no second password. DEV wears an orange banner on every page |
 | **User guide** (`/guide`) | the SOP inside the app: journeys, what goes wrong at each step, an Ask box that answers a question or a pasted message, and a live "Right now" read of the count. Open to every login |
 
 Two splits, both deliberate. **Running a count** is the Dashboard; **setting one up** is

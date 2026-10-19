@@ -432,6 +432,99 @@
       }
       pw.hidden = !(api.me && api.me.username);
     }
+    renderSystem();
+  }
+
+  /* ------------------------------------------------------------- systems
+     LIVE, DEV and any other, each at its own address. The sidebar says which
+     one this is and offers the others this login may use; a system that is not
+     the home wears a banner on every page, so nobody counts into DEV thinking
+     it is LIVE. Switching goes through the home: see src/routes/systems.js. */
+  function renderSystem() {
+    const me = api.me;
+    const sys = me && me.system;
+    const root = document.documentElement;
+    const others = (me && me.systems) || [];
+    if (sys) { root.dataset.system = sys.name; root.dataset.systemColor = sys.color; root.classList.toggle('linked-system', sys.role === 'linked'); }
+    let banner = document.getElementById('systemBanner');
+    if (sys && sys.role === 'linked') {
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'systemBanner';
+        const shell = document.querySelector('.shell');
+        if (shell) shell.insertBefore(banner, shell.firstChild); else document.body.insertBefore(banner, document.body.firstChild);
+      }
+      banner.className = `sysbanner c-${sys.color}`;
+      banner.replaceChildren(Object.assign(document.createElement('b'), { textContent: sys.name }),
+        document.createTextNode(' — not the live system. Nothing counted here is the real stock.'));
+      const home = others.find((s) => s.home);
+      if (home) {
+        const a = document.createElement('button');
+        a.type = 'button'; a.className = 'sm'; a.textContent = `Back to ${home.name}`;
+        a.onclick = () => switchSystem(home.name);
+        banner.appendChild(a);
+      }
+    } else if (banner) banner.remove();
+    const foot = document.querySelector('.side-foot');
+    if (!foot) return;
+    let box = document.getElementById('navSystem');
+    if (!sys || (!others.length && sys.role !== 'linked')) { if (box) box.remove(); return; }
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'navSystem';
+      box.className = 'navsystem';
+      foot.insertBefore(box, foot.firstChild);
+    }
+    box.replaceChildren();
+    box.appendChild(Object.assign(document.createElement('span'), { className: `syschip c-${sys.color}`, textContent: sys.name, title: `You are on ${sys.name}` }));
+    if (others.length) {
+      const sel = document.createElement('select');
+      sel.className = 'sm';
+      sel.id = 'navSystemPick';
+      sel.title = 'Switch to another system';
+      sel.appendChild(Object.assign(document.createElement('option'), { value: '', textContent: 'Switch to…' }));
+      for (const s of others) sel.appendChild(Object.assign(document.createElement('option'), { value: s.name, textContent: `${s.name}${s.home ? ' (home)' : ''}` }));
+      sel.onchange = () => { if (sel.value) switchSystem(sel.value); };
+      box.appendChild(sel);
+    }
+  }
+  /** Over to another system: the home writes a ticket for it; the way home is the home's own address. */
+  async function switchSystem(name) {
+    try {
+      const out = await api.post('/api/admin/systems/handoff', { to: name, path: here + (location.hash || '') });
+      location.href = out.url;
+    } catch (err) { alert(err.message); renderSystem(); }
+  }
+  api.switchSystem = switchSystem;
+
+  /* Before sign-in: on the home, which system to land on; on another system, where to sign in. */
+  async function mountSystemSignIn() {
+    const pw = document.getElementById('fPassword');
+    if (!pw || document.getElementById('fSignInSystem')) return;
+    let pub = null;
+    try { pub = await (await fetch('/api/system', { cache: 'no-store' })).json(); } catch { return; }
+    if (!pub || !pub.self) return;
+    const btn = document.getElementById('btnLogin');
+    if (pub.self.role === 'linked' && pub.home && pub.home.url) {
+      const note = document.createElement('div');
+      note.className = `hint sysnote c-${pub.self.color}`;
+      note.id = 'systemSignInNote';
+      note.innerHTML = `This is <b></b>. Sign in on <a></a> and switch from there — your login and what it may use are kept on ${pub.home.name.replace(/[<&]/g, '')}.`;
+      note.querySelector('b').textContent = pub.self.name;
+      const a = note.querySelector('a'); a.href = `${pub.home.url}/admin`; a.textContent = pub.home.name;
+      (btn || pw).insertAdjacentElement('afterend', note);
+      return;
+    }
+    if (!pub.systems.length) return;
+    const wrap = document.createElement('div');
+    wrap.style.marginTop = '10px';
+    wrap.innerHTML = '<label for="fSignInSystem">Sign in to</label>';
+    const sel = document.createElement('select');
+    sel.id = 'fSignInSystem';
+    sel.appendChild(Object.assign(document.createElement('option'), { value: '', textContent: `${pub.self.name} (this one)` }));
+    for (const s of pub.systems) sel.appendChild(Object.assign(document.createElement('option'), { value: s.name, textContent: s.name }));
+    wrap.appendChild(sel);
+    pw.insertAdjacentElement('afterend', wrap);
   }
 
   async function signIn(username, password) {
@@ -939,6 +1032,7 @@
     ['Pallets to move back — front bins with an empty bin behind', '/front', 'moves', 'move pallets back front behind empty double deep relocate'],
     ['Auto-assign the aisles — a staggered plan', '/admin', 'teams', 'auto assign plan stagger staggered aisles teams spread automatic queue every team'],
     ['Test with your own pallets, and try features that are off', '/testing', '', 'testing upload own pallets file lot expiry approval try features off practice'],
+    ['Systems — LIVE and DEV, and who may use each', '/settings', 'advanced', 'system systems dev live environment switch staging test deploy url address link key'],
     ['Practice data — every login\'s runs in the Testing Suite', '/practice', '', 'practice data runs testing suite users who practiced history tried export delete admin learn'],
   ].map(([title, page, sub, words]) => ({ title, page, sub, words }));
 
@@ -1276,6 +1370,9 @@
           await signIn(document.getElementById('fUser').value.trim(), document.getElementById('fPassword').value);
           document.getElementById('fPassword').value = '';
           if (msg) { msg.className = 'feedback'; msg.textContent = ''; }
+          // signed in at the home, and asked for another system: over there now
+          const to = (document.getElementById('fSignInSystem') || {}).value;
+          if (to && !(api.me && api.me.mustChange)) await switchSystem(to);
         } catch (err) {
           if (msg) { msg.className = 'feedback show err'; msg.textContent = err.message; }
         }
@@ -1286,6 +1383,7 @@
       }
     }
     if (inviteToken) mountInvite(inviteToken);
+    mountSystemSignIn();
     const out = document.getElementById('navLogout');
     // Log out: the next person to sign in on this computer starts on the dashboard
     if (out) out.onclick = () => { api.logout(); if (here !== '/admin') location.replace('/admin'); else if (location.hash !== '#progress') history.replaceState(null, '', '#progress'); };

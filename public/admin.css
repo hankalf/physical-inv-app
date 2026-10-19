@@ -855,3 +855,21 @@ html.signed-in .splashbrand { display: none; }
 .checks .check.ok .what b { font-weight: 600; }
 .checks .check button { flex: 0 0 auto; white-space: nowrap; }
 @media (max-width: 700px) { .checks .check { flex-wrap: wrap; } .checks .check button { margin-left: 36px; } }
+
+/* ------------------------------------------------------------- systems: LIVE, DEV
+   The system this is, in the sidebar; a banner across every page of a system
+   that is not the home, so DEV is never mistaken for LIVE. */
+.navsystem { display: flex; gap: 6px; align-items: center; }
+.navsystem select { flex: 1; min-width: 0; }
+.syschip { font-weight: 800; letter-spacing: .06em; font-size: 12px; padding: 4px 10px; border-radius: 999px; color: #fff; background: #2f9e57; white-space: nowrap; }
+.sysbanner { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 16px; font-size: 14px; font-weight: 600; color: #1a1300; background: #f08c2e; position: sticky; top: 0; z-index: 60; }
+.sysbanner b { font-weight: 900; letter-spacing: .08em; padding: 1px 8px; border-radius: 6px; background: rgba(0,0,0,.18); color: #fff; }
+.sysbanner button { margin-left: auto; width: auto; }
+.sysnote { margin-top: 10px; border-left: 4px solid #f08c2e; padding-left: 10px; }
+.c-green.syschip, .sysbanner.c-green { background: #2f9e57; color: #fff; }
+.c-orange.syschip, .sysbanner.c-orange { background: #f08c2e; color: #1a1300; }
+.c-purple.syschip, .sysbanner.c-purple { background: #8a5cf5; color: #fff; }
+.c-blue.syschip, .sysbanner.c-blue { background: #3b82f6; color: #fff; }
+.c-red.syschip, .sysbanner.c-red { background: #e5484d; color: #fff; }
+.c-gray.syschip, .sysbanner.c-gray { background: #6b7385; color: #fff; }
+html:not(.signed-in) .sysbanner { display: none; }
