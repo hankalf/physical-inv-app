@@ -965,9 +965,11 @@ table.palrep td.st button { margin-top: 4px; padding: 2px 8px; }
    Collapsed, the panel waits just off the left edge behind a thin strip: the
    mouse on the strip (or focus inside the panel) slides it out over the page.
    (The panel is already sticky on a desk, so the button sits in its corner.) */
-.sidetoggle { position: absolute; top: 6px; right: 6px; z-index: 3; width: 26px; height: 26px; min-width: 0; padding: 0; margin: 0;
-  display: inline-flex; align-items: center; justify-content: center; font-size: 15px; line-height: 1; border-radius: 7px; opacity: .55; }
-.sidetoggle:hover, .sidetoggle:focus-visible { opacity: 1; }
+/* a round button on the panel's right edge, below the name: clear of the banner, open or slid out */
+.sidetoggle { position: absolute; top: 132px; right: -13px; z-index: 61; width: 26px; height: 26px; min-width: 0; padding: 0; margin: 0;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--line); color: var(--muted); box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+.sidetoggle:hover, .sidetoggle:focus-visible { color: var(--text); border-color: var(--accent); }
 #sidePeek { display: none; }
 html.side-collapsed body.app { grid-template-columns: 1fr; }
 html.side-collapsed .side {

@@ -54,6 +54,12 @@ on a PC.
 | **Cycle counts** | `/cycle` | Whoever runs the daily program | Supervisor login |
 | **User guide** | `/guide` | Anyone with a login — new starters first | Supervisor login, any access |
 
+**More room on a desk.** The round **«** on the side panel's right edge puts the panel away, and the
+page takes the whole width. A thin strip stays on the left edge: put the mouse on it and the panel
+slides out over the page; move off and it slides back. **»** on the slid-out panel keeps it open
+again. It is remembered in that browser, for every office page; a phone or a narrow window keeps
+its bar along the top.
+
 ![](images/sign-in.png)
 
 *Every supervisor page opens on the same sign-in. Signing in on one carries to all four.*
