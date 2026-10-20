@@ -51,8 +51,9 @@ the name it belongs to — **Edit** that person instead.
 
 *The Employees table, with one row open for editing.*
 
-- **Find** a name, clock-in number or department; **Department** and **Team** narrow the list.
-- **Edit** opens the person under their row: clock-in number, name, department, sizes and
+- **Find** a name, clock-in number or department; **Department**, **Shift** and **Team** narrow
+  the list.
+- **Edit** opens the person under their row: clock-in number, name, department, shift, sizes and
   equipment. Change what you need and press **Save**. A new clock-in number asks first; their team
   goes with them, and counts already scanned keep the old number.
 - **Remove** (on the row, or in the Edit form) asks first, then takes them off the crew list and
@@ -82,7 +83,7 @@ them **Jacket**, **Bibs**, **Boots**. **⬇ Sample CSV** downloads one in the ri
 
 - **Drag** a person from *Not on a team* onto a team card, or between teams — or use the menu on
   their card. **— no team —** takes them off.
-- Each card shows the person's **department**, equipment and sizes.
+- Each card shows the person's **department** and **shift**, equipment and sizes.
 - **Upload the team sheet** (*Team #, Department, Employee, Equipment*, a row per seat) builds the
   teams in one go: *S1-DS01* is 1st shift, dock stocker, truck 01.
 - **1st shift / 2nd shift** and **Department** show one at a time.

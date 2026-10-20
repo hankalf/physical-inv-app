@@ -51,8 +51,7 @@ import { generateBatch, previewBatch, binList, listBatches, deleteBatch, coverag
 import {
   listEmployees, upsertEmployee, updateEmployee, setGear, gearReport, deleteEmployee, importEmployees, importHelpers,
   listTeams, createTeam, deleteTeam, setTeamShift, assignMember, getConfig, setConfig, getEmployee,
-  crewCheck, crewShortfall, importTeamSheet,
-} from './routes/people.js';
+  crewCheck, crewShortfall, importTeamSheet, shiftWord } from './routes/people.js';
 
 import { toCsv, parseRecords, pick } from './util/csv.js';
 import { listLayouts, loadLayout } from './util/layouts.js';
@@ -1270,13 +1269,13 @@ async function handleAdmin(req, res, url, m) {
     const body = await readJson(req);
     const onlyNew = url.searchParams.get('new') === '1';
     const e = upsertEmployee(body, { onlyNew });
-    if (onlyNew) audit(actor, 'added an employee', `${e.badge} ${e.name}${e.dept ? ' · ' + e.dept : ''}`);
+    if (onlyNew) audit(actor, 'added an employee', `${e.badge} ${e.name}${e.dept ? ' · ' + e.dept : ''}${e.shift ? ` · ${shiftWord(e.shift)}` : ''}`);
     return sendJson(req, res, 200, e);
   }
   if ((m = p.match(/^\/api\/admin\/people\/employees\/(?!import$)([^/]+)$/)) && method === 'POST') {   // not the crew-list upload
     const before = getEmployee(decodeURIComponent(m[1]));
     const e = updateEmployee(decodeURIComponent(m[1]), await readJson(req));
-    const changed = before ? ['badge', 'name', 'dept', 'jacket', 'bibs', 'boots'].filter((k) => before[k] !== e[k]).map((k) => `${k} ${before[k] || '-'} → ${e[k] || '-'}`) : [];
+    const changed = before ? ['badge', 'name', 'dept', 'shift', 'jacket', 'bibs', 'boots'].filter((k) => before[k] !== e[k]).map((k) => `${k} ${before[k] || '-'} → ${e[k] || '-'}`) : [];
     if (before && before.equipment.join() !== e.equipment.join()) changed.push(`equipment ${before.equipment.join('; ') || 'on foot'} → ${e.equipment.join('; ') || 'on foot'}`);
     audit(actor, 'edited an employee', `${e.badge} ${e.name}${changed.length ? ': ' + changed.join(', ') : ' (no change)'}`);
     return sendJson(req, res, 200, e);
@@ -1334,7 +1333,7 @@ async function handleAdmin(req, res, url, m) {
   }
   if (p === '/api/admin/people/export/employees.csv') {
     const rows = listEmployees().map((e) => ({ ...e, equipment: e.equipment.join('; '), team: e.team || '' }));
-    return sendCsv(req, res, 'employees.csv', toCsv(rows, ['badge', 'name', 'dept', 'equipment', 'reach', 'team', 'jacket', 'bibs', 'boots', 'active']));
+    return sendCsv(req, res, 'employees.csv', toCsv(rows, ['badge', 'name', 'dept', 'shift', 'equipment', 'reach', 'team', 'jacket', 'bibs', 'boots', 'active']));
   }
 
   // --- the file that goes back into the ERP

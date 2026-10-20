@@ -37,6 +37,9 @@ await post('/api/admin/people/assign', { badge: 'K2', teamId: team.id });
 r = await post('/api/admin/people/employees/K2', { name: 'Lee Parker', dept: '', equipment: ['HIGH REACH', 'SCISSOR LIFT'], bibs: 'xl' });
 e = await j(r);
 check('Edit: name, department cleared, equipment, a size', r.status === 200 && e.name === 'Lee Parker' && e.dept === '' && e.equipment.join() === 'HIGH REACH,SCISSOR LIFT' && e.bibs === 'XL' && e.reach.length > 1, JSON.stringify(e));
+r = await post('/api/admin/people/employees/K2', { shift: 'second' });
+e = await j(r);
+check('Edit: the shift, however it is written', r.status === 200 && e.shift === '2', JSON.stringify(e && e.shift));
 r = await post('/api/admin/people/employees/K2', { badge: 'k22' });
 e = await j(r);
 check('…a new clock-in number, and their team place goes with them', r.status === 200 && e.badge === 'K22' && e.team === '7' && e.name === 'Lee Parker' && !(await person('K2')), JSON.stringify(e));
@@ -66,14 +69,16 @@ check('Employees lists everyone, team or not', (await page.locator('#peopleTable
 await page.fill('#fBadge', 'K3');
 await page.fill('#fName', 'Mo Diaz');
 await page.fill('#fDept', 'Freezer');
+await page.selectOption('#fAddShift', '1');
 await page.check('#equipPicker input[value="DOCK TRUCK"]');
 await page.selectOption('#fAddJacket', 'M');
 await page.selectOption('#fAddBoots', '10');
 await page.click('#btnAddPerson');
 await page.waitForSelector('#peopleTable tr[data-badge="K3"]');
 e = await person('K3');
-check('Add employee on the page: every field, sizes included', e && e.name === 'Mo Diaz' && e.dept === 'Freezer' && e.equipment.join() === 'DOCK TRUCK' && e.jacket === 'M' && e.boots === '10', JSON.stringify(e));
-check('…the form clears for the next person', (await page.inputValue('#fBadge')) === '' && (await page.inputValue('#fAddJacket')) === '' && !(await page.isChecked('#equipPicker input[value="DOCK TRUCK"]')));
+check('Add employee on the page: every field, shift and sizes included', e && e.name === 'Mo Diaz' && e.dept === 'Freezer' && e.shift === '1' && e.equipment.join() === 'DOCK TRUCK' && e.jacket === 'M' && e.boots === '10', JSON.stringify(e));
+check('…the form clears for the next person', (await page.inputValue('#fBadge')) === '' && (await page.inputValue('#fAddJacket')) === '' && (await page.inputValue('#fAddShift')) === '' && !(await page.isChecked('#equipPicker input[value="DOCK TRUCK"]')));
+check('…the list has a Shift column, and the row says 1st shift', /1st shift/.test(await page.textContent('#peopleTable tr[data-badge="K3"] td.shift')) && /2nd shift/.test(await page.textContent('#peopleTable tr[data-badge="K22"] td.shift')));
 check('…and says so', /Mo Diaz added/.test(await page.textContent('#personMsg')));
 await page.fill('#fBadge', 'K3'); await page.fill('#fName', 'Not Mo');
 await page.click('#btnAddPerson');
@@ -84,8 +89,9 @@ await page.fill('#fBadge', ''); await page.fill('#fName', '');
 /* edit from the table */
 await page.click('#peopleTable button[data-edit="K3"]');
 const form = page.locator('#peopleTable .empform[data-badge="K3"]');
-check('Edit opens the form under the row, filled in', (await form.count()) === 1 && (await form.locator('input[data-f="name"]').inputValue()) === 'Mo Diaz' && (await form.locator('select[data-gear="jacket"]').inputValue()) === 'M');
+check('Edit opens the form under the row, filled in', (await form.count()) === 1 && (await form.locator('input[data-f="name"]').inputValue()) === 'Mo Diaz' && (await form.locator('select[data-gear="jacket"]').inputValue()) === 'M' && (await form.locator('select[data-f="shift"]').inputValue()) === '1');
 await form.locator('input[data-f="name"]').fill('Mo Diaz-Lopez');
+await form.locator('select[data-f="shift"]').selectOption('2');
 await form.locator('input[data-f="badge"]').fill('K33');
 await form.locator('input[data-gear="dept"]').fill('Shipping');
 await form.locator('.kitpick input[value="DOCK TRUCK"]').uncheck();
@@ -94,8 +100,9 @@ await form.locator('select[data-gear="bibs"]').selectOption('L');
 await form.locator('button.primary').click();
 await page.waitForSelector('#peopleTable tr[data-badge="K33"]');
 e = await person('K33');
-check('…Save keeps all of it, the new clock-in number too', e && e.name === 'Mo Diaz-Lopez' && e.dept === 'Shipping' && e.equipment.join() === 'HIGH REACH' && e.bibs === 'L' && e.jacket === 'M' && !(await person('K3')), JSON.stringify(e));
+check('…Save keeps all of it, the new clock-in number too', e && e.name === 'Mo Diaz-Lopez' && e.dept === 'Shipping' && e.shift === '2' && e.equipment.join() === 'HIGH REACH' && e.bibs === 'L' && e.jacket === 'M' && !(await person('K3')), JSON.stringify(e));
 check('…and the form closes', (await page.locator('#peopleTable .empform').count()) === 0);
+check('…and their card on the Teams tab wears the shift', (await page.locator('.person[data-badge="K33"] .shiftchip').textContent()).trim() === '2nd shift' && (await page.locator('.person[data-badge="K1"] .shiftchip').count()) === 0);
 
 /* find and filter */
 await page.fill('#fPeopleFind', 'parker');
@@ -107,6 +114,11 @@ await page.selectOption('#fPeopleTeam', '');
 await page.selectOption('#fPeopleDept', '-');
 check('…and No department', (await page.locator('#peopleTable tbody tr[data-badge]').count()) === 1 && (await page.locator('#peopleTable tr[data-badge="K22"]').count()) === 1);
 await page.selectOption('#fPeopleDept', '');
+await page.selectOption('#fPeopleShift', '2');
+check('…and the shift: 2nd shift is two of them', (await page.locator('#peopleTable tbody tr[data-badge]').count()) === 2 && (await page.locator('#peopleTable tr[data-badge="K33"]').count()) === 1);
+await page.selectOption('#fPeopleShift', '-');
+check('…No shift is the one left', (await page.locator('#peopleTable tbody tr[data-badge]').count()) === 1 && (await page.locator('#peopleTable tr[data-badge="K1"]').count()) === 1);
+await page.selectOption('#fPeopleShift', '');
 
 /* edit from a card on the Teams tab */
 const card = page.locator('.person[data-badge="K1"]');
@@ -136,6 +148,14 @@ check('A search hit for a person opens Employees on their row', (await page.loca
 const sr = await j(await fetch(`${BASE}/api/admin/search?q=Diaz`, { headers: A }));
 const hit = (sr.groups || []).flatMap((g) => g.rows || []).find((x) => /Mo Diaz-Lopez/.test(x.title));
 check('…which is where the search sends it', hit && hit.goto.sub === 'people' && hit.goto.value === 'K33', JSON.stringify(hit && hit.goto));
+
+/* the shift on the crew-list upload and the export: its own column, no longer read as the department */
+const csvH = { authorization: A.authorization, 'content-type': 'text/csv' };
+r = await fetch(`${BASE}/api/admin/people/employees/import`, { method: 'POST', headers: csvH, body: 'Clock In Number,Name,Department,Shift\nK5,Pat Night,Freezer,2nd\nK6,Dawn Day,Freezer,first\nK33,,,\n' });
+check('Upload: a Shift column lands on the shift, the department stays the department', r.status === 200 && (await person('K5')).shift === '2' && (await person('K5')).dept === 'Freezer' && (await person('K6')).shift === '1', JSON.stringify([await person('K5'), await person('K6')].map((x) => x && [x.dept, x.shift])));
+check('…and a blank Shift cell leaves what was entered', (await person('K33')).shift === '2');
+const exp = await (await fetch(`${BASE}/api/admin/people/export/employees.csv`, { headers: A })).text();
+check('Export current list has the shift column', /^badge,name,dept,shift,/.test(exp) && exp.split('\n').some((l) => /^K5,Pat Night,Freezer,2,/.test(l)), exp.split('\n')[0]);
 check('No page errors', !errors.length, errors.join(' | '));
 
 await browser.close();

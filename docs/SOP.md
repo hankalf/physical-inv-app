@@ -1062,23 +1062,24 @@ Teams & crew (a team with nobody on it is given every level), and the **shift**.
 
 **Employees: add, edit, remove.** *Teams & crew → Employees* is the crew list itself.
 
-- **Add employee** — type the **clock-in number** and **name**; the department, equipment and
-  jacket, bibs and boots sizes are optional. Press **Add employee** (or Enter in the name box) and
+- **Add employee** — type the **clock-in number** and **name**; the department, **shift** (1st or
+  2nd), equipment and jacket, bibs and boots sizes are optional. Press **Add employee** (or Enter in the name box) and
   the form clears for the next person. A clock-in number that is already on the list is refused,
   with the name it belongs to — use **Edit** on that person instead.
 - **The whole list from a file** — the same card uploads a CSV or Excel crew list
   ([Appendix A](#appendix-a--file-column-reference)); **Replace the whole list** clears it first.
   **Export current list** downloads it.
 - **Edit** — every row of the **Employees** table has **Edit**: it opens the person's clock-in
-  number, name, department, equipment and sizes under the row; **Save** keeps all of it. A new
+  number, name, department, shift, equipment and sizes under the row; **Save** keeps all of it. A new
   clock-in number moves their team and their team-sheet seat with them (it asks first); counts
   already scanned keep the number they were scanned under. Their card on the **Teams** tab has the
   same **Edit**.
 - **Remove** — on the row, on their card, or inside the Edit form. It asks first, takes them off
   the crew list and off their team; the counts they scanned stay as they are. A removed clock-in
   number can no longer sign on to a scanner.
-- **Find**, **Department** (or *No department*) and **Team** (or *Not on a team*) narrow the
-  table. A search for a person's name in the search box lands on their row.
+- **Find**, **Department** (or *No department*), **Shift** (1st, 2nd or *No shift*) and **Team**
+  (or *Not on a team*) narrow the table. The list has a **Shift** column, and so do the crew-list
+  export and the gear-sizes workbook. A search for a person's name in the search box lands on their row.
 
 Every add, edit and removal is in the log (Settings → Backups & log) with who made it and what
 changed.
@@ -2232,6 +2233,7 @@ the template (Type / Code) are still read.
 | Clock in number (required) | clock in number, badge, badge id, employee id, emp id, employee number, id |
 | Name | name, employee name, full name, employee |
 | Department | dept, department, area |
+| Shift | shift, shift no, shift number — 1 or 2, however it is written (*1st*, *first*, *day*; *2nd*, *second*, *night*) |
 | Equipment | equipment, certifications, certified, licenses, can operate, machines — a list, e.g. `Scissor lift; High reach` |
 | Jacket | jacket, jacket size, coat, coat size |
 | Bibs | bibs, bib size, overalls, overall size, pants |

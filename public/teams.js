@@ -49,6 +49,7 @@
     const left = document.createElement('div');
     const who = document.createElement('div'); who.className = 'who';
     who.append(Object.assign(document.createElement('span'), { textContent: e.name }), deptChip(e.dept));
+    if (e.shift) who.appendChild(shiftChip(e.shift));     // only when set: "No shift" on every card is noise
     const meta = document.createElement('div'); meta.className = 'meta';
     meta.textContent = `${e.badge} · reaches ${levelsLabel(e.reach)}`;
     left.append(who, meta);
@@ -122,6 +123,20 @@
     sel.value = value || '';
     return sel;
   }
+  /* the shift, 1st or 2nd, as a chip beside the department and a select on the forms */
+  const shiftWord = (v) => (v === '1' ? '1st shift' : v === '2' ? '2nd shift' : '');
+  function shiftChip(shift) {
+    return Object.assign(document.createElement('span'), {
+      className: 'shiftchip' + (shift ? '' : ' none'), textContent: shiftWord(shift) || 'No shift', title: 'Shift',
+    });
+  }
+  function shiftSelect(value) {
+    const sel = document.createElement('select');
+    sel.dataset.f = 'shift';
+    for (const [v, t] of [['', '—'], ['1', '1st shift'], ['2', '2nd shift']]) sel.append(Object.assign(document.createElement('option'), { value: v, textContent: t }));
+    sel.value = value || '';
+    return sel;
+  }
   function deptInput(value) {
     const inp = Object.assign(document.createElement('input'), { value: value || '', placeholder: 'e.g. Freezer', className: 'dept' });
     inp.setAttribute('list', 'deptList');
@@ -144,6 +159,7 @@
     const name = Object.assign(document.createElement('input'), { value: e.name, autocomplete: 'off' });
     name.dataset.f = 'name';
     const dept = deptInput(e.dept);
+    const shift = shiftSelect(e.shift);
     const sels = GEAR_KEYS.map(([k]) => sizeSelect(k, e[k]));
     const kit = document.createElement('div');
     kit.className = 'kitpick';
@@ -155,7 +171,7 @@
       kit.appendChild(l);
     }
     if (!kit.children.length) kit.append(Object.assign(document.createElement('span'), { className: 'muted', textContent: 'No equipment set up — Equipment rules' }));
-    box.append(field('Clock in number', badge), field('Name', name), field('Department', dept),
+    box.append(field('Clock in number', badge), field('Name', name), field('Department', dept), field('Shift', shift),
       field('Jacket', sels[0]), field('Bibs (overalls)', sels[1]), field('Boots', sels[2]));
     box.append(Object.assign(document.createElement('label'), { textContent: 'Equipment', style: 'grid-column:1/-1;margin-bottom:-4px' }), kit);
     const row = document.createElement('div'); row.className = 'full';
@@ -168,10 +184,10 @@
       try {
         const equipment = [...kit.querySelectorAll('input:checked')].map((c) => c.value);
         if (e.equipment.includes('FOOT')) equipment.push('FOOT');      // not a box on the form: kept as it was
-        const body = { badge: badge.value, name: name.value, dept: dept.value, equipment };
+        const body = { badge: badge.value, name: name.value, dept: dept.value, shift: shift.value, equipment };
         GEAR_KEYS.forEach(([k], i) => { body[k] = sels[i].value; });
         const saved = await postJson(`/api/admin/people/employees/${encodeURIComponent(e.badge)}`, body);
-        msg(msgBox, 'ok', `${saved.name} saved`, [saved.badge, saved.dept || 'No department', `reaches ${levelsLabel(saved.reach)}`, ...GEAR_KEYS.map(([k, l]) => `${l} ${saved[k] || '—'}`)].join(' · '));
+        msg(msgBox, 'ok', `${saved.name} saved`, [saved.badge, saved.dept || 'No department', shiftWord(saved.shift) || 'no shift', `reaches ${levelsLabel(saved.reach)}`, ...GEAR_KEYS.map(([k, l]) => `${l} ${saved[k] || '—'}`)].join(' · '));
         editing = '';
         await refresh();
       } catch (err) { msg(msgBox, 'err', `${e.name}: ${err.message}`); }
@@ -218,19 +234,21 @@
       tsel.value = [...tsel.options].some((o) => o.value === was) ? was : '';
     }
     const q = norm($('fPeopleFind').value);
-    const d = dsel.value; const t = tsel.value;
+    const d = dsel.value; const t = tsel.value; const sh = $('fPeopleShift').value;
     const rows = state.employees.filter((e) => (!q || norm(e.name).includes(q) || norm(e.badge).includes(q) || norm(e.dept).includes(q))
       && (!d || (d === '-' ? !e.dept : e.dept.trim() === d))
+      && (!sh || (sh === '-' ? !e.shift : e.shift === sh))
       && (!t || (t === 'none' ? !e.team : e.team === t)));
     const n = state.employees.length;
     $('peopleChip').textContent = rows.length === n ? `${n} ${n === 1 ? 'person' : 'people'}` : `${rows.length} of ${n}`;
-    const COLS = [{ label: 'Clock in number' }, { label: 'Name' }, { label: 'Department' }, { label: 'Team' }, { label: 'Equipment' }, { label: 'Jacket · Bibs · Boots' }, { label: '' }];
+    const COLS = [{ label: 'Clock in number' }, { label: 'Name' }, { label: 'Department' }, { label: 'Shift' }, { label: 'Team' }, { label: 'Equipment' }, { label: 'Jacket · Bibs · Boots' }, { label: '' }];
     window.appUi.table('peopleTable', COLS, rows, (e) => {
       const tr = document.createElement('tr');
       tr.dataset.badge = e.badge;
       const td = (text, cls) => { const c = document.createElement('td'); c.textContent = text; if (cls) c.className = cls; tr.appendChild(c); return c; };
       td(e.badge); td(e.name);
       const dc = document.createElement('td'); dc.appendChild(deptChip(e.dept)); tr.appendChild(dc);
+      td(shiftWord(e.shift) || '—', 'shift');
       td(e.team ? 'Team ' + e.team : '—');
       td(e.equipment.length ? e.equipment.map(kitName).join(', ') : 'on foot', 'kitlist');
       td(GEAR_KEYS.some(([k]) => e[k]) ? GEAR_KEYS.map(([k]) => e[k] || '—').join(' · ') : '—', 'sizes');
@@ -258,6 +276,7 @@
   $('fPeopleFind').oninput = () => renderPeople();
   $('fPeopleFind').onfocus = () => renderPeople();     // a search hit fills it in and focuses it
   $('fPeopleDept').onchange = () => renderPeople();
+  $('fPeopleShift').onchange = () => renderPeople();
   $('fPeopleTeam').onchange = () => renderPeople();
 
   /* The Gear sizes tab: everyone in a table, a size saved the moment it is
@@ -310,7 +329,7 @@
     const rows = gear.people.filter((e) => (!q || norm(e.name).includes(q) || norm(e.badge).includes(q))
       && (!missingOnly || GEAR_KEYS.some(([k]) => !e[k])));
     window.appUi.table('gearTable', [
-      { label: 'Clock in number' }, { label: 'Name' }, { label: 'Department' }, { label: 'Team' },
+      { label: 'Clock in number' }, { label: 'Name' }, { label: 'Department' }, { label: 'Shift' }, { label: 'Team' },
       { label: 'Jacket' }, { label: 'Bibs (overalls)' }, { label: 'Boots' },
     ], rows, (e) => {
       const tr = document.createElement('tr');
@@ -319,6 +338,7 @@
       td(e.badge); td(e.name);
       const dept = deptInput(e.dept);
       td(dept);
+      td(shiftWord(e.shift) || '—');
       td(e.team ? 'Team ' + e.team : '—');
       const sels = GEAR_KEYS.map(([k]) => { const s = sizeSelect(k, e[k]); td(s); return s; });
       const save = async (el, key) => {
@@ -613,12 +633,12 @@
     try {
       const equipment = [...$('equipPicker').querySelectorAll('input:checked')].map((i) => i.value);
       const e = await postJson('/api/admin/people/employees?new=1', {
-        badge: $('fBadge').value, name: $('fName').value, dept: $('fDept').value, equipment,
+        badge: $('fBadge').value, name: $('fName').value, dept: $('fDept').value, shift: $('fAddShift').value, equipment,
         jacket: $('fAddJacket').value, bibs: $('fAddBibs').value, boots: $('fAddBoots').value,
       });
-      msg($('personMsg'), 'ok', `${e.name} added`, `${e.badge}${e.dept ? ' · ' + e.dept : ''} · reaches ${levelsLabel(e.reach)}.`);
+      msg($('personMsg'), 'ok', `${e.name} added`, `${e.badge}${e.dept ? ' · ' + e.dept : ''}${e.shift ? ' · ' + shiftWord(e.shift) : ''} · reaches ${levelsLabel(e.reach)}.`);
       $('fBadge').value = ''; $('fName').value = '';
-      for (const id of ['fAddJacket', 'fAddBibs', 'fAddBoots']) $(id).value = '';
+      for (const id of ['fAddJacket', 'fAddBibs', 'fAddBoots', 'fAddShift']) $(id).value = '';
       for (const c of $('equipPicker').querySelectorAll('input:checked')) c.checked = false;
       await refresh();
       $('fBadge').focus();

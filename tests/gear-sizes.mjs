@@ -57,7 +57,7 @@ check('…boots in number order, and the people with none counted as not entered
 const grand = g.sheets.find((s) => s.name === 'Grand totals');
 check('The export has names and sizes, grand totals and a by-department sheet', g.sheets.map((s) => s.name).join('|') === 'Names and sizes|Grand totals|By department' && /^gear-sizes-\d{4}-\d{2}-\d{2}\.xlsx$/.test(g.filename), g.filename);
 check('…a grand total per item and the head count', grand.rows.some((x) => x.Item === 'Jackets — grand total' && x.Count === 5) && grand.rows.some((x) => x.Item === 'Boots — grand total' && x.Count === 4) && grand.rows.some((x) => x.Item === 'People on the list' && x.Count === 5), JSON.stringify(grand.rows.filter((x) => /total|People/.test(x.Item))));
-check('…names sorted by department, with every column', g.sheets[0].rows[0].Department === 'Dry Dock' && Object.keys(g.sheets[0].rows[0]).join(',') === 'Clock in number,Name,Department,Team,Jacket,Bibs,Boots', JSON.stringify(g.sheets[0].rows[0]));
+check('…names sorted by department, with every column', g.sheets[0].rows[0].Department === 'Dry Dock' && Object.keys(g.sheets[0].rows[0]).join(',') === 'Clock in number,Name,Department,Shift,Team,Jacket,Bibs,Boots', JSON.stringify(g.sheets[0].rows[0]));
 const byDept = g.sheets.find((s) => s.name === 'By department');
 check('…and the by-department sheet counts each department on its own', byDept.rows.some((x) => x.Department === 'Freezer' && x.Item === 'Jackets' && x.Size === 'M' && x.Count === 1) && byDept.rows.some((x) => x.Department === 'Freezer — people' && x.Count === 3));
 g = await get('/api/admin/people/gear?dept=Dry%20Dock');

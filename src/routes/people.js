@@ -140,7 +140,8 @@ export function missingForLevels(levels, equipmentList, cfg = getConfig()) {
  */
 {
   const have = new Set(db.prepare("PRAGMA table_info('employees')").all().map((c) => c.name));
-  for (const c of ['jacket', 'bibs', 'boots']) if (!have.has(c)) db.exec(`ALTER TABLE employees ADD COLUMN ${c} TEXT`);
+  // ...and the shift each person works, 1st or 2nd, beside the department
+  for (const c of ['jacket', 'bibs', 'boots', 'shift']) if (!have.has(c)) db.exec(`ALTER TABLE employees ADD COLUMN ${c} TEXT`);
 }
 const CLOTHES = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL'];
 const BOOTS = [];
@@ -178,7 +179,7 @@ export function cleanSize(key, raw) {
 }
 
 const shape = (r) => ({
-  badge: r.badge, name: r.name, dept: r.dept || '',
+  badge: r.badge, name: r.name, dept: r.dept || '', shift: r.shift || '',
   equipment: JSON.parse(r.equipment || '[]'),
   reach: reachOf(JSON.parse(r.equipment || '[]')),
   active: !!r.active, team: r.team || null,
@@ -227,9 +228,9 @@ export function gearReport({ dept = '' } = {}) {
 
   const sheetPeople = {
     name: 'Names and sizes',
-    columns: ['Clock in number', 'Name', 'Department', 'Team', 'Jacket', 'Bibs', 'Boots'],
+    columns: ['Clock in number', 'Name', 'Department', 'Shift', 'Team', 'Jacket', 'Bibs', 'Boots'],
     rows: [...people].sort((a, b) => (!a.dept.trim() - !b.dept.trim()) || a.dept.localeCompare(b.dept) || a.name.localeCompare(b.name)).map((e) => ({
-      'Clock in number': e.badge, Name: e.name, Department: e.dept, Team: e.team || '',
+      'Clock in number': e.badge, Name: e.name, Department: e.dept, Shift: shiftWord(e.shift), Team: e.team || '',
       Jacket: e.jacket, Bibs: e.bibs, Boots: e.boots,
     })),
   };
@@ -264,7 +265,7 @@ export function listEmployees() {
     .all().map(shape);
 }
 
-export function upsertEmployee({ badge, name, dept, equipment, active = 1, jacket, bibs, boots }, { onlyNew = false } = {}) {
+export function upsertEmployee({ badge, name, dept, shift, equipment, active = 1, jacket, bibs, boots }, { onlyNew = false } = {}) {
   const b = norm(badge);
   if (!b) throw Object.assign(new Error('clock in number required'), { status: 400 });
   /* Add employee is for someone new: a number already on the list is theirs, and Edit is how it changes */
@@ -274,13 +275,14 @@ export function upsertEmployee({ badge, name, dept, equipment, active = 1, jacke
   const known = getEquipment();
   const list = Array.isArray(equipment) ? equipment.map(norm).filter((e) => known[e]) : parseEquipment(equipment);
   db.prepare(
-    `INSERT INTO employees (badge, name, dept, equipment, active, created_at) VALUES (?, ?, ?, ?, ?, ?)
+    `INSERT INTO employees (badge, name, dept, shift, equipment, active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(badge) DO UPDATE SET
        name = COALESCE(NULLIF(excluded.name, ''), employees.name),
        dept = COALESCE(NULLIF(excluded.dept, ''), employees.dept),
+       shift = COALESCE(NULLIF(excluded.shift, ''), employees.shift),
        equipment = excluded.equipment,
        active = excluded.active`
-  ).run(b, String(name || b).trim(), String(dept || '').trim(), JSON.stringify(list), active ? 1 : 0, new Date().toISOString());
+  ).run(b, String(name || b).trim(), String(dept || '').trim(), cleanShift(shift), JSON.stringify(list), active ? 1 : 0, new Date().toISOString());
   const sizes = Object.fromEntries(Object.entries({ jacket, bibs, boots }).filter(([, v]) => v != null && String(v).trim()));
   if (Object.keys(sizes).length) return setGear(b, sizes);
   return getEmployee(b);
@@ -308,6 +310,7 @@ export function updateEmployee(badge, body = {}) {
     sets.push('name = ?'); vals.push(name.slice(0, 80));
   }
   if ('dept' in body) { sets.push('dept = ?'); vals.push(String(body.dept || '').trim().slice(0, 60)); }
+  if ('shift' in body) { sets.push('shift = ?'); vals.push(cleanShift(body.shift)); }
   if ('equipment' in body) {
     const known = getEquipment();
     const list = Array.isArray(body.equipment) ? body.equipment.map(norm).filter((e) => known[e]) : parseEquipment(body.equipment);
@@ -325,8 +328,8 @@ export function updateEmployee(badge, body = {}) {
     if (sets.length) db.prepare(`UPDATE employees SET ${sets.join(', ')} WHERE badge = ?`).run(...vals, b);
     if (next !== b) {
       /* the badge is the key the team list hangs off: a copy under the new number, the team place moved, the old row gone */
-      db.prepare(`INSERT INTO employees (badge, name, dept, equipment, active, created_at, jacket, bibs, boots)
-                  SELECT ?, name, dept, equipment, active, created_at, jacket, bibs, boots FROM employees WHERE badge = ?`).run(next, b);
+      db.prepare(`INSERT INTO employees (badge, name, dept, shift, equipment, active, created_at, jacket, bibs, boots)
+                  SELECT ?, name, dept, shift, equipment, active, created_at, jacket, bibs, boots FROM employees WHERE badge = ?`).run(next, b);
       db.prepare('UPDATE team_members SET badge = ? WHERE badge = ?').run(next, b);
       db.prepare('UPDATE team_seats SET badge = ? WHERE badge = ?').run(next, b);
       db.prepare('DELETE FROM employees WHERE badge = ?').run(b);
@@ -349,7 +352,10 @@ const SIZE_COLUMNS = [
   ['bibs', ['bibs', 'bib', 'bibsize', 'bibssize', 'overalls', 'overall', 'overallsize', 'overallssize', 'bibsoveralls', 'pants']],
   ['boots', ['boots', 'boot', 'bootsize', 'bootssize', 'shoe', 'shoesize']],
 ];
-/** Import a roster CSV: badge, name, department, equipment, and sizes when it has them. */
+/** "1" -> 1st shift, "2" -> 2nd shift, as the sheets and the page say it. */
+export const shiftWord = (s) => (s === '1' ? '1st shift' : s === '2' ? '2nd shift' : '');
+
+/** Import a roster CSV: badge, name, department, shift, equipment, and sizes when it has them. */
 export function importEmployees(text, { replace = false } = {}) {
   const { parseRecords, pick } = importHelpers;
   const { headers, records } = parseRecords(text);
@@ -370,7 +376,8 @@ export function importEmployees(text, { replace = false } = {}) {
       upsertEmployee({
         badge,
         name: pick(rec, ['name', 'employeename', 'fullname', 'employee']),
-        dept: pick(rec, ['dept', 'department', 'area', 'shift', 'team']),
+        dept: pick(rec, ['dept', 'department', 'area', 'team']),
+        shift: pick(rec, ['shift', 'shiftno', 'shiftnumber', 'shiftnum', 'crewshift']),
         equipment: parseEquipment(rawEquip, known),
       });
       /* sizes only when the sheet has them: a list without size columns leaves what was entered */

@@ -39,7 +39,8 @@ person's department and jacket, bibs and boot sizes, with the totals to order fr
 
 1. **Clock in number** — the number on their badge. Required.
 2. **Name** — required.
-3. **Department** — optional (*Warehouse*, *Production*, *Freezer*…).
+3. **Department** — optional (*Warehouse*, *Production*, *Freezer*…); **Shift** — 1st or 2nd,
+   optional. It shows as a chip on the person's card and a column in the list.
 4. **Equipment** — tick what they are certified on. None ticked is on foot.
 5. **Jacket**, **Bibs**, **Boots** — optional; they can be added later.
 6. **Add employee** (or Enter in the Name box). The form clears for the next person.
@@ -55,10 +56,10 @@ A clock-in number that is already on the list is refused, with the name it belon
 
 *The Employees table, with one row open for editing.*
 
-- **Find** — a name, clock-in number or department. **Department** and **Team** narrow it
-  (*No department*, *Not on a team*). The chip in the heading counts who is shown.
-- **Edit** on a row opens the person under it: **clock-in number, name, department, sizes and
-  equipment**. Change what you need and press **Save** (or Enter); **Cancel** closes it.
+- **Find** — a name, clock-in number or department. **Department**, **Shift** and **Team** narrow
+  it (*No department*, *No shift*, *Not on a team*). The chip in the heading counts who is shown.
+- **Edit** on a row opens the person under it: **clock-in number, name, department, shift, sizes
+  and equipment**. Change what you need and press **Save** (or Enter); **Cancel** closes it.
   - A **new clock-in number** asks first. Their team and their team-sheet seat go with them;
     counts already scanned keep the number they were scanned under.
 - **Remove** — on the row, or inside the Edit form. It asks first, takes them off the crew list and
@@ -84,6 +85,7 @@ The columns are matched by name, in any order:
 | **Clock In Number** (required) | Badge, Employee ID, Emp ID, Employee number |
 | Name | Employee name, Full name |
 | Department | Dept, Area |
+| Shift | Shift no — 1 or 2, however it is written (*1st*, *first*, *day*; *2nd*, *second*, *night*) |
 | Equipment | Certifications, Certified, Can operate — a list, *Scissor lift; High reach* |
 | Jacket | Jacket size, Coat |
 | Bibs | Overalls, Bib size, Pants |
