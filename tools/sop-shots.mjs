@@ -359,6 +359,7 @@ try {
   await saveCard(desk, '#featuresList', 'settings-features', 10);
   await saveCard(desk, '#lookPick', 'settings-appearance');
   await saveCard(desk, '#fSiteName', 'settings-site-name');
+  await saveCard(desk, '#fCbShift', 'settings-crew-board');      // what the wall screen shows, and its scrolling
   await saveCard(desk, '#fLogo', 'settings-logo');
 
   /* the invite as Rosa sees it, on her phone */
@@ -459,6 +460,7 @@ try {
   await sub('people'); await wait(800);
   await desk.click('#peopleTable button[data-edit="E1157"]').catch(() => {}); await wait(400);
   await saveCard(desk, '#peopleTable', 'teams-employees', 12);
+  await saveCard(desk, '#fWbFile', 'teams-workbook');          // employees and teams in one file, checked first
   await desk.click('#peopleTable button[data-edit="E1157"]').catch(() => {}); await wait(300);
   await sub('gear'); await wait(800);
   await saveCard(desk, '#gearTable', 'teams-gear-sizes', 8);
