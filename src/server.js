@@ -411,7 +411,7 @@ async function handleHandheld(req, res, url, m) {
     if (device.practice_owner) throw httpError(403, 'a test scanner stays in the Testing Suite');
     if (isOwnAddress(to.url, req)) throw httpError(409, `${to.name}'s address here is this system's own address - an admin sets SYSTEM_HOME_URL on this service in Railway to ${to.name}'s address`);
     if (selfSystem().role === 'linked') return sendJson(req, res, 200, { url: `${to.url}/`, to: to.name });
-    if (!to.scanners) throw httpError(403, `the scanners may not switch to ${to.name} - an admin can allow it under Settings → Logins & site → Systems`);
+    if (!to.scanners) throw httpError(403, `the scanners may not switch to ${to.name} - an admin can allow it under Settings → Site & systems → Systems`);
     const t = makeHandoff(to.name, { device });
     audit(device.name, `scanner switched to ${to.name}`, to.url);
     return sendJson(req, res, 200, { url: t.url, to: to.name });
@@ -726,7 +726,7 @@ async function handleAdmin(req, res, url, m) {
   const whoNow = currentUser(req, url);
   const requireAccess = (key) => {
     if (allowed(whoNow, key)) return;
-    throw httpError(403, key === 'admin' ? 'only an admin can change the site\'s settings' : `this login is not able to do that (${key}) - an admin can give it under Settings → Logins & site → Supervisor logins`);
+    throw httpError(403, key === 'admin' ? 'only an admin can change the site\'s settings' : `this login is not able to do that (${key}) - an admin can give it under Settings → Logins → Supervisor logins`);
   };
   for (const need of routeNeeds(p, method)) requireAccess(need);
 
@@ -802,7 +802,7 @@ async function handleAdmin(req, res, url, m) {
     const withPractice = url.searchParams.get('practice') === '1';
     // and a login sees only the kinds of count it may work: cycle counts need the
     // Cycle counts page, full counts any of the pages that work a full count
-    // ...and only the kinds the site has switched on (Settings → Logins & site → What is switched on)
+    // ...and only the kinds the site has switched on (Settings → Site & systems → What is switched on)
     const mayCycle = allowed(who, 'cycle') && features().cycle;
     const mayFull = ['dashboard', 'full', 'teams', 'front', 'missing'].some((k) => allowed(who, k));
     const landing = defaultSessionId();          // the count the scanners land on: the page opens on it too
@@ -1110,13 +1110,13 @@ async function handleAdmin(req, res, url, m) {
     const body = await readJson(req);
     const to = otherSystems().find((s) => s.name === String(body.to || '').toUpperCase());
     if (!to) throw httpError(404, `there is no system called ${body.to}`);
-    if (!systemsFor(whoNow).some((s) => s.name === to.name)) throw httpError(403, `this login may not use ${to.name} - an admin can give it under Settings → Logins & site → Systems`);
+    if (!systemsFor(whoNow).some((s) => s.name === to.name)) throw httpError(403, `this login may not use ${to.name} - an admin can give it under Settings → Site & systems → Systems`);
     // the way home is just the home's own address: the browser still has its sign-in there
     if (selfSystem().role === 'linked') {
       if (isOwnAddress(to.url, req)) throw httpError(409, `${to.name}'s address on this system is this system's own address (${to.url}), so there is nowhere to go back to. On this service in Railway, set SYSTEM_HOME_URL to ${to.name}'s address and redeploy.`);
       return sendJson(req, res, 200, { url: to.url + (/^\/[a-z]*(#[\w-]*)?$/.test(String(body.path || '')) ? body.path : '/admin'), to: to.name });
     }
-    if (isOwnAddress(to.url, req)) throw httpError(409, `${to.name} is listed with this system's own address (${to.url}) - put ${to.name}'s address in Settings → Logins & site → Systems.`);
+    if (isOwnAddress(to.url, req)) throw httpError(409, `${to.name} is listed with this system's own address (${to.url}) - put ${to.name}'s address in Settings → Site & systems → Systems.`);
     const t = makeHandoff(to.name, { user: whoNow, path: body.path });
     audit(actor, `switched to ${to.name}`, to.url);
     return sendJson(req, res, 200, { url: t.url, to: to.name });
@@ -1788,7 +1788,7 @@ async function handleAdmin(req, res, url, m) {
   }
 
   /* --- SOS: the list the gun offers, the alerts themselves, and the channel */
-  // --- the logo (Settings → Logins & site)
+  // --- the logo (Settings → Site & systems)
   if (p === '/api/admin/logo' && method === 'GET') return sendJson(req, res, 200, branding());
   if (p === '/api/admin/logo' && method === 'POST') {
     const body = await readJson(req);

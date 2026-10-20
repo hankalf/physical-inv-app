@@ -74,7 +74,7 @@ check('DEV knows it is DEV, linked to LIVE', pub.self.name === 'DEV' && pub.self
 
 /* ---- a login goes over */
 r = await post(BASE, '/api/admin/systems/handoff', { to: 'DEV', path: '/admin#progress' }, FLR);
-check('A login not given DEV cannot switch to it, and is told who can give it', r.status === 403 && /Settings → Logins & site → Systems/.test((await j(r)).error));
+check('A login not given DEV cannot switch to it, and is told who can give it', r.status === 403 && /Settings → Site & systems → Systems/.test((await j(r)).error));
 r = await post(BASE, '/api/admin/systems/handoff', { to: 'DEV', path: '/admin#progress' }, INV);
 const ho = await j(r);
 check('Inventory Control gets a hand-off to DEV\'s own address', r.status === 200 && ho.url.startsWith(`${DEV}/handoff?t=`), ho.url && ho.url.slice(0, 60));

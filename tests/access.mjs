@@ -105,7 +105,7 @@ check('Nor the Testing Suite, which is not on her list', !/\/testing/.test(page.
 /* the admin sees the Access column and can tick things */
 const adm = await browser.newPage({ viewport: { width: 1500, height: 950 } });
 adm.on('pageerror', (e) => errors.push('admin: ' + e.message));
-await adm.goto(BASE + '/settings#advanced');
+await adm.goto(BASE + '/settings#logins');
 await adm.fill('#fUser', 'DANA'); await adm.fill('#fPassword', 'freezer-2026'); await adm.click('#btnLogin');
 await adm.waitForSelector('#scrMain.active'); await adm.waitForTimeout(1800);
 const sueRow = adm.locator('#userTable tr', { hasText: 'SUE' });
@@ -120,7 +120,7 @@ await sueRow.locator('select.rolepick').selectOption('inventory'); await adm.wai
 check('…and picking Inventory control sets the list to the count, adjustments and downloads', (await j(await fetch(`${BASE}/api/admin/users`, { headers: A }))).users.find((u) => u.username === 'SUE').access.join() === 'dashboard,full,testing,approve,export');
 await fetch(`${BASE}/api/admin/users/SUE`, { method: 'POST', headers: A, body: JSON.stringify({ access: ['testing', 'dashboard'] }) });
 check('Ticking a box saves it', (await j(await fetch(`${BASE}/api/admin/users`, { headers: A }))).users.find((u) => u.username === 'SUE').access.includes('testing'));
-check('…and the page itself has the Logins & site tab, being an admin', (await adm.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.trim()))).some((t) => /Logins & site/.test(t)));
+check('…and the page itself has the Logins tab, being an admin', (await adm.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.trim()))).some((t) => t === 'Logins'));
 
 /* the Testing Suite follows the list too: Sue now has testing and the dashboard, but no exports and no approvals */
 await page.goto(BASE + '/testing'); await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(2500);

@@ -74,8 +74,9 @@ check('api.unfold opens whatever holds an element', !(await folded(page, 'bookCa
 
 /* the other pages */
 page = await open('/settings#advanced');
-check('Logins & site: site name, logo, look, what is switched on and Systems fold', (await folded(page, 'siteNameCard')) && (await folded(page, 'logoCard')) && (await folded(page, 'lookCard')) && (await folded(page, 'featuresCard')) && (await folded(page, 'systemsCard')));
-check('…logins stay open', await shown(page, '#loginsCard h2') && !(await page.$eval('#loginsCard', (el) => el.classList.contains('folded'))));
+check('Site & systems: site name, logo, look, what is switched on and Systems fold', (await folded(page, 'siteNameCard')) && (await folded(page, 'logoCard')) && (await folded(page, 'lookCard')) && (await folded(page, 'featuresCard')) && (await folded(page, 'systemsCard')));
+page = await open('/settings#logins');
+check('Logins: its own tab, open, not folded', await shown(page, '#loginsCard h2') && await shown(page, '#fNewUser') && !(await page.$eval('#loginsCard', (el) => el.classList.contains('folded'))));
 page = await open('/admin#reports');
 check('Reports: Filed as the count goes, Find a lot and Count sheets fold', (await folded(page, 'archiveCard')) && (await folded(page, 'lotCard')) && (await folded(page, 'sheetsCard')));
 page = await open('/teams');

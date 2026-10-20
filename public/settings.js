@@ -779,7 +779,7 @@
     }
     $('jobsOffNote').hidden = !off.length;
     $('jobsOffNote').innerHTML = off.length
-      ? `${off.map((k) => `<b>${JOB_NAME[k]}</b>`).join(', ')} ${off.length === 1 ? 'is' : 'are'} switched off for the whole site (Logins &amp; site → What is switched on), so the scanners do not offer ${off.length === 1 ? 'it' : 'them'} whatever is ticked here. The ticks are kept for when ${off.length === 1 ? 'it comes' : 'they come'} back.`
+      ? `${off.map((k) => `<b>${JOB_NAME[k]}</b>`).join(', ')} ${off.length === 1 ? 'is' : 'are'} switched off for the whole site (Site &amp; systems → What is switched on), so the scanners do not offer ${off.length === 1 ? 'it' : 'them'} whatever is ticked here. The ticks are kept for when ${off.length === 1 ? 'it comes' : 'they come'} back.`
       : '';
   }
 

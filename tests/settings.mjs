@@ -139,7 +139,7 @@ check('Shell: the sidebar links every page, Learn last (the guide, then Practice
   (await page.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).join(',') === '/admin,/full,/cycle,/front,/missing,/teams,/settings,/testing,/guide,/practice'
     && (await page.$eval('#navTabs .tab.current', (a) => a.getAttribute('href'))) === '/settings');
 check('Shell: Settings is split into sub-tabs',
-  (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.replace(/\d+$/, '').trim()))).join(' | ') === 'Count setup | Lists & racking | Scanners | Integrations | Backups & log | Logins & site',
+  (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.replace(/\d+$/, '').trim()))).join(' | ') === 'Count setup | Lists & racking | Scanners | Integrations | Backups & log | Logins | Site & systems',
   (await page.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.trim()))).join(' | '));
 check('Shell: exactly one pane is on screen at a time',
   (await page.$$eval('[data-sub]', (p) => p.filter((x) => x.classList.contains('active')).length)) === 1);
@@ -170,7 +170,7 @@ check('Shell: the open sub-tab survives a reload',
     await page.reload(); await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(1200);
     return (await page.evaluate(() => location.hash)) === before && await page.$eval('[data-sub="lists"]', (el) => el.classList.contains('active'));
   })(), await page.evaluate(() => location.hash));
-await page.click('#subTabs button:text-is("Logins & site")'); await page.waitForTimeout(600);
+await page.click('#subTabs button:text-is("Logins")'); await page.waitForTimeout(600);
 
 const headings = await page.$$eval('#scrMain .card > h2', (h) => h.map((x) => x.firstChild.textContent.trim()));
 check('Settings: every setup card is on this page, each list its own',
@@ -308,9 +308,11 @@ await sup.close();
   await adv.waitForTimeout(900);
   if (await adv.$('#scrLogin.active')) { await adv.fill('#fUser', 'DANA'); await adv.fill('#fPassword', 'freezer-2026'); await adv.click('#btnLogin'); }
   await adv.waitForSelector('#scrMain.active'); await adv.waitForTimeout(1200);
-  check('Logins & site: holds the logins, the site name, the logo and the look in one pane',
-    await adv.$eval('[data-sub="advanced"]', (el) => el.classList.contains('active') && !!el.querySelector('#fNewUser') && !!el.querySelector('#fSiteName')
-      && !!el.querySelector('#lookPick .themepick select') && !!el.querySelector('#fLogo')));
+  check('Site & systems: holds the site name, the logo and the look in one pane',
+    await adv.$eval('[data-sub="advanced"]', (el) => el.classList.contains('active') && !!el.querySelector('#fSiteName')
+      && !!el.querySelector('#lookPick .themepick select') && !!el.querySelector('#fLogo') && !el.querySelector('#fNewUser')));
+  check('Logins: the supervisor logins and your own password have a tab of their own',
+    await adv.$eval('[data-sub="logins"]', (el) => !!el.querySelector('#loginsCard #fNewUser') && !!el.querySelector('#userTable') && !!el.querySelector('#btnChangePass')));
   check('Advanced: the theme picker has left the sidebar', (await adv.$$('.side .themepick')).length === 0);
   check('Advanced: the SOS card no longer carries the Teams address', (await adv.$$('[data-sub="gun"] #fTeamsUrl')).length === 0 && !!(await adv.$('[data-sub="gun"] #fIdleTeams')));
   await adv.selectOption('#lookPick .themepick select', 'daylight');

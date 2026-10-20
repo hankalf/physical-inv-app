@@ -25,7 +25,7 @@
     '/full': [['counts', 'Counts'], ['new', 'New count'], ['setup', 'Set-up']],
     '/cycle': [['today', 'Today'], ['open', 'Still open'], ['coverage', 'Coverage'], ['setup', 'Program & data']],
     '/teams': [['crew', 'Teams'], ['people', 'Employees'], ['gear', 'Gear sizes'], ['rules', 'Equipment rules']],
-    '/settings': [['start', 'Count setup'], ['lists', 'Lists & racking'], ['gun', 'Scanners'], ['erp', 'Integrations'], ['backups', 'Backups & log'], ['advanced', 'Logins & site']],
+    '/settings': [['start', 'Count setup'], ['lists', 'Lists & racking'], ['gun', 'Scanners'], ['erp', 'Integrations'], ['backups', 'Backups & log'], ['logins', 'Logins'], ['advanced', 'Site & systems']],
     '/front': [['moves', 'Pallets to move back'], ['desk', 'Move desk'], ['bins', 'Front-placed bins']],
     '/missing': [],
     '/testing': [],
@@ -78,7 +78,7 @@
   }
   applyLook();
   function mountThemePicker() {
-    const foot = document.getElementById('lookPick');     // Settings → Logins & site
+    const foot = document.getElementById('lookPick');     // Settings → Site & systems
     if (!foot || foot.querySelector('.themepick')) return;
     const box = document.createElement('div');
     box.className = 'themepick';
@@ -286,7 +286,7 @@
      shows; once /me has answered, the ones not on the list go. */
   /* The guide has no key: every login may read it. */
   const PAGE_KEY = { '/admin': 'dashboard', '/full': 'full', '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/teams': 'teams', '/settings': 'admin', '/testing': 'testing', '/guide': '', '/practice': 'admin' };
-  /* What the site has switched on (Settings → Logins & site → What is switched
+  /* What the site has switched on (Settings → Site & systems → What is switched
      on). A part that is off is gone for every login, admins included, until
      it is switched back; before sign-in nothing is known, so everything shows. */
   const PAGE_FEATURE = { '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/testing': 'testing' };
@@ -515,7 +515,7 @@
     try {
       const out = await api.post('/api/admin/systems/handoff', { to: name, path: here + (location.hash || '') });
       // somewhere that is this page already would do nothing at all, with no word why
-      if (new URL(out.url, location.href).host === location.host) throw new Error(`${name}'s address is set to this system's own address. An admin fixes it under Settings → Logins & site → Systems, or in the SYSTEM_HOME_URL variable on Railway.`);
+      if (new URL(out.url, location.href).host === location.host) throw new Error(`${name}'s address is set to this system's own address. An admin fixes it under Settings → Site & systems → Systems, or in the SYSTEM_HOME_URL variable on Railway.`);
       location.href = out.url;
     } catch (err) { alert(err.message); renderSystem(); }
   }
@@ -607,7 +607,7 @@
         box = document.createElement('section');
         box.id = 'noAccess';
         box.className = 'screen active';
-        box.innerHTML = '<div class="card"><h2>Nothing here for this login</h2><div class="hint">This login has not been given any page to use. An admin can give it some under Settings → Logins & site → Supervisor logins.</div></div>';
+        box.innerHTML = '<div class="card"><h2>Nothing here for this login</h2><div class="hint">This login has not been given any page to use. An admin can give it some under Settings → Logins → Supervisor logins.</div></div>';
         main.appendChild(box);
       }
       box.classList.add('active');
@@ -628,7 +628,7 @@
       box.className = 'screen active';
       const label = (TABS.find(([h]) => h === here) || [])[1] || 'This page';
       const admin = api.me && api.me.role === 'admin';
-      box.innerHTML = `<div class="card"><h2>${label} is switched off</h2><div class="hint">An admin switched this part of the app off for the site, so it is not in the sidebar for anyone just now. ${admin ? 'Switch it back on under <a href="/settings#advanced">Settings → Logins & site → What is switched on</a>.' : 'Ask an admin if you need it: Settings → Logins & site → What is switched on.'}</div><div class="inline" style="margin-top:10px"><a class="btn" href="/admin">To the dashboard</a></div></div>`;
+      box.innerHTML = `<div class="card"><h2>${label} is switched off</h2><div class="hint">An admin switched this part of the app off for the site, so it is not in the sidebar for anyone just now. ${admin ? 'Switch it back on under <a href="/settings#advanced">Settings → Site & systems → What is switched on</a>.' : 'Ask an admin if you need it: Settings → Site & systems → What is switched on.'}</div><div class="inline" style="margin-top:10px"><a class="btn" href="/admin">To the dashboard</a></div></div>`;
       main.appendChild(box);
     }
     box.classList.add('active');
@@ -1082,7 +1082,7 @@
     ['Count setup checklist', '/settings', 'start', 'getting started count setup checklist setup first time what next'],
     ['Ready for count day check', '/settings', 'start', 'ready count day check readiness before count settings checklist go live'],
     ['Scanner screen layout', '/settings', 'gun', 'scanner screen questions order keyboard text size upright portrait update comments countdown gun handheld', 'layoutCard'],
-    ['Supervisor logins', '/settings', 'advanced', 'login user password account supervisor admin access advanced'],
+    ['Supervisor logins', '/settings', 'logins', 'login logins user users password account supervisor admin access invite unlock locked role may use systems', 'loginsCard'],
     ['Microsoft Teams channel', '/settings', 'erp', 'teams channel webhook alerts sos notify card integrations', 'teamsCard'],
     ['Appearance: theme, accent, text size, density', '/settings', 'advanced', 'theme dark light color color accent look appearance text size density compact corners sidebar contrast advanced', 'lookCard'],
     ['Pallet system address (move desk)', '/settings', 'erp', 'pallet system url address frame move desk erp wms link integrations', 'palletSystemCard'],
@@ -1330,7 +1330,7 @@
   }
 
   /* ------------------------------------------------- the name and the logo
-     Set under Settings → Logins & site. They are drawn from this browser's copy at
+     Set under Settings → Site & systems. They are drawn from this browser's copy at
      once and checked against the server, so the sidebar never flashes. The
      name and the place reach the sidebar, the splash and the window title. */
   const DEFAULT_BRAND = { name: 'Full Harvest Inventory', place: 'Front Royal' };

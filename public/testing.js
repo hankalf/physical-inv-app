@@ -419,8 +419,8 @@
     const byLogin = off.filter((x) => !m[x.key].switchedOff).map((x) => x.title);
     const bySite = off.filter((x) => m[x.key].switchedOff).map((x) => x.title);
     const note = [];
-    if (byLogin.length) note.push(`<b>Not on your login:</b> ${byLogin.join(', ')} — a login practices only what it may do for real; an admin can add it under Settings → Logins & site.`);
-    if (bySite.length) note.push(`<b>Switched off for the site:</b> ${bySite.join(', ')} (Settings → Logins & site → What is switched on).`);
+    if (byLogin.length) note.push(`<b>Not on your login:</b> ${byLogin.join(', ')} — a login practices only what it may do for real; an admin can add it under Settings → Logins.`);
+    if (bySite.length) note.push(`<b>Switched off for the site:</b> ${bySite.join(', ')} (Settings → Site & systems → What is switched on).`);
     $('modeNote').hidden = !note.length;
     $('modeNote').innerHTML = note.join('<br>');
     $('modeList').replaceChildren(...offered.map((x) => {
@@ -997,7 +997,7 @@
       if (g.screen !== 'scrSignon' && g.signedJob && g.signedJob !== 'cycle') return signOffFirst('cycle', g);
       if (g.screen === 'scrSignon') {
         if (!g.offers.cycle) {
-          if (restartsFor === 'cycle' && restartCount >= 2) return { key: 'cyc:nojob', target: $('sandboxCard'), step: 'Cycle count', text: 'The gun is not offering the cycle count. Under <b>Scanner settings in this sandbox</b>, tick <b>Cycle count</b> and save — or the site has cycle counts switched off (Settings → Logins & site).' };
+          if (restartsFor === 'cycle' && restartCount >= 2) return { key: 'cyc:nojob', target: $('sandboxCard'), step: 'Cycle count', text: 'The gun is not offering the cycle count. Under <b>Scanner settings in this sandbox</b>, tick <b>Cycle count</b> and save — or the site has cycle counts switched off (Settings → Site & systems).' };
           restartGun(); return { key: 'cyc:restart', target: GUN(), step: 'Cycle count', pos: 'left', text: 'Restarting the gun so it sees the cycle count…' };
         }
         if (g.job !== 'cycle') return { key: 'cyc:pick', target: GUN(), step: 'Cycle count', pos: 'left', text: 'On the gun, tap <b>Cycle count</b> at the top of the sign-on screen.' };
@@ -1070,7 +1070,7 @@
       if (g.screen !== 'scrSignon' && g.signedJob && g.signedJob !== 'move') return signOffFirst('move', g);
       if (g.screen === 'scrSignon') {
         if (!g.offers.move) {
-          if (restartsFor === 'moves' && restartCount >= 2) return { key: 'mv:nojob', target: $('sandboxCard'), step: 'Front2Back', text: 'The gun is not offering Front2Back. Under <b>Scanner settings in this sandbox</b>, tick <b>Front2Back</b> and save — or the site has front bins switched off (Settings → Logins & site).' };
+          if (restartsFor === 'moves' && restartCount >= 2) return { key: 'mv:nojob', target: $('sandboxCard'), step: 'Front2Back', text: 'The gun is not offering Front2Back. Under <b>Scanner settings in this sandbox</b>, tick <b>Front2Back</b> and save — or the site has front bins switched off (Settings → Site & systems).' };
           restartGun(); return { key: 'mv:restart', target: GUN(), step: 'Front2Back', pos: 'left', text: 'Restarting the gun so it sees the pallets to move…' };
         }
         if (g.job !== 'move') return { key: 'mv:pick', target: GUN(), step: 'Front2Back', pos: 'left', text: 'On the gun, tap <b>Front2Back</b> at the top of the sign-on screen.' };

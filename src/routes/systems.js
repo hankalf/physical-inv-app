@@ -217,7 +217,7 @@ export function checkTicket(t) {
   const me = selfSystem();
   if (me.role !== 'linked') throw Object.assign(new Error('this is the home system - it does not take hand-offs'), { status: 409 });
   const key = linkKey();
-  if (!key) throw Object.assign(new Error('this system has no link key yet - an admin pastes the home system\'s key under Settings → Logins & site → Systems'), { status: 409 });
+  if (!key) throw Object.assign(new Error('this system has no link key yet - an admin pastes the home system\'s key under Settings → Site & systems → Systems'), { status: 409 });
   const [payload, sig] = String(t || '').split('.');
   if (!payload || !sig) throw Object.assign(new Error('that hand-off link is not whole'), { status: 400 });
   const want = Buffer.from(sign(payload, key));
@@ -259,7 +259,7 @@ export async function checkLink(name, homeOrigin = '') {
   say(true, `${to.url} answers, and runs a version with systems`);
   const them = pub.json.self;
   const ok1 = say(them.role === 'linked', them.role === 'linked' ? `${to.url} knows it is linked to a home system` : `${to.url} thinks it is a home system itself`,
-    them.role === 'linked' ? '' : `On ${to.name}'s Railway service, set SYSTEM_HOME_URL to ${homeOrigin || "this system's address"} (or put it in ${to.name}'s Settings → Logins & site → Systems), then redeploy.`);
+    them.role === 'linked' ? '' : `On ${to.name}'s Railway service, set SYSTEM_HOME_URL to ${homeOrigin || "this system's address"} (or put it in ${to.name}'s Settings → Site & systems → Systems), then redeploy.`);
   if (ok1 && pub.json.home && homeOrigin) {
     const same = cleanUrl(pub.json.home.url) === cleanUrl(homeOrigin);
     say(same, same ? `…and that home is this system (${homeOrigin})` : `…but its home is set to ${pub.json.home.url}, not ${homeOrigin}`, same ? '' : `Set SYSTEM_HOME_URL on ${to.name} to ${homeOrigin}.`);

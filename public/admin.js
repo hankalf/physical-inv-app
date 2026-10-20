@@ -1994,7 +1994,7 @@
       if (!b) return;
       const ok = api.can(key);
       b.disabled = !ok;
-      b.title = ok ? '' : `Not able to: this login may not ${what}. An admin can allow it under Settings → Logins & site → Supervisor logins.`;
+      b.title = ok ? '' : `Not able to: this login may not ${what}. An admin can allow it under Settings → Logins → Supervisor logins.`;
     };
     off('btnSendMsg', 'messages', 'message the floor');
     off('btnAssign', 'assign', 'queue aisles');

@@ -324,7 +324,7 @@ try {
   await sub('backups');
   await saveCard(desk, '#backupTable', 'settings-backups', 6);
   await saveCard(desk, '#fOdClient', 'settings-onedrive');
-  await sub('advanced');
+  await sub('logins');
   /* an invite: a login added with an email gets a link, not a password */
   await desk.fill('#fNewUser', 'ROSA-D'); await desk.fill('#fNewFullName', 'Rosa Delgado');
   await desk.fill('#fNewEmail', 'rosa.delgado@example.com');
@@ -333,7 +333,6 @@ try {
   await saveCard(desk, '#inviteBox', 'settings-invite');
   const inviteLinkUrl = await desk.$eval('#inviteLink', (i) => i.value).catch(() => '');
   await saveCard(desk, '#userTable', 'settings-logins');
-  await saveCard(desk, '#featuresList', 'settings-features', 10);
   /* the access list, open on one login: what a supervisor may use, down to the tab */
   {
     const row = desk.locator('#userTable tr', { hasText: 'MARCUS-OBI' }).first();
@@ -351,6 +350,8 @@ try {
       await desk.mouse.click(4, 4); await wait(400);
     }
   }
+  await sub('advanced');
+  await saveCard(desk, '#featuresList', 'settings-features', 10);
   await saveCard(desk, '#lookPick', 'settings-appearance');
   await saveCard(desk, '#fSiteName', 'settings-site-name');
   await saveCard(desk, '#fLogo', 'settings-logo');

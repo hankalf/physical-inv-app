@@ -158,7 +158,7 @@ taken as the superadmin's). There is no shared password.
 long is left. Twenty wrong from one place, whatever the logins, lock the place. A lock
 never shuts the office out because of somebody guessing from outside: the same login from
 another address still works. An admin sees a lock on the person's row under **Settings →
-Logins & site → Supervisor logins** (a red *locked* tag) and presses **Unlock**; resetting
+Logins → Supervisor logins** (a red *locked* tag) and presses **Unlock**; resetting
 the password lifts it too. Every lock is in the log.
 
 **On a phone.** The office side works on a phone and installs like an app: open the site's
@@ -177,7 +177,7 @@ the page's name and a **Menu** button that opens the pages, the search box and *
 
 ### Step 4 — Create a login for each supervisor
 
-**Settings → Logins & site → Supervisor logins.**
+**Settings → Logins → Supervisor logins.**
 
 1. Type the person's **name**, a **username** and choose their **role**:
    - **Admin** — everything, Settings and logins included.
@@ -235,7 +235,7 @@ own password from **Change my password** at the foot of the sidebar.
 
 ![](images/settings-logins.png)
 
-*Settings &rarr; Logins &amp; site. Each person has their own login, a role and their own password; the starter password is shown once.*
+*Settings &rarr; Site &amp; systems. Each person has their own login, a role and their own password; the starter password is shown once.*
 
 ![](images/settings-access.png)
 
@@ -257,7 +257,7 @@ is the reference behind them.
 
 ### Step 4a — Switch off what nobody needs yet
 
-**Settings → Logins & site → What is switched on.** Admins only.
+**Settings → Site & systems → What is switched on.** Admins only.
 
 A team with a few days to learn the count does not need cycle counts, front bins or the map in
 front of it. An admin can switch the parts of the app the site is not using off — for everyone,
@@ -305,7 +305,7 @@ to it: it takes the people and the scanners LIVE hands over, and nothing else.
    should run.
 2. Give that service three variables: `SYSTEM_NAME` = **TEST**, `SYSTEM_HOME_URL` = LIVE's address
    (for example `https://full-harvest.up.railway.app`), and `SYSTEM_LINK_KEY` = LIVE's link key
-   (on LIVE: **Settings → Logins & site → Systems → The link key → Copy**). Or sign in on TEST with its
+   (on LIVE: **Settings → Site & systems → Systems → The link key → Copy**). Or sign in on TEST with its
    own superadmin and paste the same two into its Systems card.
 3. On LIVE, **Systems → Add a system**: name **TEST**, TEST's Railway address, a color, and tick
    **Scanners may switch** if the guns should be able to go there. **Save**.
@@ -321,7 +321,7 @@ Signing in on TEST directly is only for its own superadmin (its Railway variable
 up.
 
 **Logins someone already made on TEST.** If people were set up on TEST before it was linked, bring
-them over instead of making them again: on LIVE, **Settings → Logins & site → Supervisor logins →
+them over instead of making them again: on LIVE, **Settings → Logins → Supervisor logins →
 Copy logins from TEST**. LIVE asks TEST (signed with the link key, as a switch is) and lists TEST's
 own logins with what would happen to each:
 
@@ -1474,7 +1474,7 @@ owner can make a plain frame work by setting its cookies to `SameSite=None; Secu
 seconds, fetching only the tab on screen (plus the progress figures and the alerts, which are
 light), so three dashboards left open on a big count do not keep rebuilding the pallet report.
 
-> **How it looks** is up to you: **Settings → Logins & site → Appearance** offers four themes —
+> **How it looks** is up to you: **Settings → Site & systems → Appearance** offers four themes —
 > *Midnight* (dark blue), *Graphite* (dark gray), *Daylight* and *Frost* (light) — nine accent
 > colors, the text size, how tightly the tables sit, the corners, the sidebar's width and the
 > strength of the lines. It is kept per computer, so the office TV can be dark and a desk can be
@@ -1487,7 +1487,7 @@ light), so three dashboards left open on a big count do not keep rebuilding the 
 
 ![](images/settings-appearance.png)
 
-*Settings &rarr; Logins &amp; site &rarr; Appearance: theme, accent, text size, density, corners, sidebar and contrast — per computer.*
+*Settings &rarr; Site &amp; systems &rarr; Appearance: theme, accent, text size, density, corners, sidebar and contrast — per computer.*
 
 ![](images/settings-site-name.png)
 
@@ -2008,7 +2008,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | What you see | What it means | What to do |
 |---|---|---|
 | Gun: *"this scanner is no longer authorized"* | Its link was reset or the scanner was removed | Settings → Scanners → **Reset link**, open the new link on the device |
-| A page is not in the sidebar, or a bookmark to it says *"… is switched off"* | An admin switched that part of the app off for the site (Step 4a) | Settings → Logins & site → **What is switched on**: tick it back, or **Everything on** |
+| A page is not in the sidebar, or a bookmark to it says *"… is switched off"* | An admin switched that part of the app off for the site (Step 4a) | Settings → Site & systems → **What is switched on**: tick it back, or **Everything on** |
 | The jobs under Settings → Scanners are grayed out | Their part of the app is switched off for the site; the ticks are kept | Switch the part back on under **What is switched on** if the scanners should offer it |
 | Gun: *"Offline and no list cached for this session"* | The handheld has never downloaded this count | Carry it into Wi-Fi once and sign on again |
 | Gun says `OFFLINE` with lines queued | Normal in a dead spot | Nothing. They upload when it gets a signal. Do not wipe the device |
@@ -2026,7 +2026,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | A counter says they pressed SOS and nothing happened | The gun had no signal | The gun tells them: *"No signal — this has NOT been sent."* It sends itself the moment there is signal. In a dead zone, walking ten meters usually fixes it |
 | The printed barcodes will not scan | The page was printed “fit to page”, or on glossy paper | Print again at **100%** on plain white paper. If a gun still refuses them, print with **Per row: 1** — the bars are wider on a bigger label |
 | A code in the spreadsheet will not print | Code 128 carries plain ASCII only — an accented letter or a smart quote cannot be drawn | The book says which character it was; retype that code with plain letters and numbers |
-| The app still shows the old name somewhere | The name was changed under Settings → Logins & site → Site name | Supervisor pages change at once. A scanner picks it up when it is next online; the board on its next refresh. The name under a home-screen icon comes from the app's install and updates when the app is next reinstalled |
+| The app still shows the old name somewhere | The name was changed under Settings → Site & systems → Site name | Supervisor pages change at once. A scanner picks it up when it is next online; the board on its next refresh. The name under a home-screen icon comes from the app's install and updates when the app is next reinstalled |
 | The strip on the gun shows the pallet but no system under it | No pallet system address is set (the gun says so), or the system refuses to be framed | Settings → Integrations → Pallet system: **Check the address**, then **How it opens → Through this app** (the frame works again) or, if the server cannot reach the system, **In its own window** |
 | The pallet system under the desk shows its login page, and signing in only brings the login page back | The system's sign-in cookies are set without SameSite=None (an ASP.NET site, most in-house systems), so the browser drops them inside a plain frame | Settings → Integrations → Pallet system → **Through this app**: the frame stays and the sign-in sticks. Or the system's owner sets its cookies to SameSite=None; Secure |
 | Through this app, the frame says "The pallet system did not answer" | This server cannot reach the system — it is on the warehouse's own network and the app runs on Railway | Run the app on a PC in the building (README: *On a PC in the warehouse*), ask IT to expose the system to the server, or use *In its own window* |

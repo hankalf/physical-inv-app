@@ -32,7 +32,7 @@
      A "go" is shown only when the login may open that page; otherwise a quiet
      line says to ask an admin, so the guide never points at a locked door. */
   const mayGo = (g) => !!g && !!g.page && (g.page === '/board' || api.canTab(g.page, g.sub));
-  /* A part the site has switched off (Settings → Logins & site → What is
+  /* A part the site has switched off (Settings → Site & systems → What is
      switched on): its journey is not offered, and a link to it says why. */
   const PAGE_FEATURE = { '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/testing': 'testing' };
   const SUB_FEATURE = { '/admin': { map: 'map', alerts: 'alerts', adjust: 'adjust', reports: 'reports' } };
@@ -41,7 +41,7 @@
   const journeysOn = () => G.journeys.filter((j) => !JOURNEY_FEATURE[j.key] || !api.on || api.on(JOURNEY_FEATURE[j.key]));
   function goLink(g) {
     if (!g || !g.page) return null;
-    if (isOff(g)) return el('span', 'noway', `(${g.label || g.page} — switched off for the site just now; an admin can switch it back on under Settings → Logins & site)`);
+    if (isOff(g)) return el('span', 'noway', `(${g.label || g.page} — switched off for the site just now; an admin can switch it back on under Settings → Site & systems)`);
     if (!mayGo(g)) return el('span', 'noway', `(${g.label || g.page} — this login cannot open it; ask an admin)`);
     const a = el('a', 'go', (g.label || g.page) + ' →');
     a.href = g.page + (g.sub ? '#' + g.sub : '');

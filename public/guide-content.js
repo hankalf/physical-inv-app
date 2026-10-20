@@ -27,8 +27,8 @@
           do: 'Use the username and starter password an admin gave you. The first sign-in stops at a panel that asks for a real password: pick one you will remember, you will not be asked again on this browser until you log out.',
           where: S('/admin', '', 'Dashboard'),
           watch: [
-            { see: '"that username and password do not match"', means: 'The username is typed differently from how it was created, or the starter password has already been changed.', fix: 'Usernames are not case-sensitive, passwords are. Ask an admin to set a new starter password under Settings → Logins & site → Supervisor logins.' },
-            { see: 'Nothing here for this login', means: 'The login exists but has been given no pages.', fix: 'An admin ticks the pages for it under Settings → Logins & site → Supervisor logins, or picks a profile such as Inventory control.' },
+            { see: '"that username and password do not match"', means: 'The username is typed differently from how it was created, or the starter password has already been changed.', fix: 'Usernames are not case-sensitive, passwords are. Ask an admin to set a new starter password under Settings → Logins → Supervisor logins.' },
+            { see: 'Nothing here for this login', means: 'The login exists but has been given no pages.', fix: 'An admin ticks the pages for it under Settings → Logins → Supervisor logins, or picks a profile such as Inventory control.' },
           ],
           ask: [
             { q: 'Do I need to sign in on every page?', a: 'No. One sign-in covers every supervisor page in this browser, and it survives a server restart for 30 days of use. Log out to end it.' },
@@ -79,8 +79,8 @@
       steps: [
         {
           title: 'Create a login for each supervisor',
-          do: 'Settings → Logins & site → Supervisor logins. Give each a username, a starter password and either a profile (Supervisor, Inventory control, Read only) or the pages ticked one by one, down to the tab. Settings is admin-only.',
-          where: S('/settings', 'advanced', 'Settings → Logins & site'),
+          do: 'Settings → Logins → Supervisor logins. Give each a username, a starter password and either a profile (Supervisor, Inventory control, Read only) or the pages ticked one by one, down to the tab. Settings is admin-only.',
+          where: S('/settings', 'logins', 'Settings → Logins'),
           watch: [
             { see: '"only an admin can manage accounts"', means: 'Your login is a supervisor, not an admin.', fix: 'Ask an admin. The first admin is the superadmin from the server settings.' },
             { see: 'Can nobody sign in at all?', means: 'The admin logins were deleted or demoted.', fix: 'Set SUPERADMIN_USER to a new username in the server variables and restart. A fresh admin login is made on start.' },
@@ -92,8 +92,8 @@
         },
         {
           title: 'Switch off what nobody needs yet',
-          do: 'Settings → Logins & site → What is switched on. A team with a few days to learn the count does not need cycle counts, front bins or the map in front of it. Press Full counts and second counts only, and the rest is gone for everyone — the sidebar, the dashboard tabs, the search box and the scanners’ sign-on screen — until Everything on brings it back. Or tick the parts one by one and Save. Nothing is deleted; the count itself (Full Counts, Progress, Team plan, Second counts, Teams & crew) is always on.',
-          where: S('/settings', 'advanced', 'Settings → Logins & site'),
+          do: 'Settings → Site & systems → What is switched on. A team with a few days to learn the count does not need cycle counts, front bins or the map in front of it. Press Full counts and second counts only, and the rest is gone for everyone — the sidebar, the dashboard tabs, the search box and the scanners’ sign-on screen — until Everything on brings it back. Or tick the parts one by one and Save. Nothing is deleted; the count itself (Full Counts, Progress, Team plan, Second counts, Teams & crew) is always on.',
+          where: S('/settings', 'advanced', 'Settings → Site & systems'),
           watch: [
             { see: 'Cycle counts is switched off', means: 'Somebody opened a bookmark to a page the site has switched off.', fix: 'Nothing, unless it is wanted: an admin ticks it back under What is switched on.' },
             { see: 'A scanner still offers a job you switched off', means: 'It has not been online since.', fix: 'It picks the change up the next time its sign-on screen loads.' },
@@ -106,8 +106,8 @@
         },
         {
           title: 'Run TEST beside LIVE',
-          do: 'Settings → Logins & site → Systems. TEST is the app deployed again with its own database, at its own address. On LIVE, add TEST and its address, tick who may use it and whether the scanners may switch, and give TEST LIVE\'s address and link key (its SYSTEM_HOME_URL and SYSTEM_LINK_KEY variables). People then switch from the sidebar or the sign-in box, scanners from the sign-on screen, with no second password and no second link.',
-          where: S('/settings', 'advanced', 'Settings → Logins & site'),
+          do: 'Settings → Site & systems → Systems. TEST is the app deployed again with its own database, at its own address. On LIVE, add TEST and its address, tick who may use it and whether the scanners may switch, and give TEST LIVE\'s address and link key (its SYSTEM_HOME_URL and SYSTEM_LINK_KEY variables). People then switch from the sidebar or the sign-in box, scanners from the sign-on screen, with no second password and no second link.',
+          where: S('/settings', 'advanced', 'Settings → Site & systems'),
           watch: [
             { see: '"that hand-off was not signed with this system\'s link key"', means: 'TEST has a different link key from LIVE, or LIVE made a new one.', fix: 'Copy the key from LIVE\'s Systems card into TEST (its SYSTEM_LINK_KEY variable, or its Systems card).' },
             { see: '"this login may not use TEST"', means: 'The login has not been given TEST.', fix: 'Tick TEST for them in Who may use each system on LIVE.' },
@@ -124,7 +124,7 @@
           where: S('/practice', '', 'Learn → Practice data'),
           watch: [
             { see: 'Somebody has a run with nothing tried', means: 'They opened the Testing Suite and stopped at the sign-on.', fix: 'Sit with them for the first bin; the tips on the page point at each step.' },
-            { see: 'Practice data is not in your sidebar', means: 'The page is for admins only.', fix: 'Ask an admin, or for the admin role under Settings → Logins & site.' },
+            { see: 'Practice data is not in your sidebar', means: 'The page is for admins only.', fix: 'Ask an admin, or for the admin role under Settings → Logins.' },
           ],
           ask: [
             { q: 'Can a supervisor see other people’s practice?', a: 'No. The Testing Suite shows each person their own practice and nobody else’s; only an admin sees them all, here.' },
@@ -706,16 +706,16 @@
     { q: 'Where is the backup kept?', a: 'On the server’s volume, under Settings → Backups & log, and in a OneDrive folder too once Off-site copy is connected there. Without OneDrive, download one after every count; a volume is not a backup.', goto: S('/settings', 'backups', 'Settings → Backups & log') },
     { q: 'How do I send backups to OneDrive?', a: 'Settings → Backups & log → Off-site copy: OneDrive. Register the app in Microsoft once (the steps are on the card), paste its Application (client) ID, press Connect OneDrive and type the code at microsoft.com/devicelogin. From then on every backup is copied there and the newest 30 are kept.', goto: S('/settings', 'backups', 'Settings → Backups & log') },
     { q: 'What is the practice count?', a: 'A count of your own the Testing Suite makes, with test data, that nobody else sees.', goto: S('/testing', '', 'Testing Suite') },
-    { q: 'How do I change the look?', a: 'Settings → Logins & site → Appearance sets the theme, accent and text size for your computer; the site logo is in the same section.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },
-    { q: 'How do I rename the app, or change the location under the name?', a: 'Settings → Logins & site → Site name. The name and the location change at once on every page, the sign-in screen, the scanners, the board and the installed app. A blank name goes back to Full Harvest Inventory.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },
+    { q: 'How do I change the look?', a: 'Settings → Site & systems → Appearance sets the theme, accent and text size for your computer; the site logo is in the same section.', goto: S('/settings', 'advanced', 'Settings → Site & systems') },
+    { q: 'How do I rename the app, or change the location under the name?', a: 'Settings → Site & systems → Site name. The name and the location change at once on every page, the sign-in screen, the scanners, the board and the installed app. A blank name goes back to Full Harvest Inventory.', goto: S('/settings', 'advanced', 'Settings → Site & systems') },
     { q: 'What time zone are the scan times in?', a: 'The server’s. A scanner with a wrong clock is corrected by its own send time, so the times on the dashboard are right either way.' },
     { q: 'Where do I put jacket, bibs and boot sizes?', a: 'Teams & crew → Gear sizes: everyone in one table, a size saved as soon as it is picked, the total of each size above it, and Export names and sizes for an Excel workbook with grand totals and totals by department. Each crew card also shows the department and sizes, with Dept & sizes to change them.', goto: S('/teams', 'gear', 'Teams & crew → Gear sizes') },
     { q: 'How do I put the count into the ERP an aisle at a time?', a: 'Dashboard → Adjustments → ERP upload, an aisle at a time. ⬇ Excel on an aisle gives every pallet in it — the report, the latest count, the adjustment — with an Uploaded to ERP column. Fill it in as the lines go into the ERP, then ⬆ Upload a filled-in sheet: those lines are marked as in the ERP here. Only that column is read back.', goto: S('/admin', 'adjust', 'Dashboard → Adjustments') },
     { q: 'Can I export everything?', a: 'Reports → Export everything gives a workbook with every sheet: counts, pallets, teams, adjustments, alerts, the log.', goto: S('/admin', 'reports', 'Dashboard → Reports') },
     { q: 'Who did what?', a: 'The log under Settings → Backups & log records every change with the login that made it.', goto: S('/settings', 'backups', 'Settings → Backups & log') },
-    { q: 'How do I invite someone by email?', a: 'Settings → Logins & site → Supervisor logins: type their name, username and email (the invite box ticks itself) and Add login. Email the invite opens a ready-made message in your own email; Copy link is for a text. The link works once, for three days, and they choose their own password on it. Invite again on their row makes a new link.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },
-    { q: 'How do I hide the parts of the app we are not using yet?', a: 'Settings → Logins & site → What is switched on. Full counts and second counts only hides cycle counts, front bins, Not in Location, the map, adjustments and reports for everyone, on the office pages and the scanners; Everything on brings them back. Tick by hand for anything in between.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },
-    { q: 'Somebody is locked out of signing in', a: 'Five wrong passwords from one place lock that login there for 15 minutes. An admin presses Unlock on their row under Settings → Logins & site, or resets the password, which lifts it too.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },
+    { q: 'How do I invite someone by email?', a: 'Settings → Logins → Supervisor logins: type their name, username and email (the invite box ticks itself) and Add login. Email the invite opens a ready-made message in your own email; Copy link is for a text. The link works once, for three days, and they choose their own password on it. Invite again on their row makes a new link.', goto: S('/settings', 'logins', 'Settings → Logins') },
+    { q: 'How do I hide the parts of the app we are not using yet?', a: 'Settings → Site & systems → What is switched on. Full counts and second counts only hides cycle counts, front bins, Not in Location, the map, adjustments and reports for everyone, on the office pages and the scanners; Everything on brings them back. Tick by hand for anything in between.', goto: S('/settings', 'advanced', 'Settings → Site & systems') },
+    { q: 'Somebody is locked out of signing in', a: 'Five wrong passwords from one place lock that login there for 15 minutes. An admin presses Unlock on their row under Settings → Logins, or resets the password, which lifts it too.', goto: S('/settings', 'logins', 'Settings → Logins') },
     { q: 'Can I use the office side on my phone?', a: 'Yes. Open the site on the phone, sign in, and Add to Home Screen (Safari: Share; Chrome: ⋮ → Install app). It opens as its own app; the Menu button at the top holds the pages and the search.' },
     { q: 'Are we ready for count day?', a: 'Settings → Count setup opens on Ready for count day: the scanners, the jobs they offer, the crew list, alerts, backups and OneDrive, and a default password, checked fresh, worst first, each with a button to the fix.', goto: S('/settings', 'start', 'Settings → Count setup') },
     { q: 'Why can I not see Settings?', a: 'Settings is admin-only. Everything else is per login.' },
@@ -723,8 +723,8 @@
 
   /* the lookup bank: screen text first, so a pasted message finds its row */
   const errors = [
-    { see: 'too many wrong passwords - try again in 15 minutes, or ask an admin to unlock it', means: 'Five wrong passwords for this login from this computer.', fix: 'Wait it out, or an admin presses Unlock on the row under Settings → Logins & site.', goto: S('/settings', 'advanced', 'Logins & site') },
-    { see: 'this invite has expired or has already been used - ask an admin for a new one', means: 'The invite link was used, replaced by a newer one, or is more than three days old.', fix: 'An admin presses Invite again on the row; use the newest link.', goto: S('/settings', 'advanced', 'Logins & site') },
+    { see: 'too many wrong passwords - try again in 15 minutes, or ask an admin to unlock it', means: 'Five wrong passwords for this login from this computer.', fix: 'Wait it out, or an admin presses Unlock on the row under Settings → Logins.', goto: S('/settings', 'logins', 'Settings → Logins') },
+    { see: 'this invite has expired or has already been used - ask an admin for a new one', means: 'The invite link was used, replaced by a newer one, or is more than three days old.', fix: 'An admin presses Invite again on the row; use the newest link.', goto: S('/settings', 'logins', 'Settings → Logins') },
     { see: 'The last OneDrive copy failed', means: 'OneDrive was unreachable, full, or the sign-in was withdrawn.', fix: 'Settings → Backups & log shows why. It is tried again every half hour; if it says connect again, press Connect OneDrive.', goto: S('/settings', 'backups', 'Backups & log') },
     { see: 'this scanner is no longer authorized - ask a supervisor for its link', means: 'Its link was reset or the scanner was removed.', fix: 'Settings → Scanners → Reset link, open the new link on the device.', goto: S('/settings', 'gun', 'Scanners') },
     { see: 'this scanner link is not registered - ask a supervisor', means: 'The device opened a link that was never created here.', fix: 'Add the scanner and open the fresh link.', goto: S('/settings', 'gun', 'Scanners') },
@@ -741,7 +741,7 @@
     { see: 'that aisle belongs to another team', means: 'The aisle is on another team’s plan.', fix: 'Take it off that team first.', goto: S('/teams', 'crew', 'Counting plan') },
     { see: 'that username and password do not match', means: 'Wrong password, or the username is spelled differently.', fix: 'Passwords are case-sensitive. An admin can set a new starter password.' },
     { see: 'only an admin can manage accounts', means: 'Your login is not an admin.', fix: 'Ask an admin.' },
-    { see: 'is switched off', means: 'The page is one an admin switched off for the site under What is switched on.', fix: 'Use the sidebar, or ask an admin to switch it back on.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },
+    { see: 'is switched off', means: 'The page is one an admin switched off for the site under What is switched on.', fix: 'Use the sidebar, or ask an admin to switch it back on.', goto: S('/settings', 'advanced', 'Settings → Site & systems') },
     { see: 'this count is a trial run - end the trial and count it for real before sending anything to the ERP', means: 'ERP export is blocked on a trial.', fix: 'End the trial under Count session.', goto: S('/settings', 'start', 'Count session') },
     { see: 'this login may not approve adjustments', means: 'The login lacks the approval function.', fix: 'An admin adds it under Supervisor logins.' },
     { see: 'the address has to start with http:// or https://', means: 'The Teams or pallet-system address is not a web address.', fix: 'Paste the whole https:// address.' },

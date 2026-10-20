@@ -105,7 +105,7 @@ await sp.close();
 
 /* ---- the card */
 await page.goto(`${BASE}/settings#advanced`); await page.waitForTimeout(1500);
-check('Settings → Logins & site has the card, with what is off in its chip', await page.isVisible('#featuresCard') && /off: Cycle counts, Front bins, Not in Location, Map, Adjustments, Reports/.test(await page.textContent('#featuresChip')), await page.textContent('#featuresChip'));
+check('Settings → Site & systems has the card, with what is off in its chip', await page.isVisible('#featuresCard') && /off: Cycle counts, Front bins, Not in Location, Map, Adjustments, Reports/.test(await page.textContent('#featuresChip')), await page.textContent('#featuresChip'));
 check('…one row a part, ticked as it stands', !(await page.$eval('#fFeature-cycle', (b) => b.checked)) && await page.$eval('#fFeature-alerts', (b) => b.checked) && await page.$eval('#fFeature-testing', (b) => b.checked) && (await page.$$('#featuresList label')).length === 8);
 await page.goto(`${BASE}/settings#gun`); await page.reload(); await page.waitForTimeout(1500);
 check('Under the scanners, the jobs that are off are grayed with a note saying why', await page.$eval('#fJobCycle', (b) => b.disabled) && await page.$eval('#fJobMove', (b) => b.disabled) && !(await page.$eval('#fJobFull', (b) => b.disabled)) && await page.isVisible('#jobsOffNote') && /switched off for the whole site/.test(await page.textContent('#jobsOffNote')), await page.textContent('#jobsOffNote'));

@@ -23,10 +23,12 @@ this one is about everything those roles need to be in place.
 
 ## 1 — What only an admin can do
 
-Everything on the **Settings** page, which no other profile opens. It has six sections:
+Everything on the **Settings** page, which no other profile opens. It has seven sections:
 **Count setup** (the count-day check, the setup checklist, the count session), **Lists & racking**,
 **Scanners**, **Integrations** (ERP file, adjustment reasons, pallet system, Teams), **Backups & log**
-(with the OneDrive copy) and **Logins & site**. From there you:
+(with the Google Drive and OneDrive copies), **Logins** (the supervisor logins, what each may use,
+which systems, your own password) and **Site & systems** (what is switched on, LIVE and TEST, the
+site name, logo and look). From there you:
 
 - create, rename and delete **supervisor logins**, choose what each may do, **invite** a new one by
   email, and lift a **sign-in lock**;
@@ -69,7 +71,7 @@ count day* link or a search hit opens the card it points at.
 
 ## 3 — Logins and profiles
 
-**Settings → Logins & site → Supervisor logins.**
+**Settings → Logins → Supervisor logins.**
 
 1. **Add a login**: username, full name and, best, their **email** — then **Email the invite**
    sends them a one-time link (good for three days) on which they choose their own password,
@@ -118,7 +120,7 @@ Each role has a procedure of its own in `docs/roles/`; hand a new login the righ
 
 ## 4 — The site: name, logo, look, Teams, pallet system
 
-Site name, logo and look under **Settings → Logins & site**; Teams and the pallet system under
+Site name, logo and look under **Settings → Site & systems**; Teams and the pallet system under
 **Settings → Integrations**. On a phone, *Add to Home Screen* on any office page installs the
 office side as its own app (*FH Office*), with a Menu button in place of the side panel.
 
@@ -155,7 +157,7 @@ office side as its own app (*FH Office*), with a Menu button in place of the sid
   Suite's sandbox, all four to start with.
 - **The picker opens on the right count.** An open full count first (the one the scanners land
   on, else the newest), else an open cycle count; and it lists only the kinds the site has switched on.
-- **Systems** (Settings → Logins & site → Systems): LIVE is the home; add TEST with its address,
+- **Systems** (Settings → Site & systems → Systems): LIVE is the home; add TEST with its address,
   tick who may use it, and whether the scanners may switch. TEST is the app deployed again with its
   own database and three variables (`SYSTEM_NAME`, `SYSTEM_HOME_URL`, `SYSTEM_LINK_KEY`) — the steps
   are on the card. People switch from the sidebar; scanners from the sign-on screen. Tick who may

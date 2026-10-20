@@ -114,7 +114,7 @@ export function readiness(sessionId) {
 
   /* ---- the way in */
   const su = process.env.SUPERADMIN_USER;
-  if (su && passwordIs(su, 'changeme')) add('fail', 'The site admin still has the password "changeme"', 'Anyone who has read the set-up notes can sign in as the site admin. Change it now.', fix('advanced', 'loginsCard', 'Your password'));
+  if (su && passwordIs(su, 'changeme')) add('fail', 'The site admin still has the password "changeme"', 'Anyone who has read the set-up notes can sign in as the site admin. Change it now.', fix('logins', 'loginsCard', 'Your password'));
 
   const fails = checks.filter((c) => c.level === 'fail').length;
   const warns = checks.filter((c) => c.level === 'warn').length;

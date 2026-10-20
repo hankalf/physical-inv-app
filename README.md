@@ -102,7 +102,7 @@ Scanners need internet access for this option, not just warehouse Wi-Fi.
 | `SITE_TIMEZONE` | `America/New_York` | The warehouse's clock — dates a cycle batch is due, and the hour a schedule fires |
 | `SYSTEM_NAME` | `LIVE` | This system's name in the switcher and on its banner — `TEST` on the TEST deployment |
 | `SYSTEM_HOME_URL` | — | On TEST (or any other linked system): the home (LIVE) system's address. Unset means this is the home |
-| `SYSTEM_LINK_KEY` | — | The key the home signs hand-offs with: copy it from LIVE's Settings → Logins & site → Systems |
+| `SYSTEM_LINK_KEY` | — | The key the home signs hand-offs with: copy it from LIVE's Settings → Site & systems → Systems |
 | `SYSTEM_COLOR` | `green` / `orange` | The system's color: green, orange, purple, blue, red or gray |
 | `ONEDRIVE_CLIENT_ID` | — | The Azure app registration's Application (client) ID for backups to OneDrive; can be set in Settings instead |
 | `ONEDRIVE_TENANT` | `common` | Microsoft tenant for that sign-in; leave as `common` unless IT says otherwise |
@@ -120,15 +120,15 @@ sign-in covers all of them.
 | **Full Counts** (`/full`) | Counts · New count · Set-up — every wall-to-wall, open and closed; which one the scanners land on; start one; what it still needs |
 | **Cycle counts** (`/cycle`) | Today · Still open · Coverage · Program & data |
 | **Teams & crew** (`/teams`) | Teams · Employees · Gear sizes · Equipment rules |
-| **Settings** (`/settings`) | Count setup · Lists & racking · Scanners · Integrations · Backups & log · Logins & site |
+| **Settings** (`/settings`) | Count setup · Lists & racking · Scanners · Integrations · Backups & log · Logins · Site & systems |
 | **Front bins** (`/front`) | Pallets to move back · Move desk · Front-placed bins. The gun has the same desk: Front2Back at sign-on with a badge alone, pick the aisle, the pallet and its two bins, the pallet system framed under them (plain, or through this app so its sign-in sticks), Moved — next |
 | **Not in Location** (`/missing`) | the list, and a find desk; on the gun, Not in Location at sign-on with a badge alone, the aisle it was last seen in, the pallet system framed under the strip, Found — next |
 | **Testing Suite** (`/testing`) | the real scanner on a practice count of your own. *Practice* picks the job and the page follows it — the full count, its second counts (another crew's aisle that comes back to the gun, and one to raise by hand), a cycle count, Front2Back, Not in Location — offering only what the login may do for real and saying why the rest is missing |
 | **Settings → Scanners → What the scanners offer** | one section, one Save: the jobs on the sign-on screen (tick the full count alone on count day), comments (ask / required / the wait / the one-tap reasons), the override reasons, the SOS list |
-| **Settings → Logins & site → What is switched on** | hide the parts of the app nobody needs yet, for every login and the scanners: *Full counts and second counts only* leaves the count, its second counts, the alerts and the Testing Suite; *Everything on* brings the rest back; or tick by part. Hidden, not forbidden — roles still apply, nothing is deleted, a bookmark to a hidden page says so |
-| **Settings → Logins & site → Site name** | the app's own name and the location under it, out of the box *Full Harvest Inventory · Front Royal*; a change lands on every page, the guns, the board and the installed app's manifest |
+| **Settings → Site & systems → What is switched on** | hide the parts of the app nobody needs yet, for every login and the scanners: *Full counts and second counts only* leaves the count, its second counts, the alerts and the Testing Suite; *Everything on* brings the rest back; or tick by part. Hidden, not forbidden — roles still apply, nothing is deleted, a bookmark to a hidden page says so |
+| **Settings → Site & systems → Site name** | the app's own name and the location under it, out of the box *Full Harvest Inventory · Front Royal*; a change lands on every page, the guns, the board and the installed app's manifest |
 | **Practice data** (`/practice`) | admins only: every login's practice from the Testing Suite — who has practiced, each run with what was tried and how far it got, export one person's lot, delete it to start them fresh. Practice counts are never in a dashboard's picker |
-| **Settings → Logins & site → Systems** | LIVE, TEST and any other, each its own deployment at its own address. The home (LIVE) lists the others, says which logins may use each and whether the scanners may switch; people switch from the sidebar or the sign-in box and scanners from the sign-on screen, handed over with a signed one-time ticket, no second password. TEST wears an orange banner on every page |
+| **Settings → Site & systems → Systems** | LIVE, TEST and any other, each its own deployment at its own address. The home (LIVE) lists the others, says which logins may use each and whether the scanners may switch; people switch from the sidebar or the sign-in box and scanners from the sign-on screen, handed over with a signed one-time ticket, no second password. TEST wears an orange banner on every page |
 | **User guide** (`/guide`) | the SOP inside the app: journeys, what goes wrong at each step, an Ask box that answers a question or a pasted message, and a live "Right now" read of the count. Open to every login |
 
 Two splits, both deliberate. **Running a count** is the Dashboard; **setting one up** is
@@ -706,7 +706,7 @@ change is recorded in the audit log against the person who made it, and password
 stored scrypt-hashed, never in the clear.
 
 There is **no shared password**. Every person signs in as themselves, and the log names who
-did what. What each login may use is ticked per login under **Settings → Logins & site**; Settings
+did what. What each login may use is ticked per login under **Settings → Logins**; Settings
 itself is for admins only.
 
 ### The superadmin
