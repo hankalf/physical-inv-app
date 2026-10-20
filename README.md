@@ -41,6 +41,8 @@ counters on the handhelds, each as Markdown and PDF (`node tools/sop-pdf.mjs --r
 [the ERP upload, an aisle at a time](docs/guides/erp-upload-by-aisle.md),
 [employees, teams and gear sizes](docs/guides/employees-teams-and-gear.md), and
 [LIVE and TEST: switching, logins and scanners](docs/guides/live-and-test.md).
+`docs/guides/for-users/` has the same four for the people using the app day to day, without
+anything about setting it up.
 
 ## Offline-first
 

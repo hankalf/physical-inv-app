@@ -22,7 +22,7 @@ const ROOT = join(new URL('.', import.meta.url).pathname, '..');
 const args = process.argv.slice(2);
 const folder = (name) => readdirSync(join(ROOT, 'docs', name)).filter((f) => f.endsWith('.md') && f !== 'README.md').sort().map((f) => join(ROOT, 'docs', name, f));
 const SOURCES = args[0] === '--roles' ? folder('roles')
-  : args[0] === '--guides' ? folder('guides')
+  : args[0] === '--guides' ? [...folder('guides'), ...folder('guides/for-users')]
     : [args[0] ? join(process.cwd(), args[0]) : join(ROOT, 'docs', 'SOP.md')];
 const printed = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -142,8 +142,8 @@ const tocHtml = (contents, pages) => `
 
 /* The HTML is laid out in a temporary directory, so the manual's relative
    image paths have to be pointed back at docs/images where the pictures live. */
-// a guide under docs/guides/ points at its pictures as ../images/, so it reads on GitHub too
-const absolute = (html) => html.replace(/src="(\.\.\/)?images\//g, `src="file://${join(ROOT, 'docs')}/images/`);
+// a guide under docs/guides/ points at its pictures as ../images/ (../../images/ one folder down), so it reads on GitHub too
+const absolute = (html) => html.replace(/src="(\.\.\/)*images\//g, `src="file://${join(ROOT, 'docs')}/images/`);
 
 const page = (doc, parts, pages) => absolute(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>${doc.title}</title><style>${CSS}</style></head>
