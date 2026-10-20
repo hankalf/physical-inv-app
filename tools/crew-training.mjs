@@ -39,7 +39,7 @@ const BASE = `http://127.0.0.1:${PORT}`;
 const hdr = { 'content-type': 'application/json' };
 const j = (r) => r.json();
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-const PACE = Number(process.env.PACE || 1);
+const PACE = Number(process.env.PACE || 0.68);      // the whole film in under ten minutes; PACE=1 is slower still
 const beat = (ms) => wait(Math.round(ms * PACE));
 /* how long a caption stays up: long enough to read it twice, slowly */
 const dwell = (text) => Math.max(4200, String(text).replace(/<[^>]+>/g, '').split(/\s+/).length * 420);
@@ -81,6 +81,8 @@ try {
   await post('/api/admin/default-session', { sessionId: sess.id }).catch(() => {});
   // the comments step waits for the counter, so the film can explain it before moving on
   await post('/api/admin/scanner-prompts', { commentTimeout: 0 });
+  // the site counts the bin first: the rack label, then the pallet label, then the quantity
+  await post('/api/admin/scanner-layout', { order: ['bin', 'pallet', 'qty'] });
   await post('/api/admin/site-name', { name: 'Full Harvest Inventory', place: 'Front Royal' }).catch(() => {});
   for (const [badge, name, equipment] of CREW) {
     await post('/api/admin/people/employees', { badge, name, dept: 'Warehouse', shift: '1', equipment }).catch(() => {});
@@ -367,28 +369,36 @@ try {
   };
   const P = { pallet: L(/PALLET/, /TARIMA/), qty: L(/QUANTITY/, /CANTIDAD/), bin: L(/BIN/, /UBICACIÓN/), comments: L(/omment/, /omentario/) };
   const skipComments = async () => { await atStep(P.comments, 8000); await tap('#btnSkip', { hold: 1400 }); };
-  /* one ordinary pallet, all the way round, at film speed */
-  const countPallet = async (id, { talk = false } = {}) => {
+  /* one ordinary line, in the site's order: the rack, the pallet, the quantity, a comment */
+  const countLine = async (id, bin = expected.get(id).bin) => {
     const e = expected.get(id);
-    await atStep(P.pallet);
-    if (talk) await say(L('1 · Scan the pallet label', '1 · Escanea la etiqueta de la tarima'), L('Point the scanner at the <b>barcode on the pallet label</b> and pull the trigger. Wait for the beep. The scanner shows the pallet number — it does <b>not</b> tell you how many should be there.', 'Apunta el escáner al <b>código de barras de la etiqueta de la tarima</b> y aprieta el gatillo. Espera el bip. El escáner muestra el número de tarima — <b>no</b> te dice cuántas cajas debería haber.'));
-    await scanLabel('pallet', id);
-    if (talk) { await shotProp('pallet'); await shotPhone('pallet-scanned'); }
-    await atStep(P.qty);
-    if (talk) await say(L('2 · Count, then type the quantity', '2 · Cuenta y escribe la cantidad'), L('Count the cases that are <b>really there</b>. Type the number on the number keys, then press <b>Enter</b>. Never type what you think it should be.', 'Cuenta las cajas que <b>de verdad están ahí</b>. Escribe el número con las teclas y oprime <b>Enter</b>. Nunca escribas lo que crees que debería ser.'));
-    if (talk) await countCases(e.qty);
-    if (talk) await shotPhone('quantity');
-    await keyIn(e.qty);
+    await atStep(P.bin); await scanLabel('rack', bin);
+    await atStep(P.pallet); await scanLabel('pallet', id);
+    await atStep(P.qty); await keyIn(e.qty);
+    await skipComments();
+  };
+  /* the first one, talked through */
+  const countPallet = async (id) => {
+    const e = expected.get(id);
     await atStep(P.bin);
-    if (talk) { await shotPhone('bin-asked'); await say(L('3 · Scan the rack label', '3 · Escanea la etiqueta del rack'), L('Now scan the <b>yellow rack label</b> of the spot the pallet is sitting in. That tells the system <b>where</b> the pallet is. The scanner checks it is in your aisle.', 'Ahora escanea la <b>etiqueta amarilla del rack</b> donde está la tarima. Así el sistema sabe <b>dónde</b> está. El escáner revisa que sea de tu pasillo.')); }
+    await say(L('1 · Scan the rack label', '1 · Escanea la etiqueta del rack'), L('Point the scanner at the <b>yellow rack label</b> under the pallet and pull the trigger. Wait for the beep. That tells the system <b>where</b> you are; the scanner checks it is in your aisle.', 'Apunta el escáner a la <b>etiqueta amarilla del rack</b> debajo de la tarima y aprieta el gatillo. Espera el bip. Así el sistema sabe <b>dónde</b> estás; el escáner revisa que sea de tu pasillo.'));
     await scanLabel('rack', e.bin);
-    if (talk) await shotProp('rack');
+    await shotProp('rack'); await shotPhone('rack-scanned');
+    await atStep(P.pallet);
+    await say(L('2 · Scan the pallet label', '2 · Escanea la etiqueta de la tarima'), L('Now the <b>barcode on the pallet label</b>. The scanner shows the pallet number — it does <b>not</b> tell you how many should be there.', 'Ahora el <b>código de barras de la etiqueta de la tarima</b>. El escáner muestra el número de tarima — <b>no</b> te dice cuántas cajas debería haber.'));
+    await scanLabel('pallet', id);
+    await shotProp('pallet'); await shotPhone('pallet-scanned');
+    await atStep(P.qty);
+    await say(L('3 · Count, then type the quantity', '3 · Cuenta y escribe la cantidad'), L('Count the cases that are <b>really there</b>. Type the number on the number keys, then press <b>Enter</b>. Never type what you think it should be.', 'Cuenta las cajas que <b>de verdad están ahí</b>. Escribe el número con las teclas y oprime <b>Enter</b>. Nunca escribas lo que crees que debería ser.'));
+    await countCases(e.qty);
+    await shotPhone('quantity');
+    await keyIn(e.qty);
     await atStep(P.comments, 8000);
   };
 
   /* ================================================================ the film */
   await cover(L('Day 1 · Counting crew', 'Día 1 · Equipo de conteo'), L('How to count with the scanner', 'Cómo contar con el escáner'),
-    L('Scan the pallet. Type what is there. Scan the rack. That is the whole job — this film shows every step, slowly.', 'Escanea la tarima. Escribe lo que hay. Escanea el rack. Ese es todo el trabajo — este video muestra cada paso, despacio.'), 7000);
+    L('Scan the rack. Scan the pallet. Type what is there. That is the whole job — this film shows every step, slowly.', 'Escanea el rack. Escanea la tarima. Escribe lo que hay. Ese es todo el trabajo — este video muestra cada paso, despacio.'), 7000);
 
   /* ---------------------------------------------------------- 1 */
   await part(1, L('Before you start', 'Antes de empezar'), L('The scanner, its buttons, and your language.', 'El escáner, sus botones y tu idioma.'));
@@ -434,39 +444,27 @@ try {
   await beat(1400);
 
   /* ---------------------------------------------------------- 3 */
-  await part(3, L('Counting a pallet', 'Contar una tarima'), L('Three steps, over and over: the pallet, the quantity, the rack.', 'Tres pasos, una y otra vez: la tarima, la cantidad, el rack.'));
+  await part(3, L('Counting a pallet', 'Contar una tarima'), L('Three steps, over and over: the rack, the pallet, the quantity.', 'Tres pasos, una y otra vez: el rack, la tarima, la cantidad.'));
   await say(L('Where to go next', 'A dónde ir'), L('The box at the top says <b>Next bin</b> — the spot to go to. It walks you down the aisle in order, so nothing is missed.', 'El cuadro de arriba dice <b>Siguiente ubicación</b> — el lugar a donde ir. Te lleva por el pasillo en orden, para que no se pierda nada.'), { text: L('Follow the next bin', 'Sigue la siguiente ubicación') });
   await toTop(); await beat(600);
   await shotPhone('next-bin');
-  await countPallet(palletAt.get(single[0])[0], { talk: true });
+  await countPallet(palletAt.get(single[0])[0]);
   await shotPhone('comments');
   await say(L('4 · A comment, if there is one', '4 · Un comentario, si hay'), L('Last, the scanner offers quick reasons — damaged, partial, and so on. Tap one if it fits. Nothing to say? Tap <b>Skip</b>. On count day it also moves on by itself.', 'Al final, el escáner ofrece razones rápidas — dañada, incompleta, etc. Toca una si aplica. ¿Nada que decir? Toca <b>Saltar</b>. El día del conteo también sigue solo.'));
   await tap('#btnSkip', { hold: 1600 });
-  await say(L('Saved', 'Guardado'), L('That pallet is counted and saved. The scanner sends it to the office by itself. Now the next one — the same three steps.', 'Esa tarima ya está contada y guardada. El escáner la manda a la oficina solo. Ahora la siguiente — los mismos tres pasos.'), { text: L('Pallet · quantity · rack', 'Tarima · cantidad · rack'), ok: true });
+  await say(L('Saved', 'Guardado'), L('That pallet is counted and saved. The scanner sends it to the office by itself. Now the next one — the same three steps.', 'Esa tarima ya está contada y guardada. El escáner la manda a la oficina solo. Ahora la siguiente — los mismos tres pasos.'), { text: L('Rack · pallet · quantity', 'Rack · tarima · cantidad'), ok: true });
+  /* the wrong label */
   {
     const id = palletAt.get(single[1])[0];
     const e = expected.get(id);
-    await say(L('Again: pallet, quantity, rack', 'Otra vez: tarima, cantidad, rack'), L('Watch the rhythm. Scan the pallet, type the cases, scan the rack.', 'Mira el ritmo. Escanea la tarima, escribe las cajas, escanea el rack.'), '', { hold: false });
-    await atStep(P.pallet); await scanLabel('pallet', id);
-    await atStep(P.qty); await keyIn(e.qty);
-    await atStep(P.bin); await scanLabel('rack', e.bin);
-    await skipComments();
-  }
-  /* the wrong label */
-  {
-    const id = palletAt.get(single[2])[0];
-    const e = expected.get(id);
-    await atStep(P.pallet);
-    await say(L('The wrong label? It tells you', '¿Etiqueta equivocada? Te avisa'), L('If you scan the <b>rack label</b> when it asks for the <b>pallet</b>, the scanner says so and records nothing. Just scan the right one.', 'Si escaneas la <b>etiqueta del rack</b> cuando pide la <b>tarima</b>, el escáner te avisa y no guarda nada. Solo escanea la correcta.'), '', { hold: false });
-    await beat(2600);
-    await scanLabel('rack', e.bin, { bad: true });
-    await beat(1800);
+    await atStep(P.bin);
+    await say(L('The wrong label? It tells you', '¿Etiqueta equivocada? Te avisa'), L('If you scan the <b>pallet label</b> when it asks for the <b>rack</b>, the scanner says so and records nothing. Just scan the right one.', 'Si escaneas la <b>etiqueta de la tarima</b> cuando pide el <b>rack</b>, el escáner te avisa y no guarda nada. Solo escanea la correcta.'), '', { hold: false });
+    await beat(2400);
+    await scanLabel('pallet', id, { bad: true });
+    await beat(1600);
     await shotPhone('wrong-label');
-    await beat(dwell('read the message on the screen it says this is a bin not a pallet'));
-    await scanLabel('pallet', id);
-    await atStep(P.qty); await keyIn(e.qty);
-    await atStep(P.bin); await scanLabel('rack', e.bin);
-    await skipComments();
+    await beat(dwell('read the message on the screen it says this is a pallet not a bin'));
+    await countLine(id, e.bin);
   }
 
   /* ---------------------------------------------------------- 4 */
@@ -476,34 +474,31 @@ try {
     await say(L('More than one pallet in a spot', 'Más de una tarima en un lugar'), L(`This spot holds <b>${stack.length} pallets</b>. After the first one, the box turns orange: <b>Still in this bin</b>, with a count. Count every pallet in the spot before you move on.`, `Este lugar tiene <b>${stack.length} tarimas</b>. Después de la primera, el cuadro se pone naranja: <b>Sigues en esta ubicación</b>, con un contador. Cuenta cada tarima del lugar antes de seguir.`), { text: `${triple} · ${stack.length} ${L('pallets', 'tarimas')}` });
     let k = 0;
     for (const id of stack) {
-      const e = expected.get(id);
-      await atStep(P.pallet); await scanLabel('pallet', id);
-      await atStep(P.qty); await keyIn(e.qty);
-      await atStep(P.bin); await scanLabel('rack', e.bin);
-      await skipComments();
+      await countLine(id);
       if (++k === 1) { await shotPhone('still-in-bin'); await say(L('Still in this bin', 'Sigues en esta ubicación'), L(`<b>1 of ${stack.length}</b>. Keep going in the same spot.`, `<b>1 de ${stack.length}</b>. Sigue en el mismo lugar.`)); }
     }
     await say(L('All counted', 'Todas contadas'), L('When every pallet in the spot is counted, the box goes back to <b>Next bin</b> by itself. If the scanner expects more but there are none, tap <b>Nothing more here →</b>.', 'Cuando cada tarima del lugar está contada, el cuadro regresa a <b>Siguiente ubicación</b> solo. Si el escáner espera más pero no hay, toca <b>No hay más aquí →</b>.'), { text: L('Never leave a spot half counted', 'Nunca dejes un lugar a medias') });
   }
-  await atStep(P.pallet);
-  await say(L('An empty spot', 'Un lugar vacío'), L('Nothing in the spot? That counts too. Tap <b>Bin is EMPTY — scan the bin</b>, then scan the rack label. Now the office knows it was checked and is empty.', '¿No hay nada en el lugar? Eso también cuenta. Toca <b>Ubicación VACÍA — escanea la ubicación</b> y luego escanea la etiqueta del rack. Así la oficina sabe que se revisó y está vacío.'), '', { hold: false });
-  await beat(5200);
-  await tap('#btnEmpty', { hold: 2200, shot: 'empty-button' });
+  await atStep(P.bin);
+  await say(L('An empty spot', 'Un lugar vacío'), L('Nothing in the spot? That counts too. Scan the rack label as usual, then tap <b>Bin is EMPTY</b> and <b>Yes — it is empty</b>. Now the office knows it was checked and is empty.', '¿No hay nada en el lugar? Eso también cuenta. Escanea la etiqueta del rack como siempre, luego toca <b>Ubicación VACÍA</b> y <b>Sí — está vacía</b>. Así la oficina sabe que se revisó y está vacío.'), '', { hold: false });
+  await beat(3600);
   await scanLabel('rack', emptyBin);
-  await beat(2400);
+  await atStep(P.pallet);
+  await tap('#btnEmpty', { hold: 2200, shot: 'empty-button' });
+  await tap('#btnEmptyYes', { hold: 2000 });
+  await beat(2000);
 
   /* ---------------------------------------------------------- 5 */
   await part(5, L('Labels', 'Etiquetas'), L('Two labels on one pallet, a label that will not scan, and a pallet nobody expected.', 'Dos etiquetas en una tarima, una etiqueta que no escanea, y una tarima que nadie esperaba.'));
   {
     const [id1, id2] = palletAt.get(doubles[0]);
     const e1 = expected.get(id1); const e2 = expected.get(id2);
-    await atStep(P.pallet);
-    await say(L('A pallet with two labels', 'Una tarima con dos etiquetas'), L('Some pallets carry <b>two loads</b>, each with its own label and its own quantity. See it before you start? Tap <b>This pallet has more than one label</b>.', 'Algunas tarimas llevan <b>dos cargas</b>, cada una con su etiqueta y su cantidad. ¿Lo ves antes de empezar? Toca <b>Esta tarima tiene más de una etiqueta</b>.'), '', { hold: false });
-    await beat(5200);
-    await tap('#btnMultiLabel', { hold: 2400, shot: 'multi-label-button' });
-    await say(L('The rack first, once', 'Primero el rack, una vez'), L('Scan the <b>rack label</b> once. Then each label on the pallet, each with its own quantity.', 'Escanea la <b>etiqueta del rack</b> una vez. Luego cada etiqueta de la tarima, cada una con su cantidad.'), '', { hold: false });
-    await beat(3600);
+    await atStep(P.bin);
+    await say(L('A pallet with two labels', 'Una tarima con dos etiquetas'), L('Some pallets carry <b>two loads</b>, each with its own label and its own quantity. Scan the rack as usual. Then, before the first label, tap <b>This pallet has more than one label</b>.', 'Algunas tarimas llevan <b>dos cargas</b>, cada una con su etiqueta y su cantidad. Escanea el rack como siempre. Luego, antes de la primera etiqueta, toca <b>Esta tarima tiene más de una etiqueta</b>.'), '', { hold: false });
+    await beat(3000);
     await scanLabel('rack', e1.bin);
+    await atStep(P.pallet);
+    await tap('#btnMultiLabel', { hold: 2400, shot: 'multi-label-button' });
     await say(L('Label 1 and its quantity', 'Etiqueta 1 y su cantidad'), L('Scan <b>label 1</b>, type its cases.', 'Escanea la <b>etiqueta 1</b>, escribe sus cajas.'), '', { hold: false });
     await scanLabel('pallet', id1);
     await keyIn(e1.qty);
@@ -514,18 +509,15 @@ try {
     await keyIn(e2.qty);
     await skipComments();
     await say(L('Done', 'Listo'), L('That was every label: tap <b>Done — that was every label</b>.', 'Esas eran todas las etiquetas: toca <b>Listo — eran todas las etiquetas</b>.'), '', { hold: false });
-    await beat(3000);
+    await beat(2600);
     await tap('#btnMultiDone', { hold: 2200, shot: 'multi-label-done' });
-    await beat(1400);
+    await beat(1200);
   }
   {
     const [id1, id2] = palletAt.get(doubles[1]);
-    const e1 = expected.get(id1); const e2 = expected.get(id2);
-    await atStep(P.pallet); await scanLabel('pallet', id1);
-    await atStep(P.qty); await keyIn(e1.qty);
-    await atStep(P.bin); await scanLabel('rack', e1.bin);
-    await skipComments();
-    await atStep(P.pallet);
+    const e2 = expected.get(id2);
+    await countLine(id1);
+    await atStep(P.bin);
     await say(L('Saw the second label too late?', '¿Viste la segunda etiqueta tarde?'), L('Already counted the pallet and then spotted another label? Tap <b>Another label on the pallet just counted</b>. Scan it, type its cases, then <b>Done</b>.', '¿Ya contaste la tarima y luego viste otra etiqueta? Toca <b>Otra etiqueta en la tarima recién contada</b>. Escanéala, escribe sus cajas y luego <b>Listo</b>.'), '', { hold: false });
     await beat(5600);
     await tap('#btnSameLabel', { hold: 2400, shot: 'same-label-button' });
@@ -537,6 +529,7 @@ try {
   {
     const id = palletAt.get(single[4])[0];
     const e = expected.get(id);
+    await atStep(P.bin); await scanLabel('rack', e.bin);
     await atStep(P.pallet);
     await prop(`<div class="prop"><div class="k">${L('PALLET LABEL', 'ETIQUETA DE TARIMA')}</div><div class="line"><b>${e.sku}</b> · ${e.desc}</div><div class="bars" style="filter:blur(3px) contrast(.4); opacity:.55">${svg(id)}</div><div class="line" style="margin-top:6px">${id}</div></div>`, L('Iced over — it will not scan', 'Con hielo — no escanea'));
     await say(L('A label that will not scan', 'Una etiqueta que no escanea'), L('Ice, a rip, a faded label. <b>Never skip the pallet.</b> Tap <b>Label will not scan</b>. If you can read the number, tap <b>I can read it — let me type it</b> and type it.', 'Hielo, rota, borrosa. <b>Nunca te saltes la tarima.</b> Toca <b>La etiqueta no escanea</b>. Si puedes leer el número, toca <b>La puedo leer — la escribo</b> y escríbelo.'), '', { hold: false });
@@ -549,20 +542,19 @@ try {
     await gun().press('#fScan', 'Enter');
     await beat(1400);
     await atStep(P.qty); await keyIn(e.qty);
-    await atStep(P.bin); await scanLabel('rack', e.bin);
     await skipComments();
     await say(L('It goes on a list', 'Va a una lista'), L('The office gets a list of labels to replace, so somebody comes with a printer. You keep counting.', 'La oficina recibe una lista de etiquetas para cambiar, y alguien viene con una impresora. Tú sigues contando.'), { text: L('The pallet still gets counted', 'La tarima sí se cuenta'), ok: true });
   }
   {
+    await atStep(P.bin); await scanLabel('rack', expected.get(palletAt.get(single[5])[0]).bin);
     await atStep(P.pallet);
     await say(L('A pallet nobody expected', 'Una tarima que nadie esperaba'), L('A pallet that is not on the list? The scanner asks <b>Count it anyway?</b> Tap <b>YES</b> and count it like any other. If it was simply the wrong barcode, tap <b>NO</b>.', '¿Una tarima que no está en la lista? El escáner pregunta <b>¿Contarla de todos modos?</b> Toca <b>SÍ</b> y cuéntala como cualquier otra. Si solo era el código equivocado, toca <b>NO</b>.'), '', { hold: false });
     await beat(4600);
     await scanLabel('pallet', 'HANDWRITTEN-91');
     await beat(1200);
     await shotPhone('not-on-list');
-    await tap('#btnOvYes', { hold: 3200 });
+    await tap('#btnOvYes', { hold: 3000 });
     await atStep(P.qty); await keyIn(30);
-    await atStep(P.bin); await scanLabel('rack', expected.get(palletAt.get(single[5])[0]).bin);
     if (await gun().isVisible('#scrOverride.active').catch(() => false)) await tap('#btnOverrideAccept', { hold: 1600 }).catch(() => {});
     await skipComments().catch(() => {});
     await say(L('Found stock is never lost', 'La mercancía encontrada no se pierde'), L('The office sees it and adds it to the system. If the scanner ever asks <b>why</b> — a spot outside your aisle, a pallet already counted — pick a reason and tap <b>Accept and continue</b>.', 'La oficina la ve y la agrega al sistema. Si alguna vez el escáner pregunta <b>por qué</b> — un lugar fuera de tu pasillo, una tarima ya contada — escoge una razón y toca <b>Aceptar y seguir</b>.'), { text: L('Not sure? Ask your lead', '¿No estás seguro? Pregunta a tu líder') });
@@ -570,7 +562,7 @@ try {
 
   /* ---------------------------------------------------------- 6 */
   await part(6, L('Help and fixes', 'Ayuda y correcciones'), L('Mistakes, messages, no Wi-Fi, problems, and the SOS button.', 'Errores, mensajes, sin Wi-Fi, problemas y el botón SOS.'));
-  await atStep(P.pallet);
+  await atStep(P.bin);
   await say(L('Made a mistake?', '¿Te equivocaste?'), L('Typed the wrong number before finishing? <b>Back</b> goes back one step. Already saved? Tap <b>History</b>: your last 50 lines. <b>Void this line</b> takes a wrong one out.', '¿Escribiste mal antes de terminar? <b>Atrás</b> regresa un paso. ¿Ya se guardó? Toca <b>Historial</b>: tus últimas 50 líneas. <b>Anular esta línea</b> quita una mal hecha.'), '', { hold: false });
   await beat(5400);
   await tap('#btnHistory', { hold: 2000 });
@@ -589,13 +581,7 @@ try {
   await ctx.setOffline(true);
   await gun().evaluate(() => window.dispatchEvent(new Event('offline')));
   await beat(4200);
-  {
-    const id = palletAt.get(single[6])[0]; const e = expected.get(id);
-    await atStep(P.pallet); await scanLabel('pallet', id);
-    await atStep(P.qty); await keyIn(e.qty);
-    await atStep(P.bin); await scanLabel('rack', e.bin);
-    await skipComments();
-  }
+  await countLine(palletAt.get(single[6])[0]);
   await shotPhone('offline');
   await beat(2400);
   await ctx.setOffline(false);
@@ -648,16 +634,10 @@ try {
   await tap('#btnRecounts', { hold: 2600, shot: 'second-counts-offered' });
   await gun().waitForSelector('#scrScan.active', { timeout: 20000 });
   await beat(1400);
-  await say(L('Count it like any spot', 'Cuéntalo como cualquier lugar'), L('The screen shows <b>SECOND COUNT</b> and the spot. Go there and count everything in it — pallet, quantity, rack. You are not told the first count. Then tap <b>Bin done — nothing more here</b>.', 'La pantalla muestra <b>SEGUNDO CONTEO</b> y el lugar. Ve ahí y cuenta todo — tarima, cantidad, rack. No te dicen el primer conteo. Luego toca <b>Ubicación terminada — no hay más aquí</b>.'));
+  await say(L('Count it like any spot', 'Cuéntalo como cualquier lugar'), L('The screen shows <b>SECOND COUNT</b> and the spot. Go there and count everything in it — rack, pallet, quantity. You are not told the first count. Then tap <b>Bin done — nothing more here</b>.', 'La pantalla muestra <b>SEGUNDO CONTEO</b> y el lugar. Ve ahí y cuenta todo — rack, tarima, cantidad. No te dicen el primer conteo. Luego toca <b>Ubicación terminada — no hay más aquí</b>.'));
   await toTop(); await beat(600);
   await shotPhone('second-count');
-  {
-    const id = palletAt.get(recBin)[0]; const e = expected.get(id);
-    await atStep(P.pallet); await scanLabel('pallet', id);
-    await atStep(P.qty); await keyIn(e.qty);
-    await atStep(P.bin); await scanLabel('rack', recBin);
-    await skipComments();
-  }
+  await countLine(palletAt.get(recBin)[0], recBin);
   await tap('#btnRecountDone', { hold: 2600 });
   await beat(1600);
   if (!(await gun().isVisible('#scrAssign.active').catch(() => false))) await tap('#btnToAssign', { hold: 1400 }).catch(() => {});
@@ -670,7 +650,7 @@ try {
   await say(L('End of your shift', 'Fin de tu turno'), L('Going on break or home? Tap <b>Sign off this scanner</b> on <b>My aisle</b> and put the scanner on its charger. The next crew signs on with their own card and badges.', '¿Te vas al descanso o a casa? Toca <b>Salir de este escáner</b> en <b>Mi pasillo</b> y pon el escáner en su cargador. El siguiente equipo entra con su tarjeta y gafetes.'));
   await clearProp();
 
-  await cover(L('That is the job', 'Ese es el trabajo'), L('Pallet · Quantity · Rack', 'Tarima · Cantidad · Rack'),
+  await cover(L('That is the job', 'Ese es el trabajo'), L('Rack · Pallet · Quantity', 'Rack · Tarima · Cantidad'),
     L('Count what is <b>really there</b>. Never skip a pallet. Not sure? Ask your lead — or press <b>SOS</b> if you need help now.', 'Cuenta lo que <b>de verdad hay</b>. Nunca te saltes una tarima. ¿Dudas? Pregunta a tu líder — o toca <b>SOS</b> si necesitas ayuda ya.'), 9000);
 
   /* ------------------------------------------------------------- the file */

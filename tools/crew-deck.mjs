@@ -141,8 +141,8 @@ pres.addSection({ title: section });
   const s = pres.addSlide({ masterName: 'cover', sectionTitle: section });
   s.addText(L('Day 1 · Counting crew', 'Día 1 · Equipo de conteo'), { placeholder: 'kicker' });
   s.addText(L('How to count with the scanner', 'Cómo contar con el escáner'), { placeholder: 'title' });
-  s.addText(L('Scan the pallet. Type what is there. Scan the rack.\nThat is the whole job — these slides show every step.', 'Escanea la tarima. Escribe lo que hay. Escanea el rack.\nEse es todo el trabajo — estas láminas muestran cada paso.'), { placeholder: 'body' });
-  s.addNotes(L('Welcome. Today you learn the scanner. The job is three steps, over and over: scan the pallet label, type how many cases are really there, scan the rack label. Everything else is the scanner helping you when something is unusual. The film shows the same steps slowly; these slides are the same lesson to keep.', 'Bienvenidos. Hoy aprenden el escáner. El trabajo son tres pasos, una y otra vez: escanear la etiqueta de la tarima, escribir cuántas cajas hay de verdad, escanear la etiqueta del rack. Todo lo demás es el escáner ayudándote cuando algo es diferente. El video muestra los mismos pasos despacio; estas láminas son la misma lección para conservar.'));
+  s.addText(L('Scan the rack. Scan the pallet. Type what is there.\nThat is the whole job — these slides show every step.', 'Escanea el rack. Escanea la tarima. Escribe lo que hay.\nEse es todo el trabajo — estas láminas muestran cada paso.'), { placeholder: 'body' });
+  s.addNotes(L('Welcome. Today you learn the scanner. The job is three steps, over and over: scan the rack label, scan the pallet label, type how many cases are really there. Everything else is the scanner helping you when something is unusual. The film shows the same steps slowly; these slides are the same lesson to keep.', 'Bienvenidos. Hoy aprenden el escáner. El trabajo son tres pasos, una y otra vez: escanear la etiqueta del rack, escanear la etiqueta de la tarima, escribir cuántas cajas hay de verdad. Todo lo demás es el escáner ayudándote cuando algo es diferente. El video muestra los mismos pasos despacio; estas láminas son la misma lección para conservar.'));
 }
 
 part(1, L('Before you start', 'Antes de empezar'), L('The scanner, its buttons, and your language.', 'El escáner, sus botones y tu idioma.'));
@@ -153,7 +153,7 @@ content({
     [{ text: L('The number keys', 'Las teclas'), bold: true }, L(' type a quantity, then Enter.', ' escriben una cantidad, luego Enter.')],
     [{ text: L('The screen', 'La pantalla'), bold: true }, L(' asks one thing at a time, in big letters. Read the top, do what it says.', ' pide una cosa a la vez, con letras grandes. Lee arriba y haz lo que dice.')],
   ],
-  tip: L('Pallet · Quantity · Rack — over and over', 'Tarima · Cantidad · Rack — una y otra vez'),
+  tip: L('Rack · Pallet · Quantity — over and over', 'Rack · Tarima · Cantidad — una y otra vez'),
   shots: ['signon'],
   notes: L('Hold up a scanner. Show the trigger, the number keys and the screen. The screen in the middle of every slide is the real app.', 'Muestra un escáner. Señala el gatillo, las teclas y la pantalla. La pantalla en el centro de cada lámina es la app real.'),
 });
@@ -192,7 +192,7 @@ content({
   notes: L('The aisle is chosen by the office. You never pick one. If the screen says the aisle is still being counted by another team, wait: it starts by itself when the racking is free.', 'El pasillo lo escoge la oficina. Tú nunca eliges uno. Si la pantalla dice que otro equipo sigue en el pasillo, espera: empieza solo cuando el rack esté libre.'),
 });
 
-part(3, L('Counting a pallet', 'Contar una tarima'), L('Three steps, over and over: the pallet, the quantity, the rack.', 'Tres pasos, una y otra vez: la tarima, la cantidad, el rack.'));
+part(3, L('Counting a pallet', 'Contar una tarima'), L('Three steps, over and over: the rack, the pallet, the quantity.', 'Tres pasos, una y otra vez: el rack, la tarima, la cantidad.'));
 content({
   title: L('Where to go next', 'A dónde ir'),
   lines: [
@@ -205,9 +205,20 @@ content({
 });
 content({
   kicker: `${section} · ${L('Step 1', 'Paso 1')}`,
-  title: L('1 · Scan the pallet label', '1 · Escanea la etiqueta de la tarima'),
+  title: L('1 · Scan the rack label', '1 · Escanea la etiqueta del rack'),
   lines: [
-    L('Point the scanner at the barcode on the pallet label. Pull the trigger. Wait for the beep.', 'Apunta el escáner al código de barras de la etiqueta de la tarima. Aprieta el gatillo. Espera el bip.'),
+    L('Point the scanner at the yellow rack label under the pallet. Pull the trigger. Wait for the beep.', 'Apunta el escáner a la etiqueta amarilla del rack debajo de la tarima. Aprieta el gatillo. Espera el bip.'),
+    L('That tells the system where you are. The scanner checks it is in your aisle and on your levels.', 'Así el sistema sabe dónde estás. El escáner revisa que sea de tu pasillo y tus niveles.'),
+  ],
+  labels: ['label-rack'],
+  shots: ['rack-scanned'],
+  notes: L('Show a rack label. It is on the beam under the pallet. Scan the one for the spot you are counting, not the one next to it.', 'Muestra una etiqueta de rack. Está en la viga debajo de la tarima. Escanea la del lugar que estás contando, no la de al lado.'),
+});
+content({
+  kicker: `${section} · ${L('Step 2', 'Paso 2')}`,
+  title: L('2 · Scan the pallet label', '2 · Escanea la etiqueta de la tarima'),
+  lines: [
+    L('Now the barcode on the pallet label. Wait for the beep.', 'Ahora el código de barras de la etiqueta de la tarima. Espera el bip.'),
     [L('The scanner shows the pallet number. It does ', 'El escáner muestra el número de tarima. '), { text: L('not', 'No'), bold: true }, L(' tell you how many should be there.', ' te dice cuántas cajas debería haber.')],
   ],
   tip: L('A blind count: you count what is in front of you', 'Un conteo a ciegas: cuentas lo que tienes enfrente'),
@@ -216,8 +227,8 @@ content({
   notes: L('Show a real pallet label. The barcode is what the scanner reads. The scanner says Pallet F01-001 and nothing about what is on it: that is on purpose.', 'Muestra una etiqueta real de tarima. El código de barras es lo que lee el escáner. El escáner dice Tarima F01-001 y nada de lo que lleva: es a propósito.'),
 });
 content({
-  kicker: `${section} · ${L('Step 2', 'Paso 2')}`,
-  title: L('2 · Count, then type the quantity', '2 · Cuenta y escribe la cantidad'),
+  kicker: `${section} · ${L('Step 3', 'Paso 3')}`,
+  title: L('3 · Count, then type the quantity', '3 · Cuenta y escribe la cantidad'),
   lines: [
     [L('Count the cases that are ', 'Cuenta las cajas que '), { text: L('really there', 'de verdad están ahí'), bold: true }, '.'],
     L('Type the number on the number keys, then press Enter.', 'Escribe el número con las teclas y oprime Enter.'),
@@ -225,18 +236,6 @@ content({
   ],
   shots: ['quantity'],
   notes: L('This is the step that matters. If the pallet says 48 and you count 45, type 45. The office works out the rest.', 'Este es el paso que importa. Si la tarima dice 48 y cuentas 45, escribe 45. La oficina resuelve el resto.'),
-});
-content({
-  kicker: `${section} · ${L('Step 3', 'Paso 3')}`,
-  title: L('3 · Scan the rack label', '3 · Escanea la etiqueta del rack'),
-  lines: [
-    L('Scan the yellow rack label of the spot the pallet is sitting in.', 'Escanea la etiqueta amarilla del rack donde está la tarima.'),
-    L('That tells the system where the pallet is.', 'Así el sistema sabe dónde está la tarima.'),
-    L('The scanner checks it is in your aisle and on your levels.', 'El escáner revisa que sea de tu pasillo y tus niveles.'),
-  ],
-  labels: ['label-rack'],
-  shots: ['bin-asked'],
-  notes: L('Show a rack label. It is on the beam under the pallet. Scan the one for the spot the pallet is in, not the one next to it.', 'Muestra una etiqueta de rack. Está en la viga debajo de la tarima. Escanea la del lugar donde está la tarima, no la de al lado.'),
 });
 content({
   kicker: `${section} · ${L('Step 4', 'Paso 4')}`,
@@ -253,7 +252,7 @@ content({
 content({
   title: L('The wrong label? It tells you', '¿Etiqueta equivocada? Te avisa'),
   lines: [
-    L('If you scan the rack label when it asks for the pallet, the scanner says so and records nothing.', 'Si escaneas la etiqueta del rack cuando pide la tarima, el escáner te avisa y no guarda nada.'),
+    L('If you scan the pallet label when it asks for the rack, the scanner says so and records nothing.', 'Si escaneas la etiqueta de la tarima cuando pide el rack, el escáner te avisa y no guarda nada.'),
     L('Just scan the right one.', 'Solo escanea la correcta.'),
   ],
   shots: ['wrong-label'],
@@ -275,8 +274,8 @@ content({
 content({
   title: L('An empty spot', 'Un lugar vacío'),
   lines: [
-    L('Nothing in the spot? That counts too.', '¿No hay nada en el lugar? Eso también cuenta.'),
-    [L('Tap ', 'Toca '), { text: L('Bin is EMPTY — scan the bin', 'Ubicación VACÍA — escanea la ubicación'), bold: true }, L(', then scan the rack label.', ' y luego escanea la etiqueta del rack.')],
+    L('Nothing in the spot? That counts too. Scan the rack label as usual.', '¿No hay nada en el lugar? Eso también cuenta. Escanea la etiqueta del rack como siempre.'),
+    [L('Then tap ', 'Luego toca '), { text: L('Bin is EMPTY', 'Ubicación VACÍA'), bold: true }, L(', and ', ' y '), { text: L('Yes — it is empty', 'Sí — está vacía'), bold: true }, '.'],
     L('Now the office knows it was checked and is empty.', 'Así la oficina sabe que se revisó y está vacío.'),
   ],
   labels: ['label-rack'],
@@ -288,10 +287,10 @@ part(5, L('Labels', 'Etiquetas'), L('Two labels on one pallet, a label that will
 content({
   title: L('A pallet with two labels', 'Una tarima con dos etiquetas'),
   lines: [
-    [L('Tap ', 'Toca '), { text: L('This pallet has more than one label', 'Esta tarima tiene más de una etiqueta'), bold: true }, L(' · scan the rack once · label 1 and its cases · label 2 and its cases · ', ' · escanea el rack una vez · etiqueta 1 y sus cajas · etiqueta 2 y sus cajas · '), { text: L('Done', 'Listo'), bold: true }],
+    [L('Scan the rack as usual · tap ', 'Escanea el rack como siempre · toca '), { text: L('This pallet has more than one label', 'Esta tarima tiene más de una etiqueta'), bold: true }, L(' · label 1 and its cases · label 2 and its cases · ', ' · etiqueta 1 y sus cajas · etiqueta 2 y sus cajas · '), { text: L('Done', 'Listo'), bold: true }],
   ],
   shots: ['multi-label-button', 'multi-label-2', 'multi-label-done'],
-  notes: L('Some pallets carry two loads, each with its own label. Each label gets its own quantity. The rack is scanned once.', 'Algunas tarimas llevan dos cargas, cada una con su etiqueta. Cada etiqueta lleva su propia cantidad. El rack se escanea una vez.'),
+  notes: L('Some pallets carry two loads, each with its own label. Each label gets its own quantity. The rack is scanned once, before the button.', 'Algunas tarimas llevan dos cargas, cada una con su etiqueta. Cada etiqueta lleva su propia cantidad. El rack se escanea una vez, antes del botón.'),
 });
 content({
   title: L('Saw the second label too late?', '¿Viste la segunda etiqueta tarde?'),
@@ -384,7 +383,7 @@ content({
   lines: [
     L('Sometimes the office needs a spot counted again, by a different team.', 'A veces la oficina necesita contar un lugar otra vez, por otro equipo.'),
     [L('When there are some for you, ', 'Cuando hay para ti, '), { text: L('My aisle', 'Mi pasillo'), bold: true }, L(' shows ', ' muestra '), { text: L('Start second counts', 'Empezar segundos conteos'), bold: true }, '.'],
-    [L('Go to the spot and count everything in it — pallet, quantity, rack. Then tap ', 'Ve al lugar y cuenta todo — tarima, cantidad, rack. Luego toca '), { text: L('Bin done — nothing more here', 'Ubicación terminada — no hay más aquí'), bold: true }, '.'],
+    [L('Go to the spot and count everything in it — rack, pallet, quantity. Then tap ', 'Ve al lugar y cuenta todo — rack, tarima, cantidad. Luego toca '), { text: L('Bin done — nothing more here', 'Ubicación terminada — no hay más aquí'), bold: true }, '.'],
   ],
   tip: L('You are not told the first count', 'No te dicen el primer conteo'),
   shots: ['second-counts-offered', 'second-count'],
@@ -420,9 +419,9 @@ content({
   s.addText(section, { placeholder: 'kicker' });
   s.addText(L('The buttons, on one page', 'Los botones, en una página'), { placeholder: 'title' });
   const rows = [
-    [L('Bin is EMPTY', 'Ubicación VACÍA'), L('Nothing in the spot. Then scan the rack', 'No hay nada en el lugar. Luego escanea el rack')],
+    [L('Bin is EMPTY', 'Ubicación VACÍA'), L('Nothing in the spot: after the rack, tap it, then Yes', 'No hay nada en el lugar: después del rack, tócalo y luego Sí')],
     [L('Nothing more here →', 'No hay más aquí →'), L('The scanner expects more pallets, there are none', 'El escáner espera más tarimas, no hay')],
-    [L('This pallet has more than one label', 'Esta tarima tiene más de una etiqueta'), L('Rack once, then each label with its cases, then Done', 'Rack una vez, luego cada etiqueta con sus cajas, luego Listo')],
+    [L('This pallet has more than one label', 'Esta tarima tiene más de una etiqueta'), L('After the rack: each label with its cases, then Done', 'Después del rack: cada etiqueta con sus cajas, luego Listo')],
     [L('Another label on the pallet just counted', 'Otra etiqueta en la tarima recién contada'), L('A second label seen after saving', 'Una segunda etiqueta vista después de guardar')],
     [L('Label will not scan', 'La etiqueta no escanea'), L('Type what is printed, or count it without a label', 'Escribe lo impreso, o cuéntala sin etiqueta')],
     [L('Back / Keyboard', 'Atrás / Teclado'), L('One step back / type by hand', 'Un paso atrás / escribir a mano')],
@@ -441,7 +440,7 @@ content({
 {
   const s = pres.addSlide({ masterName: 'cover', sectionTitle: section });
   s.addText(L('That is the job', 'Ese es el trabajo'), { placeholder: 'kicker' });
-  s.addText(L('Pallet · Quantity · Rack', 'Tarima · Cantidad · Rack'), { placeholder: 'title' });
+  s.addText(L('Rack · Pallet · Quantity', 'Rack · Tarima · Cantidad'), { placeholder: 'title' });
   s.addText(L('Count what is really there. Never skip a pallet.\nNot sure? Ask your lead — or press SOS if you need help now.', 'Cuenta lo que de verdad hay. Nunca te saltes una tarima.\n¿Dudas? Pregunta a tu líder — o toca SOS si necesitas ayuda ya.'), { placeholder: 'body' });
   s.addNotes(L('Questions, then the practice at the desk with the test book.', 'Preguntas, y luego la práctica en la mesa con el libro de prueba.'));
 }

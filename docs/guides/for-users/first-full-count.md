@@ -154,12 +154,13 @@ The next screen shows the team's aisle and what is queued after it.
 
 ## 9 — On the scanner: counting
 
-**One pallet** (in the usual order)
+**One pallet** (bin first)
 
-1. **Scan PALLET ID.** The scanner names the pallet but not what is on it. Count what is in front of
+1. **Scan BIN LOCATION.** The yellow rack label under the pallet. The scanner says where that bin
+   is.
+2. **Scan PALLET ID.** The scanner names the pallet but not what is on it. Count what is in front of
    you.
-2. **Enter QUANTITY.** A big number may need typing twice.
-3. **Scan BIN LOCATION.** The scanner says where the bin is.
+3. **Enter QUANTITY.** A big number may need typing twice.
 4. **Comments.** Tap a reason if one fits, or leave it and it moves on by itself.
 
 The line is saved on the scanner at once and sent whenever there is signal. **Next bin** at the top

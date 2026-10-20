@@ -58,19 +58,24 @@ check('Teams page: the counting plan upload lives here now, with a count picker'
 // teams and drag/drop
 for (const t of ['1', '2']) { await p.fill('#fTeamName', t); await p.click('#btnAddTeam'); await p.waitForTimeout(400); }
 check('Teams page: teams created', (await p.$$('#teams .bucket')).length === 2);
-const drag = async (badge, teamIdx) => {
+/* Narrow the crew list to the person's department first, so the card is on screen: Playwright's
+   drag scrolls the page to the target mid-drag, and with the crew list pinned to the viewport the
+   card under the pointer would change while the button is down - a thing no hand does. */
+const drag = async (badge, teamIdx, dept) => {
+  if (dept) { await p.selectOption('#fDeptView', dept); await p.waitForTimeout(400); }
   await p.locator(`#pool .person[data-badge="${badge}"]`).dragTo(p.locator(`#teams .bucket >> nth=${teamIdx}`));
   await p.waitForTimeout(500);
+  if (dept) { await p.selectOption('#fDeptView', ''); await p.waitForTimeout(400); }
 };
 await drag('E1002', 0);   // scissor only -> team 1 reaches A
 await p.waitForTimeout(300);
 let cards = await p.$$eval('#teams .bucket .reach', (r) => r.map((x) => x.textContent));
 check('Drag and drop: a person moves onto a team and the reach updates', /reaches level A/.test(cards[0]), cards.join(' | '));
-await drag('E1003', 0);   // + dock truck -> A-C
+await drag('E1003', 0, 'Dry Dock');   // + dock truck -> A-C
 await p.waitForTimeout(300);
 cards = await p.$$eval('#teams .bucket .reach', (r) => r.map((x) => x.textContent));
 check('Reach pools across the team: scissor + dock truck together reach A-C', /reaches levels A–C/.test(cards[0]), cards[0]);
-await drag('E1001', 1);   // scissor + high reach -> A, C-F
+await drag('E1001', 1, 'Freezer');   // scissor + high reach -> A, C-F
 await p.waitForTimeout(300);
 cards = await p.$$eval('#teams .bucket .reach', (r) => r.map((x) => x.textContent));
 check('Team 2 with scissor + high reach reaches A, C, D, E, F', /reaches levels A, C, D, E, F/.test(cards[1]), cards[1]);

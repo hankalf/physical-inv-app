@@ -262,9 +262,10 @@ Screen* or your device management. That is a device setting, not one in this app
 **Settings → Scanners → How the counting screen is put together.** This is what a counter sees. The
 preview on the right is drawn at the real screen size of the scanner.
 
-1. **The questions, in order.** Drag them into the order your site counts in. The default is
-   **pallet**, then **quantity**, then **bin**. Counting **bin first** suits a team working a bay at
-   a time. Lot code and expiry only appear on counts that ask for them (step 14).
+1. **The questions, in order.** Drag them into the order your site counts in. Set it to **bin**,
+   then **pallet**, then **quantity**: the rack label first, which suits a team working a bay at a
+   time, and is the order the training film and slides show. Lot code and expiry only appear on
+   counts that ask for them (step 14).
 2. The switches below it. These are the ones worth knowing on a first count:
 
    | Switch | What it does | Suggested |
@@ -496,12 +497,13 @@ The scanner shows the team's aisle and what is queued behind it.
 
 ![](../images/gun-your-aisle.png)
 
-**Counting a pallet** (in the default order)
+**Counting a pallet** (in the site's order, bin first)
 
-1. **Scan PALLET ID.** The scanner names the pallet but not what is on it. It is a blind count:
+1. **Scan BIN LOCATION.** The yellow rack label under the pallet. The scanner says where that bin
+   is and checks it is in your aisle.
+2. **Scan PALLET ID.** The scanner names the pallet but not what is on it. It is a blind count:
    count what is in front of you.
-2. **Enter QUANTITY.** A big number may need typing twice.
-3. **Scan BIN LOCATION.** The scanner says where the bin is and which face it is on.
+3. **Enter QUANTITY.** A big number may need typing twice.
 4. **Comments** (optional). Tap a reason, or leave it and it moves on by itself.
 
 The line is saved on the scanner the moment the last question is answered, and sent whenever there
