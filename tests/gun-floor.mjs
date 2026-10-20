@@ -26,7 +26,7 @@ const bins = ['F01A001', 'F01A002', 'F01A003', 'F01A004', 'F01A005', 'F01A006', 
 await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=bins`, { method: 'POST', headers: csv,
   body: 'Bin Location,Zone,Aisle\n' + bins.map((b) => `${b},Freezer,${b.slice(0, 3)}`).join('\n') + '\n' });
 await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=pallets`, { method: 'POST', headers: csv,
-  body: 'Pallet ID,SKU,Description,Qty,Location\nFL-1,SKU-4120,Chicken breast IQF 40lb,40,F01A001\nFL-2,SKU-2210,Peas petite 12x2lb,30,F01A008\nFL-3,SKU-2240,Sweetcorn 20lb,20,F02A001\n' });
+  body: 'Pallet ID,SKU,Description,Qty,Location\nFL-1,SKU-4120,Chicken breast IQF 40lb,40,F01A001\nFL-2,SKU-2210,Peas petite 12x2lb,30,F01A008\nFL-3,SKU-2240,Sweetcorn 20lb,20,F02A001\nFL-4,SKU-2250,Carrots 20lb,15,F02A001\n' });
 await post(`/api/admin/sessions/${sess.id}/settings`, { guided: false, askLot: false, askExpiry: false });
 const dev = await post('/api/admin/devices', { name: 'FLOOR-01' });
 
@@ -66,27 +66,46 @@ await wait(2500);
 const raw = await (await fetch(`${BASE}/api/admin/sessions/${sess.id}/export/counts.csv`, { headers: A })).text().catch(() => '');
 check('The office still gets the SKU on the line, from the report', /FL-1,38,F01A001.*SKU-4120/.test(raw.replace(/"/g, '')) || /SKU-4120/.test(raw), raw.split('\n').find((l) => l.includes('FL-1')));
 
-/* ---------------- a pallet wearing two labels ---------------- */
+/* ---------------- a pallet with more than one label: the bin once, each label with its own quantity ---------------- */
+check('At the start of a line there is a button for a pallet with more than one label', await gun.isVisible('#btnMultiLabel') && await gun.isHidden('#btnMultiDone'));
+await gun.click('#btnMultiLabel');
+check('…which asks for the bin first, whatever the scan order', /Scan the BIN this pallet is in/.test(await gun.textContent('#prompt')) && await gun.isHidden('#btnMultiLabel'), clean(await gun.textContent('#prompt')));
+await scan('F02A001');
+check('…then the first label', /Scan LABEL 1 on this pallet/.test(await gun.textContent('#prompt')), clean(await gun.textContent('#prompt')));
 await scan('FL-3');
-check('Right after the pallet scan there is a button for a pallet with another label', await gun.isVisible('#btnMoreLabels'));
-await gun.click('#btnMoreLabels');
-check('…which asks for the other label before the quantity', /Scan the OTHER label on FL-3/.test(await gun.textContent('#prompt')));
+check('…then that label\'s quantity', /Enter QUANTITY on label 1/.test(await gun.textContent('#prompt')));
+await scan('20'); await skip();
+check('Label 1 is counted, and the gun asks for label 2 in the same bin, without the bin again', /Label 1 counted: FL-3/.test(await gun.textContent('#scanMsg')) && /Scan LABEL 2 on this pallet/.test(await gun.textContent('#prompt'))
+  && /On this pallet\s*FL-3/.test(clean(await gun.textContent('#ctx'))) && /F02A001/.test(await gun.textContent('#ctx')), clean(await gun.textContent('#scanMsg')) + ' | ' + clean(await gun.textContent('#ctx')));
+check('…and Done is offered, now that a label is in', await gun.isVisible('#btnMultiDone') && /\(1\)/.test(await gun.textContent('#btnMultiDone')));
 await scan('FL-3');
-check('The same label again is refused', /already read/.test(await gun.textContent('#scanMsg')));
-await gun.click('#btnMoreLabels');
-await scan('FL-3-OLD');
-check('The other label is taken, and the gun goes on to the quantity', /FL-3-OLD is the same pallet as FL-3/.test(await gun.textContent('#scanMsg')) && /QUANTITY/.test(await gun.textContent('#prompt')) && /2 labels/.test(await gun.textContent('#scanMsg')), clean(await gun.textContent('#scanMsg')));
-check('…and the context shows both labels on the one pallet', /FL-3 \+ FL-3-OLD/.test(await gun.textContent('#ctx')));
-await scan('20'); await scan('F02A001'); await skip();
+check('The same label twice is refused', /FL-3 is already counted on this pallet/.test(await gun.textContent('#scanMsg')) && /Scan LABEL 2/.test(await gun.textContent('#prompt')));
+await scan('FL-4');
+await scan('15'); await skip();
+check('Label 2 is counted with its own quantity', /Label 2 counted: FL-4/.test(await gun.textContent('#scanMsg')) && /15 @ F02A001/.test(await gun.textContent('#scanMsg')), clean(await gun.textContent('#scanMsg')));
+await gun.click('#btnMultiDone');
+await gun.waitForTimeout(400);
+check('Done ends the pallet and says what was counted', /Pallet with 2 labels counted in F02A001/.test(await gun.textContent('#scanMsg')) && /FL-3 · FL-4/.test(await gun.textContent('#scanMsg'))
+  && /Scan PALLET ID/.test(await gun.textContent('#prompt')) && await gun.isHidden('#btnMultiDone'), clean(await gun.textContent('#scanMsg')));
 await wait(2500);
-const rep3 = (await get(`/api/admin/sessions/${sess.id}/pallets?limit=100`)).rows;
+let rep3 = [];
+for (let i = 0; i < 20 && !rep3.some((r) => r.pallet_id === 'FL-4' && Number(r.counted_qty) === 15); i++) { rep3 = (await get(`/api/admin/sessions/${sess.id}/pallets?limit=100`)).rows; if (!rep3.some((r) => r.pallet_id === 'FL-4' && Number(r.counted_qty) === 15)) await wait(500); }
 const main3 = rep3.find((r) => r.pallet_id === 'FL-3');
-const tag3 = rep3.find((r) => r.pallet_id === 'FL-3-OLD');
-check('The pallet counts once, with its other label beside it', main3 && Number(main3.counted_qty) === 20 && main3.also_tagged === 'FL-3-OLD', main3 && `${main3.counted_qty} · ${main3.also_tagged}`);
-check('…and the other label is a second label, not an unknown pallet', tag3 && tag3.status === 'SECOND LABEL' && tag3.alias_of === 'FL-3', tag3 && tag3.status);
-await scan('FL-3-OLD');
-check('Scanning that other label later is caught as already counted', (await screen()) === 'scrOverride' && /already counted/.test(await gun.textContent('#ovWhy')));
+const tag3 = rep3.find((r) => r.pallet_id === 'FL-4');
+check('Each label is counted with its own quantity, in the one bin', main3 && Number(main3.counted_qty) === 20 && main3.found_location === 'F02A001' && tag3 && Number(tag3.counted_qty) === 15 && tag3.found_location === 'F02A001',
+  JSON.stringify([main3 && [main3.counted_qty, main3.found_location], tag3 && [tag3.counted_qty, tag3.found_location]]));
+check('…both match the report, and neither is a second label', main3.status === 'MATCH' && tag3.status === 'MATCH' && !tag3.alias_of, `${main3.status} · ${tag3.status}`);
+check('…and the second says which label it shares the pallet with', /another label on the same pallet as FL-3/.test(tag3.comments || ''), tag3.comments);
+await scan('FL-4');
+check('Scanning one of those labels later is caught as already counted', (await screen()) === 'scrOverride' && /already counted/.test(await gun.textContent('#ovWhy')));
 await gun.click('#btnOverrideCancel'); await gun.waitForTimeout(300);
+
+/* ---------------- seen late: another label on the pallet just counted ---------------- */
+check('After a line, Another label on the pallet just counted names that pallet', await gun.isVisible('#btnSameLabel') && /FL-4/.test(await gun.textContent('#btnSameLabel')), clean(await gun.textContent('#btnSameLabel')));
+await gun.click('#btnSameLabel'); await gun.waitForTimeout(500);
+check('…it goes straight to the next label, in that pallet\'s bin, with no bin scan', /Scan LABEL 2 on this pallet/.test(await gun.textContent('#prompt')) && /F02A001/.test(await gun.textContent('#ctx')), clean(await gun.textContent('#prompt')));
+await gun.click('#btnBack'); await gun.waitForTimeout(300);
+check('…and Back puts it away, nothing recorded', /Scan PALLET ID/.test(await gun.textContent('#prompt')) && await gun.isHidden('#btnMultiDone'));
 
 /* ---------------- a pallet not on the list ---------------- */
 await scan('FOUND-77');

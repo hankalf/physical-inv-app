@@ -71,8 +71,12 @@ you the next one. You do not wait for a supervisor.
   one in between; if it cannot, the count is still kept and the bay goes on the relabel list.
 - **"Pallet not on the list"**: the gun asks whether to count it anyway. If it is really there,
   yes: a supervisor adds it to the system. Pick the reason it offers.
-- **"That label belongs to another pallet"**: a second label. Tell a supervisor; count it under
-  the first label.
+- **A pallet with more than one label**: tap **This pallet has more than one label**, scan the bin,
+  then each label and its quantity, then **Done**. Saw the other label only after counting? Tap
+  **Another label on the pallet just counted** — the gun keeps the bin; scan the label and enter its
+  quantity.
+- **"That label belongs to another pallet"**: that tag is already counted elsewhere. Tell a
+  supervisor.
 - **"That is a very large quantity"**: type it again if it is right.
 - **"That date has passed"**: tell a supervisor; it is recorded.
 - **Team N is counting aisle X**: another team holds that racking. Wait, or ask.

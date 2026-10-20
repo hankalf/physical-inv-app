@@ -129,7 +129,7 @@
     draft: {},
     lastBin: '',       // the bin being worked, so the guide stays on it while tags remain
     lastPallet: null,  // { id, bin } - what a second label would belong to
-    awaitingLabel: null,
+    multi: null,       // a pallet with more than one label: { labels, base steps, bin }
     override: null,    // { title, why, rows, apply(reasonText) }
     recounts: [],      // second-count tasks offered to this team
     recount: null,     // the task being worked, if any
@@ -1352,6 +1352,12 @@
     $('stepLabel').textContent = `Step ${state.stepIndex + 1} of ${state.steps.length}`;
     $('prompt').textContent = { pallet: 'Scan PALLET ID', qty: 'Enter QUANTITY', bin: 'Scan BIN LOCATION',
       lot: 'Scan LOT CODE', expiry: 'Enter EXPIRY (YYYY-MM-DD)', comments: prompts().commentsRequired === true ? 'Comments (required)' : 'Comments (optional)' }[step];
+    if (state.multi) {
+      const n = state.multi.labels.length + 1;
+      if (step === 'bin') $('prompt').textContent = 'Scan the BIN this pallet is in';
+      if (step === 'pallet') $('prompt').textContent = `Scan LABEL ${n} on this pallet`;
+      if (step === 'qty') $('prompt').textContent = `Enter QUANTITY on label ${n}`;
+    }
     const f = $('fScan');
     f.value = '';
     f.placeholder = step === 'comments' ? (prompts().commentsRequired === true ? 'A comment is needed — tap one below or type' : 'Type a note or tap one below')
@@ -1363,24 +1369,27 @@
     f.inputMode = !state.keyboardOn ? 'none' : (step === 'qty' ? 'decimal' : 'text');
     // lot and expiry can be missing on a real pallet, so they are skippable
     $('btnSkip').hidden = !['comments', 'lot', 'expiry'].includes(step) || (step === 'comments' && prompts().commentsRequired === true);
-    $('btnEmpty').hidden = step !== 'pallet';
+    $('btnEmpty').hidden = step !== 'pallet' || !!state.multi;
     /* the bin is already scanned on this line (the bin comes first): EMPTY needs
        a yes, not the same bin scanned again */
     $('btnEmpty').textContent = state.draft.location && !state.draft.emptyBin ? 'Bin is EMPTY' : 'Bin is EMPTY — scan the bin';
     $('emptyConfirm').hidden = !(step === 'pallet' && state.emptyAsk && state.emptyAsk === state.draft.location);
-    $('btnEmptyRun').hidden = step !== 'pallet' || !!state.recount;
-    // a second label belongs to the pallet just counted, so it is offered at the
-    // start of the next line rather than in the middle of this one
-    $('btnSameLabel').hidden = step !== 'pallet' || !state.lastPallet || !!state.recount;
-    /* right after the pallet scan, before the quantity: a pallet wearing two
-       tags gets both read now, and is still counted once */
-    $('btnMoreLabels').hidden = step !== 'qty' || !state.draft.palletId || !!state.draft.emptyBin || !!state.awaitingExtra;
-    $('btnMoreLabels').textContent = (state.draft.extraLabels || []).length ? 'Another label on this pallet' : 'This pallet has another label';
+    $('btnEmptyRun').hidden = step !== 'pallet' || !!state.recount || !!state.multi;
+    /* A pallet with more than one label: offered where a line starts - before
+       anything is scanned, or with only the bin in (bin first) - and, once a
+       label is in, Done ends it. */
+    const lineStart = !state.draft.palletId && !state.draft.emptyBin && (state.stepIndex === 0 || (step === 'pallet' && !!state.draft.location));
+    $('btnMultiLabel').hidden = !!state.multi || !lineStart;
+    $('btnMultiDone').hidden = !state.multi || step !== 'pallet' || !state.multi.labels.length;
+    $('btnMultiDone').textContent = state.multi ? `Done — that was every label (${state.multi.labels.length})` : 'Done';
+    // the pallet just counted has another label: offered at the start of the next line
+    $('btnSameLabel').hidden = step !== 'pallet' || !state.lastPallet || !!state.multi || !!state.draft.location;
+    if (state.lastPallet) $('btnSameLabel').textContent = `Another label on the pallet just counted (${state.lastPallet.id})`;
     /* A barcode that will not read is not a reason to walk away from a pallet -
        or from a bin. Offered on both steps that scan a label, worded for the one
        in front of the counter, and put away again as the line moves on. */
     const labelStep = step === 'pallet' || step === 'bin';
-    $('btnNoScan').hidden = !labelStep || !!state.awaitingLabel;
+    $('btnNoScan').hidden = !labelStep;
     $('btnNoScan').textContent = step === 'bin' ? 'Bin label will not scan' : 'Label will not scan';
     $('btnNoScanType').textContent = 'I can read it — let me type it';
     if (step === 'bin') {
@@ -1606,7 +1615,8 @@
     const d = state.draft;
     const rows = [];
     if (state.session?.guided && state.assignment?.active) rows.push(['Your aisle', `${aisleLabel(state.assignment.active.aisle, state.assignment.active.zone)} · ${levelsLabel(state.assignment.active.levels)}`]);
-    if (d.palletId) rows.push(['Pallet', (d.extraLabels || []).length ? `${d.palletId} + ${d.extraLabels.join(', ')}` : d.palletId]);
+    if (state.multi && state.multi.labels.length) rows.push(['On this pallet', state.multi.labels.join(' · ')]);
+    if (d.palletId) rows.push([state.multi ? `Label ${state.multi.labels.length + 1}` : 'Pallet', d.palletId]);
     if (d.qty != null) rows.push(['Qty', String(d.qty)]);
     if (d.location) rows.push(['Bin', `${d.location}${describeBin(d.location) ? ' — ' + describeBin(d.location) : ''}`]);
     kv($('ctx'), rows);
@@ -1615,17 +1625,6 @@
   async function handleEntry(raw) {
     const value = norm(raw);
     const step = state.steps[state.stepIndex];
-    if (state.awaitingExtra) {
-      if (!value) return;
-      await takeExtraLabel(value);
-      return;
-    }
-    if (state.awaitingLabel) {
-      if (!value) return;
-      clearFeedback($('scanMsg'));
-      await saveSecondLabel(value);
-      return;
-    }
     if (!value && step !== 'comments') return;
     // a site can insist on a comment: no blank, no skip, no moving on by itself
     if (!value && step === 'comments' && prompts().commentsRequired === true) {
@@ -1649,6 +1648,13 @@
     if (step === 'pallet') {
       // a label printed with the ERP's $ prefix is the same container as the report's
       if (/^\$+[A-Z0-9]/.test(value) && !(await lookupPallet(value))) value = value.replace(/^\$+/, '');
+      // a pallet with more than one label: the same label twice is a misread, not a second load
+      if (state.multi && state.multi.labels.includes(value)) {
+        beep('err');
+        feedback($('scanMsg'), 'err', `${value} is already counted on this pallet`, 'Scan the next label, or tap Done if that was every label.');
+        $('fScan').value = ''; focusScan();
+        return;
+      }
       const dup = await alreadyCounted(value);
       const pal = await lookupPallet(value);
       const mode = state.session.palletMode || 'warn';
@@ -1922,7 +1928,7 @@
     renderOverrideReasons();
     $('btnOverrideSame').hidden = !(spec.offerSecondLabel && state.lastPallet);
     if (!$('btnOverrideSame').hidden) {
-      $('btnOverrideSame').textContent = `It is a second label on ${state.lastPallet.id}`;
+      $('btnOverrideSame').textContent = `It is another label on the pallet with ${state.lastPallet.id}`;
     }
     $('ovTitle').textContent = spec.title;
     $('ovWhy').textContent = spec.why;
@@ -1967,82 +1973,68 @@
    * pallet it is stuck to.
    */
   /*
-   * The other label, read while the counter is still at the pallet.
+   * A pallet with more than one label.
    *
-   * The second-label button after a line is saved covers the case where it is
-   * noticed late. This covers the usual case: the counter sees two tags as they
-   * scan the first, and reads the other one there and then. The extra tags ride
-   * along with the line and are saved beside it, each with no quantity of its
-   * own, so the pallet counts once and neither label comes up as uncounted.
+   * Two loads on one pallet - two items, two lots, a pallet built from two -
+   * each with its own label and its own quantity. The counter scans the bin
+   * once, then each label and its quantity in turn, and taps Done. Every label
+   * is a line of its own, with its own quantity, in that bin; the second and
+   * later ones say which label they share a pallet with. The bin comes first
+   * whatever the site's scan order, because it is what the labels share.
+   *
+   * Seen late, after the line is saved: "Another label on the pallet just
+   * counted" opens the same thing on that pallet's bin, so the label and its
+   * quantity go in without scanning the bin again.
    */
-  function askExtraLabel() {
-    if (!state.draft.palletId) return;
-    state.awaitingExtra = true;
-    $('prompt').textContent = `Scan the OTHER label on ${state.draft.palletId}`;
-    $('fScan').value = '';
-    $('btnMoreLabels').hidden = true;
-    feedback($('scanMsg'), 'warn', `Another label on ${state.draft.palletId}`, 'Scan it. It is recorded with no quantity of its own. Tap Back to cancel.');
-    focusScan();
-  }
-
-  async function takeExtraLabel(tag) {
-    const main = state.draft.palletId;
-    const have = state.draft.extraLabels || [];
-    state.awaitingExtra = false;
-    if (tag === main || have.includes(tag)) {
-      feedback($('scanMsg'), 'err', 'That label is already read', `Scan a different tag on ${main}, or enter the quantity.`);
-      renderStep();
-      return;
+  const multiSteps = (base) => ['bin', ...base.filter((k) => k !== 'bin')];
+  function startMultiLabel() {
+    if (state.multi) return;
+    const d = state.draft || {};
+    const keepBin = !!d.location && !d.emptyBin;
+    state.multi = { labels: [], base: state.steps, bin: keepBin ? d.location : '' };
+    state.steps = multiSteps(state.multi.base);
+    if (keepBin) {
+      // the bin is already scanned on this line (bin first): straight to the first label
+      state.draft = { location: d.location, aisle: d.aisle, unknownLocation: d.unknownLocation, offAssignment: d.offAssignment, binLabelIssue: d.binLabelIssue, overrideReason: d.overrideReason };
+      state.stepIndex = 1;
+    } else {
+      state.draft = {};
+      state.stepIndex = 0;
     }
-    const dup = await alreadyCounted(tag);
-    if (dup) {
-      feedback($('scanMsg'), 'err', `${tag} was counted in ${dup.loc}`, 'That tag belongs to another pallet — tell a supervisor.');
-      renderStep();
-      return;
-    }
-    state.draft.extraLabels = [...have, tag];
-    beep('ok');
     renderStep();
-    feedback($('scanMsg'), 'ok', `${tag} is the same pallet as ${main}`,
-      `${state.draft.extraLabels.length + 1} labels on it. Scan another, or enter the quantity.`);
+    feedback($('scanMsg'), 'warn', 'A pallet with more than one label',
+      keepBin ? `Scan the first label on it, then its quantity. Each label gets its own quantity, all in ${d.location}.` : 'Scan the BIN first. Then each label on the pallet, with its own quantity.');
   }
-
-  function startSecondLabel() {
+  /** The pallet just counted has another label: carry on with it, in its bin. */
+  async function startSameLabel() {
     const last = state.lastPallet;
     if (!last) {
-      feedback($('scanMsg'), 'err', 'Count the pallet first', 'Scan the pallet, then its second label.');
-      return;
+      feedback($('scanMsg'), 'err', 'Count the pallet first', 'Scan the pallet, then its other label.');
+      return false;
     }
-    state.awaitingLabel = { of: last.id, bin: last.bin };
-    $('prompt').textContent = `Scan the OTHER label on ${last.id}`;
-    $('fScan').value = '';
-    $('btnSameLabel').hidden = true;
-    feedback($('scanMsg'), 'warn', `Second label on ${last.id}`,
-      `It will be recorded in ${last.bin} with no quantity of its own. Tap Back to cancel.`);
-    focusScan();
+    const loc = await lookupLocation(last.bin);
+    state.multi = { labels: [last.id], base: state.steps, bin: last.bin, late: true };
+    state.steps = multiSteps(state.multi.base);
+    state.draft = { location: last.bin, aisle: (loc && loc.aisle) || state.assignment?.active?.aisle || '' };
+    state.stepIndex = 1;
+    renderStep();
+    feedback($('scanMsg'), 'warn', `Another label on the pallet with ${last.id}`,
+      `Scan the other label, then its quantity. It is counted in ${last.bin}, with ${last.id}. Back if not.`);
+    return true;
   }
-
-  async function saveSecondLabel(tag) {
-    const { of, bin } = state.awaitingLabel;
-    state.awaitingLabel = null;
-    if (tag === of) {
-      feedback($('scanMsg'), 'err', 'That is the same label', `Scan the other tag on ${of}, or tap Back.`);
-      renderStep();
-      return;
-    }
-    const dup = await alreadyCounted(tag);
-    if (dup && dup.loc !== bin) {
-      feedback($('scanMsg'), 'err', `${tag} was counted in ${dup.loc}`, 'That tag belongs to another pallet — tell a supervisor.');
-      renderStep();
-      return;
-    }
-    state.draft = {
-      palletId: tag, qty: 0, location: bin, aliasOf: of,
-      aisle: (await lookupLocation(bin))?.aisle || state.assignment?.active?.aisle || '',
-      comments: `second label on ${of}`,
-    };
-    await commitLine();
-    feedback($('scanMsg'), 'ok', `${tag} is the same pallet as ${of}`, 'Recorded with no quantity, so nothing is counted twice.');
+  /** Every label on the pallet is in: back to the normal order. */
+  function finishMultiLabel({ quiet = false } = {}) {
+    const m = state.multi;
+    if (!m) return;
+    state.steps = m.base;
+    state.multi = null;
+    state.draft = {};
+    state.stepIndex = 0;
+    renderStep();
+    if (quiet) { clearFeedback($('scanMsg')); return; }
+    const n = m.labels.length;
+    if (!n) { clearFeedback($('scanMsg')); return; }
+    feedback($('scanMsg'), 'ok', `Pallet with ${n} label${n === 1 ? '' : 's'} counted${m.bin ? ` in ${m.bin}` : ''}`, m.labels.join(' · '));
   }
 
   /*
@@ -2140,6 +2132,11 @@
     const d = state.draft;
     // a pallet with no readable label takes its name from the bin it turned up in
     if (d.labelIssue === 'none') d.palletId = await nameFromBin(d.location);
+    // the second and later labels on one pallet say which label they share it with
+    if (state.multi && state.multi.labels.length && !d.emptyBin) {
+      const note = `another label on the same pallet as ${state.multi.labels[0]}`;
+      d.comments = d.comments ? `${note}; ${d.comments}` : note;
+    }
     const line = {
       clientId: uuid(),
       sessionId: state.session.id,
@@ -2172,13 +2169,6 @@
     };
     await wrap(lineTx().put(line));
     if (!line.emptyBin) await wrap(tx('dup', 'readwrite').put({ p: line.palletId, loc: line.location, team: line.team }));
-    // the other labels on this pallet: a line each, no quantity, pointing at it
-    for (const tag of d.extraLabels || []) {
-      const alias = { ...line, clientId: uuid(), palletId: tag, qty: 0, aliasOf: line.palletId, comments: `second label on ${line.palletId}`,
-        labelIssue: '', binLabelIssue: '', overrideReason: null, unknownPallet: 0, duplicatePallet: 0, ts: new Date().toISOString() };
-      await wrap(lineTx().put(alias));
-      await wrap(tx('dup', 'readwrite').put({ p: tag, loc: line.location, team: line.team }));
-    }
     updateChips();
     if (line.location) {
       countedInAisle.add(line.location);
@@ -2191,6 +2181,17 @@
     renderNextBin();
     syncQueue();
 
+    if (state.multi && !line.emptyBin) {
+      // the next label on the same pallet: same bin, straight to its label
+      state.multi.labels.push(line.palletId);
+      state.multi.bin = line.location;
+      state.draft = { location: line.location, aisle: d.aisle, unknownLocation: d.unknownLocation, offAssignment: d.offAssignment, binLabelIssue: d.binLabelIssue };
+      state.stepIndex = state.steps.indexOf('pallet');
+      renderStep();
+      feedback($('scanMsg'), 'ok', `Label ${state.multi.labels.length} counted: ${line.palletId}`, `${line.qty} @ ${line.location} · scan the next label, or tap Done.`);
+      if (updateReady) setTimeout(() => applyUpdate(), 1500);
+      return;
+    }
     state.draft = {};
     state.stepIndex = 0;
     renderStep();
@@ -2336,7 +2337,12 @@
   }
 
   function stepBack() {
-    if (state.awaitingExtra) { state.awaitingExtra = false; clearFeedback($('scanMsg')); renderStep(); return; }
+    /* a pallet with more than one label: Back from a label's first step ends the
+       pallet with the labels already in; from the bin, before any, it cancels */
+    if (state.multi) {
+      const st = state.steps[state.stepIndex];
+      if (state.stepIndex === 0 || (st === 'pallet' && !state.draft.palletId)) { finishMultiLabel({ quiet: !state.multi.labels.length || state.multi.late && state.multi.labels.length === 1 }); return; }
+    }
     if (state.draft.emptyBin) { state.draft = {}; state.stepIndex = 0; clearFeedback($('scanMsg')); renderStep(); return; }
     if (state.stepIndex === 0) return;
     state.stepIndex--;
@@ -3099,12 +3105,11 @@
   };
 
   $('btnBack').onclick = () => {
-    // waiting for the other label: Back is how you change your mind
-    if (state.awaitingLabel) { state.awaitingLabel = null; clearFeedback($('scanMsg')); renderStep(); return; }
     stepBack();
   };
-  $('btnSameLabel').onclick = startSecondLabel;
-  $('btnMoreLabels').onclick = askExtraLabel;
+  $('btnSameLabel').onclick = () => { startSameLabel(); };
+  $('btnMultiLabel').onclick = startMultiLabel;
+  $('btnMultiDone').onclick = () => finishMultiLabel();
   $('btnSos').onclick = openSos;
   $('btnSosBack').onclick = backFromSos;
   $('btnSos').addEventListener('click', () => { if (!['scrMove', 'scrFind'].includes(state.sosReturn)) state.sosReturn = ''; }, true);
@@ -3203,8 +3208,15 @@
     state.stepIndex = 0;
     renderStep();
     if (!tag || !state.lastPallet) return;
-    state.awaitingLabel = { of: state.lastPallet.id, bin: state.lastPallet.bin };
-    await saveSecondLabel(tag);
+    const of = state.lastPallet.id;
+    if (!(await startSameLabel())) return;
+    // the tag is already scanned: it is the label, not on the report; its quantity is next
+    state.draft.palletId = tag;
+    state.draft.unknownPallet = 1;
+    addReason(`Not on the list - another label on the same pallet as ${of}`);
+    state.stepIndex = state.steps.indexOf('qty');
+    renderStep();
+    feedback($('scanMsg'), 'warn', `${tag} — another label on the pallet with ${of}`, 'Enter its quantity. It is counted in the same bin, flagged as not on the report.');
   };
   function setKeyboard(on) {
     state.keyboardOn = !!on;
@@ -3405,7 +3417,7 @@
 
   /** Nothing half-finished, nothing unsent: the only moment worth reloading in. */
   async function safeToReload() {
-    if (state.awaitingLabel) return false;
+    if (state.multi) return false;
     if (state.stepIndex !== 0 || Object.keys(state.draft || {}).length) return false;
     if (document.querySelector('.screen.active')?.id === 'scrOverride') return false;
     try {

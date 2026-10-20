@@ -178,8 +178,10 @@
       </div>
     </div>
     <button id="btnEmptyRun" class="ghost" hidden>Several empty bins in a row</button>
-    <button id="btnMoreLabels" class="ghost" hidden>This pallet has another label</button>
-    <button id="btnSameLabel" class="ghost" hidden>Second label on the same pallet</button>
+    <!-- a pallet with more than one label: the bin once, then each label with its own quantity -->
+    <button id="btnMultiDone" class="primary" hidden>Done — that was every label</button>
+    <button id="btnMultiLabel" class="ghost" hidden>This pallet has more than one label</button>
+    <button id="btnSameLabel" class="ghost" hidden>Another label on the pallet just counted</button>
     <button id="btnNoScan" class="ghost" hidden>Label will not scan</button>
     <div class="row" id="noScanRow" hidden>
       <button id="btnNoScanType" class="ghost">I can read it — let me type it</button>
@@ -336,7 +338,7 @@
       <input id="fReasonNote" autocomplete="off" placeholder="Free text">
       <button class="primary" id="btnOverrideAccept">Accept and continue</button>
     </div>
-    <button class="ghost" id="btnOverrideSame" hidden>It is a second label on the last pallet</button>
+    <button class="ghost" id="btnOverrideSame" hidden>It is another label on the pallet just counted</button>
     <button class="ghost" id="btnOverrideCancel">Cancel — rescan</button>
   </section>
 

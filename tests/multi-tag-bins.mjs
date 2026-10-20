@@ -121,51 +121,60 @@ await gun.click('#btnEmpty'); await gun.waitForTimeout(300);
 await scan('A01A009'); await gun.waitForTimeout(700);
 check('Gun: a bin recorded EMPTY is finished, not left open', /Next bin\s*A01A011/i.test(await banner()), (await banner()).slice(0, 60));
 
-/* ================= two labels on one pallet ================= */
-// a pallet that was re-tagged and kept its old label: count it, then say so
+/* ================= another label on a pallet, seen after it was counted ================= */
+// two loads on one pallet in A01A003: P-6 is counted, and only then does the counter see the other label
 await countOne('P-6', 30, 'A01A003');
 await gun.waitForTimeout(400);
-check('Gun: the second-label button is offered once something has been counted',
-  await gun.$eval('#btnSameLabel', (b) => !b.hidden));
-await gun.click('#btnSameLabel'); await gun.waitForTimeout(400);
-check('Gun: it asks for the other label, naming the pallet it belongs to',
-  /Scan the OTHER label on P-6/i.test(await gun.textContent('#prompt')), clean(await gun.textContent('#prompt')));
-await scan('P-6-OLD-TAG');
-await gun.waitForTimeout(900);
-check('Gun: it says the tag is the same pallet, counted once',
-  /same pallet as P-6/i.test(clean(await gun.textContent('#scanMsg'))), clean(await gun.textContent('#scanMsg')).slice(0, 110));
+check('Gun: once a pallet is counted, Another label on the pallet just counted names it',
+  await gun.$eval('#btnSameLabel', (b) => !b.hidden) && /P-6/.test(await gun.textContent('#btnSameLabel')), clean(await gun.textContent('#btnSameLabel')));
+await gun.click('#btnSameLabel'); await gun.waitForTimeout(500);
+check('Gun: it asks for the next label on that pallet, in its bin, with no bin scan',
+  /Scan LABEL 2 on this pallet/i.test(await gun.textContent('#prompt')) && /A01A003/.test(await gun.textContent('#ctx')), clean(await gun.textContent('#prompt')));
+await scan('P-6B');
+await gun.waitForTimeout(400);
+// not on the report: the same yes / no as any pallet the report does not know
+if (await gun.isVisible('#btnOvYes')) { await gun.click('#btnOvYes'); await gun.waitForTimeout(400); }
+check('Gun: then that label\'s own quantity', /Enter QUANTITY on label 2/i.test(await gun.textContent('#prompt')), clean(await gun.textContent('#prompt')));
+await scan('8');
+if (await gun.isVisible('#btnSkip')) { await gun.click('#btnSkip'); await gun.waitForTimeout(400); }
+await gun.click('#btnMultiDone'); await gun.waitForTimeout(400);
+check('Gun: Done says the pallet and its labels', /Pallet with 2 labels counted in A01A003/.test(await gun.textContent('#scanMsg')) && /P-6 · P-6B/.test(await gun.textContent('#scanMsg')), clean(await gun.textContent('#scanMsg')));
 
 /* the line has to reach the server first: the gun sends it on its next sync,
    which on a busy machine can be a few seconds away */
 let by = {};
-for (let i = 0; i < 30 && !by['P-6-OLD-TAG']; i++) {
+for (let i = 0; i < 30 && !by['P-6B']; i++) {
   await gun.waitForTimeout(500);
   const rows = (await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/pallets?limit=200`, { headers: A }))).rows;
   by = Object.fromEntries(rows.map((r) => [r.pallet_id, r]));
 }
-check('The second label lands as its own line with no quantity',
-  by['P-6-OLD-TAG'] && Number(by['P-6-OLD-TAG'].counted_qty) === 0, JSON.stringify(by['P-6-OLD-TAG']?.counted_qty));
-check('...and is reported as a second label, not as a missing or unknown pallet',
-  by['P-6-OLD-TAG'].status === 'SECOND LABEL' && by['P-6-OLD-TAG'].alias_of === 'P-6',
-  `${by['P-6-OLD-TAG'].status} of ${by['P-6-OLD-TAG'].alias_of}`);
-check('The pallet it is stuck to still counts once, and says what else is on it',
-  by['P-6'].status === 'MATCH' && by['P-6'].also_tagged === 'P-6-OLD-TAG', `${by['P-6'].status} · ${by['P-6'].also_tagged}`);
-check('Scanning that tag again is caught as already counted',
-  (await j(await fetch(`${BASE}/api/sessions/${sess.id}/counted-pallets`, { headers: D }))).some?.((x) => (x.p || x.palletId || x) === 'P-6-OLD-TAG') !== false);
+check('The other label lands with its own quantity, in the same bin',
+  by['P-6B'] && Number(by['P-6B'].counted_qty) === 8 && by['P-6B'].found_location === 'A01A003', JSON.stringify(by['P-6B'] && [by['P-6B'].counted_qty, by['P-6B'].found_location]));
+check('…not on the report, so it is stock to add, and says which pallet it shares',
+  by['P-6B'].status === 'NOT IN MASTER' && !by['P-6B'].alias_of && /another label on the same pallet as P-6/.test(by['P-6B'].comments || ''), `${by['P-6B'].status} · ${by['P-6B'].comments}`);
+check('The pallet counted first is still its own count, untouched',
+  by['P-6'].status === 'MATCH' && Number(by['P-6'].counted_qty) === 30 && !by['P-6'].also_tagged, `${by['P-6'].status} · ${by['P-6'].counted_qty}`);
+
+/* scanned as a new pallet instead: the not-on-the-list screen offers the same thing */
+await scan('P-6C');
+await gun.waitForTimeout(500);
+check('A label not on the report, scanned as a pallet, is offered as another label on the pallet just counted',
+  await gun.isVisible('#btnOverrideSame') && /another label on the pallet with P-6B/i.test(await gun.textContent('#btnOverrideSame')), clean(await gun.textContent('#btnOverrideSame').catch(() => '')));
+await gun.click('#btnOverrideSame'); await gun.waitForTimeout(500);
+check('…which goes straight to its quantity, in that bin', /Enter QUANTITY on label/i.test(await gun.textContent('#prompt')) && /A01A003/.test(await gun.textContent('#ctx')), clean(await gun.textContent('#prompt')));
+await scan('5');
+if (await gun.isVisible('#btnSkip')) { await gun.click('#btnSkip'); await gun.waitForTimeout(400); }
+await gun.click('#btnMultiDone'); await gun.waitForTimeout(400);
+for (let i = 0; i < 30 && !by['P-6C']; i++) {
+  await gun.waitForTimeout(500);
+  const rows = (await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/pallets?limit=200`, { headers: A }))).rows;
+  by = Object.fromEntries(rows.map((r) => [r.pallet_id, r]));
+}
+check('…and lands with its quantity in A01A003, flagged as not on the report', by['P-6C'] && Number(by['P-6C'].counted_qty) === 5 && by['P-6C'].found_location === 'A01A003' && by['P-6C'].status === 'NOT IN MASTER',
+  JSON.stringify(by['P-6C'] && [by['P-6C'].counted_qty, by['P-6C'].found_location, by['P-6C'].status]));
 
 const raw = await (await fetch(`${BASE}/api/admin/sessions/${sess.id}/export/counts.csv`, { headers: A })).text();
-check('The raw export says which pallet a second label belongs to',
-  /,alias_of,/.test(raw.split('\n')[0]) && /P-6-OLD-TAG.*P-6/.test(raw), raw.split('\n')[0].slice(0, 90));
-
-/* second labels are not variances to chase */
-await fetch(`${BASE}/api/admin/sessions/${sess.id}/recounts/generate`, { method: 'POST', headers: A, body: '{}' });
-const tasks = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/recounts`, { headers: A }));
-const list = Array.isArray(tasks) ? tasks : tasks.tasks || [];
-check('No second count is raised for a second label', !list.some((t) => t.pallet_id === 'P-6-OLD-TAG'),
-  list.filter((t) => t.pallet_id === 'P-6-OLD-TAG').length + ' raised');
-
-const erp = await (await fetch(`${BASE}/api/admin/sessions/${sess.id}/export/erp.csv`, { headers: A })).text().catch(() => '');
-if (erp) check('The ERP file does not carry a second label as its own adjustment', !/P-6-OLD-TAG/.test(erp));
+check('The raw export carries the note on the line', raw.split('\n').some((l) => /P-6B/.test(l) && /another label on the same pallet as P-6/.test(l)));
 
 /* ---- nothing about a scan should invite the browser's own UI in ---- */
 {

@@ -301,13 +301,19 @@ try {
   await beat(2600);
 
   /* ------------------------------------------------- 4. two labels, one pallet */
-  say('Two labels on one pallet', 'Re-labeled stock often carries both tags. The counter says so, scans the second one, '
-    + 'and it is recorded against the same pallet <b>with no quantity of its own</b> — so nobody counts it twice and '
-    + 'nobody is sent back to look for a pallet that is right there.');
+  say('A pallet with more than one label', 'Two loads on one pallet, each with its own label. Seen after counting the first, '
+    + 'the counter taps <b>Another label on the pallet just counted</b>: the gun keeps the bin, and the label is scanned '
+    + 'and counted <b>with its own quantity</b> — then <b>Done</b>.');
   await tap('#btnSameLabel');
   await beat(1200);
   await scan('OLD-TAG-4471');
-  await beat(3000);
+  await beat(900);
+  if (await page.isVisible('#btnOvYes').catch(() => false)) { await tap('#btnOvYes'); await beat(700); }
+  await scan('6');
+  await beat(900);
+  if (await page.isVisible('#btnSkip').catch(() => false)) { await tap('#btnSkip'); await beat(600); }
+  await tap('#btnMultiDone');
+  await beat(2600);
 
   /* ------------------------------------------------- 5. a label that will not scan */
   say('A label that will not scan', 'Freezer labels ice over and get clipped by forklifts. The counter says which kind of '

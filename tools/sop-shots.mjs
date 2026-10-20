@@ -712,12 +712,15 @@ try {
   await gun.click('#btnMsgAck').catch(() => {});
   await wait(900);
 
-  // two labels on one pallet
-  await gun.click('#btnSameLabel'); await wait(500);
+  // another label on the pallet just counted: the bin is kept, the label and its own quantity go in
+  await gun.click('#btnSameLabel'); await wait(700);
   await save(gun, 'gun-second-label-ask');
-  await scan('OLD-TAG-88');
-  await wait(900);
+  await scan('OLD-TAG-88'); await wait(500);
+  if (await gun.isVisible('#btnOvYes')) { await gun.click('#btnOvYes'); await wait(500); }
+  await scan('6'); await wait(500);
+  if (await gun.isVisible('#btnSkip')) { await gun.click('#btnSkip'); await wait(500); }
   await save(gun, 'gun-second-label-done');
+  await gun.click('#btnMultiDone').catch(() => {}); await wait(500);
 
   // the SOS list, as a counter sees it
   await gun.click('#btnSos'); await wait(900);

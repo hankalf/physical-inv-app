@@ -1262,10 +1262,10 @@ to find before they walk on.
   already scanned by then: the gun asks *Mark F01A004 EMPTY?* — **Yes** records it, **No** goes
   back — and never asks for the same bin twice. When the pallet comes first, it is **Bin is EMPTY
   — scan the bin**: one scan of the rack label.
-- **This pallet has another label** — on the quantity screen, right after the pallet scan. A pallet
-  wearing two tags: tap it, scan the other tag, and carry on with the quantity. The pallet is counted
-  once; the second tag is saved beside it with no quantity, so neither label comes up as uncounted.
-  (**Second label on the same pallet**, on the pallet screen, does the same after the line is saved.)
+- **This pallet has more than one label** — at the start of a line. One pallet carrying two or
+  more loads, each with its own label and its own quantity: the bin once, then each label and its
+  quantity, then **Done** (below). **Another label on the pallet just counted** does the same when
+  the second label is only seen after the line is saved.
 - **Report a problem** — damage (a pallet, the racking, the product), a bin **blocked** by a trailer
   or a forklift to come back to, or something else. Pick what, then why, add a word if it helps.
   Then **scan to confirm** which one it is: the **bin** for racking or a blocked bay, the pallet
@@ -1289,25 +1289,35 @@ working the same aisle never double-walk a bay or leave one half counted.
 *One tag into a position that holds three: the banner turns amber and stays on the bin
 until the other two are counted, or somebody says there is nothing more there.*
 
-**A pallet with two labels on it**
+**A pallet with more than one label**
 
-A re-tagged pallet that kept its old label, or one built from two, has two barcodes and is
-one pallet. Counting both as pallets doubles the stock; ignoring one leaves a live label
-for the next team to find.
+One pallet carrying two or more loads — two items, two lots, a pallet built from two — each with its
+own label and its own quantity. Each label is counted, with its quantity, in the one bin:
 
-1. Count the pallet once, as normal.
-2. Tap **Second label on the same pallet**.
-3. Scan the other label.
+1. At the start of the line, tap **This pallet has more than one label**.
+2. Scan the **bin** — once. (On a site that scans the bin first and has already scanned it, the gun
+   goes straight to the first label.)
+3. Scan **label 1**, enter its **quantity**.
+4. Scan **label 2**, enter its **quantity** — and so on for any more. The bin is not asked for again.
+5. Tap **Done — that was every label**.
 
-The tag is recorded against the pallet it is stuck to, with no quantity of its own. It
-shows on the pallet report as **SECOND LABEL**, the pallet it belongs to says *also tagged*,
-nobody is sent back for it, and it never reaches the ERP file as an adjustment. If the
-second tag is not on the inventory report, the gun offers the same answer in the
-"Pallet not on the list" screen.
+Every label is its own line with its own quantity, in that bin; the second and later ones carry the
+note *another label on the same pallet as …*, so the office can see they share a pallet. The same
+label twice is refused as a misread. **Back** on a label's first screen ends the pallet with the
+labels already in (before any, it cancels). It works on second counts too, in the task's bin.
+
+**Seen the second label only after counting?** On the next line's first screen, tap **Another
+label on the pallet just counted (P-…)**. The gun goes straight to the next label on that pallet,
+in its bin — scan it, enter its quantity, **Done**. If instead the label is scanned as a new pallet
+and it is not on the inventory report, the *Pallet not on the list* screen offers **It is another
+label on the pallet with P-…**, which goes straight to its quantity in that bin.
 
 | | |
 |:--:|:--:|
-| ![](images/gun-second-label-ask.png)<br>The gun asks for the other label and names the pallet it will belong to | ![](images/gun-second-label-done.png)<br>Recorded as the same pallet, with no quantity — so the stock is not counted twice |
+| ![](images/gun-second-label-ask.png)<br>The next label on the pallet: the bin is kept, and the gun asks for label 2 | ![](images/gun-second-label-done.png)<br>Each label counted with its own quantity, in the same bin |
+
+Counts taken before this change may show a tag as **SECOND LABEL** on the pallet report (a tag
+saved with no quantity of its own); those still read as before.
 
 **The SOS button**
 
