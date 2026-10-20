@@ -14,6 +14,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="FH Office">
 <link rel="stylesheet" href="/admin.css">
+<!-- signed in already (this tab holds a sign-in): no sign-in box for the moment it takes to check it -->
+<script>try { if (sessionStorage.getItem('admToken')) document.documentElement.classList.add('resuming', 'signed-in'); } catch (e) { /* private window */ }</script>
 <style>
   /* the cycle page's own pieces */
   .tag.auto { color: var(--warn); border-color: #5c4813; }

@@ -161,7 +161,9 @@ office side as its own app (*FH Office*), with a Menu button in place of the sid
   are on the card. People switch from the sidebar; scanners from the sign-on screen. Tick who may
   use TEST in the **Systems** column of Supervisor logins; logins are made on LIVE only and go with
   the person when they switch. If **Back to LIVE** says *this system's own address*, TEST's
-  `SYSTEM_HOME_URL` holds TEST's address: set it to LIVE's and redeploy TEST.
+  `SYSTEM_HOME_URL` holds TEST's address: set it to LIVE's and redeploy TEST. Logins someone made
+  on TEST before it was linked come over with **Copy logins from TEST** (Supervisor logins): you see
+  the list first, they keep their passwords, and LIVE logins are never changed.
 - **Report a problem** (Settings → Scanners → What the scanners offer): the kinds of problem the
   gun offers, their reasons, and what each makes the counter scan to confirm — the bin, the pallet,
   either, or nothing. Add your own, take any off, or restore the shipped list.

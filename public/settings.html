@@ -14,6 +14,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="FH Office">
 <link rel="stylesheet" href="/admin.css">
+<!-- signed in already (this tab holds a sign-in): no sign-in box for the moment it takes to check it -->
+<script>try { if (sessionStorage.getItem('admToken')) document.documentElement.classList.add('resuming', 'signed-in'); } catch (e) { /* private window */ }</script>
 <style>
   .scope {
     display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
@@ -842,6 +844,12 @@
         <div class="feedback" id="userMsg"></div>
         <div id="placeLocks" hidden></div>
         <div class="scroll" style="margin-top:10px"><table id="userTable"></table></div>
+        <!-- logins made on a linked system before it was linked: brought here once, passwords and all -->
+        <div id="copyLoginsBox" class="copylogins" hidden>
+          <div class="inline" id="copyLoginsBtns" style="margin-top:10px"></div>
+          <div id="copyLogins" hidden></div>
+          <div class="feedback" id="copyLoginsMsg"></div>
+        </div>
       </div>
       <div class="feedback" id="starterBox" style="display:none"></div>
       <div class="feedback" id="inviteBox" style="display:none"></div>

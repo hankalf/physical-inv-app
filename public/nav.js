@@ -120,6 +120,8 @@
     foot.appendChild(box);
     applyLook();
   }
+  /* never longer than this without a sign-in box, whatever the network does */
+  setTimeout(() => document.documentElement.classList.remove('resuming'), 8000);
   const api = {
     token: sessionStorage.getItem('admToken') || '',
     me: null,
@@ -448,6 +450,9 @@
     const root = document.documentElement;
     const others = (me && me.systems) || [];
     if (sys) { root.dataset.system = sys.name; root.dataset.systemColor = sys.color; root.classList.toggle('linked-system', sys.role === 'linked'); }
+    const paired = !!sys && (others.length > 0 || sys.role === 'linked');
+    markSystem(sys, paired);
+    try { localStorage.setItem('systemMark', JSON.stringify(paired ? { name: sys.name, color: sys.color } : null)); } catch { /* private window */ }
     let banner = document.getElementById('systemBanner');
     if (sys && sys.role === 'linked') {
       if (!banner) {
@@ -490,6 +495,21 @@
       box.appendChild(sel);
     }
   }
+  /* A ring in the system's color round the logo and the site name, with its name on it - only where
+     there is more than one system, so LIVE and TEST can be told apart at a glance. */
+  function markSystem(sys, paired) {
+    const root = document.documentElement;
+    root.classList.toggle('has-systems', paired);
+    if (paired) { root.dataset.systemColor = sys.color; root.dataset.system = sys.name; }
+    for (const el of document.querySelectorAll('.side .brand, .splashbrand')) {
+      if (paired) el.dataset.system = sys.name; else delete el.dataset.system;
+    }
+  }
+  try {                                    // drawn from this browser's last look at once, so it does not pop in
+    const was = JSON.parse(localStorage.getItem('systemMark') || 'null');
+    if (was && was.name) document.addEventListener('DOMContentLoaded', () => markSystem(was, true));   // the sign-in check puts it right
+  } catch { /* nothing kept */ }
+
   /** Over to another system: the home writes a ticket for it; the way home is the home's own address. */
   async function switchSystem(name) {
     try {
@@ -508,6 +528,7 @@
     let pub = null;
     try { pub = await (await fetch('/api/system', { cache: 'no-store' })).json(); } catch { return; }
     if (!pub || !pub.self) return;
+    if (!api.me) markSystem(pub.self, pub.self.role === 'linked' || pub.systems.length > 0);
     const btn = document.getElementById('btnLogin');
     if (pub.self.role === 'linked' && pub.home && pub.home.url) {
       const note = document.createElement('div');
@@ -777,8 +798,13 @@
         api.me = await api.json('/api/admin/me');
       } catch { api.token = ''; api.me = null; sessionStorage.removeItem('admToken'); }
     }
-    renderTabs();
-    announce();
+    try {
+      renderTabs();
+      announce();
+    } finally {
+      // the sign-in box was held back while the sign-in was checked: from here it shows when it is wanted
+      document.documentElement.classList.remove('resuming');
+    }
     return api.me;
   };
 

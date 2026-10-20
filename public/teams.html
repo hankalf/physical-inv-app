@@ -14,6 +14,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="FH Office">
 <link rel="stylesheet" href="/admin.css">
+<!-- signed in already (this tab holds a sign-in): no sign-in box for the moment it takes to check it -->
+<script>try { if (sessionStorage.getItem('admToken')) document.documentElement.classList.add('resuming', 'signed-in'); } catch (e) { /* private window */ }</script>
 <style>
   /* Both columns scroll inside themselves and stay put, so the person you are
      dragging and the team you are dragging them to are on screen at once - with

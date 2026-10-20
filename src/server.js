@@ -58,7 +58,7 @@ import { palletSystem, savePalletSystem, probePalletSystem } from './routes/pall
 import { proxyPalletSystem, makeTicket, ticketCookie, PREFIX as PS_PREFIX } from './routes/pallet-proxy.js';
 import { onedriveStatus, setOnedriveConfig, startSignIn, cancelSignIn, disconnect, uploadNow, startOnedrive } from './routes/onedrive.js';
 import { gdriveStatus, setGdriveConfig, checkConnection, disconnectGdrive, uploadToGdrive, startGdrive } from './routes/gdrive.js';
-import { selfSystem, systemsConfig, saveSystems, systemsFor, systemAccess, setSystemAccess, makeTicket as makeHandoff, readTicket as readHandoff, checkTicket, checkLink, provisionUser, provisionDevice, publicSystems, otherSystems } from './routes/systems.js';
+import { selfSystem, systemsConfig, saveSystems, systemsFor, systemAccess, setSystemAccess, makeTicket as makeHandoff, readTicket as readHandoff, checkTicket, checkLink, provisionUser, provisionDevice, publicSystems, otherSystems, loginsForHome, fetchLogins, loginsPreview, copyLogins } from './routes/systems.js';
 
 /* The address a request came in on, behind Railway's proxy too: the host alone, as http and https are one site there. */
 const hostOf = (req) => String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().toLowerCase();
@@ -1117,6 +1117,14 @@ async function handleAdmin(req, res, url, m) {
       audit(actor, body.newKey ? 'made a new link key for the systems' : 'changed the systems', [st.self.name, ...st.systems.map((s) => `${s.name} ${s.url}`)].join(' · '));
       return sendJson(req, res, 200, { ...st, ...systemsView(req) });
     }
+    if (p === '/api/admin/systems/logins' && method === 'POST') {
+      const body = await readJson(req);
+      const got = await fetchLogins(body.name);
+      if (!body.copy) return sendJson(req, res, 200, loginsPreview(got));
+      const out = copyLogins(got, body.usernames);
+      audit(actor, `copied logins from ${out.system}`, `${out.copied.length ? out.copied.join(', ') : 'none'}${out.skipped.length ? ` · skipped ${out.skipped.map((x) => x.username).join(', ')}` : ''}`);
+      return sendJson(req, res, 200, { ...out, preview: loginsPreview(got) });
+    }
     if (p === '/api/admin/systems/check' && method === 'POST') {
       const body = await readJson(req);
       const origin = `${String(req.headers['x-forwarded-proto'] || 'http').split(',')[0].trim()}://${req.headers['x-forwarded-host'] || req.headers.host}`;
@@ -2110,6 +2118,12 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === '/api/system' && req.method === 'GET') return sendJson(req, res, 200, publicSystems());
     // the home's link check: would this hand-off be taken? Nothing is used up
+    // the home asking for TEST's own logins, signed with the link key: Copy logins from TEST
+    if (p === '/api/system/logins' && req.method === 'POST') {
+      const body = await readJson(req);
+      try { return sendJson(req, res, 200, { logins: loginsForHome(body.t) }); }
+      catch (err) { return sendJson(req, res, err.status || 403, { error: err.message }); }
+    }
     if (p === '/api/system/verify' && req.method === 'GET') {
       try { const b = checkTicket(url.searchParams.get('t')); return sendJson(req, res, 200, { ok: true, name: b.aud }); }
       catch (err) { return sendJson(req, res, 200, { ok: false, error: err.message }); }

@@ -790,6 +790,8 @@ html:not(.signed-in) .signin { margin: 6vh auto; box-shadow: var(--shadow); }
 .splashbrand .name { font-weight: 800; font-size: 18px; letter-spacing: -.01em; }
 .splashbrand .name span { display: block; font-weight: 500; font-size: 12.5px; color: var(--muted); }
 html.signed-in .splashbrand { display: none; }
+/* a page opened while signed in: the sign-in box stays hidden while the sign-in is checked (nav.js lifts it) */
+html.resuming #scrLogin { display: none !important; }
 
 /* the notes on the board, one row each */
 .notes { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
@@ -905,3 +907,31 @@ html:not(.signed-in) .sysbanner { display: none; }
 /* the logins table: which systems a login may switch to */
 td.syscell { white-space: nowrap; }
 td.syscell label.cb { display: inline-flex; margin: 0 10px 0 0; font-size: 13px; }
+
+/* ---- which system this is, round the logo and the site name (nav.js markSystem) */
+html { --sysring: #2f9e57; }
+html[data-system-color="orange"] { --sysring: #f08c2e; }
+html[data-system-color="purple"] { --sysring: #8a5cf5; }
+html[data-system-color="blue"] { --sysring: #3b82f6; }
+html[data-system-color="red"] { --sysring: #e5484d; }
+html[data-system-color="gray"] { --sysring: #6b7385; }
+html.has-systems .side .brand[data-system] {
+  margin: -10px -4px 14px; border-radius: 14px; border-bottom: 0;
+  box-shadow: inset 0 0 0 3px var(--sysring), 0 0 18px -6px var(--sysring);
+  position: relative; padding-bottom: 26px;
+}
+html.has-systems .side .brand[data-system]::after, html.has-systems .splashbrand[data-system]::after {
+  content: attr(data-system); position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%);
+  font-size: 10.5px; font-weight: 800; letter-spacing: .12em; padding: 1px 10px; border-radius: 999px;
+  background: var(--sysring); color: #fff;
+}
+html.has-systems[data-system-color="orange"] .side .brand[data-system]::after,
+html.has-systems[data-system-color="orange"] .splashbrand[data-system]::after { color: #1a1300; }
+html.has-systems .splashbrand[data-system] {
+  position: relative; padding: 14px 18px 30px; border-radius: 16px;
+  box-shadow: inset 0 0 0 3px var(--sysring), 0 0 18px -6px var(--sysring);
+}
+@media (max-width: 900px) {
+  html.has-systems .side .brand[data-system] { margin: 0; padding: 4px 10px; box-shadow: inset 0 0 0 2px var(--sysring); border-radius: 10px; }
+  html.has-systems .side .brand[data-system]::after { position: static; transform: none; margin-left: 8px; }
+}

@@ -183,6 +183,47 @@ await gun.waitForURL(`${BASE.replace(/\/$/, '')}/**`, { timeout: 10000 }).catch(
 await gun.waitForTimeout(2500);
 check('Back to LIVE: LIVE again, still signed in as itself', gun.url().startsWith(BASE) && /LIVE/.test(await gun.textContent('#chipSystem')) && /MC93-07/.test(await gun.textContent('#chipDevice')), gun.url());
 check('No script errors', errors.length === 0, errors.join(' | '));
+/* ---- Copy logins from DEV: the ones made there before it was linked, brought to LIVE with their passwords */
+{
+  const DA = H((await login(DEV, { username: 'DEV-ADMIN', password: 'dev-only-pass' })).token);
+  await post(DEV, '/api/admin/users', { username: 'TEST-ONLY', name: 'Tess Only', password: 'only-on-test-9', mustChange: false, profile: 'floor', email: 'tess@example.com' }, DA);
+  await post(DEV, '/api/admin/users', { username: 'FLOOR-SUP', name: 'Floor Sup on DEV', password: 'another-pass-8', mustChange: false }, DA);
+  await post(DEV, '/api/admin/users', { username: 'NOT-YET', name: 'Not Yet', email: 'notyet@example.com', invite: true }, DA);
+  let pv = await j(await post(BASE, '/api/admin/systems/logins', { name: 'DEV' }, A));
+  const st = (u) => (pv.logins.find((x) => x.username === u) || {}).status || 'absent';
+  check('Copy logins from DEV: the list says what would happen to each', st('TEST-ONLY') === 'new' && st('FLOOR-SUP') === 'here' && st('NOT-YET') === 'invite' && st('DEV-ADMIN') === 'new',
+    pv.logins.map((x) => `${x.username}:${x.status}`).join(', '));
+  check('…the logins that came from LIVE are not DEV\'s to give back', st('INV-CTRL') === 'absent');
+  check('…DEV\'s own superadmin is marked as such', (pv.logins.find((x) => x.username === 'DEV-ADMIN') || {}).startup === true);
+  check('…and nothing has been copied by looking', !(await get(BASE, '/api/admin/users', A)).users.some((u) => u.username === 'TEST-ONLY'));
+  r = await post(BASE, '/api/admin/systems/logins', { name: 'DEV', copy: true, usernames: ['TEST-ONLY', 'FLOOR-SUP', 'NOT-YET'] }, A);
+  const out = await j(r);
+  check('Copying: the new one is copied, the others skipped and said why', r.status === 200 && out.copied.join() === 'TEST-ONLY' && out.skipped.map((x) => x.username).sort().join() === 'FLOOR-SUP,NOT-YET', JSON.stringify(out));
+  const tess = (await get(BASE, '/api/admin/users', A)).users.find((u) => u.username === 'TEST-ONLY');
+  check('…with its name, email and role', tess && tess.name === 'Tess Only' && tess.email === 'tess@example.com' && tess.profile === 'floor', JSON.stringify(tess));
+  const tl = await login(BASE, { username: 'TEST-ONLY', password: 'only-on-test-9' });
+  check('…and it signs in on LIVE with the password it has on DEV', !!tl.token, JSON.stringify(tl).slice(0, 120));
+  check('…and may still switch to DEV', ((await get(BASE, '/api/admin/systems', A)).access.find((u) => u.username === 'TEST-ONLY') || {}).systems?.join() === 'DEV');
+  check('FLOOR-SUP on LIVE is left exactly as it was', !!(await login(BASE, { username: 'FLOOR-SUP', password: 'dock-side-77' })).token);
+  check('The log says what was copied', (await get(BASE, '/api/admin/audit?limit=10', A)).some((x) => x.action === 'copied logins from DEV' && /TEST-ONLY/.test(x.detail)));
+  r = await post(DEV, '/api/system/logins', { t: 'made.up' });
+  check('DEV hands its logins to nobody but LIVE', r.status === 403 && !(await j(r)).logins);
+  r = await fetch(`${BASE}/api/admin/systems/logins`, { method: 'POST', headers: INV, body: JSON.stringify({ name: 'DEV' }) });
+  check('…and on LIVE only an admin may ask', r.status === 403);
+  /* on the page */
+  const pg = await ctx.newPage();
+  pg.on('pageerror', (e) => errors.push('copy: ' + e.message));
+  pg.on('dialog', (d) => d.accept());
+  await pg.goto(`${BASE}/settings#advanced`);
+  await signIn(pg);
+  await pg.waitForSelector('#copyLoginsBtns button[data-copy-from="DEV"]');
+  await pg.click('#copyLoginsBtns button[data-copy-from="DEV"]');
+  await pg.waitForSelector('#copyLoginsTable tbody tr[data-user]');
+  check('Supervisor logins: Copy logins from DEV shows the list first', (await pg.locator('#copyLoginsTable tr[data-user="TEST-ONLY"]').textContent()).includes('already a login here')
+    && (await pg.locator('#copyLoginsTable tr[data-user="DEV-ADMIN"] input').isChecked()) === false && !(await pg.locator('#copyLoginsTable tr[data-user="DEV-ADMIN"] input').isDisabled()));
+  await pg.close();
+}
+
 /* a new key here, and DEV still holding the old one: the check says which key to copy where */
 await post(BASE, '/api/admin/systems', { newKey: true }, A);
 ck = await j(await post(BASE, '/api/admin/systems/check', { name: 'DEV' }, A));

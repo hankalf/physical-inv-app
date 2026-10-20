@@ -320,12 +320,28 @@ there to match. Change someone's role on LIVE and it applies on TEST the next ti
 Signing in on TEST directly is only for its own superadmin (its Railway variables), for setting it
 up.
 
+**Logins someone already made on TEST.** If people were set up on TEST before it was linked, bring
+them over instead of making them again: on LIVE, **Settings → Logins & site → Supervisor logins →
+Copy logins from TEST**. LIVE asks TEST (signed with the link key, as a switch is) and lists TEST's
+own logins with what would happen to each:
+
+- *copied here, same password* — ticked; they sign in on LIVE with the password they use on TEST,
+  keep their name, email, role and pages, and are given TEST in the Systems column;
+- *already a login here — left as it is* — the LIVE login is never changed;
+- *never chose a password* — an invite not yet taken up on TEST: add them on LIVE and invite them;
+- TEST's own superadmin is listed but not ticked — tick it only if that login should be on LIVE too.
+
+Untick anyone who should not come over, then **Copy the ticked logins**. People who only ever
+switched over from LIVE are not listed: they are LIVE's already. The log records who was copied.
+
 *Switching:*
 
 - **In the office.** A login with TEST ticked sees **Switch to…** at the bottom of the sidebar, and
   **Sign in to** on LIVE's sign-in box. TEST opens on the same page, signed in as the same person
   with the same role and pages. Every TEST page has an orange **TEST — not the live system** bar
-  with **Back to LIVE**.
+  with **Back to LIVE**. With more than one system, the logo and site name at the top of the
+  sidebar (and on the sign-in box) sit in a ring of the system's color with its name on it —
+  green **LIVE**, orange **TEST** — so which one you are on shows at a glance.
 - **On a scanner.** With *Scanners may switch* ticked, the sign-on screen shows **System: LIVE |
   TEST**. One tap moves the gun to TEST under its own name; **Back to LIVE** brings it home. The
   header always says which system the gun is on. A gun with counts still waiting to send is not

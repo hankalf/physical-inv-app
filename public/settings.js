@@ -121,6 +121,7 @@
   async function refreshUsers() {
     const { users, locks = [], systems = [], self = null } = await api.json('/api/admin/users');
     const lockOf = (name) => locks.find((l) => l.username === name);
+    drawCopyLogins(systems, self);
     const newSys = $('fNewSystems');
     if (newSys) {
       newSys.hidden = !systems.length;
@@ -415,6 +416,78 @@
     bar.append(mail, copy);
     box.append(head, link, bar, why);
   }
+
+  /* Copy logins from TEST: what is there, what would happen to each, then the ticked ones copied. */
+  function drawCopyLogins(systems, self) {
+    const box = $('copyLoginsBox');
+    if (!box) return;
+    box.hidden = !systems.length || !self || self.role !== 'home';
+    const btns = $('copyLoginsBtns');
+    const have = [...btns.querySelectorAll('button')].map((b) => b.dataset.copyFrom).join('|');
+    if (have === systems.map((x) => x.name).join('|')) return;
+    btns.replaceChildren();
+    for (const sy of systems) {
+      const b = button(`Copy logins from ${sy.name}`, 'sm', () => previewCopy(sy.name));
+      b.dataset.copyFrom = sy.name;
+      b.title = `The logins made on ${sy.name}, brought here with their passwords — you see the list first`;
+      btns.appendChild(b);
+    }
+    btns.appendChild(Object.assign(document.createElement('span'), { className: 'muted', style: 'font-size:12.5px',
+      textContent: `for logins someone made on ${systems.map((x) => x.name).join(' or ')} before it was linked — they keep their passwords` }));
+  }
+  const COPY_WORD = { new: 'copied here, same password', here: 'already a login here — left as it is', invite: 'never chose a password — add them here and invite them' };
+  async function previewCopy(name, done = null) {
+    const panel = $('copyLogins');
+    panel.hidden = false;
+    panel.replaceChildren(Object.assign(document.createElement('div'), { className: 'muted', textContent: `Asking ${name} for its logins…` }));
+    if (!done) clearMsg($('copyLoginsMsg'));
+    let pv;
+    try { pv = await api.post('/api/admin/systems/logins', { name }); }
+    catch (err) { panel.hidden = true; msg($('copyLoginsMsg'), 'err', err.message); return; }
+    panel.replaceChildren();
+    const tbl = document.createElement('table');
+    tbl.id = 'copyLoginsTable';
+    panel.appendChild(tbl);
+    table(tbl, [{ label: '' }, { label: 'Username' }, { label: 'Name' }, { label: 'Role' }, { label: `On ${name}` }, { label: 'Copying it' }], pv.logins, (u) => {
+      const tr = document.createElement('tr');
+      tr.dataset.user = u.username;
+      const td = document.createElement('td');
+      const box = Object.assign(document.createElement('input'), { type: 'checkbox', disabled: u.status !== 'new', checked: u.status === 'new' && !u.startup });
+      box.dataset.copy = u.username;
+      td.appendChild(box);
+      tr.append(td, cell(u.username), cell(u.name + (u.email ? ` · ${u.email}` : '')), cell(u.role === 'admin' ? 'Admin' : 'Supervisor'),
+        cell(`${u.active ? 'active' : 'deactivated'}${u.startup ? ` · ${name}'s superadmin` : ''}`),
+        cell(u.status === 'new' && u.startup ? `${COPY_WORD.new} — not ticked: it is ${name}'s own setup login` : COPY_WORD[u.status]));
+      if (u.status !== 'new') tr.className = 'muted';
+      return tr;
+    }, `${name} has no logins of its own — everyone there came from here.`);
+    const fresh = pv.logins.filter((u) => u.status === 'new').length;
+    const bar = document.createElement('div');
+    bar.className = 'inline';
+    bar.style.marginTop = '8px';
+    const go = button('Copy the ticked logins', 'primary sm', async () => {
+      const usernames = [...tbl.querySelectorAll('input[data-copy]:checked')].map((b) => b.dataset.copy);
+      if (!usernames.length) return msg($('copyLoginsMsg'), 'warn', 'Nothing ticked.');
+      if (!confirm(`Copy ${usernames.length} login${usernames.length === 1 ? '' : 's'} from ${name} to ${thisSystem().name}? They sign in here with the password they use on ${name}.`)) return;
+      go.disabled = true;
+      try {
+        const out = await api.post('/api/admin/systems/logins', { name, copy: true, usernames });
+        msg($('copyLoginsMsg'), out.copied.length ? 'ok' : 'warn',
+          out.copied.length ? `Copied ${out.copied.length} from ${name}: ${out.copied.join(', ')}` : 'Nothing copied',
+          [out.copied.length ? `They sign in here with the password they use on ${name}, and may still switch to ${name}.` : '',
+            out.skipped.length ? `Skipped: ${out.skipped.map((x) => `${x.username} (${x.why})`).join('; ')}.` : ''].filter(Boolean).join(' '));
+        await refreshUsers();
+        refreshSystems().catch(() => {});
+        await previewCopy(name, true);
+      } catch (err) { go.disabled = false; msg($('copyLoginsMsg'), 'err', err.message); }
+    });
+    go.disabled = !fresh;
+    const close = button('Close', 'sm ghost', () => { panel.hidden = true; panel.replaceChildren(); });
+    bar.append(go, close, Object.assign(document.createElement('span'), { className: 'muted', style: 'font-size:12.5px',
+      textContent: fresh ? `${fresh} of ${pv.logins.length} can be copied. Nobody here is changed.` : `Nothing new to copy from ${name}.` }));
+    panel.appendChild(bar);
+  }
+  const thisSystem = () => (api.me && api.me.system) || { name: 'this system' };
 
   $('fNewEmail').addEventListener('input', () => { if ($('fNewEmail').value.includes('@') && !$('fNewPass').value) $('fNewInvite').checked = true; });
   $('btnAddUser').onclick = async () => {

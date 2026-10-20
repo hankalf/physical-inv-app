@@ -323,3 +323,92 @@ export function publicSystems() {
   const me = selfSystem();
   return { self: { name: me.name, color: me.color, role: me.role }, home: me.role === 'linked' ? { name: me.homeName, url: me.homeUrl } : null, systems: otherSystems().map((s) => ({ name: s.name, url: s.url, color: s.color, home: !!s.home })) };
 }
+
+/* ------------------------------------------------------------ copying logins
+   The other way round from a hand-off, and only when the home asks: the
+   logins someone made on TEST before it was linked, brought to the home with
+   their passwords, so nobody has to be set up twice. The home signs the ask
+   with the link key, as it signs a hand-off; TEST answers nobody else. A
+   password is kept as its salted hash and travels as one - nothing on either
+   side ever sees it. */
+const PW_HASH = /^[0-9a-f]{16,}:[0-9a-f]{64,}$/i;
+
+/** On TEST: its own logins, for the home that asked. Logins that came from the home are not its own. */
+export function loginsForHome(t) {
+  const body = checkTicket(t);
+  if (body.kind !== 'logins') throw Object.assign(new Error('that is not an ask for the logins'), { status: 403 });
+  db.prepare('DELETE FROM handoff_nonces WHERE exp < ?').run(new Date().toISOString());
+  try { db.prepare('INSERT INTO handoff_nonces (n, exp) VALUES (?, ?)').run(String(body.n), new Date(Number(body.exp)).toISOString()); }
+  catch { throw Object.assign(new Error('that ask has been used already'), { status: 403 }); }
+  return db.prepare('SELECT username, name, email, role, access, active, must_change, password_hash, invite_hash, created_at, created_by FROM users ORDER BY name').all()
+    .filter((u) => !String(u.password_hash).startsWith('handoff:'))
+    .map((u) => ({
+      username: u.username, name: u.name, email: u.email || '', role: u.role, access: u.access, active: !!u.active,
+      mustChange: !!u.must_change, hash: u.password_hash, invitePending: !!u.invite_hash, createdAt: u.created_at, startup: u.created_by === 'startup',
+    }));
+}
+
+/** On the home: ask a linked system for its logins. */
+export async function fetchLogins(name) {
+  const me = selfSystem();
+  if (me.role !== 'home') throw Object.assign(new Error('logins are copied to the home system, from there'), { status: 409 });
+  const to = otherSystems().find((s) => s.name === cleanName(name));
+  if (!to) throw Object.assign(new Error(`there is no system called ${name}`), { status: 404 });
+  const body = { v: 1, iss: me.name, aud: to.name, exp: Date.now() + TICKET_SECONDS() * 1000, n: randomBytes(12).toString('base64url'), kind: 'logins' };
+  const payload = b64(JSON.stringify(body));
+  let r;
+  try {
+    r = await fetch(`${to.url}/api/system/logins`, {
+      method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ t: `${payload}.${sign(payload, linkKey())}` }), signal: AbortSignal.timeout(15000),
+    });
+  } catch (err) {
+    throw Object.assign(new Error(`${to.name} could not be reached (${err.name === 'TimeoutError' ? 'no answer in 15 seconds' : err.message}) - press Check the link under Systems`), { status: 502 });
+  }
+  let out = null;
+  try { out = await r.json(); } catch { /* not this app */ }
+  if (r.status === 404 || !out) throw Object.assign(new Error(`${to.name} cannot hand its logins over yet - deploy the same version as here to it`), { status: 502 });
+  if (!r.ok) throw Object.assign(new Error(`${to.name} said no: ${out.error || r.status} - press Check the link under Systems`), { status: 502 });
+  return { system: to.name, logins: Array.isArray(out.logins) ? out.logins : [] };
+}
+
+/** What copying would do with each one: new here, already here (left alone), or one to invite again. */
+export function loginsPreview({ system, logins }) {
+  const here = new Set(db.prepare('SELECT username FROM users').all().map((u) => u.username));
+  return {
+    system,
+    logins: logins.map((u) => {
+      const username = norm(u.username);
+      const status = here.has(username) ? 'here' : u.invitePending || !PW_HASH.test(String(u.hash || '')) ? 'invite' : 'new';
+      return { username, name: u.name, email: u.email, role: u.role === 'admin' ? 'admin' : 'supervisor', active: u.active, startup: !!u.startup, status };
+    }),
+  };
+}
+
+/** Copy the ticked ones that are new here, passwords and all, and let them keep using the system they came from. */
+export function copyLogins({ system, logins }, usernames = []) {
+  const want = new Set((Array.isArray(usernames) ? usernames : []).map(norm));
+  const here = new Set(db.prepare('SELECT username FROM users').all().map((u) => u.username));
+  const keys = new Set(otherSystems().map((s) => s.name));
+  const copied = []; const skipped = [];
+  db.exec('BEGIN');
+  try {
+    for (const u of logins) {
+      const username = norm(u.username);
+      if (!want.has(username)) continue;
+      if (!/^[A-Z0-9._-]{2,32}$/.test(username)) { skipped.push({ username, why: 'not a login name this app takes' }); continue; }
+      if (here.has(username)) { skipped.push({ username, why: 'already a login here - left as it is' }); continue; }
+      if (u.invitePending || !PW_HASH.test(String(u.hash || ''))) { skipped.push({ username, why: 'never chose a password - add them here and invite them' }); continue; }
+      let access = null;
+      try { const a = u.access == null ? null : JSON.parse(u.access); access = Array.isArray(a) ? JSON.stringify(a) : null; } catch { access = null; }
+      db.prepare(`INSERT INTO users (username, name, password_hash, role, active, created_at, created_by, must_change, access, email, systems)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(username, String(u.name || username).slice(0, 80), String(u.hash), u.role === 'admin' ? 'admin' : 'supervisor', u.active ? 1 : 0,
+          new Date().toISOString(), `copied from ${system}`, u.mustChange ? 1 : 0, access, u.email || null, keys.has(system) ? JSON.stringify([system]) : null);
+      here.add(username);
+      copied.push(username);
+    }
+    db.exec('COMMIT');
+  } catch (err) { db.exec('ROLLBACK'); throw err; }
+  return { system, copied, skipped };
+}
