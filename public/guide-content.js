@@ -296,6 +296,7 @@
           ],
           ask: [
             { q: 'What does shift 1 or 2 mean on a team?', a: 'Which shift the team belongs to, so the plan can show who is on. Day, morning, am, first all mean 1; night, pm, second mean 2.' },
+            { q: 'How do I take an aisle off a team, or move it behind the rest?', a: 'Dashboard → Team plan. Each aisle in a team\'s row has its buttons: release sends the aisle being counted to the back of the team\'s queue and the next one starts (with nothing else queued it simply starts again, and the card says so); ✕ takes an aisle off the plan whatever its state — the aisle\'s counts stay, and if the team was counting it their next aisle starts. On an aisle being counted or finished, ✕ asks first.' },
             { q: 'Can a team count an aisle nobody gave them?', a: 'Only with Count without an assignment on. Otherwise the gun says who holds it.' },
           ],
         },
@@ -489,11 +490,24 @@
           ],
         },
         {
+          title: 'Inventory Control: where the count stands',
+          do: 'Inventory Control in the sidebar is the dashboard\'s Second counts, Adjustments and Reports on a page of their own, with an Overview in front: how much of the count is in, how many second and third counts are still open, the positive, negative and net units, how many lines and aisles are in the ERP, and whether the final report can be filed. Each figure opens the tab it comes from. With cycle counts on, the open cycle counts are listed there too, with Show it here to bring one onto the same tabs.',
+          where: S('/inventory', 'overview', 'Inventory Control → Overview'),
+          watch: [
+            { see: 'No Inventory Control in the sidebar', means: 'This login has none of the dashboard\'s Second counts, Adjustments or Reports, and not Inventory Control itself.', fix: 'An admin ticks Inventory Control, or any of those three dashboard tabs, under Settings → Logins.' },
+            { see: 'No cycle counts on the page', means: 'Cycle counts are switched off for the site.', fix: 'Settings → Site & systems → What is switched on, if they are wanted.' },
+          ],
+          ask: [
+            { q: 'Is it the same data as the dashboard?', a: 'The same tabs, the same cards, the same count picked in the header. Only the Overview is Inventory Control\'s own, and the Dashboard does not show it.' },
+            { q: 'Which pallets does the Not on the report sheet list?', a: 'Reports → Export everything has a Not on the report sheet: the pallets the report does not have — sold or shipped in the system, found on the floor. Each row has where it was found and by whom, its quantity and lot, where its approval and ERP entry stand, and an Investigation column to write the finding in before it is adjusted back into stock.' },
+          ],
+        },
+        {
           title: 'Read the reports',
           do: 'Reports: the pallet report with filters (status, aisle, lot, text, hide missing), variances by aisle, labels to replace, and the exports. Everything can be read on screen without downloading.',
           where: S('/admin', 'reports', 'Dashboard → Reports'),
           watch: [
-            { see: 'Pallets marked NOT IN MASTER', means: 'Counted, but not on the inventory report.', fix: 'Real pallets the report did not know about, or a mistyped id. The adjustments list carries them as additions.' },
+            { see: 'Pallets marked NOT IN MASTER', means: 'Counted, but not on the inventory report.', fix: 'Real pallets the report did not know about, or a mistyped id. The adjustments list carries them as additions, and Export everything lists them on their own Not on the report sheet, with a column for the investigation.' },
             { see: 'Pallets marked MISSING', means: 'On the report, never scanned.', fix: 'Not an adjustment until the count is closed. Tick Hide missing to read the rest.' },
           ],
           ask: [

@@ -370,6 +370,13 @@ try {
   await save(cards, 'scanner-setup-cards');
   await cards.close();
 
+  // Inventory Control: the dashboard's three tabs on a page of their own, and its overview
+  await signIn('/inventory');
+  await pick(sess.id);
+  await sub('overview');
+  await wait(1200);
+  await saveCard(desk, '#icOverview .card', 'inventory-control-overview', 0);
+
   await signIn('/admin');
   await pick(sess.id);
   await sub('progress');

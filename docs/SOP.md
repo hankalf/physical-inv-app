@@ -47,6 +47,7 @@ on a PC.
 | **Scanner** | its own link, `/?d=…` | Counters, on the handhelds | Each scanner has its own link; the bare address opens the supervisor sign-in |
 | **Dashboard** | `/admin` | Supervisor running the count — the live view of the count in the picker | Supervisor login |
 | **Full Counts** | `/full` | Every wall-to-wall on the site: open and closed, how far each got, which one the scanners land on; start a new one; what a count still needs | Supervisor login (the Dashboard's access) |
+| **Inventory Control** | `/inventory` | The dashboard's Second counts, Adjustments and Reports on a page of their own, with an **Overview** in front: how much is counted, what is still being counted again, what the count adds and takes off, how much is in the ERP, and whether the final report can be filed. With cycle counts on, the open cycle counts are there too. |
 | **Settings** | `/settings` | Whoever sets the count up | Supervisor login |
 | **Office board** | `/board` | Anyone — put it on the office TV | **None.** Read-only |
 | **Practice data** | `/practice` | An admin: every login's runs in the Testing Suite | Admin login |
@@ -282,7 +283,7 @@ What it is and is not:
 - **Hidden, not forbidden.** A login's role still says what it may use (Step 4). Switching a part
   off takes it out of everyone's way; nothing is deleted, and the data behind a hidden page waits
   for it to come back.
-- **Always on:** the Dashboard's Progress, Team plan and Second counts, the Full Counts page,
+- **Always on:** the Dashboard's Progress, Team plan and Second counts, the Full Counts page, Inventory Control's Overview and Second counts,
   Teams & crew, Settings and the User guide — the count itself.
 - **A bookmark** to a hidden page says *"Cycle counts is switched off"* with the way back for an
   admin, rather than wandering somewhere else without a word.
@@ -1674,6 +1675,21 @@ one team, or all of them, with a read receipt — use **Message the floor** unde
 ---
 
 ## Part 5 — Finishing a count
+
+Everything in this part is also under **Inventory Control** in the sidebar (`/inventory`): the
+dashboard's **Second counts**, **Adjustments** and **Reports** tabs on a page of their own, so the
+people turning the count into stock have nothing else in front of them. In front of the three
+sits an **Overview**: how much of the count is in, how many second (and third) counts are still
+open, the positive, negative and net units, how many lines and aisles are in the ERP, and whether
+the final report can be filed yet — each figure opens the tab it comes from. With cycle counts on,
+the open cycle counts are listed there too, with **Show it here** to bring one onto the same tabs;
+switched off for the site, they are gone from the page and its count picker. A login given the
+dashboard's Second counts, Adjustments or Reports has Inventory Control's too, and the other way
+round; *Inventory Control* is also a page of its own in a login's access list.
+
+![](images/inventory-control-overview.png)
+
+*Inventory Control → Overview: where the count stands, in one read.*
 
 ### Step 18 — Work the second counts
 

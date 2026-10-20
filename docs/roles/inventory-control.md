@@ -1,6 +1,6 @@
 # SOP — Inventory Control
 
-**Role:** Inventory controller  **Login profile:** *Inventory control — the count, adjustments, downloads*  **Pages:** Dashboard (every tab), Full Counts, Testing Suite, User guide  **Functions:** Approve adjustments, Downloads and printouts
+**Role:** Inventory controller  **Login profile:** *Inventory control — the count, adjustments, downloads*  **Pages:** Inventory Control, Dashboard (every tab), Full Counts, Testing Suite, User guide  **Functions:** Approve adjustments, Downloads and printouts
 
 This procedure is for the person who owns the numbers: who checks a count before it is
 trusted, signs off the differences, hands the ERP its file, and keeps the records an auditor
@@ -8,9 +8,13 @@ will ask for. It covers only what the *Inventory control* login can reach. Setti
 up, registering scanners and running the floor are other roles' procedures; where this one
 needs something from them it says so.
 
-Everything here is done on the **Dashboard** (`/admin`) with an *Inventory control* login. The
-count to work on is picked in the header; every tab, download and export on the page is about
-that count.
+Everything here is done on **Inventory Control** (`/inventory`) with an *Inventory control*
+login: the dashboard's **Second counts**, **Adjustments** and **Reports** tabs on a page of their
+own, with an **Overview** in front — how much of the count is in, what is still being counted
+again, the positive, negative and net units, how much is in the ERP, and whether the final report
+can be filed. The same three tabs are on the **Dashboard** (`/admin`), and this procedure names
+them by tab, so it reads the same on either page. The count to work on is picked in the header;
+every tab, download and export on the page is about that count.
 
 ## Contents
 
