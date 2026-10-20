@@ -1515,6 +1515,31 @@
     renderLogo(b);
     if (document.activeElement !== $('fSiteName') && document.activeElement !== $('fSitePlace')) { $('fSiteName').value = b.name || ''; $('fSitePlace').value = b.place || ''; }
   }
+  /* ------------------------------------------------------------ the crew board */
+  function drawCrewBoard(c) {
+    $('fCbShift').value = c.shift || 'auto';
+    $('fCbScroll').checked = !!c.scroll.on;
+    $('fCbSpeed').value = ['slow', 'normal', 'fast'].includes(c.scroll.speed) ? c.scroll.speed : 'normal';
+    $('fCbPause').value = c.scroll.pause;
+    $('fCbMembers').checked = c.show.members; $('fCbOpen').checked = c.show.openSeats; $('fCbNotes').checked = c.show.notes;
+    $('fCbWhere').checked = c.show.where; $('fCbLast').checked = c.show.lastScan; $('fCbCount').checked = c.show.count;
+  }
+  async function refreshCrewBoard() {
+    if (!api.me || api.me.role !== 'admin') { $('crewBoardCard').hidden = true; return; }
+    $('crewBoardCard').hidden = false;
+    drawCrewBoard(await api.json('/api/admin/crew-board'));
+  }
+  $('btnCrewBoardSave').onclick = async () => {
+    try {
+      const c = await api.post('/api/admin/crew-board', {
+        shift: $('fCbShift').value,
+        scroll: { on: $('fCbScroll').checked, speed: $('fCbSpeed').value, pause: Number($('fCbPause').value) || 0 },
+        show: { members: $('fCbMembers').checked, openSeats: $('fCbOpen').checked, notes: $('fCbNotes').checked, where: $('fCbWhere').checked, lastScan: $('fCbLast').checked, count: $('fCbCount').checked },
+      });
+      drawCrewBoard(c);
+      msg($('crewBoardMsg'), 'ok', 'Saved.', `The screen shows ${c.shift === 'auto' ? 'the shift on now' : c.shift === '1' ? 'the 1st shift' : 'the 2nd shift'}${c.scroll.on ? `, scrolling ${c.scroll.speed}` : ', without scrolling'}; it picks it up within half a minute.`);
+    } catch (err) { msg($('crewBoardMsg'), 'err', err.message); }
+  };
   $('btnSiteNameSave').onclick = async () => {
     try {
       const b = await api.post('/api/admin/site-name', { name: $('fSiteName').value, place: $('fSitePlace').value });
@@ -2506,7 +2531,7 @@
 
   async function load() {
     await refreshMe();
-    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshJobs().catch(() => {}), refreshReasons(), refreshSosSettings(), refreshIssueMenu().catch(() => {}), refreshLogo(), refreshPalletSystem().catch(() => {}), refreshOnedrive().catch(() => {}), refreshGdrive().catch(() => {}), refreshTeamsBackup().catch(() => {}), refreshSystems().catch(() => {})]);
+    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshJobs().catch(() => {}), refreshReasons(), refreshSosSettings(), refreshIssueMenu().catch(() => {}), refreshLogo(), refreshPalletSystem().catch(() => {}), refreshOnedrive().catch(() => {}), refreshGdrive().catch(() => {}), refreshTeamsBackup().catch(() => {}), refreshCrewBoard().catch(() => {}), refreshSystems().catch(() => {})]);
     await refreshFeatures().catch(() => {});
     await refreshGun().catch(() => {});
     await loadLayouts().catch(() => {});

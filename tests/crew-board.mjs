@@ -73,32 +73,75 @@ check('…and the clock it was judged by comes with it, as a wall clock says it'
 check('The shift on now follows the site\'s clock', d.now.shift === want && d.shifts.filter((s) => s.on).map((s) => s.key).join() === want && (want ? /until/.test(d.now.until + 'until') : /Between shifts/.test(d.now.label)), `${hour}h → ${JSON.stringify(d.now)}`);
 
 /* ---------------- the page ---------------- */
+const wantShown = want || '1';            // between shifts the board shows the next one coming in
+const cfg = await j(await fetch(`${BASE}/api/admin/crew-board`, { headers: A }));
+check('The crew board’s options start as: the shift on now, everything shown, scrolling by itself at normal speed', cfg.shift === 'auto' && Object.values(cfg.show).every(Boolean) && cfg.scroll.on && cfg.scroll.speed === 'normal' && cfg.scroll.pause === 6 && cfg.pxPerSecond === 36 && cfg.isDefault, JSON.stringify(cfg));
+check('…and the screen is told them with the teams', d.config && d.config.shift === 'auto' && d.config.scroll.on && !('isDefault' in d.config), JSON.stringify(d.config));
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 await page.goto(`${BASE}/crew?session=${S}`);
+await page.waitForSelector('.shift .team');
+check('/crew serves it with no sign-in screen', (await page.$('#fPassword')) === null && (await page.$$('.shift')).length === 1);
+check('One shift at a time: the one on now by the site’s clock (or the next one coming in)', (await page.getAttribute('.shift', 'data-shift')) === wantShown, `${hour}h → ${await page.getAttribute('.shift', 'data-shift')}`);
+check('A team with no shift set is listed with it, marked', /Team 14/.test(await page.textContent('.shift')) && /shift not set/.test(await page.textContent('.team[data-team="14"]')) && await page.$eval('.team[data-team="14"]', (e) => e.classList.contains('unset')));
+await page.goto(`${BASE}/crew?shift=1&session=${S}`);
 await page.waitForSelector('.shift[data-shift="1"] .team');
-check('/crew serves it with no sign-in screen', (await page.$('#fPassword')) === null && (await page.$$('.shift')).length >= 2);
-check('1st and 2nd shift side by side, each with its hours', /1st shift.*6am – 2pm/.test(clean(await page.textContent('.shift[data-shift="1"] .sh'))) && /2nd shift.*2pm – 10pm/.test(clean(await page.textContent('.shift[data-shift="2"] .sh'))));
+check('?shift=1 pins a screen to the 1st shift, with its hours', (await page.$$('.shift')).length === 1 && /1st shift.*6am – 2pm/.test(clean(await page.textContent('.shift[data-shift="1"] .sh'))));
 check('Team 11 lists Ana and Ben, names only', /Ana Day/.test(await page.textContent('.team[data-team="11"]')) && /Ben Day/.test(await page.textContent('.team[data-team="11"]')) && !/Freezer|Scissor/i.test(await page.textContent('.team[data-team="11"]')), clean(await page.textContent('.team[data-team="11"]')));
 check('…where it is: Aisle C01 · levels A–C, last scan just now, next C03', /Aisle C01 · levels A–C/.test(clean(await page.textContent('.team[data-team="11"] .where'))) && /last scan just now · C01A001/.test(clean(await page.textContent('.team[data-team="11"] .where'))) && /next C03/.test(await page.textContent('.team[data-team="11"] .where')), clean(await page.textContent('.team[data-team="11"] .where')));
 check('…the aisle and its levels are one piece, so they never part across a line', await page.$eval('.team[data-team="11"] .where .pos', (e) => getComputedStyle(e).whiteSpace === 'nowrap' && /Aisle C01 · levels A–C/.test(e.textContent)));
 check('…and that it is scanning, in green', /Scanning/i.test(await page.textContent('.team[data-team="11"] .st')) && await page.$eval('.team[data-team="11"]', (e) => e.classList.contains('live')));
-check('Team 12 is marked red: Stopped scanning, with how long', /Stopped scanning · \d+ min/i.test(clean(await page.textContent('.team[data-team="12"] .st'))) && await page.$eval('.team[data-team="12"]', (e) => e.classList.contains('stopped')), clean(await page.textContent('.team[data-team="12"] .st')));
-check('Team 13 says Not signed on', /Not signed on/i.test(await page.textContent('.team[data-team="13"] .st')));
 check('The header names the count', /Crew board count/.test(await page.textContent('#bSession')));
-check('Team 13 says its shift comes from its people', /shift from its people/.test(await page.textContent('.team[data-team="13"]')));
-check('The shift on now is marked, and only that one', (await page.$$('.shift.on')).length === (want ? 1 : 0) && (!want || (await page.getAttribute('.shift.on', 'data-shift')) === want) && (!want || /On now/.test(await page.textContent('.shift.on .sh'))));
-check('The header clock shows the site\'s time, not the browser\'s', clean(await page.textContent('#bClock')) === d.now.time || /^\d{1,2}:\d{2} (AM|PM)$/.test(clean(await page.textContent('#bClock'))), clean(await page.textContent('#bClock')));
-check('The shift header counts its teams and their people', clean(await page.textContent('.shift[data-shift="1"] .count')) === '1 team · 2 people', clean(await page.textContent('.shift[data-shift="1"] .count')));
+check('The shift on now is marked, and only when it is', (await page.$$('.shift.on')).length === (want === '1' ? 1 : 0) && (want !== '1' || /On now/.test(await page.textContent('.shift.on .sh'))));
+check('The header clock shows the site’s time, not the browser’s', clean(await page.textContent('#bClock')) === d.now.time || /^\d{1,2}:\d{2} (AM|PM)$/.test(clean(await page.textContent('#bClock'))), clean(await page.textContent('#bClock')));
+check('The shift header counts its teams and their people, the unset team included', clean(await page.textContent('.shift[data-shift="1"] .count')) === '2 teams · 2 people', clean(await page.textContent('.shift[data-shift="1"] .count')));
 check('Nobody off a team is on the screen', !/Ed Loose|Flo Unset|Not on a team/.test(await page.textContent('body')));
-check('Shift not set has team 14, and only teams', /Team 14/.test(await page.textContent('.shift.unset')) && (await page.$$('.shift.unset .team')).length === 1);
 check('No clock-in numbers anywhere on the screen', !/CB[1-6]\b/.test(await page.textContent('body')));
 check('It fits a 1080p screen without scrolling', await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 2), String(await page.evaluate(() => document.documentElement.scrollHeight)));
 await page.goto(`${BASE}/crew?shift=2&session=${S}`);
 await page.waitForSelector('.shift[data-shift="2"] .team');
 check('?shift=2 pins it to the 2nd shift alone', (await page.$$('.shift')).length === 1 && (await page.getAttribute('.shift', 'data-shift')) === '2');
+check('Team 12 is marked red: Stopped scanning, with how long', /Stopped scanning · \d+ min/i.test(clean(await page.textContent('.team[data-team="12"] .st'))) && await page.$eval('.team[data-team="12"]', (e) => e.classList.contains('stopped')), clean(await page.textContent('.team[data-team="12"] .st')));
+check('Team 13 says Not signed on', /Not signed on/i.test(await page.textContent('.team[data-team="13"] .st')));
+check('Team 13 says its shift comes from its people', /shift from its people/.test(await page.textContent('.team[data-team="13"]')));
+
+/* ---------------- the admin's options ---------------- */
+let r = await post('/api/admin/crew-board', { shift: '2', show: { notes: false, lastScan: false }, scroll: { on: true, speed: 240, pause: 1 } });
+const c2 = await j(r);
+check('An admin fixes the screen to the 2nd shift, takes the notes and last scans off, and sets the scroll fast with a short pause', r.status === 200 && c2.shift === '2' && !c2.show.notes && !c2.show.lastScan && c2.show.members && c2.scroll.speed === 240 && c2.pxPerSecond === 240 && c2.scroll.pause === 1, JSON.stringify(c2));
+r = await post('/api/admin/crew-board', { shift: '3' });
+check('A shift that is not auto, 1 or 2 is refused', r.status === 400);
+r = await post('/api/admin/crew-board', { scroll: { speed: 'warp' } });
+check('…and so is a speed that is not slow, normal, fast or a number', r.status === 400);
+await page.goto(`${BASE}/crew?session=${S}`);
+await page.waitForSelector('.shift[data-shift="2"] .team');
+check('The screen now shows the 2nd shift whatever the clock says', (await page.$$('.shift')).length === 1 && (await page.getAttribute('.shift', 'data-shift')) === '2');
+check('…without last scans or next aisles', !/last scan|next C/.test(await page.textContent('.shift')) && /Stopped scanning/i.test(await page.textContent('.team[data-team="12"]')));
+/* a short screen: the list is longer than it, so it scrolls by itself */
+const tv = await browser.newPage({ viewport: { width: 420, height: 380 } });
+tv.on('pageerror', (e) => errors.push(e.message));
+await tv.goto(`${BASE}/crew?session=${S}`);
+await tv.waitForSelector('.shift[data-shift="2"] .team');
+const overflow = await tv.$eval('.shift .teams', (g) => g.scrollHeight - g.clientHeight);
+/* how far it got over three seconds: a short list is down and back up again quickly, so one glance could miss it */
+const farthest = () => tv.evaluate(() => new Promise((r) => { let m = 0; const g = document.querySelector('.shift .teams'); const t = setInterval(() => { m = Math.max(m, g.scrollTop); }, 40); setTimeout(() => { clearInterval(t); r(m); }, 3000); }));
+const moved = await farthest();
+check('On a screen the list does not fit, it scrolls down by itself after the pause', overflow > 20 && moved > 10, `overflow ${overflow}px, scrolled ${moved}px within 3 s`);
+check('…with no scrollbar showing', await tv.$eval('.shift .teams', (g) => getComputedStyle(g).scrollbarWidth === 'none'));
+await tv.goto(`${BASE}/crew?session=${S}&scroll=0`);
+await tv.waitForSelector('.shift[data-shift="2"] .team');
+check('?scroll=0 on the address keeps that one screen still', (await farthest()) === 0);
+await post('/api/admin/crew-board', { scroll: { on: false } });
+await tv.goto(`${BASE}/crew?session=${S}`);
+await tv.waitForSelector('.shift[data-shift="2"] .team');
+check('Scrolling switched off by the admin: the list stays put', (await farthest()) === 0);
+await post('/api/admin/users', { username: 'CREW-SUP', name: 'Crew Sup', password: 'crew-board-1', mustChange: false, profile: 'supervisor' });
+const SUP = { ...hdr, authorization: 'Bearer ' + (await j(await fetch(`${BASE}/api/admin/login`, { method: 'POST', headers: hdr, body: JSON.stringify({ username: 'CREW-SUP', password: 'crew-board-1' }) }))).token };
+check('Only an admin changes what the wall screen shows', (await post('/api/admin/crew-board', { shift: 'auto' }, SUP)).status === 403 && (await fetch(`${BASE}/api/admin/crew-board`, { headers: SUP })).status === 403);
+check('The change is in the log', (await j(await fetch(`${BASE}/api/admin/audit?limit=20`, { headers: A }))).some((x) => x.action === 'changed the crew board'));
+await post('/api/admin/crew-board', { shift: 'auto', show: { notes: true, lastScan: true }, scroll: { on: true, speed: 'normal', pause: 6 } });
 check('No page errors', !errors.length, errors.join(' | '));
 await browser.close();
 

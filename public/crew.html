@@ -9,8 +9,10 @@
 <style>
   /* A screen by the time clock, read from ten feet away: who is on which
      team, this shift and the next. Nothing is clickable. */
+  /* the board is exactly the screen: a list longer than it scrolls inside its shift, never the page */
+  html, body { height: 100%; overflow: hidden; }
   body { padding: 0; }
-  .board { display: flex; flex-direction: column; min-height: 100vh; padding: 2.2vh 2vw; gap: 1.8vh; }
+  .board { display: flex; flex-direction: column; height: 100vh; padding: 2.2vh 2vw; gap: 1.8vh; box-sizing: border-box; }
   .bhead { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
   .bhead .site { font-size: clamp(12px, 1.2vw, 16px); color: var(--muted, #8b95a7); margin-top: 2px; }
   .bhead h1 { margin: 0; font-size: clamp(20px, 2.4vw, 34px); font-weight: 800; letter-spacing: -.02em; }
@@ -21,7 +23,8 @@
   .bhead .clock b { color: var(--text); font-weight: 700; }
   .stale-warn { color: var(--warn); font-weight: 700; }
 
-  .shifts { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 1.4vw; flex: 1; min-height: 0; }
+  /* one shift at a time, the whole screen; the teams inside scroll by themselves */
+  .shifts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.4vw; flex: 1; min-height: 0; }
   .shift { display: flex; flex-direction: column; gap: 1vh; min-height: 0; border: 2px solid var(--line); border-radius: 16px; padding: 1.2vh 1.1vw; background: var(--surface); }
   .shift.on { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-dim) inset; }
   .shift .sh { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
@@ -29,7 +32,9 @@
   .shift .sh .hours { color: var(--muted); font-weight: 700; font-size: clamp(13px, 1.3vw, 19px); }
   .shift .sh .onnow { margin-left: auto; font-size: clamp(11px, 1vw, 15px); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent-dim); border-radius: 999px; padding: 3px 12px; background: var(--accent-ink); }
   .shift .sh .count { color: var(--muted); font-size: clamp(12px, 1.1vw, 16px); font-weight: 600; }
-  .shift .teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(220px, 16vw, 320px), 1fr)); gap: .9vw; align-content: start; overflow: auto; }
+  .shift .teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(220px, 16vw, 320px), 1fr)); gap: .9vw; align-content: start; overflow: auto; scrollbar-width: none; min-height: 0; flex: 1 1 auto; }
+  .shift .teams::-webkit-scrollbar { display: none; }
+  .team.unset { border-style: dashed; }
   .team { background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 1vh 1vw; }
   .team .th { display: flex; align-items: baseline; gap: 10px; }
   .team .th b { font-size: clamp(16px, 1.6vw, 24px); font-weight: 800; }

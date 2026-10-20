@@ -89,7 +89,11 @@ them **Jacket**, **Bibs**, **Boots**. **⬇ Sample CSV** downloads one in the ri
 - **1st shift / 2nd shift** and **Department** show one at a time.
 - **The crew board** (`/crew`) is the same list for a screen by the time clock: each shift's teams
   and who is on them, the shift on now marked, and where each team is counting — its aisle, last
-  scan, and **Scanning** or a red **Stopped scanning**. No sign-in, no clock-in numbers.
+  scan, and **Scanning** or a red **Stopped scanning**. No sign-in, no clock-in numbers. It shows
+  one shift at a time and scrolls by itself when the list is longer than the screen; an admin
+  picks the shift, what each card shows and the scroll speed.
+- **⬇ Export the teams (CSV)** downloads every team across both shifts, one row a seat, with the
+  shift on every row, so the shifts compare side by side in Excel.
 - **🖨 Print team QR codes** prints a card per team with its number as a QR code, for every team
   or one shift. At sign-on, scan the card into **Team number** on the gun instead of typing it.
   The number is printed large under the code too.

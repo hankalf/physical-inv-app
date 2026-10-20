@@ -1164,6 +1164,13 @@ change. Printing needs **Downloads** on the login, and the Log records who print
 
 *The 1st shift's team cards: the QR holds the team number, printed large underneath.*
 
+**Export the teams.** **⬇ Export the teams (CSV)**, beside the team sheet's sample, downloads every
+team across both shifts, one row a seat — *Team #*, **Shift**, *Department*, *Employee*, *Clock In
+Number*, the person's own shift, *Equipment*, whether the seat is open, whether the person is on the
+crew list, and the team's notes and the levels it reaches. The columns are the team sheet's own, so
+the file compares the shifts side by side in Excel and uploads back as a team sheet after it is
+reworked. It needs *Downloads*, and the Log records who exported it.
+
 **Departments and gear sizes.** Every crew card shows the person's **department** as a blue chip
 beside their name (*No department* when it is blank), and their **jacket**, **bibs (overalls)**
 and **boots** sizes under their equipment. **Edit** on the card opens the same form as the
@@ -1737,7 +1744,19 @@ clock-in numbers. `/crew?shift=1` or `?shift=2` pins a screen to one shift; the 
 
 ![](images/crew-board.png)
 
-*The crew board: 1st and 2nd shift, each team's people, and the shift on now marked.*
+*The crew board: one shift at a time — each team's people, where it is counting, and whether it is scanning.*
+
+**What the crew board shows is the admin's.** *Settings → Site & systems → Crew board*: the **shift
+shown** — the one on now by the warehouse clock (between shifts, the one coming in next), or the
+1st or the 2nd always; what each team's card carries — the **people** on it, **open seats** from the
+team sheet, the team's **notes**, its **aisle and Scanning / Stopped scanning**, its **last scan and
+next aisle**, and **which count** in the header; and the **scrolling**. A screen in the warehouse is
+touched by nobody, so when the list is longer than the screen it **scrolls by itself**: down at the
+speed set here (**Slow**, **Normal** or **Fast**), a **pause** at the bottom, back up, a pause at the
+top. A list that fits never moves. The screen picks a change up within half a minute. A team with no
+shift set is listed with the shift on screen, marked *shift not set*. On the screen's own address,
+`?shift=1` or `?shift=2` pins that screen to one shift whatever is set, and `?scroll=0` stops the
+scrolling on that screen alone — for the screen by the supervisor's desk, say.
 
 ---
 

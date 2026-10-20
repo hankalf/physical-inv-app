@@ -27,9 +27,60 @@ const twelve = (h) => (h === 0 ? '12am' : h < 12 ? `${h}am` : h === 12 ? '12pm' 
 /** Which shift it is at the site right now, and what to say about it. */
 export function shiftNow(hour = localHour()) {
   const on = SHIFTS.find((s) => hour >= s.from && hour < s.to);
-  if (on) return { shift: on.key, hour, label: `${on.label} · ${on.hours}`, until: twelve(on.to) };
+  if (on) return { shift: on.key, hour, label: `${on.label} · ${on.hours}`, until: twelve(on.to), next: on.key };
   const next = SHIFTS.find((s) => s.from > hour) || SHIFTS[0];
-  return { shift: '', hour, label: `Between shifts · ${next.label} starts ${twelve(next.from)}`, until: '' };
+  // between shifts the board shows the one coming in next
+  return { shift: '', hour, label: `Between shifts · ${next.label} starts ${twelve(next.from)}`, until: '', next: next.key };
+}
+
+/* ------------------------------------------------------------ what the screen shows
+ * An admin decides, under Settings → Site & systems → Crew board: which shift
+ * (the one on now by the clock, or a fixed one), what each team card carries,
+ * and whether the list scrolls by itself for a screen nobody touches. */
+const SPEEDS = { slow: 18, normal: 36, fast: 70 };
+const SHOW_KEYS = ['members', 'openSeats', 'notes', 'where', 'lastScan', 'count'];
+const DEFAULT_CONFIG = { shift: 'auto', show: { members: true, openSeats: true, notes: true, where: true, lastScan: true, count: true }, scroll: { on: true, speed: 'normal', pause: 6 } };
+export function crewBoardConfig() {
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'crewBoard'").get();
+  let saved = {};
+  try { saved = row ? JSON.parse(row.value) : {}; } catch { saved = {}; }
+  const show = { ...DEFAULT_CONFIG.show };
+  for (const k of SHOW_KEYS) if (saved.show && k in saved.show) show[k] = saved.show[k] !== false;
+  const scroll = { ...DEFAULT_CONFIG.scroll, ...(saved.scroll || {}) };
+  if (!(scroll.speed in SPEEDS) && !(Number(scroll.speed) >= 5 && Number(scroll.speed) <= 400)) scroll.speed = 'normal';
+  scroll.on = scroll.on !== false;
+  scroll.pause = Math.max(0, Math.min(60, Number(scroll.pause) || 0));
+  return {
+    shift: ['auto', '1', '2'].includes(saved.shift) ? saved.shift : 'auto',
+    show, scroll,
+    pxPerSecond: SPEEDS[scroll.speed] || Number(scroll.speed),
+    isDefault: !row,
+  };
+}
+export function saveCrewBoardConfig(body = {}) {
+  const now = crewBoardConfig();
+  const bad = (m) => Object.assign(new Error(m), { status: 400 });
+  const next = { shift: now.shift, show: { ...now.show }, scroll: { ...now.scroll } };
+  if (body.shift !== undefined) {
+    if (!['auto', '1', '2'].includes(String(body.shift))) throw bad('the shift shown is auto, 1 or 2');
+    next.shift = String(body.shift);
+  }
+  if (body.show && typeof body.show === 'object') for (const k of SHOW_KEYS) if (k in body.show) next.show[k] = body.show[k] !== false;
+  if (body.scroll && typeof body.scroll === 'object') {
+    if ('on' in body.scroll) next.scroll.on = body.scroll.on !== false;
+    if ('speed' in body.scroll) {
+      const v = body.scroll.speed;
+      if (!(v in SPEEDS) && !(Number(v) >= 5 && Number(v) <= 400)) throw bad('the scroll speed is slow, normal or fast, or 5 to 400 pixels a second');
+      next.scroll.speed = v in SPEEDS ? v : Number(v);
+    }
+    if ('pause' in body.scroll) {
+      const n = Number(body.scroll.pause);
+      if (!(n >= 0 && n <= 60)) throw bad('the pause at each end is 0 to 60 seconds');
+      next.scroll.pause = n;
+    }
+  }
+  db.prepare("INSERT INTO settings (key, value) VALUES ('crewBoard', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(JSON.stringify(next));
+  return crewBoardConfig();
 }
 
 /* What a team is doing on the count, in the words the dashboard uses: counting
@@ -88,10 +139,12 @@ export function crewBoard(sessionId = '') {
   const group = (key) => ({
     teams: teams.filter((t) => t.shift === key).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })),
   });
+  const { isDefault, ...config } = crewBoardConfig();
   return {
     now,
     session: session ? { id: session.id, name: session.name } : null,
     quietLimit,
+    config,
     shifts: [
       ...SHIFTS.map((s) => ({ key: s.key, label: s.label, hours: s.hours, on: now.shift === s.key, ...group(s.key) })),
       { key: '', label: 'Shift not set', hours: '', on: false, ...group('') },

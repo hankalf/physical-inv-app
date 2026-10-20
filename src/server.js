@@ -13,7 +13,7 @@ import {
   enrollDevice, deviceByToken, resetDevice, saveAdminToken, adminTokenInfo, dropAdminToken, dropAdminTokensFor, purgeAdminTokens } from './db.js';
 import { importMaster, pruneAreaAisles } from './routes/master.js';
 import { boardData } from './routes/board.js';
-import { crewBoard } from './routes/crew-board.js';
+import { crewBoard, crewBoardConfig, saveCrewBoardConfig } from './routes/crew-board.js';
 import { countClock } from './routes/count-clock.js';
 import { sendMessage, listMessages, messagesFor, ackMessage, clearMessage } from './routes/messages.js';
 import { listAdjustments, adjustmentView, decideAdjustments, adjustmentReasons, saveAdjustmentReasons } from './routes/adjustments.js';
@@ -1348,6 +1348,28 @@ async function handleAdmin(req, res, url, m) {
     audit(actor, 'changed the equipment rules', JSON.stringify(body.levelRules || []));
     return sendJson(req, res, 200, setConfig(body));
   }
+  /* every team across the shifts, one row a seat: the team sheet's own columns
+     (so the file uploads back as one) with the shift, the team's notes and reach */
+  if (p === '/api/admin/people/export/teams.csv') {
+    const teams = listTeams().sort((x, y) => (x.shift || '9').localeCompare(y.shift || '9') || x.name.localeCompare(y.name, undefined, { numeric: true }));
+    const rows = [];
+    for (const t of teams) {
+      const base = { 'Team #': t.name, 'Shift': t.shift ? `${t.shift === '1' ? '1st' : '2nd'} shift` : '', 'Team notes': t.notes || '', 'Team reaches': t.reachLabel || '' };
+      const seated = new Set();
+      for (const seat of t.seats) {
+        const m = seat.badge ? t.members.find((x) => x.badge === seat.badge) : null;
+        if (m) seated.add(m.badge);
+        rows.push({ ...base, 'Department': seat.dept || (m ? m.dept : ''), 'Employee': m ? m.name : (seat.name || ''), 'Clock In Number': m ? m.badge : '', 'Person shift': m && m.shift ? `${m.shift === '1' ? '1st' : '2nd'} shift` : '', 'Equipment': (seat.equipment.length ? seat.equipment : (m ? m.equipment : [])).join('; '), 'Seat': seat.open ? 'open seat' : (seat.role || ''), 'On crew list': m ? 'yes' : (seat.name ? 'no' : '') });
+      }
+      for (const m of t.members) {
+        if (seated.has(m.badge)) continue;
+        rows.push({ ...base, 'Department': m.dept, 'Employee': m.name, 'Clock In Number': m.badge, 'Person shift': m.shift ? `${m.shift === '1' ? '1st' : '2nd'} shift` : '', 'Equipment': m.equipment.join('; '), 'Seat': '', 'On crew list': 'yes' });
+      }
+      if (!t.seats.length && !t.members.length) rows.push({ ...base, 'Department': '', 'Employee': '', 'Clock In Number': '', 'Person shift': '', 'Equipment': '', 'Seat': 'nobody assigned', 'On crew list': '' });
+    }
+    audit(actor, 'exported the teams', `${teams.length} teams, ${rows.length} rows`);
+    return sendCsv(req, res, `teams-${localDate()}.csv`, toCsv(rows, ['Team #', 'Shift', 'Department', 'Employee', 'Clock In Number', 'Person shift', 'Equipment', 'Seat', 'On crew list', 'Team notes', 'Team reaches']));
+  }
   if (p === '/api/admin/people/export/employees.csv') {
     const rows = listEmployees().map((e) => ({ ...e, equipment: e.equipment.join('; '), team: e.team || '' }));
     return sendCsv(req, res, 'employees.csv', toCsv(rows, ['badge', 'name', 'dept', 'shift', 'equipment', 'reach', 'team', 'jacket', 'bibs', 'boots', 'active']));
@@ -1905,6 +1927,14 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, out);
   }
   // the site's name and place: the sidebar, the splash, the guns, the board, the installed app
+  /* the crew board's screen: which shift, what a card carries, the scrolling */
+  if (p === '/api/admin/crew-board' && whoNow.role !== 'admin') throw httpError(403, 'only an admin changes what the crew board shows');
+  if (p === '/api/admin/crew-board' && method === 'GET') return sendJson(req, res, 200, crewBoardConfig());
+  if (p === '/api/admin/crew-board' && method === 'POST') {
+    const c = saveCrewBoardConfig(await readJson(req));
+    audit(actor, 'changed the crew board', `shift ${c.shift}, ${Object.entries(c.show).filter(([, v]) => !v).map(([k]) => k).join(', ') || 'everything'} shown${Object.values(c.show).some((v) => !v) ? ' off' : ''}, scroll ${c.scroll.on ? `${c.scroll.speed}, ${c.scroll.pause}s pause` : 'off'}`);
+    return sendJson(req, res, 200, c);
+  }
   if (p === '/api/admin/site-name' && method === 'POST') {
     requireAccess('admin');
     const body = await readJson(req);

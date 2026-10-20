@@ -626,6 +626,7 @@
     } catch (err) { msg($('teamFileMsg'), 'err', 'Upload failed', err.message); }
   };
 
+  $('btnTeamsExport').onclick = () => api.download('/api/admin/people/export/teams.csv', 'teams.csv').catch((err) => msg($('teamFileMsg'), 'err', err.message));
   $('btnExport').onclick = () => api.download('/api/admin/people/export/employees.csv', 'employees.csv')
     .catch((err) => msg($('uploadMsg'), 'err', err.message));
 

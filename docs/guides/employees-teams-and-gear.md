@@ -112,8 +112,14 @@ The columns are matched by name, in any order:
 - **1st shift / 2nd shift** and **Department** above the board show one at a time.
 - **The crew board** (`/crew`) puts the teams and their people on a wall screen by shift — 1st
   shift 6am–2pm, 2nd shift 2pm–10pm, the one on now marked — with each team's aisle, its last
-  scan, and **Scanning** or a red **Stopped scanning**. No sign-in, no clock-in numbers. Open it from the Dashboard's **Crew board ↗** chip; `?shift=2` pins a screen to one
-  shift.
+  scan, and **Scanning** or a red **Stopped scanning**. No sign-in, no clock-in numbers. It shows
+  **one shift at a time**: the one on now by the clock, or the one fixed under **Settings → Site &
+  systems → Crew board**, which also picks what each card shows and whether the list **scrolls by
+  itself**, and how fast. Open it from the Dashboard's **Crew board ↗** chip; `?shift=2` pins a
+  screen to one shift and `?scroll=0` stops the scrolling on that screen.
+- **⬇ Export the teams (CSV)** downloads every team across both shifts, one row a seat, in the
+  team sheet's own columns plus the shift, so the shifts compare side by side in Excel and the file
+  uploads back after it is reworked.
 - **🖨 Print team QR codes** prints a card for each team with its number as a QR code, three
   across a letter page. Pick **Every team**, **1st shift** or **2nd shift** in the box beside
   it first. At sign-on the counter scans the card into **Team number** on the gun instead of

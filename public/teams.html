@@ -17,14 +17,15 @@
 <!-- signed in already (this tab holds a sign-in): no sign-in box for the moment it takes to check it -->
 <script>try { if (sessionStorage.getItem('admToken')) document.documentElement.classList.add('resuming', 'signed-in'); } catch (e) { /* private window */ }</script>
 <style>
-  /* Both columns scroll inside themselves and stay put, so the person you are
-     dragging and the team you are dragging them to are on screen at once - with
-     a long crew list the page used to scroll the target out from under you. */
+  /* The crew list stays put and scrolls inside itself, so the person you are
+     dragging is on screen whichever team you drag them to; the teams take the
+     whole page and grow with it, so every team is in view with no second
+     scrollbar inside the page. */
   .board { display: grid; grid-template-columns: 330px 1fr; gap: 16px; align-items: start; }
-  .board > div { position: sticky; top: 8px; max-height: calc(100vh - 210px); overflow-y: auto; padding-right: 2px; }
+  .board > .bucket { position: sticky; top: 8px; max-height: calc(100vh - 120px); overflow-y: auto; padding-right: 2px; }
   @media (max-width: 1000px) {
     .board { grid-template-columns: 1fr; }
-    .board > div { position: static; max-height: none; overflow: visible; }
+    .board > .bucket { position: static; max-height: none; overflow: visible; }
   }
   .teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
 
@@ -162,6 +163,7 @@
         <div class="auto"><label class="cb" title="Teams that are not on the sheet are deleted; their people go back to the crew list"><input type="checkbox" id="fTeamReplace"> Remove teams not on the sheet</label></div>
         <div class="auto"><button class="primary" id="btnTeamUpload">Upload the team sheet</button></div>
         <div class="auto"><a href="/templates/team-sheet-template.csv" download style="color:var(--accent);font-weight:700;text-decoration:none">⬇ Sample sheet</a></div>
+        <div class="auto"><button id="btnTeamsExport" title="Every team across both shifts, one row a seat — the team sheet's columns, so it uploads back">⬇ Export the teams (CSV)</button></div>
       </div>
       <div class="hint" style="margin-top:6px">
         One row per seat: <b>Team #</b>, <b>Department</b>, <b>Employee</b>, <b>Equipment</b> (a <b>Clock In Number</b> column is used

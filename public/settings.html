@@ -928,6 +928,35 @@
       </div>
       <div class="feedback" id="featuresMsg"></div>
     </div>
+    <div class="card" id="crewBoardCard" data-fold>
+      <h2>Crew board <span class="muted">the wall screen by the time clock: which shift, what each team's card shows, and how it scrolls</span></h2>
+      <div class="hint" style="margin-top:0">
+        <b>/crew</b> is a screen nobody touches: one shift at a time, every team on it with its people, and where each team is counting.
+        It needs no sign-in and shows no clock-in numbers. <a href="/crew" target="_blank" rel="noopener" style="color:var(--accent);font-weight:700;text-decoration:none">Open the crew board ↗</a>
+      </div>
+      <div class="inline" style="margin-top:10px">
+        <div class="auto"><label for="fCbShift">Shift shown</label>
+          <select id="fCbShift" class="sm"><option value="auto">The shift on now (by the clock)</option><option value="1">1st shift, always</option><option value="2">2nd shift, always</option></select></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fCbScroll"> Scroll by itself</label></div>
+        <div class="auto"><label for="fCbSpeed">Scroll speed</label>
+          <select id="fCbSpeed" class="sm"><option value="slow">Slow</option><option value="normal">Normal</option><option value="fast">Fast</option></select></div>
+        <div class="auto"><label for="fCbPause">Pause at each end (seconds)</label><input id="fCbPause" type="number" min="0" max="60" step="1" style="width:90px"></div>
+      </div>
+      <div class="inline" style="margin-top:8px">
+        <div class="auto"><label class="cb"><input type="checkbox" id="fCbMembers"> The people on each team</label></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fCbOpen"> Open seats from the team sheet</label></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fCbNotes"> The team's notes</label></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fCbWhere"> Its aisle, and Scanning / Stopped scanning</label></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fCbLast"> Its last scan and next aisle</label></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fCbCount"> Which count, in the header</label></div>
+      </div>
+      <div class="inline" style="margin-top:10px">
+        <div class="auto"><button class="primary fit" id="btnCrewBoardSave">Save</button></div>
+      </div>
+      <div class="feedback" id="crewBoardMsg"></div>
+      <div class="hint">The screen picks a change up within half a minute. Between shifts it shows the one coming in next. A team with no shift set is listed with the shift on screen, marked <i>shift not set</i>. On the screen itself, <b>?shift=1</b> or <b>?shift=2</b> on the address pins it to one shift whatever is set here, and <b>?scroll=0</b> stops the scrolling on that screen alone.</div>
+    </div>
+
     <div class="card" id="siteNameCard" data-fold>
       <h2>Site name <span class="muted">what the app calls itself, and the location under it</span></h2>
       <div class="hint" style="margin-top:0">

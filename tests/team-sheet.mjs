@@ -97,6 +97,14 @@ await page.click('#btnTeamUpload'); await page.waitForTimeout(1500);
 check('Uploading from the page says what it did', /1 teams from teams.csv/.test(clean(await page.textContent('#teamFileMsg'))) && /1 of 1 named people found on the crew list/.test(clean(await page.textContent('#teamFileMsg'))), clean(await page.textContent('#teamFileMsg')));
 const sample = await (await fetch(`${BASE}/templates/team-sheet-template.csv`)).text();
 check('The sample sheet is the floor\'s own layout', /^Team #,Department,Employee,Equipment/.test(sample) && /S1-DS01/.test(sample));
+/* every team across the shifts, in the team sheet's own columns */
+const exRes = await fetch(`${BASE}/api/admin/people/export/teams.csv`, { headers: A });
+const exCsv = await exRes.text();
+const exLines = exCsv.trim().split(/\r?\n/);
+check('Export the teams: a CSV, every team across both shifts, one row a seat', exRes.status === 200 && /teams-\d{4}-\d\d-\d\d\.csv/.test(exRes.headers.get('content-disposition')) && exLines[0] === 'Team #,Shift,Department,Employee,Clock In Number,Person shift,Equipment,Seat,On crew list,Team notes,Team reaches' && exLines.length > 2, exLines[0]);
+check('…with the shift on every row, so the shifts compare side by side in Excel', exLines.slice(1).every((l) => /^[^,]+,(1st shift|2nd shift|),/.test(l)) && exLines.slice(1).some((l) => /,1st shift,/.test(l)), exLines.slice(1, 3).join(' | '));
+check('…open seats marked as such, and the people who are on the crew list', exLines.slice(1).some((l) => /,open seat,/.test(l)) && exLines.slice(1).some((l) => /,yes,/.test(l)));
+check('…and the export is in the log', (await j(await fetch(`${BASE}/api/admin/audit?limit=20`, { headers: A }))).some((x) => x.action === 'exported the teams'));
 check('No script errors', errors.length === 0, errors.join(' | '));
 await browser.close();
 const passed = results.filter(Boolean).length;
