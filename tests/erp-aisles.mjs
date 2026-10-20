@@ -86,6 +86,16 @@ r = await fetch(`${BASE}/api/admin/sessions/${S}/erp-entries/upload?aisle=F01`, 
 out = await j(r);
 const p3c = (await get(`/api/admin/sessions/${S}/export/erp-aisle?aisle=F01`)).sheets[0].rows.find((x) => x.Pallet === 'P-3');
 check('"again" marks it at today\'s numbers: no longer changed', out.remarked === 1 && p3c['Uploaded to ERP'] === 'yes' && p3c['Changed since uploaded'] === '' && (await get(`/api/admin/sessions/${S}/erp-entries/aisles`)).aisles.find((x) => x.aisle === 'F01').changed === 0, JSON.stringify([out, p3c['Changed since uploaded']]));
+/* quantities typed over in the sheet by mistake: only the Uploaded to ERP column is read; the count stays the count */
+const typedOver = 'Aisle,Bin,Pallet,Report quantity,Counted quantity,Adjustment,Uploaded to ERP\nF01,F01A004,P-9,5,999,994,yes\n';
+r = await fetch(`${BASE}/api/admin/sessions/${S}/erp-entries/upload?aisle=F01`, { method: 'POST', headers: csv, body: typedOver });
+out = await j(r);
+const p9 = (await get(`/api/admin/sessions/${S}/pallets?limit=100`)).rows.find((x) => x.pallet_id === 'P-9');
+const p9sheet = (await get(`/api/admin/sessions/${S}/export/erp-aisle?aisle=F01`)).sheets[0].rows.find((x) => x.Pallet === 'P-9');
+check('Quantities typed over in an uploaded sheet change nothing: the line is marked, the count is still the count',
+  r.status === 200 && out.marked === 1 && Number(p9.counted_qty) === 12 && p9sheet['Counted quantity'] === 12 && p9sheet['Report quantity'] === '' && p9sheet['Uploaded to ERP'] === 'yes' && !p9sheet['Changed since uploaded'],
+  JSON.stringify({ marked: out.marked, counted: p9.counted_qty, sheet: [p9sheet['Report quantity'], p9sheet['Counted quantity'], p9sheet.Adjustment, p9sheet['Uploaded to ERP']] }));
+r = await fetch(`${BASE}/api/admin/sessions/${S}/erp-entries/upload`, { method: 'POST', headers: csv, body: 'Pallet,Uploaded to ERP\nP-9,no\n' });   // back as it was for the checks below
 r = await fetch(`${BASE}/api/admin/sessions/${S}/erp-entries/upload`, { method: 'POST', headers: csv, body: 'Pallet,Quantity\nP-1,40\n' });
 check('A file without the column is turned away, saying which column', r.status === 400 && /Uploaded to ERP/.test((await j(r)).error));
 r = await fetch(`${BASE}/api/admin/sessions/${S}/erp-entries/upload`, { method: 'POST', headers: csv, body: 'Pallet,Uploaded to ERP\nP-2,no\n' });
