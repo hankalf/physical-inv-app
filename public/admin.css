@@ -202,7 +202,9 @@ html.embed main { padding: 14px 16px 24px; }
 .card > h2 + .hint, .card > h2 + .muted { margin-top: 0; margin-bottom: 12px; }
 .card h2 .muted { font-weight: 400; font-size: 13px; }
 /* A long explanation folds to two lines; More opens it. The page is a tool first. */
-.hint.folded { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* Two lines and a fade. Not a line clamp: inside -webkit-box every <b> and <i> became a box of
+   its own, and the clamp dropped them - "write (or an , a date…" */
+.hint.folded { max-height: 3em; overflow: hidden; -webkit-mask-image: linear-gradient(#000 55%, transparent); mask-image: linear-gradient(#000 55%, transparent); }
 .hint-more { display: inline-block; background: none; border: 0; padding: 0 0 2px; margin: 2px 0 0; font-size: 12px; font-weight: 600; color: var(--accent); cursor: pointer; }
 .hint-more:hover { text-decoration: underline; }
 .card h3 { margin: 20px 0 8px; font-size: 14px; font-weight: 700; }

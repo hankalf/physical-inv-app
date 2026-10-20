@@ -179,7 +179,8 @@ says how much of it is counted, how much differs, how much is uploaded and what 
 counted. **⬇ Excel** gives every pallet in the aisle — the report, the latest count, the
 adjustment — with an **Uploaded to ERP** column: fill it in as the lines go into the ERP and
 **⬆ Upload a filled-in sheet** to mark them here. Same marks as the worksheet; only that column is
-read back, never the quantities.
+read back, never the quantities. A line counted again after it went in: put it right in the ERP
+and write **again** in its cell. Step by step: [the ERP upload guide](../guides/erp-upload-by-aisle.md).
 
 ## 6 — Exporting the data
 

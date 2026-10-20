@@ -263,7 +263,7 @@ try {
   };
 
   /* ---------- the supervisor pages ---------- */
-  const desk = await browser.newPage({ viewport: { width: 1560, height: 940 }, deviceScaleFactor: 1 });
+  let desk = await browser.newPage({ viewport: { width: 1560, height: 940 }, deviceScaleFactor: 1 });
   desk.on('dialog', (d) => d.accept());
   const signIn = async (path) => {
     await desk.goto(BASE + path);
@@ -731,6 +731,184 @@ try {
   await gun.click('#btnHistory'); await wait(1200);
   if (await gun.$('#scrHistory.active')) await save(gun, 'gun-history');
   await gun.close();
+
+  /* ================= the how-to guides (docs/guides/) =================
+     Last of all, so nothing they set up - a third count, a TEST system -
+     shows in the manual's own pictures above. Each part is on its own: one
+     that fails is said, and the rest still run. */
+  // the supervisor tab was closed above: a fresh one, which signIn, sub and saveCard all use
+  desk = await browser.newPage({ viewport: { width: 1560, height: 940 }, deviceScaleFactor: 1 });
+  desk.on('dialog', (d) => d.accept());
+  const part = async (what, fn) => { try { await fn(); } catch (err) { console.log(`  (guide shots: ${what} skipped - ${err.message})`); } };
+  /* An export as a table on screen, the way it opens in Excel: the columns
+     that matter for the picture, the first rows. */
+  const sheetShot = async (name, columns, rows, { fill = null, widths = {}, file = name } = {}) => {
+    const page = await browser.newPage({ viewport: { width: 1500, height: 700 }, deviceScaleFactor: 1 });
+    const esc = (v) => String(v ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    const head = columns.map((c, i) => `<th style="${widths[c] ? `width:${widths[c]}px` : ''}">${String.fromCharCode(65 + i)}</th>`).join('');
+    const body = rows.map((r, n) => `<tr><td class="rn">${n + 2}</td>${columns.map((c) => `<td class="${fill && fill(c, r) ? 'fill' : ''}">${esc(r[c])}</td>`).join('')}</tr>`).join('');
+    await page.setContent(`<!doctype html><style>
+      body{margin:0;font:12px Calibri,Carlito,Arial,sans-serif;background:#fff;color:#111}
+      .bar{background:#217346;color:#fff;padding:6px 12px;font-weight:600}
+      table{border-collapse:collapse;margin:0}
+      th,td{border:1px solid #d4d4d4;padding:3px 6px;white-space:nowrap;text-align:left}
+      th{background:#f3f3f3;font-weight:400;color:#777;text-align:center}
+      td.rn,th:first-child{background:#f3f3f3;color:#777;text-align:center;width:28px}
+      td.fill{background:#e2f0d9;font-weight:700;color:#1d5c2c}
+    </style><div class="bar">${esc(file)}</div><table><tr><th></th>${head}</tr><tr><td class="rn">1</td>${columns.map((c) => `<td><b>${esc(c)}</b></td>`).join('')}</tr>${body}</table>`);
+    const tbl = await page.$('body');
+    await page.setViewportSize({ width: Math.min(1500, Math.ceil(await page.evaluate(() => document.querySelector('table').scrollWidth)) + 4), height: 700 });
+    await save({ screenshot: (o) => tbl.screenshot(o) }, name.replace(/^guide-/, 'guide-'));
+    await page.close();
+  };
+
+  /* ---- second and third counts */
+  await part('third counts', async () => {
+    await post(`/api/admin/sessions/${sess.id}/settings`, { thirdCount: true });
+    const all = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/recounts`, { headers: A }));
+    const open = all.filter((t) => t.status === 'open' && t.reason !== 'CYCLE' && t.first_team === '1' && t.pallet_id);
+    const [one, two] = open;
+    if (!one) throw new Error('no open second count from team 1');
+    // one second count that agrees with nobody: a third count follows
+    await post(`/api/sessions/${sess.id}/recounts/${one.id}/take`, { team: '2' }, gunOf[2].H);
+    await post(`/api/sessions/${sess.id}/counts`, [{ clientId: 'guide-2nd-a', palletId: one.pallet_id, qty: 7, location: one.bin, team: '2', deviceId: gunOf[2].name, pass: 2, recountId: one.id, scannedAt: new Date().toISOString() }], gunOf[2].H);
+    await post(`/api/sessions/${sess.id}/recounts/${one.id}/done`, { team: '2' }, gunOf[2].H);
+    // and one that agrees with the first count: settled, the difference is real
+    if (two) {
+      const firsts = String(two.first_result || '').split(', ').map((x) => x.split(' ×')).filter((x) => x[0]);
+      await post(`/api/sessions/${sess.id}/recounts/${two.id}/take`, { team: '3' }, gunOf[3].H);
+      await post(`/api/sessions/${sess.id}/counts`, firsts.map(([p, q], i) => ({ clientId: `guide-2nd-b${i}`, palletId: p, qty: Number(q), location: two.bin, team: '3', deviceId: gunOf[3].name, pass: 2, recountId: two.id, scannedAt: new Date().toISOString() })), gunOf[3].H);
+      await post(`/api/sessions/${sess.id}/recounts/${two.id}/done`, { team: '3' }, gunOf[3].H);
+    }
+    const third = (await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/recounts`, { headers: A }))).find((t) => Number(t.round) === 3);
+    if (!third) throw new Error('no third count was raised');
+    await post(`/api/admin/sessions/${sess.id}/recounts/${third.id}`, { team: '3' });
+    // the option, on the count's settings
+    await signIn('/settings');
+    await pick(sess.id).catch(() => {});
+    await sub('start');
+    const fs = await desk.$('#fThirdCount');
+    if (fs) { const box = (await fs.evaluateHandle((el) => el.closest('.fieldset'))).asElement(); if (box) await save(box, 'guide-third-count-option'); }
+    // the dashboard: the third count with its second count above it
+    await signIn('/admin'); await pick(sess.id); await sub('second');
+    await desk.waitForSelector(`#recountTable tr[data-recount="${third.id}"]`, { timeout: 8000 });
+    // the rows the guide talks about, at the top: the second count that settled nothing, its third, and one that agreed
+    await desk.evaluate(({ keep }) => {
+      const body = document.querySelector('#recountTable tbody');
+      const rows = [...body.querySelectorAll('tr')];
+      for (const tr of rows) if (!keep.includes(Number(tr.dataset.recount))) tr.style.display = 'none';
+      for (const id of [...keep].reverse()) { const tr = rows.find((x) => Number(x.dataset.recount) === id); if (tr) body.prepend(tr); }
+    }, { keep: [one.id, third.id, ...(two ? [two.id] : [])] });
+    await saveCard(desk, '#recountTable', 'guide-dashboard-third-count', 12);
+    await desk.reload(); await desk.waitForSelector('#scrMain.active'); await wait(1200);
+    // the export, as it opens in Excel
+    const sbs = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/export/recounts-side-by-side`, { headers: A }));
+    const rows = sbs.sheets[1].rows;
+    const pickRows = [...rows.filter((r) => r.Bin === third.bin), ...rows.filter((r) => two && r.Bin === two.bin), ...rows.filter((r) => r.Bin !== third.bin && (!two || r.Bin !== two.bin))].slice(0, 9);
+    await sheetShot('guide-export-second-third', ['Bin', 'Pallet', 'Report quantity', '1st count', '1st count team', '2nd count', '2nd count team', '3rd count', '3rd count team', 'Final count', 'Final count is the', 'Which number stands', 'State'], pickRows,
+      { fill: (c, r) => c === 'Final count' && r['Final count'] !== '', file: sbs.filename });
+    // the gun, on the third count
+    const g = await browser.newPage({ viewport: { width: 360, height: 640 }, deviceScaleFactor: 2 });
+    g.on('dialog', (d) => d.accept());
+    await g.goto(`${BASE}/?d=${gunOf[3].uid}`);
+    await g.waitForSelector('#scrSignon.active, #scrAssign.active', { timeout: 15000 }); await wait(1200);
+    if (await g.$('#scrSignon.active')) {
+      await g.selectOption('#fSession', String(sess.id)).catch(() => {});
+      await g.fill('#fTeam', '3');
+      for (const b of crewOf('3')) { await g.fill('#fEmployee', b); await g.press('#fEmployee', 'Enter'); }
+      await g.click('#btnStart'); await wait(3000);
+    }
+    if (await g.$('#scrAssign.active')) { await save(g, 'guide-gun-recounts-available'); await g.click('#btnRecounts').catch(() => {}); await wait(2500); }
+    if (await g.isVisible('#btnMsgAck')) { await g.click('#btnMsgAck'); await wait(600); }   // the break message from earlier
+    await g.evaluate(() => { document.activeElement && document.activeElement.blur(); window.scrollTo(0, 0); document.querySelector('#scrScan')?.scrollIntoView({ block: 'start' }); });
+    await wait(500);
+    if (await g.isVisible('#recountBanner')) await save(g, 'guide-gun-third-count');
+    await g.close();
+  });
+
+  /* ---- the ERP, an aisle at a time */
+  await part('erp aisles', async () => {
+    const sheet = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/export/erp-aisle?aisle=F01`, { headers: A }));
+    const rows = sheet.sheets[0].rows.slice(0, 12).map((r, i) => ({ ...r, 'Uploaded to ERP': i < 7 ? 'yes' : '' }));
+    await sheetShot('guide-export-erp-aisle', ['Bin', 'Pallet', 'Item', 'Report quantity', 'Counted quantity', 'Adjustment', 'Result', 'Count', 'Uploaded to ERP', 'Uploaded by', 'Uploaded at', 'Changed since uploaded'], rows,
+      { fill: (c, r) => c === 'Uploaded to ERP' && r[c], file: sheet.filename });
+    await signIn('/admin'); await pick(sess.id); await sub('adjust');
+    await desk.waitForSelector('#erpAislesTable tbody tr[data-aisle]', { timeout: 8000 });
+    await saveCard(desk, '#erpAislesTable', 'guide-erp-aisles-before', 8);
+    // the filled-in sheet back, as the upload button sends it
+    const back = 'Pallet,Uploaded to ERP\n' + sheet.sheets[0].rows.map((r) => `${r.Pallet},yes`).join('\n') + '\n';
+    await fetch(`${BASE}/api/admin/sessions/${sess.id}/erp-entries/upload?aisle=F01`, { method: 'POST', headers: { authorization: 'Bearer ' + tok, 'content-type': 'text/csv' }, body: back });
+    await desk.reload(); await desk.waitForSelector('#scrMain.active'); await wait(1500);
+    await sub('adjust');
+    await desk.evaluate(() => {
+      const m = document.getElementById('erpAislesMsg');
+      if (m) { m.className = 'feedback show ok'; m.innerHTML = '<b>Aisle-F01-for-ERP.xlsx: ' + document.querySelector('#erpAislesTable tr[data-aisle="F01"] td:nth-child(2)').textContent + ' lines marked as uploaded to the ERP</b>'; }
+    });
+    await saveCard(desk, '#erpAislesTable', 'guide-erp-aisles-after', 8);
+  });
+
+  /* ---- employees: the add form */
+  await part('employees', async () => {
+    await signIn('/teams'); await sub('people');
+    await desk.fill('#fBadge', 'E1301'); await desk.fill('#fName', 'Rosa Delgado'); await desk.fill('#fDept', 'Warehouse');
+    await desk.check('#equipPicker input[value="SCISSOR LIFT"]').catch(() => {});
+    await desk.selectOption('#fAddJacket', 'M').catch(() => {}); await desk.selectOption('#fAddBibs', 'M').catch(() => {}); await desk.selectOption('#fAddBoots', '8').catch(() => {});
+    await saveCard(desk, '#btnAddPerson', 'guide-add-employee');
+    await desk.fill('#fBadge', ''); await desk.fill('#fName', '');
+  });
+
+  /* ---- LIVE and TEST: a second server, linked to this one */
+  await part('systems', async () => {
+    const TPORT = PORT + 1;
+    const TBASE = `http://127.0.0.1:${TPORT}`;
+    const key = (await j(await fetch(`${BASE}/api/admin/systems`, { headers: A }))).key;
+    await post('/api/admin/systems', { systems: [{ name: 'TEST', url: TBASE, color: 'orange', scanners: true }] });
+    await post('/api/admin/systems/access', { username: 'MARCUS-OBI', systems: ['TEST'] });
+    const tdir = mkdtempSync(join(tmpdir(), 'sopshots-test-'));
+    const test = spawn(process.execPath, ['--no-warnings=ExperimentalWarning', join(ROOT, 'src', 'server.js')], {
+      env: { ...process.env, PORT: String(TPORT), DB_PATH: join(tdir, 'test.db'), SUPERADMIN_USER: 'TEST-SETUP', SUPERADMIN_NAME: 'Test setup', SUPERADMIN_PASSWORD: 'test-setup-pass',
+        SYSTEM_NAME: 'TEST', SYSTEM_HOME_URL: BASE, SYSTEM_LINK_KEY: key, SITE_TIMEZONE: 'America/New_York' },
+      stdio: ['ignore', 'ignore', 'inherit'],
+    });
+    try {
+      for (let i = 0; i < 100; i++) { try { if ((await fetch(`${TBASE}/api/health`)).ok) break; } catch { /* starting */ } await wait(200); }
+      // a login somebody made on TEST before it was linked
+      const TA = { ...hdr, authorization: 'Bearer ' + (await j(await fetch(`${TBASE}/api/admin/login`, { method: 'POST', headers: hdr, body: JSON.stringify({ username: 'TEST-SETUP', password: 'test-setup-pass' }) }))).token };
+      await fetch(`${TBASE}/api/admin/users`, { method: 'POST', headers: TA, body: JSON.stringify({ username: 'NADIA-H', name: 'Nadia Haddad', password: 'tried-it-on-test-1', mustChange: false, profile: 'floor' }) });
+      // LIVE: the Systems card, the logins with their Systems column, and copying from TEST
+      await signIn('/settings'); await sub('advanced');
+      await desk.evaluate(() => { const c = document.getElementById('systemsCard'); if (c) c.classList.remove('folded'); });
+      await wait(800);
+      // the address as it reads on Railway, not this run's own port
+      await desk.evaluate(() => { for (const i of document.querySelectorAll('#sysTable .sysurl')) i.value = 'https://full-harvest-inv-dev.up.railway.app'; });
+      await saveCard(desk, '#sysTable', 'guide-systems-card');
+      await sub('logins'); await wait(800);
+      await saveCard(desk, '#userTable', 'guide-logins-systems');
+      await desk.click('#copyLoginsBtns button[data-copy-from="TEST"]'); await desk.waitForSelector('#copyLoginsTable tbody tr', { timeout: 10000 });
+      await saveCard(desk, '#copyLoginsTable', 'guide-copy-logins');
+      await desk.click('#copyLogins button.ghost').catch(() => {});
+      // the ring: green on LIVE, and over on TEST with its banner
+      const top = async (name) => save({ screenshot: (o) => desk.screenshot({ ...o, clip: { x: 0, y: 0, width: 900, height: 330 } }) }, name);
+      await signIn('/admin'); await pick(sess.id); await sub('progress');
+      await top('guide-ring-live');
+      await desk.selectOption('#navSystemPick', 'TEST'); await desk.waitForURL(`${TBASE}/**`, { timeout: 15000 }); await wait(2500);
+      await top('guide-ring-test');
+      await desk.goto(`${TBASE}/settings#gun`); await wait(2500);
+      await saveCard(desk, '#deviceTable', 'guide-test-scanner-setup', 4);
+      await desk.goto(`${BASE}/admin`); await wait(1500);
+      // the gun: System LIVE | TEST on the sign-on screen, then on TEST
+      const g = await browser.newPage({ viewport: { width: 360, height: 640 }, deviceScaleFactor: 2 });
+      await g.goto(`${BASE}/?d=${devices[3].uid}`); await wait(2500);
+      await save(g, 'guide-gun-system-live');
+      await g.click('#systemPick button[data-system="TEST"]'); await g.waitForURL(`${TBASE}/**`, { timeout: 15000 }); await wait(3000);
+      await save(g, 'guide-gun-system-test');
+      await g.close();
+    } finally {
+      test.kill();
+      await post('/api/admin/systems', { systems: [] }).catch(() => {});
+      try { rmSync(tdir, { recursive: true, force: true }); } catch { /* best effort */ }
+    }
+  });
 
   console.log(`\n${shots.length} screenshots written to docs/images/`);
 } finally {

@@ -15,6 +15,10 @@ wrong.
 > picture in this manual from scratch and re-prints
 > **[SOP.pdf](SOP.pdf)** — the same manual typeset for paper.
 
+> **Step-by-step guides.** For the jobs that have the most steps, [docs/guides](guides/README.md)
+> has a short guide each, with its own PDF: **second and third counts**, **the ERP upload, an aisle
+> at a time**, **employees, teams and gear sizes**, and **LIVE and TEST**.
+
 ---
 
 ## Contents
@@ -1843,7 +1847,10 @@ wall-to-wall into the ERP aisle by aisle, as the aisles are finished:
 These are the same marks as the worksheet's *In ERP* above, so the two never disagree. Only the
 **Uploaded to ERP** column is read back — the quantities in the file are not: a count changes only
 by being counted. A line second- or third-counted after it was uploaded is flagged **changed since
-uploaded**, with the number the ERP was given.
+uploaded**, with the number the ERP was given. Put it right in the ERP, write **again** (or
+*updated*, *re-entered*) in its cell and upload the sheet: it is marked at today's numbers. A plain
+*yes* on a line already marked keeps its first mark, so an old sheet uploaded twice cannot hide a
+change. The full routine is in [the ERP upload guide](guides/erp-upload-by-aisle.md).
 
 The **In ERP** column shows the mark with who and when; the chip in the heading counts *entered
 of total*. A line **counted again after it was entered** is flagged **changed**, with the number

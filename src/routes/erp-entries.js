@@ -96,9 +96,12 @@ export function markEntered(sessionId, { pallets = [], on = true, note = '', act
    mean entered; a no means not; blank means leave it as it is. */
 const YES = /^(y|yes|x|✓|✔|true|1|done|entered|ok|in erp|uploaded)$/i;
 const NO = /^(n|no|false|0|not yet|pending|-)$/i;
+/* A line counted again after it went in, put right in the ERP since: marked again at the numbers it has now. */
+const AGAIN = /^(again|re-?entered|re-?uploaded|updated|corrected|fixed)$/i;
 export function readFlag(v) {
   const s = String(v ?? '').trim();
   if (!s) return null;
+  if (AGAIN.test(s)) return 'again';
   if (NO.test(s)) return false;
   if (YES.test(s)) return true;
   if (/\d/.test(s)) return true;                 // a date, or whoever typed their initials and the day
@@ -115,15 +118,22 @@ export function markFromFile(sessionId, text, actor = 'supervisor', note = '') {
   if (!hasFlag) throw Object.assign(new Error('the file has no "In ERP" or "Uploaded to ERP" column - download the ERP worksheet or an aisle\'s sheet, fill that column in, and upload it back'), { status: 400 });
   const yes = [];
   const no = [];
+  const again = [];
   let skipped = 0;
   for (const rec of records) {
     const pallet = norm(pick(rec, ['Pallet', 'Pallet ID', 'Container No.', 'Pallet number', 'LPN', 'Tag', 'Container']));
     if (!pallet) { skipped++; continue; }
     const flag = readFlag(pick(rec, ['In ERP', 'Entered in ERP', 'Entered', 'Uploaded to ERP', 'Uploaded', 'ERP']));
     if (flag === null) { skipped++; continue; }
-    (flag ? yes : no).push(pallet);
+    (flag === 'again' ? again : flag ? yes : no).push(pallet);
   }
-  const out = { marked: 0, already: 0, unmarked: 0, unknown: [], skipped, rows: records.length };
+  const out = { marked: 0, already: 0, unmarked: 0, remarked: 0, unknown: [], skipped, rows: records.length };
+  if (again.length) {
+    // off and on again: the mark now holds today's numbers, so the line is no longer "changed"
+    markEntered(id, { pallets: again, on: false, actor });
+    const r = markEntered(id, { pallets: again, on: true, actor, note: `${note || 'from the worksheet'}, put right in the ERP` });
+    out.remarked = r.marked; out.unknown.push(...r.unknown);
+  }
   if (yes.length) { const r = markEntered(id, { pallets: yes, on: true, actor, note: note || 'from the worksheet' }); out.marked = r.marked; out.already = r.already; out.unknown.push(...r.unknown); }
   if (no.length) { const r = markEntered(id, { pallets: no, on: false, actor }); out.unmarked = r.unmarked; out.unknown.push(...r.unknown); }
   return { ...out, ...withEntries(adjustmentView(id), id).erp };

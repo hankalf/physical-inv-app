@@ -22,7 +22,7 @@ third-party runtime dependencies: Node 22's built-in HTTP server and `node:sqlit
 > who has never opened the app: deployment and logins, uploading the lists, registering
 > scanners, every option on a count explained, what a counter does on the handheld,
 > and how a count is finished and sent to the ERP. Thirty-odd screenshots of the real
-> app. There is a printable copy at **[docs/SOP.pdf](docs/SOP.pdf)** — 35 pages, and
+> app. There is a printable copy at **[docs/SOP.pdf](docs/SOP.pdf)** — 90 pages, and
 > `npm run docs` rebuilds both the screenshots and the PDF from scratch. This README is
 > the reference behind it.
 
@@ -33,6 +33,14 @@ third-party runtime dependencies: Node 22's built-in HTTP server and `node:sqlit
 `docs/SOP.md` is the whole manual. `docs/roles/` has one short SOP per login profile — admin,
 supervisor, inventory control, count supervisor, warehouse jobs, cycle counter — and one for the
 counters on the handhelds, each as Markdown and PDF (`node tools/sop-pdf.mjs --roles`).
+
+## How-to guides
+
+`docs/guides/` has step-by-step guides, each as Markdown and PDF (`npm run docs:guides`):
+[second and third counts](docs/guides/second-and-third-counts.md),
+[the ERP upload, an aisle at a time](docs/guides/erp-upload-by-aisle.md),
+[employees, teams and gear sizes](docs/guides/employees-teams-and-gear.md), and
+[LIVE and TEST: switching, logins and scanners](docs/guides/live-and-test.md).
 
 ## Offline-first
 

@@ -1427,18 +1427,19 @@
         parts = wb.SheetNames.map((n) => ({ name: n, csv: XLSX.utils.sheet_to_csv(wb.Sheets[n]) })).filter((x) => /uploaded to erp|in erp/i.test(x.csv.split('\n')[0] || ''));
       } else parts = [{ name: file.name, csv: await file.text() }];
       if (!parts.length) throw new Error('no sheet in it has an "Uploaded to ERP" column - download an aisle with ⬇ Excel, fill that column in, and upload it');
-      const tot = { marked: 0, unmarked: 0, already: 0, skipped: 0, unknown: [] };
+      const tot = { marked: 0, unmarked: 0, already: 0, skipped: 0, remarked: 0, unknown: [] };
       for (const part of parts) {
         const aisle = (part.name.match(/^Aisle\s+(\S+)/i) || [])[1] || '';
         const res = await fetch(`/api/admin/sessions/${sessionId}/erp-entries/upload${aisle ? `?aisle=${encodeURIComponent(aisle)}` : ''}`,
           { method: 'POST', headers: { 'content-type': 'text/csv', authorization: 'Bearer ' + api.token }, body: part.csv });
         const out = await res.json();
         if (!res.ok) throw new Error(out.error || 'the upload failed');
-        for (const k of ['marked', 'unmarked', 'already', 'skipped']) tot[k] += out[k] || 0;
+        for (const k of ['marked', 'unmarked', 'already', 'skipped', 'remarked']) tot[k] += out[k] || 0;
         tot.unknown.push(...(out.unknown || []));
       }
       msg($('erpAislesMsg'), 'ok', `${file.name}: ${tot.marked} line${tot.marked === 1 ? '' : 's'} marked as uploaded to the ERP${tot.unmarked ? `, ${tot.unmarked} unmarked` : ''}`,
-        [tot.already ? `${tot.already} were marked already.` : '', tot.skipped ? `${tot.skipped} left blank, left as they were.` : '',
+        [tot.remarked ? `${tot.remarked} put right in the ERP and marked again at today's numbers.` : '',
+          tot.already ? `${tot.already} were marked already.` : '', tot.skipped ? `${tot.skipped} left blank, left as they were.` : '',
           tot.unknown.length ? `Not on this count, ignored: ${tot.unknown.slice(0, 5).join(', ')}${tot.unknown.length > 5 ? '…' : ''}.` : ''].filter(Boolean).join(' '));
       await Promise.all([refreshErpAisles(), refreshPositiveNegative().catch(() => {})]);
     } catch (err) { msg($('erpAislesMsg'), 'err', 'Not applied', err.message); }

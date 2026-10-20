@@ -5,6 +5,7 @@
  *   node tools/sop-pdf.mjs                         # the manual
  *   node tools/sop-pdf.mjs docs/roles/counter.md   # one role's procedure, PDF beside it
  *   node tools/sop-pdf.mjs --roles                 # every file under docs/roles/
+ *   node tools/sop-pdf.mjs --guides                # every how-to under docs/guides/
  *
  * Chromium does the typesetting (it is already here for the tests), so what
  * prints is what the screenshots were taken in. Two passes: the first lays the
@@ -19,9 +20,10 @@ import { markdownToHtml, inline } from './md.mjs';
 
 const ROOT = join(new URL('.', import.meta.url).pathname, '..');
 const args = process.argv.slice(2);
-const SOURCES = args[0] === '--roles'
-  ? readdirSync(join(ROOT, 'docs', 'roles')).filter((f) => f.endsWith('.md') && f !== 'README.md').sort().map((f) => join(ROOT, 'docs', 'roles', f))
-  : [args[0] ? join(process.cwd(), args[0]) : join(ROOT, 'docs', 'SOP.md')];
+const folder = (name) => readdirSync(join(ROOT, 'docs', name)).filter((f) => f.endsWith('.md') && f !== 'README.md').sort().map((f) => join(ROOT, 'docs', name, f));
+const SOURCES = args[0] === '--roles' ? folder('roles')
+  : args[0] === '--guides' ? folder('guides')
+    : [args[0] ? join(process.cwd(), args[0]) : join(ROOT, 'docs', 'SOP.md')];
 const printed = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
 /** Everything about one document that the layout needs, read from its markdown. */
@@ -140,7 +142,8 @@ const tocHtml = (contents, pages) => `
 
 /* The HTML is laid out in a temporary directory, so the manual's relative
    image paths have to be pointed back at docs/images where the pictures live. */
-const absolute = (html) => html.replace(/src="images\//g, `src="file://${join(ROOT, 'docs')}/images/`);
+// a guide under docs/guides/ points at its pictures as ../images/, so it reads on GitHub too
+const absolute = (html) => html.replace(/src="(\.\.\/)?images\//g, `src="file://${join(ROOT, 'docs')}/images/`);
 
 const page = (doc, parts, pages) => absolute(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>${doc.title}</title><style>${CSS}</style></head>
