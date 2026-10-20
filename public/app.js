@@ -1386,7 +1386,8 @@
     $('btnMultiDone').hidden = !state.multi || step !== 'pallet' || !state.multi.labels.length;
     $('btnMultiDone').textContent = state.multi ? `Done — that was every label (${state.multi.labels.length})` : 'Done';
     // the pallet just counted has another label: offered at the start of the next line
-    $('btnSameLabel').hidden = step !== 'pallet' || !state.lastPallet || !!state.multi || !!state.draft.location;
+    // (wherever the line starts: at the pallet on a pallet-first site, at the bin on a bin-first one)
+    $('btnSameLabel').hidden = !state.lastPallet || !!state.multi || !!state.draft.palletId || !!state.draft.emptyBin || !!state.draft.location || !(state.stepIndex === 0 || step === 'pallet');
     if (state.lastPallet) $('btnSameLabel').textContent = `Another label on the pallet just counted (${state.lastPallet.id})`;
     /* A barcode that will not read is not a reason to walk away from a pallet -
        or from a bin. Offered on both steps that scan a label, worded for the one

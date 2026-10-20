@@ -68,6 +68,12 @@ await gun.click('#btnMultiLabel'); await gun.waitForTimeout(300);
 check('From the very start (no bin yet), it asks for the bin', /Scan the BIN this pallet is in/.test(await T('#prompt')));
 await gun.click('#btnBack'); await gun.waitForTimeout(300);
 check('Back before anything is in cancels it, nothing recorded', /Scan BIN LOCATION/.test(await T('#prompt')) && await gun.isHidden('#btnMultiDone'));
+/* a second label seen late, on a bin-first site: the button is where the line starts - at the bin */
+check('Bin first: "Another label on the pallet just counted" is offered at the start of the next line, before the bin', await gun.isVisible('#btnSameLabel') && /ML-2/.test(await T('#btnSameLabel')), await T('#btnSameLabel'));
+await gun.click('#btnSameLabel'); await gun.waitForTimeout(300);
+check('…it keeps that pallet\'s bin and asks for the next label', /Scan LABEL 2 on this pallet/.test(await T('#prompt')) && /M01A001/.test(await T('#ctx')), await T('#prompt') + ' ' + await T('#ctx'));
+await gun.click('#btnBack'); await gun.waitForTimeout(400);
+check('…and Back leaves it as it was, a new line starting at the bin', /Scan BIN LOCATION/.test(await T('#prompt')) && await gun.isHidden('#btnMultiDone'), await T('#prompt'));
 
 /* ---------------- a second count ---------------- */
 await post('/api/admin/scanner-layout', { order: layoutWas.order || ['pallet', 'qty', 'bin'] });
