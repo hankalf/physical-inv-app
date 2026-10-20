@@ -123,7 +123,9 @@ await step('Full count: aisle', /Start counting/);
 await gunClick('#btnCount'); await wait(800);
 await step('Full count: the bin comes first', /First, the bin — click F01A001/);
 /* scrolled away from a sheet target: the box docks instead of vanishing, and Show me brings the target back */
-await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)); await wait(900);
+await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+// the box docks on the scroll; under a full run's load that can land later than any fixed pause, so wait for it
+await page.waitForFunction(() => { const b = document.getElementById('coach'); return b && b.classList.contains('docked') && !document.querySelector('#coachGo').hidden; }, null, { timeout: 5000 }).catch(() => {});
 const docked = await page.$eval('#coach', (b) => ({ docked: b.classList.contains('docked'), go: !document.querySelector('#coachGo').hidden, inView: b.getBoundingClientRect().top >= 0 && b.getBoundingClientRect().bottom <= innerHeight }));
 check('Scrolled away from the target, the box docks on screen with Show me', docked.docked && docked.go && docked.inView, JSON.stringify(docked));
 await page.click('#coachGo'); await wait(1200);
