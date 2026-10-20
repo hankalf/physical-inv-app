@@ -390,7 +390,10 @@
     state.session = merged;
     await metaSet('session', merged);
     await applyTrialClear(merged);
-    state.steps = stepsFor(merged);
+    /* the order of the questions may have changed - but a pallet with more than
+       one label keeps the bin first, whatever the order, until it is done */
+    if (state.multi) { state.multi.base = stepsFor(merged); state.steps = multiSteps(state.multi.base); }
+    else state.steps = stepsFor(merged);
     document.body.classList.toggle('big-text', (merged.layout_cfg || {}).textSize === 'large');
     holdUpright();
     renderStep();

@@ -93,6 +93,32 @@ const a1 = after.find((r) => r.pallet_id === 'ML-1'); const a2 = after.find((r) 
 const t = (await get(`/api/admin/sessions/${S}/recounts`)).find((x) => x.id === (task.id || (task.task && task.task.id)));
 check('The second count has both labels with their own quantities, standing over the first, and the task is done',
   a1 && Number(a1.counted_qty) === 11 && a2 && Number(a2.counted_qty) === 12 && t && t.status === 'done', JSON.stringify({ ml1: a1 && a1.counted_qty, ml2: a2 && a2.counted_qty, status: t && t.status }));
+/* ---------------- the bin first, whatever the settings refresh says ----------------
+   Pallet first on this site. "This pallet has more than one label" at the start of a line puts the
+   bin first; the gun's settings refresh, which runs between lines, used to put the site's order
+   back and drop the counter onto label 1 with no bin - the next scan was refused as a bin. */
+await post('/api/admin/scanner-layout', { order: ['pallet', 'qty', 'bin'] });
+const dev2 = await j(await post('/api/admin/devices', { name: 'MULTI-LBL-2' }));
+const g2 = await (await browser.newContext({ viewport: { width: 360, height: 640 } })).newPage();
+g2.on('pageerror', (e) => errors.push('g2: ' + e.message));
+await g2.goto(`${BASE}/?d=${dev2.uid}`);
+await g2.waitForTimeout(1500);
+await g2.selectOption('#fSession', String(S)).catch(() => {});
+await g2.fill('#fTeam', '7'); await g2.press('#fTeam', 'Enter');
+await g2.fill('#fEmployee', 'E7002'); await g2.press('#fEmployee', 'Enter');
+await g2.click('#btnStart');
+await g2.waitForSelector('#scrScan.active, #scrAssign.active', { timeout: 8000 });
+if (await g2.$('#scrAssign.active')) { await g2.click('#btnCount'); await g2.waitForSelector('#scrScan.active'); }
+await g2.waitForTimeout(600);
+check('Pallet first: the line starts at the pallet', /Scan PALLET ID/.test(clean(await g2.textContent('#prompt'))));
+await g2.click('#btnMultiLabel'); await g2.waitForTimeout(400);
+check('…more than one label: the bin comes first', /Scan the BIN this pallet is in/.test(clean(await g2.textContent('#prompt'))), clean(await g2.textContent('#prompt')));
+await g2.waitForTimeout(16000);                                   // past the settings refresh's own gap
+await g2.evaluate(() => window.dispatchEvent(new Event('online')));   // which the next sync runs
+await g2.waitForTimeout(1500);
+check('…and the settings refresh between lines leaves the bin first, not label 1 with no bin', /Scan the BIN this pallet is in/.test(clean(await g2.textContent('#prompt'))), clean(await g2.textContent('#prompt')));
+await g2.fill('#fScan', 'M01A002'); await g2.press('#fScan', 'Enter'); await g2.waitForTimeout(500);
+check('…the bin scans, and label 1 is asked for', /Scan LABEL 1 on this pallet/.test(clean(await g2.textContent('#prompt'))), clean(await g2.textContent('#prompt')));
 check('No page errors', !errors.length, errors.join(' | '));
 await browser.close();
 

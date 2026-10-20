@@ -1209,6 +1209,13 @@ the gear can have it without the rest of the page.
 
 ### Step 15 — The counter's procedure (on the handheld)
 
+> **The crew's day-one training.** `docs/training/` holds a slow, captioned film of everything
+> below on the real scanner — `scanner-training-en.mp4` and, on the scanner's Spanish screens,
+> `scanner-training-es.mp4`, about fifteen minutes each, with a beep on every scan — and the same
+> lesson as a slide deck in each language (`scanner-training-en.pptx`, `-es.pptx`) with the
+> narration in the speaker notes, the scanner at every step, and the buttons on one page to print.
+> Play the film, then go through the deck with scanners in hand and the test book.
+>
 > **There is a film of this.** `docs/gun-demo.webm` (about four minutes) is a recording of the
 > real app on real data, working through everything below: signing on, counting a pallet, a bay
 > with three tags, two labels on one pallet, a label that will not scan, an empty bin, a pallet

@@ -14,7 +14,9 @@
     "docs:pdf": "node tools/sop-pdf.mjs",
     "docs:guides": "node tools/sop-pdf.mjs --roles && node tools/sop-pdf.mjs --guides",
     "docs": "npm run docs:shots && npm run docs:pdf && npm run docs:guides",
-    "video": "node tools/gun-video.mjs"
+    "video": "node tools/gun-video.mjs",
+    "training": "node tools/crew-training.mjs && LANG_FILM=es node tools/crew-training.mjs",
+    "training:decks": "node tools/crew-deck.mjs && LANG_FILM=es node tools/crew-deck.mjs"
   },
   "engines": {
     "node": "22.x"
