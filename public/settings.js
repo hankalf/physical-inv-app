@@ -997,7 +997,7 @@
       if (home) {
         note.innerHTML = '<b></b> <span></span> <a target="_top"></a>';
         note.querySelector('b').textContent = `Scanners are registered on ${home.name}.`;
-        note.querySelector('span').textContent = `A gun comes to ${home.self} when someone taps ${home.self} on its sign-on screen, under the same name and link — so nothing is added, reset or printed here. Do that on ${home.name}, and tick Scanners may switch on its ${home.self} row.`;
+        note.querySelector('span').textContent = `A gun comes to ${home.self} when someone taps ${home.self} on its sign-on screen, under the same name and link — so nothing is added, reset or printed here. Do that on ${home.name}, and choose ${home.self} under On the scanners on its Systems card.`;
         const a = note.querySelector('a');
         a.href = `${home.url}/settings#gun`; a.textContent = `${home.name} → Settings → Scanners`;
       }
@@ -1952,6 +1952,7 @@
     $('sysHomeFields').hidden = home;
     $('sysKeyField').hidden = home;
     $('sysHomeOnly').hidden = !home;
+    $('sysHomeOnly2').hidden = !home;
     $('sysAccessBox').hidden = !home;
     $('sysHow').hidden = !home;
     if (!home) {
@@ -1967,6 +1968,7 @@
       line(st.systems.length ? `This is ${me.name}, the home system. People and scanners can switch to ${st.systems.map((s) => s.name).join(', ')} from here.` : `This is ${me.name}, the home system. No other system is listed yet.`);
       status.className = 'feedback show ' + (st.systems.length ? 'ok' : 'warn');
       sysRows = st.systems.map((s) => ({ ...s }));
+      sysScan = st.scanners || 'all';
       drawSysRows();
       $('fSysKeyShow').value = st.key || '';
       drawSysAccess(st);
@@ -1976,6 +1978,7 @@
     } else {
       line(st.keySet && me.homeUrl ? `This is ${me.name}, linked to ${me.homeName} at ${me.homeUrl}. People arrive from there.` : `This is ${me.name}. Put in the home system's address and its link key so people can switch here.`);
       status.className = 'feedback show ' + (st.keySet && me.homeUrl ? 'ok' : 'warn');
+      drawSysScan();
     }
     if (home && (st.selfListed || []).length) {
       line(`${st.selfListed.join(', ')} is listed with this system's own address — put in the address it opens at.`);
@@ -1984,28 +1987,53 @@
   }
   function drawSysRows() {
     const t = $('sysTable');
-    table(t, [{ label: 'Name' }, { label: 'Address' }, { label: 'Color' }, { label: 'Scanners may switch' }, { label: '' }], sysRows, (s, i) => {
+    drawSysScan();
+    table(t, [{ label: 'Name' }, { label: 'Address' }, { label: 'Color' }, { label: '' }], sysRows, (s, i) => {
       const idx = sysRows.indexOf(s);
       const tr = document.createElement('tr');
       const name = Object.assign(document.createElement('input'), { value: s.name, className: 'sm sysname', maxLength: 16, placeholder: 'TEST' });
-      name.oninput = () => { s.name = name.value; };
+      name.oninput = () => { const was = (s.name || '').trim().toUpperCase(); s.name = name.value; if (sysScan === was) sysScan = s.name.trim().toUpperCase(); drawSysScan(); };
       const url = Object.assign(document.createElement('input'), { value: s.url, className: 'sysurl', placeholder: 'https://full-harvest-dev.up.railway.app', spellcheck: false });
       url.oninput = () => { s.url = url.value; };
       const col = document.createElement('select'); col.className = 'sm syscolor';
       for (const c of sysState.colors) col.appendChild(Object.assign(document.createElement('option'), { value: c, textContent: c }));
       col.value = s.color || 'orange'; col.onchange = () => { s.color = col.value; };
-      const sc = Object.assign(document.createElement('input'), { type: 'checkbox', className: 'sysscan', checked: !!s.scanners });
-      sc.onchange = () => { s.scanners = sc.checked; };
-      const scl = document.createElement('label'); scl.className = 'cb'; scl.append(sc, document.createTextNode(' the guns can go there'));
       const td = (el) => { const c = document.createElement('td'); c.appendChild(el); return c; };
       const acts = document.createElement('td');
       const chk = button('Check the link', 'sm', () => checkSystem(s.name));
       chk.dataset.check = s.name;
       chk.title = 'Ask the other system, server to server, whether a hand-off from here would work - and what to change if not';
       acts.append(chk, button('Remove', 'sm ghost', () => { sysRows.splice(idx, 1); drawSysRows(); }));
-      tr.append(td(name), td(url), td(col), td(scl), acts);
+      tr.append(td(name), td(url), td(col), acts);
       return tr;
     }, 'None yet — Add a system for TEST.');
+  }
+  /* On the scanners: both (switched on the gun), the home alone, or one other alone.
+     Chosen on the home; a linked system shows what the home chose. */
+  let sysScan = 'all';
+  function drawSysScan() {
+    const st = sysState;
+    const home = st.self.role === 'home';
+    const box = $('sysScanPick');
+    const me = home ? (($('fSysName').value || '').trim().toUpperCase() || st.self.name) : st.self.homeName;
+    const others = home ? sysRows.map((s) => (s.name || '').trim().toUpperCase()).filter(Boolean) : [st.self.name];
+    $('sysScanBox').hidden = !others.length;
+    if (!others.length) return;
+    const chosen = home ? sysScan : (st.scanners || 'all');
+    const opts = [
+      ['all', `${[me, ...others].join(' and ')} — the gun switches on its sign-on screen`],
+      ['home', `${me} only`],
+      ...others.map((n) => [n, `${n} only — every gun goes to ${n}`]),
+    ];
+    box.replaceChildren();
+    for (const [v, text] of opts) {
+      const r = Object.assign(document.createElement('input'), { type: 'radio', name: 'sysScan', value: v, checked: chosen === v || (v === 'home' && chosen === me), disabled: !home });
+      r.onchange = () => { if (r.checked) sysScan = v; };
+      const l = document.createElement('label'); l.className = 'cb'; l.append(r, document.createTextNode(' ' + text));
+      box.appendChild(l);
+    }
+    $('sysScanHint').hidden = !home;
+    if (!home) box.appendChild(Object.assign(document.createElement('div'), { className: 'hint', textContent: `Chosen on ${st.self.homeName}, under Settings → Systems there.` }));
   }
   function drawSysAccess(st) {
     const names = st.systems.map((s) => s.name);
@@ -2059,7 +2087,10 @@
       const home = sysState.self.role === 'home';
       const body = { color: $('fSysColor').value };
       if (!$('fSysName').disabled) body.name = $('fSysName').value;
-      if (home) body.systems = sysRows;
+      if (home) {
+        body.systems = sysRows.map(({ scanners, ...s }) => s);
+        body.scanners = sysRows.some((s) => (s.name || '').trim().toUpperCase() === sysScan) || sysScan === 'all' ? sysScan : 'home';
+      }
       else {
         if (!$('fSysHomeUrl').disabled) body.homeUrl = $('fSysHomeUrl').value;
         if (!$('fSysKey').disabled && $('fSysKey').value) body.key = $('fSysKey').value;

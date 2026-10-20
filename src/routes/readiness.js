@@ -71,7 +71,7 @@ export function readiness(sessionId) {
   const sys = selfSystem();
   /* TEST: the scanners are LIVE's, and come over when they switch - nothing to register here */
   if (sys.role === 'linked') {
-    if (!devices.length) add('warn', `No scanner has switched to ${sys.name} yet`, `Scanners are registered on ${sys.homeName}. Tick Scanners may switch on its ${sys.name} row, then tap ${sys.name} on a gun's sign-on screen.`);
+    if (!devices.length) add('warn', `No scanner has switched to ${sys.name} yet`, `Scanners are registered on ${sys.homeName}. On its Systems card, set On the scanners to both (then tap ${sys.name} on a gun's sign-on screen) or ${sys.name} only.`);
     else add('ok', `${devices.length} scanner${devices.length === 1 ? ' has' : 's have'} come over from ${sys.homeName}`, `They are registered there; each arrives here under its own name and link when it switches.`);
   } else if (!devices.length) add('fail', 'No scanners registered', 'Add each handheld and open its link on the device once.', fix('gun', 'devicesCard', 'Scanner setup'));
   else if (!enrolled.length) add('fail', 'No scanner has opened its link', `${devices.length} registered, none signed in. Open each link on its device once.`, fix('gun', 'devicesCard', 'Scanner setup'));

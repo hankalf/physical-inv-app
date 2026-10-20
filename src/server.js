@@ -62,7 +62,7 @@ import { palletSystem, savePalletSystem, probePalletSystem } from './routes/pall
 import { proxyPalletSystem, makeTicket, ticketCookie, PREFIX as PS_PREFIX } from './routes/pallet-proxy.js';
 import { onedriveStatus, setOnedriveConfig, startSignIn, cancelSignIn, disconnect, uploadNow, startOnedrive } from './routes/onedrive.js';
 import { gdriveStatus, setGdriveConfig, checkConnection, disconnectGdrive, uploadToGdrive, startGdrive } from './routes/gdrive.js';
-import { selfSystem, systemsConfig, saveSystems, systemsFor, systemAccess, setSystemAccess, makeTicket as makeHandoff, readTicket as readHandoff, checkTicket, checkLink, provisionUser, provisionDevice, publicSystems, otherSystems, loginsForHome, fetchLogins, loginsPreview, copyLogins } from './routes/systems.js';
+import { selfSystem, systemsConfig, saveSystems, systemsFor, systemAccess, setSystemAccess, makeTicket as makeHandoff, readTicket as readHandoff, checkTicket, checkLink, provisionUser, provisionDevice, publicSystems, otherSystems, scannersOn, homeScannersOn, loginsForHome, fetchLogins, loginsPreview, copyLogins } from './routes/systems.js';
 
 /* The address a request came in on, behind Railway's proxy too: the host alone, as http and https are one site there. */
 const hostOf = (req) => String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().toLowerCase();
@@ -421,7 +421,21 @@ async function handleHandheld(req, res, url, m) {
   if (p === '/api/systems' && method === 'GET') {
     const pub = publicSystems();
     const linked = pub.self.role === 'linked';
-    return sendJson(req, res, 200, { ...pub, systems: device && device.practice_owner ? [] : otherSystems().filter((s) => linked || s.scanners).map((s) => ({ name: s.name, url: s.url, color: s.color, home: !!s.home })) });
+    if (device && device.practice_owner) return sendJson(req, res, 200, { ...pub, systems: [] });
+    /* Which system the scanners use: the home says. 'all' - switch on the sign-on
+       screen. One system alone - a gun anywhere else is sent there (goTo), and a
+       gun there is offered no other. A linked system asks the home each time. */
+    const ask = linked ? await homeScannersOn() : { on: scannersOn(), fresh: true };
+    const on = ask.on;
+    let offer = otherSystems().filter((s) => linked || s.scanners);
+    let goTo = null;
+    if (on !== 'all' && on !== pub.self.name) {
+      // a linked system sends it home; the home sends it on to the one it named
+      const next = linked ? offer.find((s) => s.home) : offer.find((s) => s.name === on);
+      offer = next ? [next] : [];
+      goTo = next && ask.fresh ? next.name : null;
+    } else if (on === pub.self.name) offer = [];
+    return sendJson(req, res, 200, { ...pub, scanners: on, goTo, systems: offer.map((s) => ({ name: s.name, url: s.url, color: s.color, home: !!s.home })) });
   }
 
   if (p === '/api/sessions' && method === 'GET') {
@@ -1140,8 +1154,11 @@ async function handleAdmin(req, res, url, m) {
       const mine = (Array.isArray(body.systems) ? body.systems : []).find((x) => isOwnAddress(String(x.url || '').trim(), req));
       if (mine) throw httpError(400, `${mine.name || 'That system'} has this system's own address (${String(mine.url).trim()}) - put its own address in, the one it opens at`);
       if (body.homeUrl && isOwnAddress(String(body.homeUrl).trim(), req)) throw httpError(400, `that is this system's own address - the home address is the one ${selfSystem().homeName} opens at`);
+      const was = selfSystem().role === 'home' ? scannersOn() : null;
       const st = saveSystems(body);
       audit(actor, body.newKey ? 'made a new link key for the systems' : 'changed the systems', [st.self.name, ...st.systems.map((s) => `${s.name} ${s.url}`)].join(' · '));
+      const now = st.self.role === 'home' ? scannersOn() : null;
+      if (was !== now) audit(actor, 'chose which system the scanners use', now === 'all' ? `${st.self.name} and ${st.systems.map((s) => s.name).join(', ')} - switched on the gun` : `${now} only`);
       return sendJson(req, res, 200, { ...st, ...systemsView(req) });
     }
     if (p === '/api/admin/systems/logins' && method === 'POST') {

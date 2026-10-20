@@ -59,7 +59,9 @@ You only see *Switch to…* if your login has been given TEST.
 3. A gun with **counts still waiting to send** will not switch until they have gone — they belong
    to the system they were counted in. Get it into Wi-Fi first.
 
-The *System* row only shows on guns that are allowed to switch.
+The *System* row only shows when the office lets the guns use both. When the office puts the
+scanners on **one system only**, every gun goes there by itself — once its counts have sent —
+and has no *System* row: a gun you open on LIVE on a TEST-only day moves to TEST on its own.
 
 ## 5 — What to know
 
@@ -77,6 +79,7 @@ The *System* row only shows on guns that are allowed to switch.
 | *this login may not use TEST* | The same | Ask an admin |
 | TEST's sign-in box says to sign in on LIVE | You opened TEST directly | Sign in on LIVE, then switch |
 | **Back to LIVE** does nothing, or says *this system's own address* | TEST is not pointed at LIVE correctly | Tell an admin; until then, open LIVE's address yourself |
-| The gun has no *System* row | That gun is not allowed to switch | Ask an admin |
+| The gun has no *System* row | The office has the scanners on one system only | Count where it is; ask an admin if that is wrong |
+| The gun says *the scanners are on TEST now* and will not sign on | It is going to TEST, and its counts are still sending | Get it into Wi-Fi; it goes by itself |
 | *N counts are still on this scanner* | Counts waiting to send | Let them send in Wi-Fi, then switch |
 | You counted on TEST by mistake | Those counts are on TEST only | Count the bins again on LIVE; tell your supervisor |

@@ -43,7 +43,11 @@ LIVE has **no** `SYSTEM_HOME_URL` — that is what makes it the home.
 **On LIVE**, *Settings → Site & systems → Systems*:
 
 1. **Add a system**: name **TEST**, TEST's Railway address, a color (orange).
-2. Tick **Scanners may switch** if the guns should be able to go to TEST.
+2. Under **On the scanners**, choose where the guns count:
+   - **LIVE and TEST** — the gun's sign-on screen has *System* to switch;
+   - **LIVE only** — no *System* row; a gun left on TEST comes back to LIVE by itself;
+   - **TEST only** — every gun goes to TEST by itself, once its counts have sent, and has no way
+     back until you choose again (a training day on the real guns, say).
 3. **Save**.
 4. Press **Check the link** on the TEST row. It asks TEST, server to server, and says what to fix
    if anything is wrong: TEST cannot be reached, runs an older version, thinks it is a home, has
@@ -110,7 +114,7 @@ People who only ever switched over from LIVE are not listed — they are LIVE's 
 
 1. **Register every gun on LIVE** — *Settings → Scanners → Scanner setup*, print its setup card,
    open its link on the gun — as always.
-2. With *Scanners may switch* ticked on LIVE's TEST row, the gun's sign-on screen shows
+2. With *On the scanners* at **LIVE and TEST**, the gun's sign-on screen shows
    **System: LIVE | TEST**. One tap takes it to TEST under its own name and link.
 3. **Back to LIVE** on TEST's sign-on screen brings it home.
 4. A gun with **counts still waiting to send** may not switch until they have gone — they belong
@@ -136,6 +140,8 @@ switches.
 | *calls itself DEV, but it is listed here as TEST* | The names differ | Set `SYSTEM_NAME=TEST` on TEST, or rename the row on LIVE |
 | *this login may not use TEST* | TEST is not ticked for that login | Settings → Logins → Systems column |
 | No *Switch to…* in the sidebar | No other system is listed, or this login has none ticked | Settings → Site & systems → Systems; Settings → Logins |
-| The gun shows no *System* row | *Scanners may switch* is off for TEST | Tick it on LIVE's TEST row and save |
+| The gun shows no *System* row | *On the scanners* is LIVE only, or TEST only | Choose **LIVE and TEST** on LIVE's Systems card and save |
+| A gun goes to TEST (or back to LIVE) by itself | *On the scanners* is one system only | As meant. Choose **LIVE and TEST** to let the guns switch |
+| The gun says *the scanners are on TEST now* and will not sign on | TEST only is chosen, and its counts are still sending | Get it into Wi-Fi; it goes when they have sent |
 | *N counts are still on this scanner* | Counts waiting to send | Let them send (Wi-Fi), then switch |
 | *scanners are registered on LIVE* | Someone tried to add a gun on TEST | Add it on LIVE, then switch it to TEST from the gun |

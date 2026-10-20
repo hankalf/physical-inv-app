@@ -83,7 +83,44 @@ export function otherSystems(c = load()) {
     const seen = Array.isArray(c.seen) ? c.seen.filter((s) => s.name !== me.name) : [];
     return [{ name: me.homeName, url: me.homeUrl, color: c.homeColor || 'green', home: true }, ...seen.filter((s) => s.url !== me.homeUrl && !s.home)];
   }
-  return (Array.isArray(c.list) ? c.list : []).map((s) => ({ name: s.name, url: s.url, color: s.color || 'orange', scanners: !!s.scanners }));
+  const mode = scannerMode(c);
+  return (Array.isArray(c.list) ? c.list : []).map((s) => ({ name: s.name, url: s.url, color: s.color || 'orange',
+    scanners: mode === 'all' ? (c.scanners === 'all' || !!s.scanners) : mode === s.name }));
+}
+
+/* Which system the scanners use, set on the home: 'all' - the home and the
+   others, switched on the gun's sign-on screen - or one system's name alone:
+   'home' for the home only. Kept from before there was a choice: a TEST row
+   with "Scanners may switch" ticked is 'all', none ticked is the home only. */
+export function scannerMode(c = load()) {
+  const list = Array.isArray(c.list) ? c.list : [];
+  if (c.scanners === 'all' || c.scanners === 'home') return c.scanners;
+  if (c.scanners && list.some((s) => s.name === c.scanners)) return c.scanners;
+  return list.some((s) => s.scanners) ? 'all' : 'home';
+}
+/** The same, as a gun is told it: 'all', or the name of the one system the scanners use. */
+export function scannersOn(c = load()) {
+  const mode = scannerMode(c);
+  return mode === 'home' ? selfSystem(c).name : mode;
+}
+
+/* On a linked system: the home says which system the scanners use. Asked fresh
+   when a gun asks, so a change on the home reaches the guns at once; the last
+   answer stands when the home cannot be reached. */
+export async function homeScannersOn() {
+  const me = selfSystem();
+  if (me.role !== 'linked' || !me.homeUrl) return { on: 'all', fresh: false };
+  try {
+    const r = await fetch(`${me.homeUrl}/api/system`, { signal: AbortSignal.timeout(Number(process.env.SYSTEM_ASK_MS) || 3000), headers: { accept: 'application/json' } });
+    const out = await r.json();
+    if (out && out.scanners) {
+      const on = out.scanners === 'all' ? 'all' : cleanName(out.scanners);
+      save({ ...load(), homeScanners: on });
+      return { on, fresh: true };
+    }
+  } catch { /* the home is down, or older: the last answer stands */ }
+  const c = load();
+  return { on: c.homeScanners || 'all', fresh: false };
 }
 
 /** The settings card, for an admin. The key is only for the home's admin to copy. */
@@ -96,6 +133,7 @@ export function systemsConfig() {
     systems: otherSystems(c),
     key: me.role === 'home' ? key : '',
     keySet: !!key,
+    scanners: me.role === 'home' ? scannerMode(c) : (c.homeScanners || 'all'),
     colors: COLORS,
   };
 }
@@ -130,7 +168,20 @@ export function saveSystems(body = {}) {
       if (!url) throw Object.assign(new Error(`${name} needs its web address`), { status: 400 });
       return { name, url, color: cleanColor(s.color, 'orange'), scanners: !!s.scanners };
     }).slice(0, 6);
+    // the list sent the old way, a tick on each row: the ticks say it
+    if (body.scanners === undefined && body.systems.some((s) => s && typeof s.scanners === 'boolean')) delete next.scanners;
   }
+  if (body.scanners !== undefined) {
+    const v = String(body.scanners || '');
+    if (v === 'all' || v === 'home') next.scanners = v;
+    else {
+      const n = cleanName(v);
+      if (n === selfSystem(next).name) next.scanners = 'home';
+      else if ((next.list || []).some((s) => s.name === n)) next.scanners = n;
+      else throw Object.assign(new Error(`there is no system called ${v} for the scanners to use`), { status: 400 });
+    }
+  }
+  if (next.scanners && !['all', 'home'].includes(next.scanners) && !(next.list || []).some((s) => s.name === next.scanners)) next.scanners = 'home';
   save(next);
   return systemsConfig();
 }
@@ -178,6 +229,7 @@ export function makeTicket(toName, { user, device, path } = {}) {
     v: 1, iss: me.name, aud: to.name, exp: Date.now() + TICKET_SECONDS() * 1000, n: randomBytes(12).toString('base64url'),
     home: { name: me.name, url: '', color: me.color },
     systems: otherSystems().map((s) => ({ name: s.name, url: s.url, color: s.color })),
+    scanners: scannersOn(),
   };
   if (user) {
     body.kind = 'user';
@@ -208,6 +260,7 @@ export function readTicket(t) {
   // remember what the home said about itself and the others, for the way back
   const c = load();
   save({ ...c, homeName: cleanName(body.iss) || c.homeName || 'LIVE', homeColor: cleanColor(body.home && body.home.color, 'green'),
+    homeScanners: body.scanners ? (body.scanners === 'all' ? 'all' : cleanName(body.scanners)) : (c.homeScanners || 'all'),
     seen: (body.systems || []).map((s) => ({ name: cleanName(s.name), url: String(s.url || ''), color: cleanColor(s.color, 'orange') })) });
   return body;
 }
@@ -321,7 +374,8 @@ export function provisionDevice(d) {
 /** What any page or scanner may know: this system's name and the others' addresses. */
 export function publicSystems() {
   const me = selfSystem();
-  return { self: { name: me.name, color: me.color, role: me.role }, home: me.role === 'linked' ? { name: me.homeName, url: me.homeUrl } : null, systems: otherSystems().map((s) => ({ name: s.name, url: s.url, color: s.color, home: !!s.home })) };
+  return { self: { name: me.name, color: me.color, role: me.role }, home: me.role === 'linked' ? { name: me.homeName, url: me.homeUrl } : null, systems: otherSystems().map((s) => ({ name: s.name, url: s.url, color: s.color, home: !!s.home })),
+    ...(me.role === 'home' ? { scanners: scannersOn() } : {}) };
 }
 
 /* ------------------------------------------------------------ copying logins

@@ -64,7 +64,7 @@ export function setupState(sessionId) {
         ? {
           title: `Bring a scanner over from ${linked.homeName}`,
           why: `Scanners are registered on ${linked.homeName}; one comes here, under its own name and link, when someone taps ${linked.name} on its sign-on screen.`,
-          detail: scanners ? `${scanners} come over · ${enrolled} signed in` : `none yet — tick Scanners may switch on ${linked.homeName}`,
+          detail: scanners ? `${scanners} come over · ${enrolled} signed in` : `none yet — on ${linked.homeName}, Systems → On the scanners: choose both, or ${linked.name || 'this system'} only`,
           goto: { page: '/settings', sub: 'gun' }, label: 'Scanners here',
         }
         : {

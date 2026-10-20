@@ -412,3 +412,6 @@ html.has-systems[data-system-color="orange"] #systemPick button.selected { color
 .emptyconfirm { margin: 8px 0; padding: 12px; border-radius: 12px; border: 2px solid #f0b429; background: rgba(240,180,41,.12); }
 .emptyconfirm .ecq { font-weight: 800; font-size: 1.15em; margin-bottom: 8px; }
 .emptyconfirm .row button { flex: 1; }
+
+/* the scanners are on another system alone: nothing to sign on to here */
+#scrSignon.sys-away > :not(#systemBlock):not(#sysGoTo):not(#signonMsg):not(.muted):not(#btnChangeDevice):not(.spacer) { display: none !important; }

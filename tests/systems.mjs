@@ -183,6 +183,63 @@ await gun.waitForURL(`${BASE.replace(/\/$/, '')}/**`, { timeout: 10000 }).catch(
 await gun.waitForTimeout(2500);
 check('Back to LIVE: LIVE again, still signed in as itself', gun.url().startsWith(BASE) && /LIVE/.test(await gun.textContent('#chipSystem')) && /MC93-07/.test(await gun.textContent('#chipDevice')), gun.url());
 check('No script errors', errors.length === 0, errors.join(' | '));
+/* ---- which system the scanners use: both, LIVE alone, or DEV alone - the admin chooses on LIVE */
+{
+  // the browser gun above signed the link in again, on both: fresh tokens for these calls
+  const T = { ...hdr, authorization: 'Device ' + (await j(await post(BASE, `/api/devices/${gunDev.uid}`, {}, hdr))).token };
+  const TD = { ...hdr, authorization: 'Device ' + (await j(await post(DEV, `/api/devices/${gunDev.uid}`, {}, hdr))).token };
+  let st0 = await get(BASE, '/api/admin/systems', A);
+  check('On the scanners: DEV ticked the old way reads as both', st0.scanners === 'all', st0.scanners);
+  r = await post(BASE, '/api/admin/systems', { systems: [{ name: 'DEV', url: DEV, color: 'orange' }], scanners: 'DEV' }, A);
+  st0 = await j(r);
+  check('An admin puts the scanners on DEV alone', r.status === 200 && st0.scanners === 'DEV', JSON.stringify(st0.scanners));
+  check('…and the log says so', (await get(BASE, '/api/admin/audit?limit=10', A)).some((x) => x.action === 'chose which system the scanners use' && /DEV only/.test(x.detail)));
+  check('…and LIVE says it to anyone who asks, for DEV to read', (await get(BASE, '/api/system')).scanners === 'DEV');
+  sys = await get(BASE, '/api/systems', T);
+  check('DEV alone: a gun on LIVE is sent to DEV, and offered nothing else', sys.goTo === 'DEV' && sys.scanners === 'DEV' && sys.systems.map((s) => s.name).join() === 'DEV', JSON.stringify(sys));
+  sys = await get(DEV, '/api/systems', TD);
+  check('…a gun on DEV stays there: no way back to LIVE', !sys.goTo && sys.systems.length === 0 && sys.scanners === 'DEV', JSON.stringify(sys));
+  r = await post(BASE, '/api/admin/systems', { scanners: 'home' }, A);
+  check('LIVE alone', r.status === 200 && (await j(r)).scanners === 'home');
+  sys = await get(BASE, '/api/systems', T);
+  check('…a gun on LIVE is offered no other system', !sys.goTo && sys.systems.length === 0 && sys.scanners === 'LIVE', JSON.stringify(sys));
+  r = await post(BASE, '/api/systems/handoff', { to: 'DEV' }, T);
+  check('…and a switch to DEV is refused', r.status === 403);
+  sys = await get(DEV, '/api/systems', TD);
+  check('…a gun still on DEV is sent back to LIVE', sys.goTo === 'LIVE' && sys.systems.map((s) => s.name).join() === 'LIVE', JSON.stringify(sys));
+  check('…and DEV\'s Systems card shows what LIVE chose', (await get(DEV, '/api/admin/systems', H((await login(DEV, { username: 'DEV-ADMIN', password: 'dev-only-pass' })).token))).scanners === 'LIVE');
+  r = await post(BASE, '/api/admin/systems', { scanners: 'NOPE' }, A);
+  check('A system that is not on the list is refused', r.status === 400 && /no system called NOPE/.test((await j(r)).error));
+
+  /* the gun, on its own */
+  await post(BASE, '/api/admin/systems', { scanners: 'DEV' }, A);
+  await gun.goto(`${BASE}/?d=${gunDev.uid}`);
+  await gun.waitForURL(`${DEV}/**`, { timeout: 12000 }).catch(() => {});
+  await gun.waitForTimeout(2500);
+  check('DEV alone: the gun opened on LIVE goes to DEV by itself', gun.url().startsWith(DEV) && /DEV/.test(await gun.textContent('#chipSystem')) && /MC93-07/.test(await gun.textContent('#chipDevice')), gun.url());
+  check('…where it signs on as usual, with no System row to leave by', await gun.isHidden('#systemBlock') && await gun.isVisible('#btnStart') && await gun.isHidden('#sysGoTo'));
+  await post(BASE, '/api/admin/systems', { scanners: 'home' }, A);
+  await gun.reload();
+  await gun.waitForURL(`${BASE.replace(/\/$/, '')}/**`, { timeout: 12000 }).catch(() => {});
+  await gun.waitForTimeout(2500);
+  check('LIVE alone: the gun on DEV comes back to LIVE by itself', gun.url().startsWith(BASE) && /LIVE/.test(await gun.textContent('#chipSystem')), gun.url());
+  check('…and is offered no System row there', await gun.isHidden('#systemBlock') && await gun.isVisible('#btnStart'));
+
+  /* the Settings card */
+  const sp = await ctx.newPage();
+  sp.on('pageerror', (e) => errors.push('scan pick: ' + e.message));
+  await sp.goto(`${BASE}/settings#advanced`);
+  await signIn(sp);
+  await sp.evaluate(() => window.appApi && window.appApi.showSub && window.appApi.showSub('advanced')).catch(() => {});
+  await sp.waitForSelector('#sysScanPick input[type=radio]', { timeout: 8000 }).catch(() => {});
+  const opts = clean(await sp.textContent('#sysScanPick').catch(() => ''));
+  check('Settings → Systems → On the scanners: both, LIVE only, DEV only — LIVE only chosen', /LIVE and DEV/.test(opts) && /LIVE only/.test(opts) && /DEV only/.test(opts) && await sp.isChecked('#sysScanPick input[value="home"]'), opts);
+  await sp.check('#sysScanPick input[value="all"]');
+  await sp.click('#btnSysSave');
+  await sp.waitForTimeout(900);
+  check('…choosing both and saving puts the System row back on the guns', (await get(BASE, '/api/admin/systems', A)).scanners === 'all' && (await get(BASE, '/api/systems', { ...hdr, authorization: 'Device ' + (await j(await post(BASE, `/api/devices/${gunDev.uid}`, {}, hdr))).token })).systems.map((s) => s.name).join() === 'DEV');
+  await sp.close();
+}
 /* ---- Copy logins from DEV: the ones made there before it was linked, brought to LIVE with their passwords */
 {
   const DA = H((await login(DEV, { username: 'DEV-ADMIN', password: 'dev-only-pass' })).token);

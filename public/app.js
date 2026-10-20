@@ -604,7 +604,7 @@
   async function loadSystems() {
     if (PRACTICE) return;
     let d = null;
-    try { d = await api('/api/systems'); await metaSet('systems', d); } catch { d = await metaGet('systems'); }
+    try { d = await api('/api/systems'); await metaSet('systems', d); } catch { d = await metaGet('systems'); if (d) d = { ...d, fresh: false }; }
     renderSystems(d);
   }
   function renderSystems(d) {
@@ -620,6 +620,17 @@
     chip.textContent = d.self.name;
     chip.className = `chip system c-${d.self.color}`;
     box.hidden = !others.length;
+    /* The office has put the scanners on one system alone, and it is not this
+       one: no counting here - the gun goes there by itself, once its counts
+       have sent. Only on a fresh answer: an old one offline never stops a count. */
+    state.sysGoTo = d.goTo && d.fresh !== false ? d.goTo : null;
+    $('scrSignon').classList.toggle('sys-away', !!state.sysGoTo);
+    $('sysGoTo').hidden = !state.sysGoTo;
+    if (state.sysGoTo) {
+      $('sysGoTo').textContent = `The scanners are on ${d.scanners === 'all' ? state.sysGoTo : d.scanners} now — this gun is going to ${state.sysGoTo}.`;
+      clearTimeout(state.sysGoTimer);
+      state.sysGoTimer = setTimeout(() => switchSystem(state.sysGoTo, { auto: true }), 600);
+    }
     const pick = $('systemPick');
     pick.replaceChildren();
     const here = document.createElement('button');
@@ -636,18 +647,21 @@
       pick.appendChild(b);
     }
   }
-  async function switchSystem(name) {
+  async function switchSystem(name, { auto = false } = {}) {
+    // going by itself: try again shortly, until the counts have sent and there is signal
+    const later = () => { if (auto) { clearTimeout(state.sysGoTimer); state.sysGoTimer = setTimeout(() => loadSystems().catch(() => {}), 15000); } };
     const q = await queueAge();
     if (q.count) {
       feedback($('signonMsg'), 'err', `${q.count} count${q.count === 1 ? ' is' : 's are'} still on this scanner`, `Let ${q.count === 1 ? 'it' : 'them'} send before switching to ${name} — they belong to this system.`);
+      later();
       return;
     }
-    if (!online()) { feedback($('signonMsg'), 'err', 'No signal', `Switching to ${name} needs Wi-Fi.`); return; }
+    if (!online()) { feedback($('signonMsg'), 'err', 'No signal', `Switching to ${name} needs Wi-Fi.`); later(); return; }
     try {
       const out = await api('/api/systems/handoff', { method: 'POST', body: JSON.stringify({ to: name }) });
       feedback($('signonMsg'), 'ok', `Switching to ${name}…`);
       location.href = out.url;
-    } catch (err) { feedback($('signonMsg'), 'err', `Could not switch to ${name}`, err.message); }
+    } catch (err) { feedback($('signonMsg'), 'err', `Could not switch to ${name}`, err.message); later(); }
   }
 
   async function loadSessions() {
@@ -731,6 +745,7 @@
 
   async function signon() {
     clearFeedback($('signonMsg'));
+    if (state.sysGoTo) { feedback($('signonMsg'), 'warn', `The scanners are counting on ${state.sysGoTo}`, `Tap ${state.sysGoTo} above, or wait: the gun goes there by itself.`); return; }
     if (norm($('fEmployee').value)) addEmployee();
     const solo = state.mode === 'cycle' || state.mode === 'move' || state.mode === 'missing';
     // on a cycle count the person IS the team, so everything keyed by team - the

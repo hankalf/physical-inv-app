@@ -311,8 +311,9 @@ to it: it takes the people and the scanners LIVE hands over, and nothing else.
    (for example `https://full-harvest.up.railway.app`), and `SYSTEM_LINK_KEY` = LIVE's link key
    (on LIVE: **Settings → Site & systems → Systems → The link key → Copy**). Or sign in on TEST with its
    own superadmin and paste the same two into its Systems card.
-3. On LIVE, **Systems → Add a system**: name **TEST**, TEST's Railway address, a color, and tick
-   **Scanners may switch** if the guns should be able to go there. **Save**.
+3. On LIVE, **Systems → Add a system**: name **TEST**, TEST's Railway address, a color. Under
+   **On the scanners**, choose where the guns count: **LIVE and TEST** (switched on the gun),
+   **LIVE only**, or **TEST only**. **Save**.
 4. Say which logins may use TEST: tick **TEST** in the **Systems** column of **Supervisor logins**
    (or in **Who may use each system** on the Systems card — the two are the same ticks). A new
    login can be given it as it is made: *may also switch to TEST* under **Add login**. Admins
@@ -346,8 +347,11 @@ switched over from LIVE are not listed: they are LIVE's already. The log records
   with **Back to LIVE**. With more than one system, the logo and site name at the top of the
   sidebar (and on the sign-in box) sit in a ring of the system's color with its name on it —
   green **LIVE**, orange **TEST** — so which one you are on shows at a glance.
-- **On a scanner.** With *Scanners may switch* ticked, the sign-on screen shows **System: LIVE |
-  TEST**. One tap moves the gun to TEST under its own name; **Back to LIVE** brings it home. The
+- **On a scanner.** *On the scanners* (LIVE's Systems card) decides. **LIVE and TEST**: the
+  sign-on screen shows **System: LIVE | TEST**. **LIVE only**: no System row, and a gun left on
+  TEST comes back by itself. **TEST only**: every gun goes to TEST by itself (once its counts have
+  sent) and is offered no way back until the choice changes. With both, one tap moves the gun to
+  TEST under its own name, and **Back to LIVE** brings it home. The
   header always says which system the gun is on. A gun with counts still waiting to send is not
   allowed to switch until they have gone — they belong to the system they were counted in. Each
   system keeps its own storage on the gun, so nothing mixes. With more than one system the gun's

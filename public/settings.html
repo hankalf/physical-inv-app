@@ -825,6 +825,13 @@
         <div class="scroll"><table id="sysTable"></table></div>
         <div id="sysCheck" class="syscheck" hidden></div>
         <div class="inline" style="margin-top:8px"><div class="auto"><button class="fit sm" id="btnSysAdd">Add a system</button></div></div>
+      </div>
+      <div id="sysScanBox" hidden>
+        <h3>On the scanners</h3>
+        <div class="hint" style="margin-top:0" id="sysScanHint">Which system the guns count in. With both, the gun's sign-on screen has <b>System</b> to switch. With one alone, every gun goes to it by itself and is offered no other — a gun with counts still to send waits until they have gone.</div>
+        <div class="syspick" id="sysScanPick"></div>
+      </div>
+      <div id="sysHomeOnly2">
         <h3>The link key</h3>
         <div class="hint" style="margin-top:0">The other systems take people this system sends only when the hand-off is signed with this key. Put it in each of them (Settings → Site &amp; systems → Systems there, or its <code>SYSTEM_LINK_KEY</code> variable).</div>
         <div class="inline" style="margin-top:6px">
@@ -846,7 +853,7 @@
         <ol style="margin:8px 0 0 18px; padding:0">
           <li>In Railway, deploy this app a second time as its own service, with its <b>own volume</b> (its own database), from the branch you want TEST to run.</li>
           <li>Give that service three variables: <code>SYSTEM_NAME</code> = <b>TEST</b>, <code>SYSTEM_HOME_URL</code> = this system's address, and <code>SYSTEM_LINK_KEY</code> = the link key above — no spaces or quotes. Redeploy it.</li>
-          <li>Here, <b>Add a system</b>: name <b>TEST</b> (the same name as its <code>SYSTEM_NAME</code>), its Railway address, and tick <b>Scanners may switch</b> if the guns should be able to go there. <b>Save</b>, then <b>Check the link</b>: every line should come back ✓.</li>
+          <li>Here, <b>Add a system</b>: name <b>TEST</b> (the same name as its <code>SYSTEM_NAME</code>), its Railway address, and under <b>On the scanners</b> choose whether the guns use LIVE and TEST, LIVE only or TEST only. <b>Save</b>, then <b>Check the link</b>: every line should come back ✓.</li>
           <li>Tick who may use TEST in the table. They see <b>Switch to…</b> in the sidebar, and <b>Sign in to</b> on the sign-in box.</li>
         </ol>
         <div style="margin-top:8px">Logins live here, on the home system: TEST takes them from the hand-off, with the same role and pages, and nobody has a second password. A scanner keeps its own link: switching hands it to TEST under the same link, and TEST's counts stay in TEST's own storage on the gun. The way back is a button, on the gun and on every TEST page.</div>
