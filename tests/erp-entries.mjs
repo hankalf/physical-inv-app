@@ -109,6 +109,12 @@ const up = await page.$('#fErpFile');
 await up.setInputFiles({ name: 'erp-worksheet.csv', mimeType: 'text/csv', buffer: Buffer.from('Side,Pallet,In ERP\nPositive,P-9,yes\n') });
 await page.waitForTimeout(1500);
 check('Uploading the worksheet back from the tab marks the line and says what it did', /From the worksheet: 1 marked as entered/.test(clean(await page.textContent('#erpMsg'))) && /3 of 3 entered/.test(clean(await page.textContent('#erpChip'))), clean(await page.textContent('#erpMsg')));
+/* Export everything: the pallets the report does not have, on a sheet of their own */
+const ev = await get(`/api/admin/sessions/${sid}/export/everything`);
+const nor = ev.sheets.find((x) => x.name === 'Not on the report');
+check('Export everything has a Not on the report sheet, after Adjustments', !!nor && ev.sheets.findIndex((x) => x.name === 'Not on the report') === ev.sheets.findIndex((x) => x.name === 'Adjustments') + 1, ev.sheets.map((x) => x.name).join());
+check('…with the one pallet found on the floor that the report does not have, where it was found, and its ERP mark', nor && nor.rows.length === 1 && nor.rows[0].Pallet === 'P-9' && nor.rows[0]['Found in'] === 'F01A004' && nor.rows[0].Aisle === 'F01' && nor.rows[0]['Counted quantity'] === 10 && nor.rows[0]['In ERP'] === 'yes', JSON.stringify(nor && nor.rows[0]));
+check('…and a blank Investigation column to write the finding in', nor && nor.columns[nor.columns.length - 1] === 'Investigation' && nor.rows[0].Investigation === '');
 check('No script errors', errors.length === 0, errors.join(' | '));
 await browser.close();
 const passed = results.filter(Boolean).length;

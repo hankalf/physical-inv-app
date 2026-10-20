@@ -135,6 +135,27 @@ export function exportEverything(sessionId, { by = '' } = {}) {
   const adjustments = sheet('Adjustments', adjCols,
     [...adj.positive.rows.map(adjRow('Positive')), ...adj.negative.rows.map(adjRow('Negative'))]);
 
+  /* Pallets the report does not have: sold or shipped in the system, found on
+     the floor. Each is an investigation, then an adjustment back into stock -
+     so the sheet carries where it was found and by whom, where its approval
+     and ERP entry stand, and a column to write the finding in. */
+  const aisleOf = new Map(db.prepare('SELECT code, aisle FROM locations WHERE session_id = ?').all(id).map((l) => [l.code, l.aisle || '']));
+  const signedOff = new Map(adj.positive.rows.map((r) => [r.pallet_id, r]));
+  const notOnReport = sheet('Not on the report', [
+    'Pallet', 'System', 'Item', 'Description', 'Variant', 'Found in', 'Aisle', 'Counted quantity', 'Lot', 'Best before',
+    'Times counted', 'Teams', 'Last scanned', 'Comments', 'Approval', 'Approval reason', 'Approved by', 'In ERP', 'Entered by', 'Entered at', 'Investigation',
+  ], pallets.filter((r) => r.status === 'NOT IN MASTER').map((r) => {
+    const a = signedOff.get(r.pallet_id);
+    return {
+      'Pallet': r.pallet_id, 'System': r.source || '', 'Item': r.sku || '', 'Description': r.description || '', 'Variant': r.variant || '',
+      'Found in': r.found_location || '', 'Aisle': aisleOf.get(r.found_location) || '', 'Counted quantity': r.counted_qty,
+      'Lot': r.found_lot || '', 'Best before': r.expiry || '', 'Times counted': r.times_counted || 0, 'Teams': r.teams || '',
+      'Last scanned': when(r.last_scan), 'Comments': r.comments || '',
+      'Approval': adj.approvals ? ((a && a.status) || 'waiting') : 'not required', 'Approval reason': (a && a.reason) || '', 'Approved by': (a && a.decided_by) || '',
+      'In ERP': a && a.erp ? 'yes' : '', 'Entered by': a && a.erp ? a.erp.by : '', 'Entered at': a && a.erp ? a.erp.at : '', 'Investigation': '',
+    };
+  }));
+
   const binRows = db.prepare(
     `SELECT l.code, l.zone, l.aisle, l.level, l.description, l.last_counted,
             (SELECT COUNT(*) FROM counts c WHERE c.session_id = l.session_id AND c.location_code = l.code AND c.voided = 0) AS lines,
@@ -211,7 +232,7 @@ export function exportEverything(sessionId, { by = '' } = {}) {
 
   return {
     filename: `${String(s.name).replace(/[^A-Za-z0-9 _-]+/g, '').trim().replace(/\s+/g, '-') || 'count'}-${new Date().toISOString().slice(0, 10)}.xlsx`,
-    sheets: [summary, lines, report, adjustments, bins, notCounted, teams, downtime, signons, sos, quiet, second,
+    sheets: [summary, lines, report, adjustments, notOnReport, bins, notCounted, teams, downtime, signons, sos, quiet, second,
       sheet('Counts side by side', sideBySide.columns, sideBySide.rows), fixes, log],
   };
 }

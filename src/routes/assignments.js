@@ -237,7 +237,11 @@ export function setAssignmentStatus(sessionId, assignmentId, status) {
   if (status === 'done') {
     db.prepare("UPDATE assignments SET status = 'done', completed_at = ? WHERE id = ?").run(now(), row.id);
   } else if (status === 'queued') {
-    db.prepare("UPDATE assignments SET status = 'queued', started_at = NULL WHERE id = ?").run(row.id);
+    /* Released from active: to the back of the team's queue, so the next aisle
+       starts instead - left at the front, auto-start would hand it straight
+       back. Reopened from done: the same, after what is still waiting. */
+    const last = db.prepare('SELECT MAX(position) AS p FROM assignments WHERE session_id = ? AND team = ?').get(id, row.team);
+    db.prepare("UPDATE assignments SET status = 'queued', started_at = NULL, completed_at = NULL, position = ? WHERE id = ?").run((last && last.p ? last.p : 0) + 1, row.id);
   } else if (status === 'active') {
     const holder = blockHolder(id, row.aisle, row.team, row.levels, row.direction);
     if (holder) {
@@ -250,12 +254,18 @@ export function setAssignmentStatus(sessionId, assignmentId, status) {
     throw Object.assign(new Error('unknown status'), { status: 400 });
   }
   const activated = autoActivate(id);
-  return { assignment: db.prepare('SELECT * FROM assignments WHERE id = ?').get(row.id), activated };
+  const after = db.prepare('SELECT * FROM assignments WHERE id = ?').get(row.id);
+  // released, and nothing else was waiting: it is the team's next aisle again, and says so
+  const back = status === 'queued' && row.status === 'active' && after.status === 'active';
+  return { assignment: after, activated, note: back ? `Team ${row.team} had nothing else queued, so ${row.aisle} started again - ✕ takes it off the plan` : '' };
 }
 
+/** Off the plan, whatever its state: the team's next aisle starts in its place. The aisle's counts stay. */
 export function deleteAssignment(sessionId, assignmentId) {
-  db.prepare('DELETE FROM assignments WHERE id = ? AND session_id = ?').run(Number(assignmentId), Number(sessionId));
-  return { activated: autoActivate(Number(sessionId)) };
+  const row = db.prepare('SELECT * FROM assignments WHERE id = ? AND session_id = ?').get(Number(assignmentId), Number(sessionId));
+  if (!row) throw Object.assign(new Error('assignment not found'), { status: 404 });
+  db.prepare('DELETE FROM assignments WHERE id = ?').run(row.id);
+  return { removed: { team: row.team, aisle: row.aisle, levels: row.levels, status: row.status }, activated: autoActivate(Number(sessionId)) };
 }
 
 /** What a handheld shows after sign-on: this team's current aisle and queue. */

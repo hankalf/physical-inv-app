@@ -1108,8 +1108,9 @@ async function handleAdmin(req, res, url, m) {
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments\/(\d+)$/)) && method === 'POST') {
     const body = await readJson(req);
-    audit(actor, `assignment ${body.status}`, `assignment ${m[2]}`, m[1]);
     const out = setAssignmentStatus(m[1], m[2], body.status);
+    const a = out.assignment;
+    audit(actor, body.status === 'queued' ? 'released an aisle' : `assignment ${body.status}`, `team ${a.team}: ${a.aisle}${a.levels ? ` (${a.levels})` : ''}${out.note ? ' - started again, nothing else queued' : ''}`, m[1]);
     if (body.status === 'done') {
       const filed = archiveAisle(m[1], out.assignment.aisle, { team: out.assignment.team, by: actor });
       if (filed) audit(actor, 'aisle filed', `${filed.aisle}: ${filed.lines} lines → ${filed.name}`, m[1]);
@@ -1117,8 +1118,9 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, out);
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments\/(\d+)$/)) && method === 'DELETE') {
-    audit(actor, 'removed an assignment', `assignment ${m[2]}`, m[1]);
-    return sendJson(req, res, 200, deleteAssignment(m[1], m[2]));
+    const out = deleteAssignment(m[1], m[2]);
+    audit(actor, 'took an aisle off the plan', `team ${out.removed.team}: ${out.removed.aisle}${out.removed.levels ? ` (${out.removed.levels})` : ''}, was ${out.removed.status}`, m[1]);
+    return sendJson(req, res, 200, out);
   }
 
   // --- accounts

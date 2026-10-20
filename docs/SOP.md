@@ -1027,6 +1027,14 @@ or queue aisles by hand here.
   pairs the teams (1 with 2, 3 with 4 …) and plans it for every aisle; an odd team out works alone.
   A counting-plan file takes the same thing in an optional **Start** column: *far end* or *001 end*.
 
+**The buttons on an aisle.** Each aisle in a team's row has what fits its state: **start** on one
+waiting (if its racking block is free); **done** on the one being counted (the same as the gun's
+*Aisle complete*); **release** sends the one being counted to the **back** of the team's queue and
+the next one starts — with nothing else queued it simply starts again, and the card says so;
+**reopen** on a finished one queues it again; **✕** takes the aisle off the plan whatever its
+state — the aisle's counts stay, and if the team was counting it, their next aisle starts. On an
+aisle being counted or finished, ✕ asks first.
+
 **Auto-assign the aisles.** The card above the queue does the whole plan at once, staggered:
 
 1. Pick the **teams** (blank is every team on Teams & crew, or one **shift**), the **levels**
@@ -1760,7 +1768,10 @@ count is open; until then the card says what is still missing. The log records e
 
 **Export everything (Excel)** — one workbook with every table the app keeps for this count, in a
 form a person can read: a **Summary**, every **count line**, the **pallet** report, the
-**adjustments** (positive and negative), the **bins** and the ones **not counted**, the **teams**
+**adjustments** (positive and negative), the pallets **not on the report** (sold or shipped in the
+system, found on the floor — with where each was found, where its approval and ERP entry stand,
+and an *Investigation* column to fill in before it is adjusted back into stock), the **bins** and
+the ones **not counted**, the **teams**
 and their times, **sign-ons**, **SOS**, **stopped scanning**, **second counts** and the **log**.
 Headings are plain words, flags are *Yes* / *No*, and times are on the warehouse's clock. It is
 the file for an auditor, a manager or the shared drive. (The CSV buttons beside it are for

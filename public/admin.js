@@ -486,19 +486,27 @@
           const b = document.createElement('button');
           b.className = 'sm ghost';
           b.textContent = label;
+          if (status === 'delete') b.title = it.status === 'queued' ? 'Take it off the plan' : `Take it off the plan - the aisle's counts stay${it.status === 'active' ? ', and the team\'s next aisle starts' : ''}`;
+          if (status === 'queued' && it.status === 'active') b.title = 'Release it: back of the queue, and the next aisle starts';
           b.onclick = async () => {
+            // an aisle being counted, or finished: a second look before it goes
+            if (status === 'delete' && it.status !== 'queued' && !confirm(`Take ${it.aisle} off team ${team}'s plan? Its counts stay.`)) return;
             try {
-              if (status === 'delete') await apiJson(`/api/admin/sessions/${sessionId}/assignments/${it.id}`, { method: 'DELETE' });
-              else await postJson(`/api/admin/sessions/${sessionId}/assignments/${it.id}`, { status });
+              const out = status === 'delete' ? await apiJson(`/api/admin/sessions/${sessionId}/assignments/${it.id}`, { method: 'DELETE' })
+                : await postJson(`/api/admin/sessions/${sessionId}/assignments/${it.id}`, { status });
               clearMsg($('assignMsg'));
+              const next = (out.activated || []).find((x) => x.team === team);
+              if (out.note) msg($('assignMsg'), 'warn', out.note);
+              else if (status === 'delete') msg($('assignMsg'), 'ok', `${it.aisle} is off team ${team}'s plan.`, next ? `${next.aisle} started in its place.` : '');
+              else if (status === 'queued' && it.status === 'active') msg($('assignMsg'), 'ok', `${it.aisle} released to the back of team ${team}'s queue.`, next ? `${next.aisle} started.` : '');
               await refreshAll();
             } catch (err) { msg($('assignMsg'), 'err', err.message); }
           };
           return b;
         };
         if (it.status === 'queued') { a.appendChild(act('start', 'active')); a.appendChild(act('✕', 'delete')); }
-        if (it.status === 'active') { a.appendChild(act('done', 'done')); a.appendChild(act('release', 'queued')); }
-        if (it.status === 'done') { a.appendChild(act('reopen', 'queued')); }
+        if (it.status === 'active') { a.appendChild(act('done', 'done')); a.appendChild(act('release', 'queued')); a.appendChild(act('✕', 'delete')); }
+        if (it.status === 'done') { a.appendChild(act('reopen', 'queued')); a.appendChild(act('✕', 'delete')); }
         seq.appendChild(a);
       }
       box.appendChild(seq);

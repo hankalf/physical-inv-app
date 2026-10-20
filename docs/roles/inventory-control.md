@@ -207,6 +207,7 @@ finance team and the shared drive. Its sheets:
 | **Count lines** | every scan: time, team, clock-in numbers, scanner, aisle, bin, pallet, system, quantity, empty-bin flag, item, description, lot, best before, second-count flag, pallet-not-on-report, bin-not-on-list, outside the team's aisle, counted twice, pallet and rack label state, second-label-of, flag / reason, comments, voided, and when it reached the server |
 | **Pallets** | the pallet report: pallet, system, item, description, variant, entry no., result, report and counted quantity, difference, report bin, found in, times counted, teams, report and counted lot, best before, second label, last scanned, comments |
 | **Adjustments** | side (positive / negative), pallet, system, item, bin, why, report and counted quantity, adjustment, approval state, approval reason, approved by |
+| **Not on the report** | the pallets the report does not have — sold or shipped in the system, found on the floor: where each was found and by whom, its quantity and lot, where its approval and ERP entry stand, and an **Investigation** column to write the finding in before it is adjusted back into stock |
 | **Bins** | every bin with zone, aisle, level, description, counted, recorded empty, lines, last counted |
 | **Bins not counted** | the bins with no line at all |
 | **Teams**, **Sign-ons** | who was on the count, when, for how long, on which scanner |
