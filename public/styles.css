@@ -32,7 +32,8 @@ header {
   padding: 8px 10px; background: var(--panel);
   border-bottom: 1px solid var(--line); flex: 0 0 auto;
 }
-header .title { font-weight: 700; font-size: 15px; flex: 1; }
+header .brandmark { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+header .title { font-weight: 700; font-size: 15px; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* the site's logo, set under Settings → Advanced; the title gives way to it */
 header img.logo { height: 22px; max-width: 96px; object-fit: contain; flex: 0 0 auto; }
 header .chip {
@@ -185,7 +186,7 @@ progress { width: 100%; height: 14px; }
 /* On a phone or a tablet in portrait the tabs get their own line under the title. */
 @media (max-width: 860px) {
   header { flex-wrap: wrap; row-gap: 6px; }
-  header .title { flex: 1 1 auto; }
+  header .brandmark { flex: 1 1 auto; }
   .tabs { order: 3; flex-basis: 100%; }
   .tabs .tab { padding: 6px 10px; font-size: 13px; }
 }
@@ -394,7 +395,18 @@ header .chip.system.c-blue { background: #3b82f6; }
 header .chip.system.c-red { background: #e5484d; }
 header .chip.system.c-gray { background: #6b7385; }
 #systemPick button { flex: 1; }
-#systemPick button.selected { background: var(--accent, #3b82f6); color: #fff; border-color: transparent; opacity: 1; }
+#systemPick button.selected { background: var(--sysring, var(--accent, #3b82f6)); color: #fff; border-color: transparent; opacity: 1; }
+/* Which system the gun is on, at a glance: a band of its color across the top, and the name in a ring of it.
+   Only with more than one system (app.js renderSystems). */
+html { --sysring: #2f9e57; }
+html[data-system-color="orange"] { --sysring: #f08c2e; }
+html[data-system-color="purple"] { --sysring: #8a5cf5; }
+html[data-system-color="blue"] { --sysring: #3b82f6; }
+html[data-system-color="red"] { --sysring: #e5484d; }
+html[data-system-color="gray"] { --sysring: #6b7385; }
+html.has-systems header { box-shadow: inset 0 4px 0 var(--sysring); padding-top: 12px; }
+html.has-systems header .brandmark { flex: 0 1 auto; margin-right: auto; padding: 3px 12px; border-radius: 999px; box-shadow: inset 0 0 0 2px var(--sysring); }
+html.has-systems[data-system-color="orange"] #systemPick button.selected { color: #1a1300; }
 
 /* EMPTY with the bin already scanned: a yes, not a second scan */
 .emptyconfirm { margin: 8px 0; padding: 12px; border-radius: 12px; border: 2px solid #f0b429; background: rgba(240,180,41,.12); }

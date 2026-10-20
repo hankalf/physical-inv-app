@@ -610,9 +610,13 @@
   function renderSystems(d) {
     const chip = $('chipSystem');
     const box = $('systemBlock');
-    if (!d || !d.self) { chip.hidden = true; box.hidden = true; return; }
+    if (!d || !d.self) { chip.hidden = true; box.hidden = true; document.documentElement.classList.remove('has-systems'); return; }
     const others = d.systems || [];
-    chip.hidden = !(others.length || d.self.role === 'linked');
+    const paired = !!(others.length || d.self.role === 'linked');
+    document.documentElement.classList.toggle('has-systems', paired);
+    if (paired) document.documentElement.dataset.systemColor = d.self.color;
+    else delete document.documentElement.dataset.systemColor;
+    chip.hidden = !paired;
     chip.textContent = d.self.name;
     chip.className = `chip system c-${d.self.color}`;
     box.hidden = !others.length;

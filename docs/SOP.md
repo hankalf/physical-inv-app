@@ -346,7 +346,14 @@ switched over from LIVE are not listed: they are LIVE's already. The log records
   TEST**. One tap moves the gun to TEST under its own name; **Back to LIVE** brings it home. The
   header always says which system the gun is on. A gun with counts still waiting to send is not
   allowed to switch until they have gone — they belong to the system they were counted in. Each
-  system keeps its own storage on the gun, so nothing mixes.
+  system keeps its own storage on the gun, so nothing mixes. With more than one system the gun's
+  header has a band of the system's color across the top, the site name in a ring of it, and the
+  current system's button in that color — green LIVE, orange TEST.
+- **Scanners are registered on LIVE only.** Register each gun, print its setup card and open its
+  link under **LIVE → Settings → Scanners**, as always. When it switches, LIVE hands the scanner
+  over and TEST makes it there under the same name and the same link; it is never registered on
+  TEST by hand (a gun registered on TEST would be a second scanner with a second link, and LIVE
+  would not know it). Reset or remove a scanner on LIVE.
 
 *What to know:*
 
