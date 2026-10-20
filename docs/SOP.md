@@ -1677,8 +1677,8 @@ one team, or all of them, with a read receipt — use **Message the floor** unde
 by shift — **1st shift 6am–2pm** and **2nd shift 2pm–10pm** side by side, the one on now marked
 by the warehouse's clock (*On now · until 2pm*; between shifts it says when the next starts).
 Each team card has its people with their department and equipment, the levels the team reaches,
-its note, and any open seat from the team sheet; under each shift, who is on that shift but not
-on a team. A team's shift is the one set on Teams & crew; a team with none set takes its
+its note, and any open seat from the team sheet — the teams and who is on them, nobody else. A
+team's shift is the one set on Teams & crew; a team with none set takes its
 people's shift when they all share one (*shift from its people*). Teams with neither sit under
 *Shift not set*. It needs no sign-in, is read-only, refreshes every half minute, and shows no
 clock-in numbers. `/crew?shift=1` or `?shift=2` pins a screen to one shift.

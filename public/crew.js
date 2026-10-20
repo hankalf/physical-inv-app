@@ -44,18 +44,13 @@
     head.append(el('h2', '', s.label));
     if (s.hours) head.append(el('span', 'hours', s.hours));
     const people = s.teams.reduce((n, t) => n + t.members.length, 0);
-    head.append(el('span', 'count', `${s.teams.length} team${s.teams.length === 1 ? '' : 's'} · ${people} ${people === 1 ? 'person' : 'people'}${s.unassigned.length ? ` · ${s.unassigned.length} not on a team` : ''}`));
+    head.append(el('span', 'count', `${s.teams.length} team${s.teams.length === 1 ? '' : 's'} · ${people} ${people === 1 ? 'person' : 'people'}`));
     if (s.on) head.append(el('span', 'onnow', 'On now'));
     box.append(head);
     const grid = el('div', 'teams');
     for (const t of s.teams) grid.append(teamCard(t));
     if (!s.teams.length) grid.append(el('div', 'empty', s.key ? `No teams on the ${s.label.toLowerCase()} yet` : ''));
     box.append(grid);
-    if (s.unassigned.length) {
-      const loose = el('div', 'loose');
-      loose.append(el('b', '', `Not on a team (${s.unassigned.length}): `), document.createTextNode(s.unassigned.map((p) => p.name).join(' · ')));
-      box.append(loose);
-    }
     return box;
   }
 
@@ -65,7 +60,7 @@
     now.append(el('b', '', d.now.shift ? 'On now: ' : ''), document.createTextNode(d.now.label + (d.now.until ? ` · until ${d.now.until}` : '')));
     const wrap = $('bShifts');
     wrap.innerHTML = '';
-    const shown = d.shifts.filter((s) => (ONLY ? s.key === ONLY : s.key || s.teams.length || s.unassigned.length));
+    const shown = d.shifts.filter((s) => (ONLY ? s.key === ONLY : s.key || s.teams.length));
     wrap.style.setProperty('--cols', String(Math.max(1, Math.min(2, shown.filter((s) => s.key).length))));
     for (const s of shown) wrap.append(shiftPanel(s));
     siteTime = d.now.time || '';

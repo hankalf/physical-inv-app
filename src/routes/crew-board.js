@@ -3,14 +3,15 @@
  *
  * Like the office board it is read-only and needs no sign-in - it goes on a
  * TV by the time clock, and nobody signs a TV in. So it carries names, teams,
- * departments and equipment, and nothing else: no clock-in numbers.
+ * departments and equipment, and nothing else: no clock-in numbers, and
+ * nobody who is not on a team.
  *
  * The site works two shifts, 1st 6am-2pm and 2nd 2pm-10pm. A team's shift is
  * what Teams & crew says it is; a team with no shift set takes its members'
  * shift when they all share one. The shift on now comes from the warehouse's
  * clock, not the browser's.
  */
-import { listTeams, listEmployees, getConfig } from './people.js';
+import { listTeams, getConfig } from './people.js';
 import { localHour, localTime } from '../util/localtime.js';
 
 export const SHIFTS = [
@@ -47,12 +48,10 @@ export function crewBoard() {
       open: t.seats.filter((s) => s.open).map((s) => ({ role: s.role || '', dept: s.dept || '' })),
     };
   });
-  const onTeam = new Set(listTeams().flatMap((t) => t.members.map((m) => m.badge)));
-  const loose = listEmployees().filter((e) => e.active && !onTeam.has(e.badge));
   const now = { ...shiftNow(), time: localTime() };     // the site's clock, so the screen and "on now" agree
+  // the teams and who is on them, nothing else: people on no team are Teams & crew's business
   const group = (key) => ({
     teams: teams.filter((t) => t.shift === key).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })),
-    unassigned: loose.filter((e) => (e.shift || '') === key).sort((a, b) => a.name.localeCompare(b.name)).map(person),
   });
   return {
     now,
@@ -60,6 +59,6 @@ export function crewBoard() {
       ...SHIFTS.map((s) => ({ key: s.key, label: s.label, hours: s.hours, on: now.shift === s.key, ...group(s.key) })),
       { key: '', label: 'Shift not set', hours: '', on: false, ...group('') },
     ],
-    people: listEmployees().filter((e) => e.active).length,
+    people: teams.reduce((n, t) => n + t.members.length, 0),
   };
 }
