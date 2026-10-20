@@ -158,7 +158,10 @@ office side as its own app (*FH Office*), with a Menu button in place of the sid
 - **Systems** (Settings → Logins & site → Systems): LIVE is the home; add TEST with its address,
   tick who may use it, and whether the scanners may switch. TEST is the app deployed again with its
   own database and three variables (`SYSTEM_NAME`, `SYSTEM_HOME_URL`, `SYSTEM_LINK_KEY`) — the steps
-  are on the card. People switch from the sidebar; scanners from the sign-on screen.
+  are on the card. People switch from the sidebar; scanners from the sign-on screen. Tick who may
+  use TEST in the **Systems** column of Supervisor logins; logins are made on LIVE only and go with
+  the person when they switch. If **Back to LIVE** says *this system's own address*, TEST's
+  `SYSTEM_HOME_URL` holds TEST's address: set it to LIVE's and redeploy TEST.
 - **Report a problem** (Settings → Scanners → What the scanners offer): the kinds of problem the
   gun offers, their reasons, and what each makes the counter scan to confirm — the bin, the pallet,
   either, or nothing. Add your own, take any off, or restore the shipped list.

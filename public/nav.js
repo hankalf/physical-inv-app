@@ -494,6 +494,8 @@
   async function switchSystem(name) {
     try {
       const out = await api.post('/api/admin/systems/handoff', { to: name, path: here + (location.hash || '') });
+      // somewhere that is this page already would do nothing at all, with no word why
+      if (new URL(out.url, location.href).host === location.host) throw new Error(`${name}'s address is set to this system's own address. An admin fixes it under Settings → Logins & site → Systems, or in the SYSTEM_HOME_URL variable on Railway.`);
       location.href = out.url;
     } catch (err) { alert(err.message); renderSystem(); }
   }

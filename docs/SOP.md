@@ -309,7 +309,16 @@ to it: it takes the people and the scanners LIVE hands over, and nothing else.
    own superadmin and paste the same two into its Systems card.
 3. On LIVE, **Systems → Add a system**: name **TEST**, TEST's Railway address, a color, and tick
    **Scanners may switch** if the guns should be able to go there. **Save**.
-4. In **Who may use each system**, tick TEST for each login that should have it. Admins always may.
+4. Say which logins may use TEST: tick **TEST** in the **Systems** column of **Supervisor logins**
+   (or in **Who may use each system** on the Systems card — the two are the same ticks). A new
+   login can be given it as it is made: *may also switch to TEST* under **Add login**. Admins
+   always may.
+
+**Logins are made on LIVE only.** Nobody needs a login on TEST: when someone switches, LIVE hands
+over who they are, their role and the pages they may use, and TEST makes or updates their login
+there to match. Change someone's role on LIVE and it applies on TEST the next time they switch.
+Signing in on TEST directly is only for its own superadmin (its Railway variables), for setting it
+up.
 
 *Switching:*
 
@@ -337,6 +346,11 @@ to it: it takes the people and the scanners LIVE hands over, and nothing else.
   address; it calls itself something other than it is listed as (match `SYSTEM_NAME` and the name
   here); or it refuses the key (copy the link key into its `SYSTEM_LINK_KEY`, with no spaces or
   quotes, and redeploy). Run it after setting TEST up, and whenever a switch fails.
+- **Back to LIVE goes nowhere, or says "this system's own address".** **Back to LIVE** and *Switch
+  to… LIVE* use one thing only: `SYSTEM_HOME_URL` on the TEST service. If it holds TEST's own
+  address the button would just reload TEST, so it says so instead, and so does TEST's Systems
+  card. Set it to LIVE's address (`https://…-prod.up.railway.app`, nothing after it) and redeploy
+  TEST. LIVE refuses, the same way, a system listed with LIVE's own address.
 
 ### Step 5 — Change the superadmin's password
 

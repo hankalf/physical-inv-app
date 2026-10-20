@@ -119,12 +119,27 @@
   }
 
   async function refreshUsers() {
-    const { users, locks = [] } = await api.json('/api/admin/users');
+    const { users, locks = [], systems = [], self = null } = await api.json('/api/admin/users');
     const lockOf = (name) => locks.find((l) => l.username === name);
+    const newSys = $('fNewSystems');
+    if (newSys) {
+      newSys.hidden = !systems.length;
+      const have = [...newSys.querySelectorAll('input')].map((b) => b.dataset.system).join('|');
+      if (have !== systems.map((x) => x.name).join('|')) {
+        newSys.replaceChildren(Object.assign(document.createElement('span'), { className: 'muted', textContent: `Signs in on ${self ? self.name : 'this system'}; may also switch to ` }));
+        for (const sy of systems) {
+          const l = Object.assign(document.createElement('label'), { className: 'cb' });
+          const b = Object.assign(document.createElement('input'), { type: 'checkbox' });
+          b.dataset.system = sy.name;
+          l.append(b, document.createTextNode(' ' + sy.name));
+          newSys.appendChild(l);
+        }
+      }
+    }
     drawPlaceLocks(locks.filter((l) => !l.username));
     const keys = (api.me && api.me.accessKeys) || [];
     table($('userTable'),
-      [{ label: 'Username' }, { label: 'Name' }, { label: 'Role' }, { label: 'May use' }, { label: 'Status' }, { label: 'Last signed in' }, { label: 'Added' }, { label: '' }],
+      [{ label: 'Username' }, { label: 'Name' }, { label: 'Role' }, { label: 'May use' }, ...(systems.length ? [{ label: 'Systems' }] : []), { label: 'Status' }, { label: 'Last signed in' }, { label: 'Added' }, { label: '' }],
       users,
       (u) => {
         const tr = document.createElement('tr');
@@ -253,6 +268,32 @@
           tdAcc.appendChild(pick);
         }
         tr.appendChild(tdAcc);
+        /* Which systems: this one always, the others ticked. Their login and what it may use come
+           with them when they switch, so nobody needs a second login on the other system. */
+        if (systems.length) {
+          const tdSys = document.createElement('td');
+          tdSys.className = 'syscell';
+          const here = Object.assign(document.createElement('label'), { className: 'cb', title: `Everyone signs in on ${self ? self.name : 'this system'}` });
+          here.append(Object.assign(document.createElement('input'), { type: 'checkbox', checked: true, disabled: true }), document.createTextNode(' ' + (self ? self.name : 'This one')));
+          tdSys.appendChild(here);
+          for (const sy of systems) {
+            const l = Object.assign(document.createElement('label'), { className: 'cb' });
+            const box = Object.assign(document.createElement('input'), { type: 'checkbox', checked: u.role === 'admin' || (u.systems || []).includes(sy.name), disabled: u.role === 'admin' || !u.active });
+            box.dataset.userSystem = sy.name;
+            l.title = u.role === 'admin' ? 'An admin may use every system' : `May ${u.name || u.username} switch to ${sy.name}?`;
+            box.onchange = async () => {
+              const want = [...tdSys.querySelectorAll('input[data-user-system]')].filter((b) => b.checked).map((b) => b.dataset.userSystem);
+              try {
+                await api.post('/api/admin/systems/access', { username: u.username, systems: want });
+                msg($('userMsg'), 'ok', `${u.name || u.username}: ${[self ? self.name : '', ...want].filter(Boolean).join(' and ')}`, want.length ? `They switch with the sidebar's Switch to…, or pick it at sign-in — no second login needed.` : '');
+                refreshSystems().catch(() => {});
+              } catch (err) { box.checked = !box.checked; msg($('userMsg'), 'err', err.message); }
+            };
+            l.append(box, document.createTextNode(' ' + sy.name));
+            tdSys.appendChild(l);
+          }
+          tr.appendChild(tdSys);
+        }
         const tdSt = document.createElement('td');
         tdSt.appendChild(u.active ? tag('active') : tag('off'));
         if (u.active && u.mustChange) {
@@ -383,6 +424,9 @@
         username: $('fNewUser').value, name: $('fNewFullName').value, email: $('fNewEmail').value,
         password: invite ? '' : $('fNewPass').value, profile: $('fNewRole').value, invite,
       });
+      const also = [...document.querySelectorAll('#fNewSystems input:checked')].map((b) => b.dataset.system);
+      if (also.length && u.role !== 'admin') await api.post('/api/admin/systems/access', { username: u.username, systems: also }).catch((err) => msg($('userMsg'), 'err', err.message));
+      for (const b of document.querySelectorAll('#fNewSystems input')) b.checked = false;
       $('fNewUser').value = ''; $('fNewFullName').value = ''; $('fNewPass').value = ''; $('fNewEmail').value = ''; $('fNewInvite').checked = false;
       if (u.invite) { clearMsg($('userMsg')); showInvite({ ...u.invite, name: u.name }); }
       else if (u.starterPassword) { clearMsg($('userMsg')); $('inviteBox').style.display = 'none'; showStarter(u.username, u.starterPassword); }
@@ -1832,9 +1876,16 @@
       drawSysRows();
       $('fSysKeyShow').value = st.key || '';
       drawSysAccess(st);
+    } else if (st.homeIsSelf) {
+      line(`The home address here, ${me.homeUrl}, is this system's own address — so Back to ${me.homeName} has nowhere to go. ${me.homeFromEnv ? 'Set SYSTEM_HOME_URL on this service in Railway' : 'Put in'} the address ${me.homeName} opens at${me.homeFromEnv ? ', and redeploy' : ''}.`);
+      status.className = 'feedback show err';
     } else {
       line(st.keySet && me.homeUrl ? `This is ${me.name}, linked to ${me.homeName} at ${me.homeUrl}. People arrive from there.` : `This is ${me.name}. Put in the home system's address and its link key so people can switch here.`);
       status.className = 'feedback show ' + (st.keySet && me.homeUrl ? 'ok' : 'warn');
+    }
+    if (home && (st.selfListed || []).length) {
+      line(`${st.selfListed.join(', ')} is listed with this system's own address — put in the address it opens at.`);
+      status.className = 'feedback show err';
     }
   }
   function drawSysRows() {
@@ -1875,7 +1926,7 @@
         box.title = u.role === 'admin' ? 'An admin may use every system' : `May ${u.name} switch to ${n}?`;
         box.onchange = async () => {
           const want = [...tr.querySelectorAll('input[data-system]')].filter((b) => b.checked).map((b) => b.dataset.system);
-          try { drawSystems(await api.post('/api/admin/systems/access', { username: u.username, systems: want })); msg($('sysMsg'), 'ok', `${u.name}: ${want.length ? want.join(', ') : `${st.self.name} only`}.`); }
+          try { drawSystems(await api.post('/api/admin/systems/access', { username: u.username, systems: want })); msg($('sysMsg'), 'ok', `${u.name}: ${want.length ? want.join(', ') : `${st.self.name} only`}.`); refreshUsers().catch(() => {}); }
           catch (err) { box.checked = !box.checked; msg($('sysMsg'), 'err', err.message); }
         };
         td.appendChild(box);

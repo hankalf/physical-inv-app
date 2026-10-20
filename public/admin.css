@@ -902,3 +902,6 @@ html:not(.signed-in) .sysbanner { display: none; }
 .foldsec.folded > h3.foldhead { margin-bottom: 0; }
 .foldsec > h3.foldhead .muted { font-weight: 400; font-size: 12.5px; }
 @media (prefers-reduced-motion: reduce) { .foldbtn span { transition: none; } }
+/* the logins table: which systems a login may switch to */
+td.syscell { white-space: nowrap; }
+td.syscell label.cb { display: inline-flex; margin: 0 10px 0 0; font-size: 13px; }

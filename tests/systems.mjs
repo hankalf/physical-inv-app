@@ -135,7 +135,7 @@ check('…which is LIVE\'s own address, where its link still holds', r.status ==
 let ck = await j(await post(BASE, '/api/admin/systems/check', { name: 'DEV' }, A));
 check('Check the link: DEV answers, is linked to this LIVE, is called DEV, and takes a hand-off', ck.ok && ck.steps.length >= 4 && ck.steps.every((x) => x.ok), JSON.stringify(ck.steps.map((x) => x.text)));
 check('…and checking used nothing up: the probe is not a sign-in', (await get(DEV, '/api/admin/users', H((await login(DEV, { username: 'DEV-ADMIN', password: 'dev-only-pass' })).token))).users.length === devLogins.users.length);
-await post(BASE, '/api/admin/systems', { systems: [{ name: 'DEV', url: DEV, color: 'orange', scanners: true }, { name: 'GHOST', url: 'http://127.0.0.1:1' }, { name: 'SELF', url: BASE }, { name: 'STAGE', url: DEV }] }, A);
+await post(BASE, '/api/admin/systems', { systems: [{ name: 'DEV', url: DEV, color: 'orange', scanners: true }, { name: 'GHOST', url: 'http://127.0.0.1:1' }, { name: 'SELF', url: BASE.includes('127.0.0.1') ? BASE.replace('127.0.0.1', 'localhost') : BASE.replace('localhost', '127.0.0.1') }, { name: 'STAGE', url: DEV }] }, A);   // LIVE again, by another name for it: a system with no home set
 ck = await j(await post(BASE, '/api/admin/systems/check', { name: 'GHOST' }, A));
 check('An address nothing answers on says so, and what to check', !ck.ok && /could not be reached/.test(ck.steps[0].text) && /running in Railway/.test(ck.steps[0].fix), JSON.stringify(ck.steps[0]));
 ck = await j(await post(BASE, '/api/admin/systems/check', { name: 'SELF' }, A));
@@ -187,6 +187,71 @@ check('No script errors', errors.length === 0, errors.join(' | '));
 await post(BASE, '/api/admin/systems', { newKey: true }, A);
 ck = await j(await post(BASE, '/api/admin/systems/check', { name: 'DEV' }, A));
 check('After a new key here, Check the link says DEV refuses it, and to copy the key into SYSTEM_LINK_KEY', !ck.ok && ck.steps.some((x) => !x.ok && /link key/.test(x.text) && /SYSTEM_LINK_KEY/.test(x.fix)), JSON.stringify(ck.steps.filter((x) => !x.ok)));
+
+/* ---- the logins table: which systems each login may switch to, ticked where the login is */
+{
+  const pg = await ctx.newPage(); pg.on('pageerror', (e) => errors.push('logins: ' + e.message));
+  pg.on('dialog', (d) => d.accept());
+  await pg.goto(`${BASE}/settings#advanced`);
+  await signIn(pg);
+  await pg.waitForSelector('#userTable td.syscell');
+  const heads = await pg.$$eval('#userTable thead th', (t) => t.map((x) => x.textContent.trim()));
+  const ticks = async (user) => pg.$$eval('#userTable tbody tr', (rows, u) => {
+    const tr = rows.find((r) => r.firstChild && r.firstChild.textContent.trim() === u);
+    return tr ? [...tr.querySelectorAll('td.syscell input')].map((b) => `${b.parentElement.textContent.trim()}:${b.checked ? 'on' : 'off'}${b.disabled ? '(fixed)' : ''}`).join(',') : 'no row';
+  }, user);
+  check('Supervisor logins has a Systems column', heads.includes('Systems'), heads.join('|'));
+  check('…LIVE always, DEV as ticked: Inventory Control has DEV, the floor supervisor not', (await ticks('INV-CTRL')) === 'LIVE:on(fixed),DEV:on' && (await ticks('FLOOR-SUP')) === 'LIVE:on(fixed),DEV:off', `${await ticks('INV-CTRL')} / ${await ticks('FLOOR-SUP')}`);
+  check('…an admin has every system, fixed', /DEV:on\(fixed\)/.test(await ticks('DANA-WHITFIELD')), await ticks('DANA-WHITFIELD'));
+  await pg.locator('#userTable tbody tr', { hasText: 'FLOOR-SUP' }).locator('input[data-user-system="DEV"]').check();
+  await pg.waitForTimeout(600);
+  const acc = (await get(BASE, '/api/admin/systems', A)).access;
+  check('Ticking DEV for a login gives it DEV', acc.find((u) => u.username === 'FLOOR-SUP').systems.join() === 'DEV');
+  check('…and the Systems card\'s own table follows', await pg.isChecked('#sysAccess tr[data-user="FLOOR-SUP"] input[data-system="DEV"]'));
+  await pg.fill('#fNewUser', 'NEW-SUP'); await pg.fill('#fNewFullName', 'New Sup');
+  check('Add login offers "may also switch to DEV"', await pg.isVisible('#fNewSystems input[data-system="DEV"]'));
+  await pg.check('#fNewSystems input[data-system="DEV"]');
+  await pg.click('#btnAddUser');
+  await pg.waitForTimeout(900);
+  check('…and a login made with it ticked may use DEV from the start', ((await get(BASE, '/api/admin/systems', A)).access.find((u) => u.username === 'NEW-SUP') || {}).systems?.join() === 'DEV');
+  await pg.close();
+}
+
+/* ---- a TEST whose way home is its own address: said, not a click that does nothing */
+r = await post(BASE, '/api/admin/systems', { systems: [{ name: 'DEV', url: DEV, color: 'orange' }, { name: 'SELF', url: BASE }] }, A);
+check('LIVE refuses a system listed with LIVE\'s own address', r.status === 400 && /own address/.test((await j(r)).error));
+{
+  const BAD_PORT = DEV_PORT + 7;
+  const BAD = `http://127.0.0.1:${BAD_PORT}`;
+  const bad = spawn(process.execPath, ['--no-warnings=ExperimentalWarning', new URL('../src/server.js', import.meta.url).pathname], {
+    env: { ...process.env, PORT: String(BAD_PORT), DB_PATH: join(mkdtempSync(join(tmpdir(), 'invbad-')), 'bad.db'), SUPERADMIN_USER: 'BAD-ADMIN', SUPERADMIN_PASSWORD: 'bad-only-pass',
+      SYSTEM_NAME: 'TEST', SYSTEM_HOME_URL: BAD, SYSTEM_LINK_KEY: KEY, SITE_TIMEZONE: 'America/New_York' },
+    stdio: ['ignore', 'ignore', 'inherit'],
+  });
+  for (let i = 0; i < 100; i++) { try { if ((await fetch(`${BAD}/api/health`)).ok) break; } catch { /* not up */ } await wait(200); }
+  const BH = H((await login(BAD, { username: 'BAD-ADMIN', password: 'bad-only-pass' })).token);
+  r = await post(BAD, '/api/admin/systems/handoff', { to: 'LIVE', path: '/admin' }, BH);
+  const err = (await j(r)).error || '';
+  check('Back to LIVE on a TEST whose SYSTEM_HOME_URL is its own address says so, and how to fix it', r.status === 409 && /own address/.test(err) && /SYSTEM_HOME_URL/.test(err), err);
+  const card = await get(BAD, '/api/admin/systems', BH);
+  check('…and its Systems card knows', card.homeIsSelf === true);
+  const bp = await ctx.newPage();
+  const said = [];
+  bp.on('dialog', (d) => { said.push(d.message()); d.dismiss(); });
+  await bp.goto(`${BAD}/settings#advanced`);
+  await bp.fill('#fUser', 'BAD-ADMIN'); await bp.fill('#fPassword', 'bad-only-pass'); await bp.click('#btnLogin');
+  await bp.waitForSelector('#systemBanner button', { timeout: 8000 }).catch(() => {});
+  await bp.click('#systemBanner button').catch(() => {});
+  await bp.waitForTimeout(800);
+  check('…the button says what is wrong instead of doing nothing', said.some((x) => /own address/.test(x)), said.join(' | '));
+  await bp.evaluate(() => window.appApi.showSub('advanced')).catch(() => {});
+  await bp.waitForTimeout(800);
+  check('…and so does the Systems card', /own address/.test(clean(await bp.textContent('#sysStatus').catch(() => ''))), clean(await bp.textContent('#sysStatus').catch(() => '')));
+  await bp.close();
+  try { bad.kill(); } catch { /* gone */ }
+}
+check('No script errors on the logins table', errors.length === 0, errors.join(' | '));
+
 await browser.close();
 stopDev();
 const passed = results.filter(Boolean).length;

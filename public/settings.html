@@ -811,7 +811,8 @@
           adjustments and downloads and nothing on teams, warehouse jobs or cycle counts; <b>Admins</b> get everything, Settings
           included — and <b>May use</b> fine-tunes it, which makes the role <b>Custom</b>. Deactivating a login keeps its history
           in the log but stops it being used. The <b>superadmin</b> is the login the site started with, set in the server's
-          environment (Railway variables); there is no shared password.
+          environment (Railway variables); there is no shared password. With a TEST system linked, <b>Systems</b> ticks which
+          ones a login may switch to — logins are made here only, and go with the person when they switch.
         </div>
         <div class="inline" style="margin-top:10px">
           <div class="auto"><label for="fNewUser">Username</label><input id="fNewUser" style="width:140px" placeholder="DANA"></div>
@@ -832,6 +833,7 @@
           <div class="auto"><button class="primary fit" id="btnAddUser">Add login</button></div>
         </div>
         <label class="cb" style="margin-top:8px"><input type="checkbox" id="fNewInvite"> Email them an invite to choose their own password, instead of a password from here</label>
+        <div class="inline" id="fNewSystems" style="margin-top:6px;gap:12px;align-items:center" hidden></div>
         <div class="hint">
           Leave the password blank and one is generated for you — read it out once, and they choose
           their own the first time they sign in. Type one instead and they still have to replace it,

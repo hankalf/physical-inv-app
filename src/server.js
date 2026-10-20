@@ -59,6 +59,17 @@ import { proxyPalletSystem, makeTicket, ticketCookie, PREFIX as PS_PREFIX } from
 import { onedriveStatus, setOnedriveConfig, startSignIn, cancelSignIn, disconnect, uploadNow, startOnedrive } from './routes/onedrive.js';
 import { gdriveStatus, setGdriveConfig, checkConnection, disconnectGdrive, uploadToGdrive, startGdrive } from './routes/gdrive.js';
 import { selfSystem, systemsConfig, saveSystems, systemsFor, systemAccess, setSystemAccess, makeTicket as makeHandoff, readTicket as readHandoff, checkTicket, checkLink, provisionUser, provisionDevice, publicSystems, otherSystems } from './routes/systems.js';
+
+/* The address a request came in on, behind Railway's proxy too: the host alone, as http and https are one site there. */
+const hostOf = (req) => String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().toLowerCase();
+const isOwnAddress = (u, req) => { try { return new URL(u).host.toLowerCase() === hostOf(req); } catch { return false; } };
+/** The Systems card's data, with the one mistake that cannot be seen from the inside: an address that is this system's own. */
+function systemsView(req) {
+  const st = { ...systemsConfig(), access: systemAccess() };
+  if (st.self.role === 'linked') st.homeIsSelf = !!st.self.homeUrl && isOwnAddress(st.self.homeUrl, req);
+  else st.selfListed = st.systems.filter((x) => isOwnAddress(x.url, req)).map((x) => x.name);
+  return st;
+}
 import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, unlockPlace, PER_LOGIN, PER_PLACE } from './routes/login-limit.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards, barcodeBook } from './routes/printing.js';
@@ -396,6 +407,7 @@ async function handleHandheld(req, res, url, m) {
     if (!to) throw httpError(404, `there is no system called ${body.to}`);
     if (!device) throw httpError(403, 'only a registered scanner can switch system - open its link from Settings → Scanners');
     if (device.practice_owner) throw httpError(403, 'a test scanner stays in the Testing Suite');
+    if (isOwnAddress(to.url, req)) throw httpError(409, `${to.name}'s address here is this system's own address - an admin sets SYSTEM_HOME_URL on this service in Railway to ${to.name}'s address`);
     if (selfSystem().role === 'linked') return sendJson(req, res, 200, { url: `${to.url}/`, to: to.name });
     if (!to.scanners) throw httpError(403, `the scanners may not switch to ${to.name} - an admin can allow it under Settings → Logins & site → Systems`);
     const t = makeHandoff(to.name, { device });
@@ -1084,19 +1096,26 @@ async function handleAdmin(req, res, url, m) {
     if (!to) throw httpError(404, `there is no system called ${body.to}`);
     if (!systemsFor(whoNow).some((s) => s.name === to.name)) throw httpError(403, `this login may not use ${to.name} - an admin can give it under Settings → Logins & site → Systems`);
     // the way home is just the home's own address: the browser still has its sign-in there
-    if (selfSystem().role === 'linked') return sendJson(req, res, 200, { url: to.url + (/^\/[a-z]*(#[\w-]*)?$/.test(String(body.path || '')) ? body.path : '/admin'), to: to.name });
+    if (selfSystem().role === 'linked') {
+      if (isOwnAddress(to.url, req)) throw httpError(409, `${to.name}'s address on this system is this system's own address (${to.url}), so there is nowhere to go back to. On this service in Railway, set SYSTEM_HOME_URL to ${to.name}'s address and redeploy.`);
+      return sendJson(req, res, 200, { url: to.url + (/^\/[a-z]*(#[\w-]*)?$/.test(String(body.path || '')) ? body.path : '/admin'), to: to.name });
+    }
+    if (isOwnAddress(to.url, req)) throw httpError(409, `${to.name} is listed with this system's own address (${to.url}) - put ${to.name}'s address in Settings → Logins & site → Systems.`);
     const t = makeHandoff(to.name, { user: whoNow, path: body.path });
     audit(actor, `switched to ${to.name}`, to.url);
     return sendJson(req, res, 200, { url: t.url, to: to.name });
   }
   if (p === '/api/admin/systems' || p.startsWith('/api/admin/systems/')) {
     if (whoNow.role !== 'admin') throw httpError(403, 'only an admin can see or change the systems');
-    if (p === '/api/admin/systems' && method === 'GET') return sendJson(req, res, 200, { ...systemsConfig(), access: systemAccess() });
+    if (p === '/api/admin/systems' && method === 'GET') return sendJson(req, res, 200, systemsView(req));
     if (p === '/api/admin/systems' && method === 'POST') {
       const body = await readJson(req);
+      const mine = (Array.isArray(body.systems) ? body.systems : []).find((x) => isOwnAddress(String(x.url || '').trim(), req));
+      if (mine) throw httpError(400, `${mine.name || 'That system'} has this system's own address (${String(mine.url).trim()}) - put its own address in, the one it opens at`);
+      if (body.homeUrl && isOwnAddress(String(body.homeUrl).trim(), req)) throw httpError(400, `that is this system's own address - the home address is the one ${selfSystem().homeName} opens at`);
       const st = saveSystems(body);
       audit(actor, body.newKey ? 'made a new link key for the systems' : 'changed the systems', [st.self.name, ...st.systems.map((s) => `${s.name} ${s.url}`)].join(' · '));
-      return sendJson(req, res, 200, { ...st, access: systemAccess() });
+      return sendJson(req, res, 200, { ...st, ...systemsView(req) });
     }
     if (p === '/api/admin/systems/check' && method === 'POST') {
       const body = await readJson(req);
@@ -1109,7 +1128,7 @@ async function handleAdmin(req, res, url, m) {
       const body = await readJson(req);
       const row = setSystemAccess(body.username, body.systems);
       audit(actor, 'changed which systems a login may use', `${row.username}: ${row.systems.join(', ') || 'this one only'}`);
-      return sendJson(req, res, 200, { ...systemsConfig(), access: systemAccess() });
+      return sendJson(req, res, 200, systemsView(req));
     }
     throw httpError(404, 'unknown systems endpoint');
   }
@@ -1123,7 +1142,15 @@ async function handleAdmin(req, res, url, m) {
   };
   if (p === '/api/admin/users' && method === 'GET') {
     requireAccountAdmin(req, url);
-    return sendJson(req, res, 200, { users: listUsers(), locks: listLocks() });
+    /* which systems each login may switch to, for the column on the logins table (the home only) */
+    const home = selfSystem().role === 'home';
+    const sys = home ? new Map(systemAccess().map((a) => [a.username, a.systems])) : new Map();
+    return sendJson(req, res, 200, {
+      users: listUsers().map((u) => (home ? { ...u, systems: sys.get(u.username) || [] } : u)),
+      locks: listLocks(),
+      systems: home ? otherSystems().map((x) => ({ name: x.name, color: x.color })) : [],
+      self: { name: selfSystem().name, color: selfSystem().color, role: selfSystem().role },
+    });
   }
   // lift a lock that wrong passwords put on a login or an address
   if (p === '/api/admin/login-locks/unlock' && method === 'POST') {
