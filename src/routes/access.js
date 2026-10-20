@@ -26,7 +26,7 @@ export const ACCESS = [
 export const TABS = {
   dashboard: [['progress', 'Progress'], ['map', 'Map'], ['teams', 'Team plan'], ['alerts', 'Alerts'], ['second', 'Second counts'], ['adjust', 'Adjustments'], ['reports', 'Reports']],
   cycle: [['today', 'Today'], ['open', 'Still open'], ['coverage', 'Coverage'], ['setup', 'Program & data']],
-  teams: [['crew', 'Crew & teams'], ['gear', 'Gear sizes'], ['rules', 'Equipment rules']],
+  teams: [['crew', 'Teams & employees'], ['gear', 'Gear sizes'], ['rules', 'Equipment rules']],
   front: [['moves', 'Pallets to move back'], ['desk', 'Move desk'], ['bins', 'Front-placed bins']],
 };
 export const TAB_KEYS = Object.entries(TABS).flatMap(([page, subs]) => subs.map(([sub]) => `${page}.${sub}`));

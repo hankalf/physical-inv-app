@@ -441,6 +441,10 @@ try {
   /* a crew card with its department and sizes open, then the Gear sizes tab */
   await desk.click('.person[data-badge="E1204"] [data-gear-edit]').catch(() => {}); await wait(400);
   { const c = await desk.$('.person[data-badge="E1204"]'); if (c) await save(c, 'teams-gear-card'); }
+  await sub('people'); await wait(800);
+  await desk.click('#peopleTable button[data-edit="E1157"]').catch(() => {}); await wait(400);
+  await saveCard(desk, '#peopleTable', 'teams-employees', 12);
+  await desk.click('#peopleTable button[data-edit="E1157"]').catch(() => {}); await wait(300);
   await sub('gear'); await wait(800);
   await saveCard(desk, '#gearTable', 'teams-gear-sizes', 8);
   await sub('crew');

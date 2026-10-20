@@ -76,6 +76,20 @@
   .gearedit label { margin: 0; font-size: 11px; }
   .gearedit input, .gearedit select { padding: 4px 7px; font-size: 12.5px; width: 100%; }
   .gearedit .full { grid-column: 1 / -1; display: flex; gap: 6px; }
+  .empform { flex-basis: 100%; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 10px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
+  .empform label { margin: 0; font-size: 11px; }
+  .empform input, .empform select { padding: 4px 7px; font-size: 12.5px; width: 100%; }
+  .empform .kitpick { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .empform .kitpick label { font-size: 12.5px; margin: 0; }
+  .empform .full { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; }
+  .empform .full .del { margin-left: auto; }
+  .person .empform { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #peopleTable td.acts { white-space: nowrap; text-align: right; }
+  #peopleTable td.acts button { margin-left: 4px; }
+  #peopleTable tr.editing > td { background: var(--surface-2); }
+  #peopleTable tr.formrow > td { background: var(--surface-2); padding-top: 0; }
+  #peopleTable .kitlist { font-size: 12px; color: var(--text-dim); }
+  #peopleTable .sizes { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
   .geartotals { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 12px; }
   .gearbox { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--surface-2); }
   .gearbox .t { font-weight: 800; display: flex; justify-content: space-between; gap: 8px; }
@@ -122,32 +136,7 @@
     </section>
 
     <section class="screen" id="scrMain">
-      <div data-sub="crew" data-sub-label="Crew &amp; teams">
-    <div class="card">
-      <h2>Crew list <span class="muted">clock in number, name, department, equipment, gear sizes</span></h2>
-      <div class="inline">
-        <div><label for="fFile">CSV or Excel file</label><input type="file" id="fFile" accept=".csv,.tsv,.txt,.xlsx,.xlsm"></div>
-        <div class="auto"><label class="cb"><input type="checkbox" id="fReplace"> Replace the whole list</label></div>
-        <div class="auto"><button class="primary" id="btnUpload">Upload</button></div>
-        <div class="auto"><a id="lnkTemplate" href="/templates/employees-template.csv" download style="color:var(--accent);font-weight:700;text-decoration:none">⬇ Sample CSV</a></div>
-        <div class="auto"><button id="btnExport">Export current list</button></div>
-      </div>
-      <div class="hint" style="margin-top:8px">
-        Columns matched by name: <b>Clock In Number</b> (also accepts Badge, Employee ID), then Name, Department, Equipment, and — if you have them — Jacket, Bibs, Boots. Equipment can be a list —
-        <code>Scissor lift; High reach</code>. Spellings like <i>forklift</i>, <i>reach truck</i>, <i>pallet jack</i> are understood.
-      </div>
-      <div class="feedback" id="uploadMsg"></div>
-      <hr>
-      <div class="inline">
-        <div class="auto"><label for="fBadge">Clock in number</label><input id="fBadge" class="sm" style="width:130px" placeholder="E1042"></div>
-        <div><label for="fName">Name</label><input id="fName" placeholder="Full name"></div>
-        <div class="auto"><label for="fDept">Department</label><input id="fDept" class="sm" placeholder="Freezer"></div>
-        <div><label for="fEquip">Equipment</label><div class="inline" id="equipPicker" style="gap:12px"></div></div>
-        <div class="auto"><button class="primary" id="btnAddPerson">Add / update</button></div>
-      </div>
-      <div class="feedback" id="personMsg"></div>
-    </div>
-
+      <div data-sub="crew" data-sub-label="Teams">
     <div class="card">
       <h2>Teams <span class="muted">drag people between the crew list and a team — or use the menu on a card</span></h2>
       <div class="inline">
@@ -203,6 +192,48 @@
       </div>
       <div class="colguide" id="colGuide-plan"></div>
       <div class="feedback" id="uploadMsg-plan"></div>
+    </div>
+      </div>
+
+      <div data-sub="people" data-sub-label="Employees">
+    <div class="card" id="crewCard">
+      <h2>Add employees <span class="muted">one at a time, or the whole crew list from a file</span></h2>
+      <div class="inline">
+        <div><label for="fFile">CSV or Excel file</label><input type="file" id="fFile" accept=".csv,.tsv,.txt,.xlsx,.xlsm"></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fReplace"> Replace the whole list</label></div>
+        <div class="auto"><button class="primary" id="btnUpload">Upload</button></div>
+        <div class="auto"><a id="lnkTemplate" href="/templates/employees-template.csv" download style="color:var(--accent);font-weight:700;text-decoration:none">⬇ Sample CSV</a></div>
+        <div class="auto"><button id="btnExport">Export current list</button></div>
+      </div>
+      <div class="hint" style="margin-top:8px">
+        Columns matched by name: <b>Clock In Number</b> (also accepts Badge, Employee ID), then Name, Department, Equipment, and — if you have them — Jacket, Bibs, Boots. Equipment can be a list —
+        <code>Scissor lift; High reach</code>. Spellings like <i>forklift</i>, <i>reach truck</i>, <i>pallet jack</i> are understood.
+      </div>
+      <div class="feedback" id="uploadMsg"></div>
+      <hr>
+      <div class="inline">
+        <div class="auto"><label for="fBadge">Clock in number</label><input id="fBadge" class="sm" style="width:130px" placeholder="E1042"></div>
+        <div><label for="fName">Name</label><input id="fName" placeholder="Full name"></div>
+        <div class="auto"><label for="fDept">Department</label><input id="fDept" class="sm" placeholder="Freezer"></div>
+        <div><label for="fEquip">Equipment</label><div class="inline" id="equipPicker" style="gap:12px"></div></div>
+        <div class="auto"><label for="fAddJacket">Jacket</label><select id="fAddJacket" class="sm" data-size="jacket"></select></div>
+        <div class="auto"><label for="fAddBibs">Bibs</label><select id="fAddBibs" class="sm" data-size="bibs"></select></div>
+        <div class="auto"><label for="fAddBoots">Boots</label><select id="fAddBoots" class="sm" data-size="boots"></select></div>
+        <div class="auto"><button class="primary" id="btnAddPerson">Add employee</button></div>
+      </div>
+      <div class="feedback" id="personMsg"></div>
+    </div>
+
+
+    <div class="card" id="peopleCard">
+      <h2>Employees <span class="chip" id="peopleChip"></span> <span class="muted">everyone on the crew list — Edit changes a person, Remove takes them off</span></h2>
+      <div class="inline">
+        <div><label for="fPeopleFind">Find</label><input id="fPeopleFind" placeholder="Name, clock in number or department"></div>
+        <div class="auto"><label for="fPeopleDept">Department</label><select id="fPeopleDept" class="sm"><option value="">Every department</option></select></div>
+        <div class="auto"><label for="fPeopleTeam">Team</label><select id="fPeopleTeam" class="sm"><option value="">Anyone</option><option value="none">Not on a team</option></select></div>
+      </div>
+      <div class="feedback" id="peopleMsg"></div>
+      <div class="scroll" style="margin-top:12px"><table id="peopleTable"></table></div>
     </div>
       </div>
 

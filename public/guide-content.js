@@ -289,10 +289,10 @@
         {
           title: 'Give the teams their aisles',
           do: 'Teams & crew → Counting plan. Add the teams, drop the crew in, and give each team its aisles in order, or press Stagger to spread them so no two teams start side by side. The gun hands out the next aisle itself.',
-          where: S('/teams', 'crew', 'Teams & crew'),
+          where: S('/teams', 'crew', 'Teams & crew → Teams'),
           watch: [
             { see: '"that aisle belongs to another team"', means: 'You are moving an aisle a team already holds.', fix: 'Take it off that team first.' },
-            { see: 'Gun: "Not signed on — see a supervisor"', means: 'A clock-in number is not on the crew list; once a crew list is loaded nobody signs on with an unknown number.', fix: 'Add the person under Teams & crew → Crew & teams; they sign on again.' },
+            { see: 'Gun: "Not signed on — see a supervisor"', means: 'A clock-in number is not on the crew list; once a crew list is loaded nobody signs on with an unknown number.', fix: 'Add the person under Teams & crew → Employees; they sign on again.' },
           ],
           ask: [
             { q: 'What does shift 1 or 2 mean on a team?', a: 'Which shift the team belongs to, so the plan can show who is on. Day, morning, am, first all mean 1; night, pm, second mean 2.' },

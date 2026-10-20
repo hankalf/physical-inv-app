@@ -88,7 +88,7 @@ export function setupState(sessionId) {
         title: 'Add the crew and the teams',
         why: 'Lets the app check a team has the equipment for the levels it is given, and check who signed on.',
         detail: crew || teams ? `${crew} on the crew list · ${teams} team(s)` : 'no crew list yet',
-        goto: { page: '/teams', sub: 'crew' }, label: 'Set them up',
+        goto: { page: '/teams', sub: 'people' }, label: 'Set them up',
       },
       {
         key: 'plan', need: 'required', done: assigned > 0,

@@ -264,9 +264,13 @@ export function listEmployees() {
     .all().map(shape);
 }
 
-export function upsertEmployee({ badge, name, dept, equipment, active = 1 }) {
+export function upsertEmployee({ badge, name, dept, equipment, active = 1, jacket, bibs, boots }, { onlyNew = false } = {}) {
   const b = norm(badge);
   if (!b) throw Object.assign(new Error('clock in number required'), { status: 400 });
+  /* Add employee is for someone new: a number already on the list is theirs, and Edit is how it changes */
+  const there = onlyNew && db.prepare('SELECT name FROM employees WHERE badge = ?').get(b);
+  if (there) throw Object.assign(new Error(`${b} is already ${there.name} on the crew list — use Edit on their row to change them`), { status: 409 });
+  if (onlyNew && !String(name || '').trim()) throw Object.assign(new Error('a name is needed'), { status: 400 });
   const known = getEquipment();
   const list = Array.isArray(equipment) ? equipment.map(norm).filter((e) => known[e]) : parseEquipment(equipment);
   db.prepare(
@@ -277,6 +281,8 @@ export function upsertEmployee({ badge, name, dept, equipment, active = 1 }) {
        equipment = excluded.equipment,
        active = excluded.active`
   ).run(b, String(name || b).trim(), String(dept || '').trim(), JSON.stringify(list), active ? 1 : 0, new Date().toISOString());
+  const sizes = Object.fromEntries(Object.entries({ jacket, bibs, boots }).filter(([, v]) => v != null && String(v).trim()));
+  if (Object.keys(sizes).length) return setGear(b, sizes);
   return getEmployee(b);
 }
 
@@ -284,6 +290,54 @@ export const getEmployee = (badge) => {
   const r = db.prepare('SELECT * FROM employees WHERE badge = ?').get(norm(badge));
   return r ? shape({ ...r, team: db.prepare('SELECT t.name FROM team_members m JOIN teams t ON t.id = m.team_id WHERE m.badge = ?').get(norm(badge))?.name }) : null;
 };
+
+/**
+ * Edit one person: any of clock-in number, name, department, equipment and
+ * sizes. A key left out is left alone. A new clock-in number moves their team
+ * place and their team-sheet seat with them; the counts already scanned keep
+ * the number they were scanned under.
+ */
+export function updateEmployee(badge, body = {}) {
+  const b = norm(badge);
+  const was = db.prepare('SELECT * FROM employees WHERE badge = ?').get(b);
+  if (!was) throw Object.assign(new Error(`${b} is not on the crew list`), { status: 404 });
+  const sets = []; const vals = [];
+  if ('name' in body) {
+    const name = String(body.name || '').trim();
+    if (!name) throw Object.assign(new Error('a name is needed'), { status: 400 });
+    sets.push('name = ?'); vals.push(name.slice(0, 80));
+  }
+  if ('dept' in body) { sets.push('dept = ?'); vals.push(String(body.dept || '').trim().slice(0, 60)); }
+  if ('equipment' in body) {
+    const known = getEquipment();
+    const list = Array.isArray(body.equipment) ? body.equipment.map(norm).filter((e) => known[e]) : parseEquipment(body.equipment);
+    sets.push('equipment = ?'); vals.push(JSON.stringify([...new Set(list)]));
+  }
+  for (const g of GEAR) if (g.key in body) { sets.push(`${g.key} = ?`); vals.push(cleanSize(g.key, body[g.key])); }
+  const next = 'badge' in body ? norm(body.badge) : b;
+  if (!next) throw Object.assign(new Error('clock in number required'), { status: 400 });
+  if (next !== b) {
+    const other = db.prepare('SELECT name FROM employees WHERE badge = ?').get(next);
+    if (other) throw Object.assign(new Error(`${next} is already ${other.name} on the crew list`), { status: 409 });
+  }
+  db.exec('BEGIN');
+  try {
+    if (sets.length) db.prepare(`UPDATE employees SET ${sets.join(', ')} WHERE badge = ?`).run(...vals, b);
+    if (next !== b) {
+      /* the badge is the key the team list hangs off: a copy under the new number, the team place moved, the old row gone */
+      db.prepare(`INSERT INTO employees (badge, name, dept, equipment, active, created_at, jacket, bibs, boots)
+                  SELECT ?, name, dept, equipment, active, created_at, jacket, bibs, boots FROM employees WHERE badge = ?`).run(next, b);
+      db.prepare('UPDATE team_members SET badge = ? WHERE badge = ?').run(next, b);
+      db.prepare('UPDATE team_seats SET badge = ? WHERE badge = ?').run(next, b);
+      db.prepare('DELETE FROM employees WHERE badge = ?').run(b);
+    }
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+  return getEmployee(next);
+}
 
 export function deleteEmployee(badge) {
   db.prepare('DELETE FROM team_members WHERE badge = ?').run(norm(badge));

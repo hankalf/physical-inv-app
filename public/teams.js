@@ -77,27 +77,20 @@
     const del = document.createElement('button');
     del.className = 'sm ghost del'; del.textContent = 'Remove'; del.title = `Remove ${e.name} from the crew list`;
     del.style.marginTop = '6px'; del.style.width = '100%';
-    del.onclick = async () => {
-      if (!confirm(`Remove ${e.name} from the crew list?`)) return;
-      try { await apiJson(`/api/admin/people/employees/${encodeURIComponent(e.badge)}`, { method: 'DELETE' }); await refresh(); }
-      catch (err) { msg($('personMsg'), 'err', err.message); }
-    };
+    del.onclick = () => removeEmployee(e, $('teamMsg'));
     right.append(sel);
-    /* department and sizes, on the card itself: opened under the name, saved in one go */
-    if (api.canTab('/teams', 'gear')) {
-      const edit = document.createElement('button');
-      edit.className = 'sm'; edit.textContent = 'Dept & sizes'; edit.title = `Department and gear sizes for ${e.name}`;
-      edit.style.marginTop = '6px'; edit.style.width = '100%';
-      edit.dataset.gearEdit = e.badge;
-      edit.onclick = () => {
-        const open = div.querySelector('.gearedit');
-        if (open) { open.remove(); div.draggable = true; return; }
-        div.draggable = false;                      // typing in a box should not start a drag
-        div.appendChild(gearEditor(e, () => { div.draggable = true; }));   // under the whole card, not squeezed beside the menu
-      };
-      right.appendChild(edit);
-    }
-    right.appendChild(del);
+    /* everything about the person, on the card itself: opened under the name, saved in one go */
+    const edit = document.createElement('button');
+    edit.className = 'sm'; edit.textContent = 'Edit'; edit.title = `Edit ${e.name}: clock in number, name, department, equipment, sizes`;
+    edit.style.marginTop = '6px'; edit.style.width = '100%';
+    edit.dataset.gearEdit = e.badge;
+    edit.onclick = () => {
+      const open = div.querySelector('.empform');
+      if (open) { open.remove(); div.draggable = true; return; }
+      div.draggable = false;                        // typing in a box should not start a drag
+      div.appendChild(employeeForm(e, $('teamMsg'), () => { div.draggable = true; }));   // under the whole card, not squeezed beside the menu
+    };
+    right.append(edit, del);
 
     div.append(left, right);
     return div;
@@ -135,34 +128,135 @@
     inp.dataset.gear = 'dept';
     return inp;
   }
-  function gearEditor(e, done) {
+  /* One form for a person, wherever they are edited - their card on Teams,
+     or their row under Employees: every field, saved in one go. */
+  function employeeForm(e, msgBox, done) {
     const box = document.createElement('div');
-    box.className = 'gearedit';
+    box.className = 'empform gearedit';
+    box.dataset.badge = e.badge;
     const field = (label, el) => {
       const w = document.createElement('div');
       w.append(Object.assign(document.createElement('label'), { textContent: label }), el);
       return w;
     };
+    const badge = Object.assign(document.createElement('input'), { value: e.badge, autocomplete: 'off' });
+    badge.dataset.f = 'badge';
+    const name = Object.assign(document.createElement('input'), { value: e.name, autocomplete: 'off' });
+    name.dataset.f = 'name';
     const dept = deptInput(e.dept);
     const sels = GEAR_KEYS.map(([k]) => sizeSelect(k, e[k]));
-    box.append(field('Department', dept), field('Jacket', sels[0]), field('Bibs (overalls)', sels[1]), field('Boots', sels[2]));
+    const kit = document.createElement('div');
+    kit.className = 'kitpick';
+    for (const [key, label] of Object.entries(state.config.equipment)) {
+      if (key === 'FOOT') continue;
+      const l = document.createElement('label'); l.className = 'cb';
+      const c = Object.assign(document.createElement('input'), { type: 'checkbox', value: key, checked: e.equipment.includes(key) });
+      l.append(c, document.createTextNode(' ' + label));
+      kit.appendChild(l);
+    }
+    if (!kit.children.length) kit.append(Object.assign(document.createElement('span'), { className: 'muted', textContent: 'No equipment set up — Equipment rules' }));
+    box.append(field('Clock in number', badge), field('Name', name), field('Department', dept),
+      field('Jacket', sels[0]), field('Bibs (overalls)', sels[1]), field('Boots', sels[2]));
+    box.append(Object.assign(document.createElement('label'), { textContent: 'Equipment', style: 'grid-column:1/-1;margin-bottom:-4px' }), kit);
     const row = document.createElement('div'); row.className = 'full';
     const save = Object.assign(document.createElement('button'), { className: 'sm primary', textContent: 'Save' });
     const cancel = Object.assign(document.createElement('button'), { className: 'sm ghost', textContent: 'Cancel' });
+    const del = Object.assign(document.createElement('button'), { className: 'sm ghost del', textContent: 'Remove', title: `Remove ${e.name} from the crew list` });
     save.onclick = async () => {
+      const newBadge = norm(badge.value);
+      if (newBadge && newBadge !== e.badge && !confirm(`Change ${e.name}'s clock in number from ${e.badge} to ${newBadge}? Counts already scanned keep ${e.badge}.`)) return;
       try {
-        const body = { dept: dept.value };
+        const body = { badge: badge.value, name: name.value, dept: dept.value, equipment: [...kit.querySelectorAll('input:checked')].map((c) => c.value) };
         GEAR_KEYS.forEach(([k], i) => { body[k] = sels[i].value; });
-        const saved = await postJson(`/api/admin/people/employees/${encodeURIComponent(e.badge)}/gear`, body);
-        msg($('personMsg'), 'ok', `${saved.name} saved`, [saved.dept || 'No department', ...GEAR_KEYS.map(([k, l]) => `${l} ${saved[k] || '—'}`)].join(' · '));
+        const saved = await postJson(`/api/admin/people/employees/${encodeURIComponent(e.badge)}`, body);
+        msg(msgBox, 'ok', `${saved.name} saved`, [saved.badge, saved.dept || 'No department', `reaches ${levelsLabel(saved.reach)}`, ...GEAR_KEYS.map(([k, l]) => `${l} ${saved[k] || '—'}`)].join(' · '));
+        editing = '';
         await refresh();
-      } catch (err) { msg($('personMsg'), 'err', err.message); }
+      } catch (err) { msg(msgBox, 'err', `${e.name}: ${err.message}`); }
     };
-    cancel.onclick = () => { box.remove(); done(); };
-    row.append(save, cancel);
+    cancel.onclick = () => { box.remove(); editing = ''; done(); };
+    del.onclick = () => removeEmployee(e, msgBox);
+    for (const inp of [badge, name, dept]) inp.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') save.click(); if (ev.key === 'Escape') cancel.click(); });
+    row.append(save, cancel, del);
     box.appendChild(row);
+    setTimeout(() => name.focus(), 0);
     return box;
   }
+  async function removeEmployee(e, msgBox) {
+    const on = e.team ? ` They come off team ${e.team}.` : '';
+    if (!confirm(`Remove ${e.name} (${e.badge}) from the crew list?${on} Counts they already scanned stay as they are.`)) return;
+    try {
+      await apiJson(`/api/admin/people/employees/${encodeURIComponent(e.badge)}`, { method: 'DELETE' });
+      msg(msgBox, 'ok', `${e.name} removed from the crew list`);
+      editing = '';
+      await refresh();
+    } catch (err) { msg(msgBox, 'err', err.message); }
+  }
+
+  /* The Employees tab: everyone on the crew list, whatever team they are on,
+     with Edit and Remove on every row. */
+  let editing = '';                                  // the badge whose row is open for editing
+  function renderPeople() {
+    const depts = [...new Set(state.employees.map((e) => (e.dept || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const dsel = $('fPeopleDept');
+    if (dsel.dataset.have !== depts.join('|')) {
+      const was = dsel.value;
+      dsel.dataset.have = depts.join('|');
+      dsel.innerHTML = '<option value="">Every department</option><option value="-">No department</option>';
+      for (const d of depts) dsel.append(Object.assign(document.createElement('option'), { value: d, textContent: d }));
+      dsel.value = depts.includes(was) || was === '-' ? was : '';
+    }
+    const tsel = $('fPeopleTeam');
+    const teamsHave = state.teams.map((t) => t.name).join('|');
+    if (tsel.dataset.have !== teamsHave) {
+      const was = tsel.value;
+      tsel.dataset.have = teamsHave;
+      tsel.innerHTML = '<option value="">Anyone</option><option value="none">Not on a team</option>';
+      for (const t of state.teams) tsel.append(Object.assign(document.createElement('option'), { value: t.name, textContent: 'Team ' + t.name }));
+      tsel.value = [...tsel.options].some((o) => o.value === was) ? was : '';
+    }
+    const q = norm($('fPeopleFind').value);
+    const d = dsel.value; const t = tsel.value;
+    const rows = state.employees.filter((e) => (!q || norm(e.name).includes(q) || norm(e.badge).includes(q) || norm(e.dept).includes(q))
+      && (!d || (d === '-' ? !e.dept : e.dept.trim() === d))
+      && (!t || (t === 'none' ? !e.team : e.team === t)));
+    const n = state.employees.length;
+    $('peopleChip').textContent = rows.length === n ? `${n} ${n === 1 ? 'person' : 'people'}` : `${rows.length} of ${n}`;
+    const COLS = [{ label: 'Clock in number' }, { label: 'Name' }, { label: 'Department' }, { label: 'Team' }, { label: 'Equipment' }, { label: 'Jacket · Bibs · Boots' }, { label: '' }];
+    window.appUi.table('peopleTable', COLS, rows, (e) => {
+      const tr = document.createElement('tr');
+      tr.dataset.badge = e.badge;
+      const td = (text, cls) => { const c = document.createElement('td'); c.textContent = text; if (cls) c.className = cls; tr.appendChild(c); return c; };
+      td(e.badge); td(e.name);
+      const dc = document.createElement('td'); dc.appendChild(deptChip(e.dept)); tr.appendChild(dc);
+      td(e.team ? 'Team ' + e.team : '—');
+      td(e.equipment.length ? e.equipment.map(kitName).join(', ') : 'on foot', 'kitlist');
+      td(GEAR_KEYS.some(([k]) => e[k]) ? GEAR_KEYS.map(([k]) => e[k] || '—').join(' · ') : '—', 'sizes');
+      const acts = document.createElement('td'); acts.className = 'acts';
+      const edit = Object.assign(document.createElement('button'), { className: 'sm', textContent: editing === e.badge ? 'Close' : 'Edit', title: `Edit ${e.name}` });
+      edit.dataset.edit = e.badge;
+      edit.onclick = () => { editing = editing === e.badge ? '' : e.badge; renderPeople(); };
+      const del = Object.assign(document.createElement('button'), { className: 'sm ghost del', textContent: 'Remove', title: `Remove ${e.name} from the crew list` });
+      del.dataset.remove = e.badge;
+      del.onclick = () => removeEmployee(e, $('peopleMsg'));
+      acts.append(edit, del);
+      tr.appendChild(acts);
+      if (editing !== e.badge) return tr;
+      /* the open row: its form in a row of its own under it */
+      tr.className = 'editing';
+      const frag = document.createDocumentFragment();
+      const formRow = document.createElement('tr'); formRow.className = 'formrow';
+      const cell = document.createElement('td'); cell.colSpan = COLS.length;
+      cell.appendChild(employeeForm(e, $('peopleMsg'), () => renderPeople()));
+      formRow.appendChild(cell);
+      frag.append(tr, formRow);
+      return frag;
+    }, state.employees.length ? 'Nobody matches.' : 'Nobody on the crew list yet — add someone above, or upload the list.');
+  }
+  $('fPeopleFind').oninput = () => renderPeople();
+  $('fPeopleFind').onfocus = () => renderPeople();     // a search hit fills it in and focuses it
+  $('fPeopleDept').onchange = () => renderPeople();
+  $('fPeopleTeam').onchange = () => renderPeople();
 
   /* The Gear sizes tab: everyone in a table, a size saved the moment it is
      picked, and the totals that an order is placed from. */
@@ -244,7 +338,7 @@
       dept.onchange = () => save(dept, 'dept');
       sels.forEach((s, i) => { s.onchange = () => save(s, GEAR_KEYS[i][0]); });
       return tr;
-    }, missingOnly ? 'Everyone has all three sizes.' : 'Nobody on the crew list yet — add people under Crew & teams.');
+    }, missingOnly ? 'Everyone has all three sizes.' : 'Nobody on the crew list yet — add people under Employees.');
   }
   let stale = false;
   $('fGearDept').onchange = () => { gearDept = $('fGearDept').value; loadGear().catch((err) => msg($('gearMsg'), 'err', err.message)); };
@@ -384,6 +478,13 @@
     renderEquipPicker();
     renderRules();
     renderReachTable();
+    renderPeople();
+    for (const sel of document.querySelectorAll('#crewCard select[data-size]')) {
+      if (sel.options.length) continue;
+      const fresh = sizeSelect(sel.dataset.size, '');
+      sel.append(...fresh.options);
+      sel.value = '';
+    }
   }
 
   function renderEquipPicker() {
@@ -509,14 +610,19 @@
   $('btnAddPerson').onclick = async () => {
     try {
       const equipment = [...$('equipPicker').querySelectorAll('input:checked')].map((i) => i.value);
-      const e = await postJson('/api/admin/people/employees', {
+      const e = await postJson('/api/admin/people/employees?new=1', {
         badge: $('fBadge').value, name: $('fName').value, dept: $('fDept').value, equipment,
+        jacket: $('fAddJacket').value, bibs: $('fAddBibs').value, boots: $('fAddBoots').value,
       });
-      msg($('personMsg'), 'ok', `${e.name} saved`, `Reaches ${levelsLabel(e.reach)}.`);
+      msg($('personMsg'), 'ok', `${e.name} added`, `${e.badge}${e.dept ? ' · ' + e.dept : ''} · reaches ${levelsLabel(e.reach)}.`);
       $('fBadge').value = ''; $('fName').value = '';
+      for (const id of ['fAddJacket', 'fAddBibs', 'fAddBoots']) $(id).value = '';
+      for (const c of $('equipPicker').querySelectorAll('input:checked')) c.checked = false;
       await refresh();
+      $('fBadge').focus();
     } catch (err) { msg($('personMsg'), 'err', err.message); }
   };
+  $('fName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnAddPerson').click(); });
   $('fBadge').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('fName').focus(); });
 
   $('btnAddTeam').onclick = async () => {

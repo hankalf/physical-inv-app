@@ -24,7 +24,7 @@
     '/admin': [['progress', 'Progress'], ['map', 'Map'], ['teams', 'Team plan'], ['alerts', 'Alerts'], ['second', 'Second counts'], ['adjust', 'Adjustments'], ['reports', 'Reports']],
     '/full': [['counts', 'Counts'], ['new', 'New count'], ['setup', 'Set-up']],
     '/cycle': [['today', 'Today'], ['open', 'Still open'], ['coverage', 'Coverage'], ['setup', 'Program & data']],
-    '/teams': [['crew', 'Crew & teams'], ['gear', 'Gear sizes'], ['rules', 'Equipment rules']],
+    '/teams': [['crew', 'Teams'], ['people', 'Employees'], ['gear', 'Gear sizes'], ['rules', 'Equipment rules']],
     '/settings': [['start', 'Count setup'], ['lists', 'Lists & racking'], ['gun', 'Scanners'], ['erp', 'Integrations'], ['backups', 'Backups & log'], ['advanced', 'Logins & site']],
     '/front': [['moves', 'Pallets to move back'], ['desk', 'Move desk'], ['bins', 'Front-placed bins']],
     '/missing': [],
@@ -306,6 +306,8 @@
   };
   /* A tab of a page: the whole page, or that tab by name. Pages without tabs
      in the list (Settings, the Testing Suite) are all or nothing. */
+  /* a tab that is part of another's access tick: the Employees list is the crew's */
+  const TAB_SAME = { '/teams#people': 'crew' };
   api.canTab = (href, sub) => {
     if (!pageOn(href) || !subOn(href, sub)) return false;
     const page = PAGE_KEY[href] || '';
@@ -313,7 +315,7 @@
     if (page === 'admin' || page === 'full') return api.can(page);    // no tabs of their own in the access list
     const me = api.me;
     if (!me || me.role === 'admin' || !Array.isArray(me.access)) return true;
-    return me.access.includes(page) || me.access.includes(`${page}.${sub}`);
+    return me.access.includes(page) || me.access.includes(`${page}.${TAB_SAME[`${href}#${sub}`] || sub}`);
   };
   const mayOpen = (href) => pageOn(href) && (!PAGE_KEY[href] || api.can(PAGE_KEY[href]));
 
@@ -1042,8 +1044,8 @@
     ['Labels to replace', '/admin', 'reports', 'label barcode unreadable relabel print rack tag damaged'],
     ['Printable count sheets', '/admin', 'reports', 'print paper count sheet blind auditor pen', 'sheetsCard'],
     ['Cycle count program', '/cycle', '', 'cycle batch schedule daily weekly oldest coverage program'],
-    ['Crew list and equipment', '/teams', 'crew', 'crew employee badge clock in number people roster equipment forklift scissor reach'],
-    ['Teams and who is on them', '/teams', 'teams', 'team member crew drag assign people'],
+    ['Employees: add, edit or remove someone', '/teams', 'people', 'employee employees crew list add new person edit change rename remove delete leaver starter badge clock in number people roster department equipment forklift scissor reach upload', 'peopleCard'],
+    ['Teams and who is on them', '/teams', 'crew', 'team member crew drag assign people'],
     ['Gear sizes: jackets, bibs, boots', '/teams', 'gear', 'gear sizes jacket coat bibs overalls boots shoe size order freezer ppe department export totals'],
     ['Level rules for equipment', '/teams', 'rules', 'level rules reach equipment which levels forklift high reach'],
     ['Count setup checklist', '/settings', 'start', 'getting started count setup checklist setup first time what next'],

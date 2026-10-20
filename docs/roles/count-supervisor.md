@@ -41,12 +41,14 @@ control's.
 
 ## 2 — Teams, crew and the counting plan
 
-**Teams & crew → Crew & teams.**
+**Teams & crew → Employees** and **Teams & crew → Teams.**
 
-- **Crew**: every counter with their clock-in number, name, department and shift. Once this
-  list is loaded, a gun refuses to sign on with a clock-in number that is not on it, and tells
-  the counter to see a supervisor: add them here and they sign on again. The
-  list uploads from a file or is typed; **Employees CSV** downloads it.
+- **Employees**: every counter with their clock-in number, name, department, equipment and sizes.
+  Once this list is loaded, a gun refuses to sign on with a clock-in number that is not on it, and
+  tells the counter to see a supervisor: **Add employee** and they sign on again. Every row has
+  **Edit** (any field, the clock-in number too — their team goes with them) and **Remove** (off the
+  list and off their team; their counts stay). The list also uploads from a file; **Export current
+  list** downloads it.
 - **Teams**: a number, a shift (1 or 2; *day*, *am*, *first* read as 1, *night*, *pm*,
   *second* as 2) and the people on it. Two people with one gun is the usual team; a team of
   one is fine.
@@ -55,7 +57,7 @@ control's.
   crew list go on the team; a blank name is an open seat (Production, on the day) and its machine
   still counts toward the team's reach. Names not on the crew list yet are marked on the card.
 - **Departments and gear sizes**: each card shows the person's department as a chip and their
-  jacket, bibs and boots sizes; **Dept & sizes** on the card changes them. **Gear sizes** (its own
+  jacket, bibs and boots sizes; **Edit** on the card changes them, or anything else about the person. **Gear sizes** (its own
   tab) is everyone in one table — pick a size and it saves — with the total of each size above
   it, a filter for people missing a size, and **Export names and sizes**: an Excel workbook of
   names and sizes, grand totals and totals by department, for the order.

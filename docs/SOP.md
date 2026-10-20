@@ -988,7 +988,34 @@ Teams & crew (a team with nobody on it is given every level), and the **shift**.
 
 ![](images/teams-and-crew.png)
 
-*Teams &amp; crew (`/teams`): the crew list and who is on which team. Equipment is what decides which levels a team can be sent to.*
+*Teams &amp; crew (`/teams`) → Teams: who is on which team. Equipment is what decides which levels a team can be sent to.*
+
+**Employees: add, edit, remove.** *Teams & crew → Employees* is the crew list itself.
+
+- **Add employee** — type the **clock-in number** and **name**; the department, equipment and
+  jacket, bibs and boots sizes are optional. Press **Add employee** (or Enter in the name box) and
+  the form clears for the next person. A clock-in number that is already on the list is refused,
+  with the name it belongs to — use **Edit** on that person instead.
+- **The whole list from a file** — the same card uploads a CSV or Excel crew list
+  ([Appendix A](#appendix-a--file-column-reference)); **Replace the whole list** clears it first.
+  **Export current list** downloads it.
+- **Edit** — every row of the **Employees** table has **Edit**: it opens the person's clock-in
+  number, name, department, equipment and sizes under the row; **Save** keeps all of it. A new
+  clock-in number moves their team and their team-sheet seat with them (it asks first); counts
+  already scanned keep the number they were scanned under. Their card on the **Teams** tab has the
+  same **Edit**.
+- **Remove** — on the row, on their card, or inside the Edit form. It asks first, takes them off
+  the crew list and off their team; the counts they scanned stay as they are. A removed clock-in
+  number can no longer sign on to a scanner.
+- **Find**, **Department** (or *No department*) and **Team** (or *Not on a team*) narrow the
+  table. A search for a person's name in the search box lands on their row.
+
+Every add, edit and removal is in the log (Settings → Backups & log) with who made it and what
+changed.
+
+![](images/teams-employees.png)
+
+*Teams &amp; crew → Employees: everyone on the crew list, with Edit and Remove on every row — here one row open for editing.*
 
 **The team sheet.** *Teams & crew → Teams → Upload the team sheet* takes the sheet the floor already
 keeps, one row per seat on each team: **Team #**, **Department**, **Employee**, **Equipment** (and a
@@ -1007,7 +1034,7 @@ keeps, one row per seat on each team: **Team #**, **Department**, **Employee**, 
   on the sheet is made (or brought up to date) with that shift and a note saying what it is.
 - **A named person on the crew list goes on the team** — matched by clock-in number when the sheet
   has one, else by name. A name that is not on the crew list yet stays on the card, marked *not on
-  the crew list*: add their clock-in number under Crew list and upload the sheet again.
+  the crew list*: add them under Employees and upload the sheet again.
 - **A blank name is an open seat** — Production sends someone on the day. Its equipment still
   counts toward what the team can reach: the truck is the team's either way.
 - **The equipment words are read as the floor writes them**: *Dock Stocker* is the dock truck,
@@ -1032,12 +1059,12 @@ dashboard, so the 2nd-shift lead sees only their crews.
 
 **Departments and gear sizes.** Every crew card shows the person's **department** as a blue chip
 beside their name (*No department* when it is blank), and their **jacket**, **bibs (overalls)**
-and **boots** sizes under their equipment. **Dept & sizes** on the card opens a small form for the
-four of them; **Save** keeps them. The department filter above the crew list uses the same field.
+and **boots** sizes under their equipment. **Edit** on the card opens the same form as the
+Employees table; **Save** keeps it. The department filter above the teams uses the same field.
 
 ![](images/teams-gear-card.png)
 
-*A crew card with Dept & sizes open: department, jacket, bibs and boots, saved in one go.*
+*A crew card with Edit open: clock-in number, name, department, sizes and equipment, saved in one go.*
 
 **Teams & crew → Gear sizes** is everyone at once, for ordering:
 
@@ -1918,7 +1945,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | A gun does not offer the cycle count, Front2Back or Not in Location | That job is unticked under Settings → Scanners → What the scanners offer | Deliberate during a wall-to-wall; tick it back on when the count is over |
 | A gun offers Front2Back but says *Nothing waiting to move right now* | The job is ticked and the move list is empty | Normal: build a move list under Front bins, or untick the job |
 | A count is missing from the picker | The login may not work that kind of count | A login without the Cycle counts page sees no cycle count; a cycle counter sees no full count. An admin adds the page under Supervisor logins |
-| Gun: *Not signed on — see a supervisor* (*E9999 is not on the crew list*) | That clock-in number is not on the crew list | Add the person under Teams & crew → Crew & teams, then they sign on again. Once a crew list is loaded, nobody signs on with a number the site does not know (the Testing Suite's practice gun is exempt) |
+| Gun: *Not signed on — see a supervisor* (*E9999 is not on the crew list*) | That clock-in number is not on the crew list | Add the person under Teams & crew → Employees, then they sign on again. Once a crew list is loaded, nobody signs on with a number the site does not know (the Testing Suite's practice gun is exempt) |
 | You do not know what a message means | The gun or the dashboard said something unfamiliar | Paste it into **User guide → Ask the guide**: it knows every message the gun and the server can show, with the fix. A new starter should begin at the guide's *Your first day* |
 | You cannot find where something is set | The app has four pages and twenty-odd cards | Type what you would call it into the search box at the top of the sidebar — *"upload bin list"*, *"keyboard"*, *"approve"* — and the **Go to** hits take you straight there. **/** puts the cursor in it |
 | Not sure whether a gun has the latest version | — | The sign-on screen's bottom line reads *"App build a1b2c3d4e5f6 on the server — this scanner is up to date"*. Compare it across two guns, or against a fresh reload |

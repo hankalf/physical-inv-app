@@ -119,7 +119,7 @@ sign-in covers all of them.
 | **Dashboard** (`/admin`) | Progress (with the clock on the count: time on the clock since the first sign-on, downtime, counting time, pace and *done about*, ticking; each team's downtime and lines an hour) · Map · Team plan · Alerts · Second counts · Adjustments (with *Entered in the ERP*: mark lines keyed into the ERP by hand, from the table or by uploading the ERP worksheet back with its In ERP column filled, so nothing is keyed twice) · Reports — the live view of the count in the picker |
 | **Full Counts** (`/full`) | Counts · New count · Set-up — every wall-to-wall, open and closed; which one the scanners land on; start one; what it still needs |
 | **Cycle counts** (`/cycle`) | Today · Still open · Coverage · Program & data |
-| **Teams & crew** (`/teams`) | Crew & teams · Equipment rules |
+| **Teams & crew** (`/teams`) | Teams · Employees · Gear sizes · Equipment rules |
 | **Settings** (`/settings`) | Count setup · Lists & racking · Scanners · Integrations · Backups & log · Logins & site |
 | **Front bins** (`/front`) | Pallets to move back · Move desk · Front-placed bins. The gun has the same desk: Front2Back at sign-on with a badge alone, pick the aisle, the pallet and its two bins, the pallet system framed under them (plain, or through this app so its sign-in sticks), Moved — next |
 | **Not in Location** (`/missing`) | the list, and a find desk; on the gun, Not in Location at sign-on with a badge alone, the aisle it was last seen in, the pallet system framed under the strip, Found — next |
@@ -169,7 +169,13 @@ A separate page for the roster, on the same sign-in.
 **Upload the crew list** (CSV or Excel): `Badge` (required), `Name`, `Department`,
 `Equipment`. Equipment can be a list — `Scissor lift; High reach` — and common spellings
 (*forklift*, *reach truck*, *pallet jack*, *walkie*) are understood; anything unrecognised
-is reported rather than silently dropped. People can also be added one at a time.
+is reported rather than silently dropped. Optional `Jacket`, `Bibs` and `Boots` columns carry gear sizes.
+
+**Employees** is the crew list as a table: **Add employee** for one person at a time, and on every
+row **Edit** (clock-in number, name, department, equipment, sizes — a new number takes the
+person's team with them) and **Remove** (off the list and off their team; their counts stay).
+**Gear sizes** adds up jackets, bibs and boots by size and exports names, sizes and grand totals
+to Excel.
 
 **Teams** are created here and people are **dragged** between the crew list and a team
 card (every card also has a menu, for a tablet). Or **upload the team sheet** — `Team #`,

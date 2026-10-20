@@ -44,7 +44,7 @@ import {
 } from './routes/recounts.js';
 import { generateBatch, previewBatch, binList, listBatches, deleteBatch, coverage, runSchedules, STRATEGIES, levelsOnOpenTasks } from './routes/cycles.js';
 import {
-  listEmployees, upsertEmployee, setGear, gearReport, deleteEmployee, importEmployees, importHelpers,
+  listEmployees, upsertEmployee, updateEmployee, setGear, gearReport, deleteEmployee, importEmployees, importHelpers,
   listTeams, createTeam, deleteTeam, setTeamShift, assignMember, getConfig, setConfig, getEmployee,
   crewCheck, crewShortfall, importTeamSheet,
 } from './routes/people.js';
@@ -1184,7 +1184,18 @@ async function handleAdmin(req, res, url, m) {
   }
   if (p === '/api/admin/people/employees' && method === 'POST') {
     const body = await readJson(req);
-    return sendJson(req, res, 200, upsertEmployee(body));
+    const onlyNew = url.searchParams.get('new') === '1';
+    const e = upsertEmployee(body, { onlyNew });
+    if (onlyNew) audit(actor, 'added an employee', `${e.badge} ${e.name}${e.dept ? ' · ' + e.dept : ''}`);
+    return sendJson(req, res, 200, e);
+  }
+  if ((m = p.match(/^\/api\/admin\/people\/employees\/(?!import$)([^/]+)$/)) && method === 'POST') {   // not the crew-list upload
+    const before = getEmployee(decodeURIComponent(m[1]));
+    const e = updateEmployee(decodeURIComponent(m[1]), await readJson(req));
+    const changed = before ? ['badge', 'name', 'dept', 'jacket', 'bibs', 'boots'].filter((k) => before[k] !== e[k]).map((k) => `${k} ${before[k] || '-'} → ${e[k] || '-'}`) : [];
+    if (before && before.equipment.join() !== e.equipment.join()) changed.push(`equipment ${before.equipment.join('; ') || 'on foot'} → ${e.equipment.join('; ') || 'on foot'}`);
+    audit(actor, 'edited an employee', `${e.badge} ${e.name}${changed.length ? ': ' + changed.join(', ') : ' (no change)'}`);
+    return sendJson(req, res, 200, e);
   }
   if (p === '/api/admin/people/employees/import' && method === 'POST') {
     const text = await readBody(req);
@@ -1207,7 +1218,10 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, gearReport({ dept: url.searchParams.get('dept') || '' }));
   }
   if ((m = p.match(/^\/api\/admin\/people\/employees\/([^/]+)$/)) && method === 'DELETE') {
-    return sendJson(req, res, 200, { deleted: deleteEmployee(decodeURIComponent(m[1])) });
+    const gone = getEmployee(decodeURIComponent(m[1]));
+    const deleted = deleteEmployee(decodeURIComponent(m[1]));
+    if (deleted && gone) audit(actor, 'removed an employee', `${gone.badge} ${gone.name}${gone.team ? ` (was on team ${gone.team})` : ''}`);
+    return sendJson(req, res, 200, { deleted });
   }
   if (p === '/api/admin/people/teams' && method === 'POST') {
     const body = await readJson(req);

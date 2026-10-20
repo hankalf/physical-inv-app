@@ -179,7 +179,7 @@ export function searchAll(sessionId, rawQ) {
     return {
       title: `${p.name} · ${p.badge}`,
       detail: [p.dept, p.teams ? `team ${p.teams}` : 'no team today', kit.join(', '), p.active ? '' : 'inactive'].filter(Boolean).join(' · '),
-      goto: { page: '/teams', sub: 'crew' },
+      goto: { page: '/teams', sub: 'people', focus: 'fPeopleFind', value: p.badge },   // their row, with Edit and Remove
     };
   }));
 
