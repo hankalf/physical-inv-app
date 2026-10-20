@@ -7,6 +7,7 @@ The full manual is [docs/SOP.md](../SOP.md); the procedure for each job is under
 
 | Guide | For | PDF |
 |---|---|---|
+| [Your first full count, start to finish](first-full-count.md) | Whoever sets the site up and runs its first wall-to-wall | [PDF](first-full-count.pdf) |
 | [Second and third counts](second-and-third-counts.md) | Supervisors, inventory control | [PDF](second-and-third-counts.pdf) |
 | [The ERP upload, an aisle at a time](erp-upload-by-aisle.md) | Inventory control | [PDF](erp-upload-by-aisle.pdf) |
 | [Employees, teams and gear sizes](employees-teams-and-gear.md) | Count supervisors, whoever keeps the crew list | [PDF](employees-teams-and-gear.pdf) |
@@ -14,11 +15,12 @@ The full manual is [docs/SOP.md](../SOP.md); the procedure for each job is under
 
 ## For users
 
-The same four without anything about setting the system up — no Railway, no Settings, no access
+The same guides without anything about setting the system up — no Railway, no Settings, no access
 lists: just how it works for the people using it day to day.
 
 | Guide | For | PDF |
 |---|---|---|
+| [Your first full count — how it works](for-users/first-full-count.md) | Count supervisors, inventory control and counters new to the app | [PDF](for-users/first-full-count.pdf) |
 | [Second and third counts — how they work](for-users/second-and-third-counts.md) | Counters, count supervisors, inventory control | [PDF](for-users/second-and-third-counts.pdf) |
 | [The ERP upload, an aisle at a time — how it works](for-users/erp-upload-by-aisle.md) | Inventory control | [PDF](for-users/erp-upload-by-aisle.pdf) |
 | [Employees, teams and gear sizes — how it works](for-users/employees-teams-and-gear.md) | Count supervisors, whoever keeps the crew list | [PDF](for-users/employees-teams-and-gear.pdf) |
