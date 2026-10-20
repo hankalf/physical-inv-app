@@ -1125,6 +1125,10 @@ the teams in one go (a failure half-way leaves nothing changed). **Replace the w
 and **Remove teams not in the workbook** work as on the two separate uploads, and the check says
 how many would go. **⬇ Sample workbook** is the file to start from, with a *How to use* sheet.
 
+![](images/teams-workbook.png)
+
+*The crew workbook: one file for the crew list and the teams, checked against each other before Apply.*
+
 **The team sheet.** *Teams & crew → Teams → Upload the team sheet* takes the sheet the floor already
 keeps, one row per seat on each team: **Team #**, **Department**, **Employee**, **Equipment** (and a
 **Clock In Number** column, if the sheet has one).
@@ -1778,6 +1782,10 @@ top. A list that fits never moves. The screen picks a change up within half a mi
 shift set is listed with the shift on screen, marked *shift not set*. On the screen's own address,
 `?shift=1` or `?shift=2` pins that screen to one shift whatever is set, and `?scroll=0` stops the
 scrolling on that screen alone — for the screen by the supervisor's desk, say.
+
+![](images/settings-crew-board.png)
+
+*Settings → Site & systems → Crew board: the shift shown, what each card carries, and the scrolling.*
 
 ---
 
