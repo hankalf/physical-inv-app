@@ -726,7 +726,12 @@ try {
   if (await gun.isVisible('#btnOvYes')) { await gun.click('#btnOvYes'); await wait(500); }
   await scan('6'); await wait(500);
   // lot, expiry, comments: skipped, so the picture is the label saved, not a line half done
-  for (let i = 0; i < 4 && await gun.isVisible('#btnSkip').catch(() => false); i++) { await gun.click('#btnSkip'); await wait(500); }
+  // the gun moves on from the quantity a beat after the scan: look for Skip a few times, not once
+  for (let i = 0; i < 8; i++) {
+    await wait(400);
+    if (/Label \d+ counted/.test(await gun.textContent('#scanMsg').catch(() => ''))) break;
+    if (await gun.isVisible('#btnSkip').catch(() => false)) await gun.click('#btnSkip').catch(() => {});
+  }
   await top();
   await save(gun, 'gun-second-label-done');
   await gun.click('#btnMultiDone').catch(() => {}); await wait(500);
