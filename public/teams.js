@@ -166,7 +166,9 @@
       const newBadge = norm(badge.value);
       if (newBadge && newBadge !== e.badge && !confirm(`Change ${e.name}'s clock in number from ${e.badge} to ${newBadge}? Counts already scanned keep ${e.badge}.`)) return;
       try {
-        const body = { badge: badge.value, name: name.value, dept: dept.value, equipment: [...kit.querySelectorAll('input:checked')].map((c) => c.value) };
+        const equipment = [...kit.querySelectorAll('input:checked')].map((c) => c.value);
+        if (e.equipment.includes('FOOT')) equipment.push('FOOT');      // not a box on the form: kept as it was
+        const body = { badge: badge.value, name: name.value, dept: dept.value, equipment };
         GEAR_KEYS.forEach(([k], i) => { body[k] = sels[i].value; });
         const saved = await postJson(`/api/admin/people/employees/${encodeURIComponent(e.badge)}`, body);
         msg(msgBox, 'ok', `${saved.name} saved`, [saved.badge, saved.dept || 'No department', `reaches ${levelsLabel(saved.reach)}`, ...GEAR_KEYS.map(([k, l]) => `${l} ${saved[k] || '—'}`)].join(' · '));
