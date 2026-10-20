@@ -104,6 +104,29 @@
     </section>
 
     <section class="screen" id="scrMain">
+      <!-- Inventory Control's own tab: where the count stands for the people who turn it into stock.
+           The dashboard does not show it; the tabs after it are the dashboard's own. -->
+      <div data-sub="overview" data-sub-label="Overview" data-ic-only id="icOverview">
+    <div class="card">
+      <h2>Where the count stands <span class="chip" id="icKind"></span> <span class="muted" id="icSub"></span></h2>
+      <div class="grid icgrid" id="icStats"></div>
+      <div class="feedback show" id="icFinal" style="margin-top:12px"></div>
+      <div class="inline" style="margin-top:10px">
+        <div class="auto"><button class="fit" data-ic-go="second">Second counts →</button></div>
+        <div class="auto"><button class="fit" data-ic-go="adjust">Adjustments &amp; the ERP →</button></div>
+        <div class="auto"><button class="fit" data-ic-go="reports">Reports →</button></div>
+      </div>
+    </div>
+    <div class="card" id="icCycleCard" hidden>
+      <h2>Cycle counts still open <span class="muted">pick one to see its second counts, adjustments and reports here</span></h2>
+      <div class="scroll"><table id="icCycles"></table></div>
+    </div>
+    <div class="card" id="icMissingCard" hidden>
+      <h2>Not in Location <span class="muted">pallets the system has lost track of</span></h2>
+      <div class="grid icgrid" id="icMissing"></div>
+      <div class="inline" style="margin-top:10px"><div class="auto"><button class="fit" id="icMissingLink">Open Not in Location →</button></div></div>
+    </div>
+      </div>
       <div data-sub="progress" data-sub-label="Progress">
     <div class="card">
       <h2>Count progress</h2>

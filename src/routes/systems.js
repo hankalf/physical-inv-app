@@ -248,7 +248,7 @@ export function makeTicket(toName, { user, device, path } = {}) {
 /* where a person lands on the other side: one of the office pages, never somewhere else */
 function safePath(p) {
   const s = String(p || '/admin');
-  return /^\/(admin|full|cycle|front|missing|teams|settings|testing|guide|practice)?(#[A-Za-z0-9_-]*)?$/.test(s) ? s : '/admin';
+  return /^\/(admin|full|inventory|cycle|front|missing|teams|settings|testing|guide|practice)?(#[A-Za-z0-9_-]*)?$/.test(s) ? s : '/admin';
 }
 
 /** On a linked system: the ticket checked, once. Returns what it carries. */

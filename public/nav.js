@@ -8,6 +8,7 @@
   const TABS = [
     ['/admin', 'Dashboard', '▤', 'Counting'],
     ['/full', 'Full Counts', '▦', 'Counting'],
+    ['/inventory', 'Inventory Control', '⊞', 'Counting'],
     ['/cycle', 'Cycle counts', '↻', 'Counting'],
     ['/front', 'Front bins', '▥', 'Warehouse jobs'],
     ['/missing', 'Not in Location', '◎', 'Warehouse jobs'],
@@ -23,6 +24,7 @@
   const SUBS = {
     '/admin': [['progress', 'Progress'], ['map', 'Map'], ['teams', 'Team plan'], ['alerts', 'Alerts'], ['second', 'Second counts'], ['adjust', 'Adjustments'], ['reports', 'Reports']],
     '/full': [['counts', 'Counts'], ['new', 'New count'], ['setup', 'Set-up']],
+    '/inventory': [['overview', 'Overview'], ['second', 'Second counts'], ['adjust', 'Adjustments'], ['reports', 'Reports']],
     '/cycle': [['today', 'Today'], ['open', 'Still open'], ['coverage', 'Coverage'], ['setup', 'Program & data']],
     '/teams': [['crew', 'Teams'], ['people', 'Employees'], ['gear', 'Gear sizes'], ['rules', 'Equipment rules']],
     '/settings': [['start', 'Count setup'], ['lists', 'Lists & racking'], ['gun', 'Scanners'], ['erp', 'Integrations'], ['backups', 'Backups & log'], ['logins', 'Logins'], ['advanced', 'Site & systems']],
@@ -34,6 +36,24 @@
   };
 
   const here = location.pathname.replace(/\/$/, '') || '/admin';
+
+  /* Inventory Control is the dashboard's own page, keeping only its second
+     counts, adjustments and reports - the same cards, the same data - with an
+     overview of its own in front. The dashboard does not show the overview. */
+  const IC_SUBS = ['overview', 'second', 'adjust', 'reports'];
+  if (document.getElementById('icOverview')) {
+    const ic = here === '/inventory';
+    for (const pane of document.querySelectorAll('[data-sub]')) {
+      const keep = ic ? IC_SUBS.includes(pane.dataset.sub) : !pane.hasAttribute('data-ic-only');
+      if (!keep) { pane.removeAttribute('data-sub'); pane.style.display = 'none'; }
+    }
+    if (ic) {
+      document.title = document.title.replace(/Dashboard$/, 'Inventory Control');
+      const h1 = document.querySelector('.topbar h1, header h1, h1');
+      if (h1) h1.textContent = 'Inventory Control';
+      document.documentElement.classList.add('ic-page');
+    }
+  }
 
   /* A page opened as ?embed=<session id> is a dashboard inside another page -
      the Testing Suite puts the real one above its practice count. It loses its
@@ -285,12 +305,12 @@
   /* What this login may open. Nothing is known before sign-in, so every tab
      shows; once /me has answered, the ones not on the list go. */
   /* The guide has no key: every login may read it. */
-  const PAGE_KEY = { '/admin': 'dashboard', '/full': 'full', '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/teams': 'teams', '/settings': 'admin', '/testing': 'testing', '/guide': '', '/practice': 'admin' };
+  const PAGE_KEY = { '/admin': 'dashboard', '/full': 'full', '/inventory': 'inventory', '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/teams': 'teams', '/settings': 'admin', '/testing': 'testing', '/guide': '', '/practice': 'admin' };
   /* What the site has switched on (Settings → Site & systems → What is switched
      on). A part that is off is gone for every login, admins included, until
      it is switched back; before sign-in nothing is known, so everything shows. */
   const PAGE_FEATURE = { '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/testing': 'testing' };
-  const SUB_FEATURE = { '/admin': { map: 'map', alerts: 'alerts', adjust: 'adjust', reports: 'reports' } };
+  const SUB_FEATURE = { '/admin': { map: 'map', alerts: 'alerts', adjust: 'adjust', reports: 'reports' }, '/inventory': { adjust: 'adjust', reports: 'reports' } };
   api.on = (key) => !api.me || !api.me.features || api.me.features[key] !== false;
   const pageOn = (href) => !PAGE_FEATURE[href] || api.on(PAGE_FEATURE[href]);
   const subOn = (href, sub) => !(SUB_FEATURE[href] && SUB_FEATURE[href][sub]) || api.on(SUB_FEATURE[href][sub]);
@@ -302,10 +322,20 @@
     if (me.role === 'admin') return true;
     if (key === 'admin') return false;
     if (!Array.isArray(me.access)) return true;
-    if (key === 'full') return me.access.includes('full') || me.access.includes('dashboard');
-    if (key.includes('.')) return me.access.includes(key) || me.access.includes(key.split('.')[0]);
-    return me.access.includes(key) || me.access.some((k) => k.startsWith(key + '.'));
+    const has = (k) => me.access.includes(k);
+    if (key === 'full') return has('full') || has('dashboard');
+    // Inventory Control mirrors the dashboard's second counts, adjustments and reports: as the server has it
+    const icFrom = () => has('inventory') || has('dashboard') || MIRRORED.some((t) => has(`dashboard.${t}`) || has(`inventory.${t}`));
+    if (key === 'inventory' || key === 'inventory.overview') return has(key) || icFrom();
+    if (key.includes('.')) {
+      const [page, tab] = key.split('.');
+      if (has(key) || has(page)) return true;
+      const twin = MIRRORED.includes(tab) && (page === 'dashboard' ? 'inventory' : page === 'inventory' ? 'dashboard' : '');
+      return !!twin && (has(`${twin}.${tab}`) || has(twin));
+    }
+    return has(key) || me.access.some((k) => k.startsWith(key + '.'));
   };
+  const MIRRORED = ['second', 'adjust', 'reports'];
   /* A tab of a page: the whole page, or that tab by name. Pages without tabs
      in the list (Settings, the Testing Suite) are all or nothing. */
   /* a tab that is part of another's access tick: the Employees list is the crew's */
@@ -317,7 +347,7 @@
     if (page === 'admin' || page === 'full') return api.can(page);    // no tabs of their own in the access list
     const me = api.me;
     if (!me || me.role === 'admin' || !Array.isArray(me.access)) return true;
-    return me.access.includes(page) || me.access.includes(`${page}.${TAB_SAME[`${href}#${sub}`] || sub}`);
+    return api.can(`${page}.${TAB_SAME[`${href}#${sub}`] || sub}`);
   };
   const mayOpen = (href) => pageOn(href) && (!PAGE_KEY[href] || api.can(PAGE_KEY[href]));
 
@@ -1100,6 +1130,10 @@
     ['Racking blocks', '/settings', 'lists', 'racking block back to back pair aisles conflict'],
     ['Send to the ERP', '/settings', 'erp', 'erp export send file layout columns adjustments posting'],
     ['Backups and the log', '/settings', 'backups', 'backup restore log audit who did what download'],
+    ['Inventory Control — where the count stands', '/inventory', 'overview', 'inventory control overview stock adjustments erp upload second counts reports final report positive negative net summary controller'],
+    ['Inventory Control — second counts', '/inventory', 'second', 'inventory control second counts third counts recount'],
+    ['Inventory Control — adjustments and the ERP', '/inventory', 'adjust', 'inventory control adjustments erp upload aisle positive negative approve'],
+    ['Inventory Control — reports', '/inventory', 'reports', 'inventory control reports pallet report export final report fix list count sheets'],
     ['Full counts — every wall-to-wall, open and closed', '/full', 'counts', 'full counts physical wall-to-wall list sessions open closed progress scanners land here default'],
     ['Start a new full count', '/full', 'new', 'new full count create start physical session'],
     ['What a count still needs — set-up list', '/full', 'setup', 'setup checklist guided needs required wanted bins report scanners plan'],

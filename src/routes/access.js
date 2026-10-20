@@ -9,6 +9,7 @@ export const ACCESS = [
   // the pages
   ['dashboard', 'Dashboard', 'page'],
   ['full', 'Full Counts', 'page'],
+  ['inventory', 'Inventory Control', 'page'],
   ['cycle', 'Cycle counts', 'page'],
   ['front', 'Front bins', 'page'],
   ['missing', 'Not in Location', 'page'],
@@ -25,13 +26,14 @@ export const ACCESS = [
    that tab alone. Settings has no entry here: it stays for admins. */
 export const TABS = {
   dashboard: [['progress', 'Progress'], ['map', 'Map'], ['teams', 'Team plan'], ['alerts', 'Alerts'], ['second', 'Second counts'], ['adjust', 'Adjustments'], ['reports', 'Reports']],
+  inventory: [['overview', 'Overview'], ['second', 'Second counts'], ['adjust', 'Adjustments'], ['reports', 'Reports']],
   cycle: [['today', 'Today'], ['open', 'Still open'], ['coverage', 'Coverage'], ['setup', 'Program & data']],
   teams: [['crew', 'Teams & employees'], ['gear', 'Gear sizes'], ['rules', 'Equipment rules']],
   front: [['moves', 'Pallets to move back'], ['desk', 'Move desk'], ['bins', 'Front-placed bins']],
 };
 export const TAB_KEYS = Object.entries(TABS).flatMap(([page, subs]) => subs.map(([sub]) => `${page}.${sub}`));
 export const ACCESS_KEYS = [...ACCESS.map(([k]) => k), ...TAB_KEYS];
-export const PAGE_KEY = { '/admin': 'dashboard', '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/teams': 'teams', '/testing': 'testing', '/settings': 'admin', '/practice': 'admin' };
+export const PAGE_KEY = { '/admin': 'dashboard', '/inventory': 'inventory', '/cycle': 'cycle', '/front': 'front', '/missing': 'missing', '/teams': 'teams', '/testing': 'testing', '/settings': 'admin', '/practice': 'admin' };
 
 /** A stored list, or null for "everything a supervisor can". */
 export function parseAccess(raw) {
@@ -51,15 +53,27 @@ export function cleanAccess(list) {
   return [...new Set(list)].filter((k) => !k.includes('.') || !whole.has(k.split('.')[0]));
 }
 
+/* Inventory Control is the dashboard's second counts, adjustments and reports
+   under a tab of its own: a tick for one is a tick for the other. Its overview
+   comes with any of them. */
+export const MIRRORED = ['second', 'adjust', 'reports'];
 export const allowed = (who, key) => {
   if (!who) return false;
   if (who.role === 'admin') return true;
   if (key === 'admin') return false;
   if (who.access == null) return true;
+  const has = (k) => who.access.includes(k);
   // Full Counts came after the logins did: the whole dashboard carries it with it
-  if (key === 'full') return who.access.includes('full') || who.access.includes('dashboard');
-  if (key.includes('.')) return who.access.includes(key) || who.access.includes(key.split('.')[0]);   // a tab: the tab, or its whole page
-  return who.access.includes(key) || who.access.some((k) => k.startsWith(key + '.'));                 // a page: whole, or any of its tabs
+  if (key === 'full') return has('full') || has('dashboard');
+  const icFrom = () => has('inventory') || has('dashboard') || MIRRORED.some((t) => has(`dashboard.${t}`) || has(`inventory.${t}`));
+  if (key === 'inventory' || key === 'inventory.overview') return has(key) || icFrom();
+  if (key.includes('.')) {
+    const [page, tab] = key.split('.');
+    if (has(key) || has(page)) return true;                                                          // a tab: the tab, or its whole page
+    const twin = MIRRORED.includes(tab) && (page === 'dashboard' ? 'inventory' : page === 'inventory' ? 'dashboard' : '');
+    return !!twin && (has(`${twin}.${tab}`) || has(twin));
+  }
+  return has(key) || who.access.some((k) => k.startsWith(key + '.'));                                // a page: whole, or any of its tabs
 };
 
 /**
@@ -76,6 +90,7 @@ function tabOf(p, method) {
     if (/^map$/.test(rest) || rest === 'aisles/apply-layout') return 'dashboard.map';
     if (/^assignments(\/|$)/.test(rest)) return 'dashboard.teams';
     if (/^(alerts|messages)(\/|$)/.test(rest)) return 'dashboard.alerts';
+    if (rest === 'inventory-control') return 'inventory.overview';
     if (/^recounts(\/|$)/.test(rest) || rest === 'export/recounts.csv') return 'dashboard.second';
     if (/^adjustments(\/|$)/.test(rest) || rest === 'export/adjustments.csv') return 'dashboard.adjust';
     if (/^(pallets|labels|fixlist|lot|uncounted|issues|archives)(\/|$)/.test(rest) || /^export\//.test(rest) || /^print\//.test(rest)) return rest === 'export/coverage.csv' ? 'cycle.coverage' : 'dashboard.reports';

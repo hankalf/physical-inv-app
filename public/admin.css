@@ -938,3 +938,8 @@ html.has-systems .splashbrand[data-system] {
   html.has-systems .side .brand[data-system] { margin: 0; padding: 4px 10px; box-shadow: inset 0 0 0 2px var(--sysring); border-radius: 10px; }
   html.has-systems .side .brand[data-system]::after { position: static; transform: none; margin-left: 8px; }
 }
+
+/* Inventory Control's overview: each figure opens the tab it comes from */
+.icgrid button.stat { text-align: left; font: inherit; color: inherit; cursor: pointer; width: 100%; margin: 0; }
+.icgrid button.stat:hover:not(:disabled) { border-color: var(--accent); }
+.icgrid button.stat:disabled { cursor: default; opacity: 1; }

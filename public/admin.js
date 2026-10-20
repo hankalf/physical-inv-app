@@ -17,7 +17,11 @@
   const EMBED = api.embed || 0;
   // a practice count is only ever listed to the dashboard inside the Testing Suite, or opened from it in its own tab (?practice=1)
   const WITH_PRACTICE = !!EMBED || new URLSearchParams(location.search).get('practice') === '1';
-  const SESSIONS_URL = '/api/admin/sessions' + (WITH_PRACTICE ? '?practice=1' : '');
+  /* The same page is Inventory Control at /inventory: the dashboard's second
+     counts, adjustments and reports, and an overview of its own. */
+  const IC = location.pathname.replace(/\/$/, '') === '/inventory';
+  const SESSIONS_URL = '/api/admin/sessions' + (WITH_PRACTICE ? '?practice=1' : IC ? '?inventory=1' : '');
+  const PAGE = IC ? '/inventory' : '/admin';
 
   const needSession = (el) => {
     if (sessionId) return true;
@@ -52,6 +56,8 @@
   /* ------------------------------------------------------------ sessions */
   async function loadSessions() {
     sessions = await apiJson(SESSIONS_URL);
+    // cycle counts switched off for the site: Inventory Control lists none of them
+    if (IC && !api.on('cycle')) sessions = sessions.filter((s) => s.mode !== 'cycle');
     const prior = sessionId;
     if (!sessions.length) {
       sessionId = null;
@@ -1228,6 +1234,8 @@
   /** Re-read the session list so the header picker's progress stays live. */
   async function refreshPicker() {
     sessions = await apiJson(SESSIONS_URL);
+    // cycle counts switched off for the site: Inventory Control lists none of them
+    if (IC && !api.on('cycle')) sessions = sessions.filter((s) => s.mode !== 'cycle');
     picker.render(sessions, sessionId);
   }
 
@@ -1269,7 +1277,7 @@
 
   /* Only the tabs this login has are fetched: a tab it may not open would be
      refused by the server, and one refusal must not stop the rest. */
-  const tab = (name) => api.canTab('/admin', name);
+  const tab = (name) => api.canTab(PAGE, name);
   /* Only what is on screen is fetched: the pallet report of a twenty-thousand-bin
      count is not pulled every half minute by a page sitting on Progress. The
      progress figures (the header's percentage) and the alerts (the SOS bar, the
@@ -1280,9 +1288,74 @@
   function paneJobs() {
     return {
       progress: [refreshNotes, refreshProgress], teams: [refreshAssignments], reports: [refreshPallets, refreshLabels, refreshArchives], map: [refreshMap],
-      second: [refreshRecounts], alerts: [refreshMessages, refreshAlerts], adjust: [refreshAdjustments, () => refreshErpAisles().catch(() => {})],
+      overview: [refreshOverview], second: [refreshRecounts], alerts: [refreshMessages, refreshAlerts], adjust: [refreshAdjustments, () => refreshErpAisles().catch(() => {})],
     };
   }
+  /* ------------------------------------------------------- Inventory Control's overview
+     Where the count stands for inventory control, in one read. */
+  async function refreshOverview() {
+    const o = await apiJson(`/api/admin/sessions/${sessionId}/inventory-control`);
+    const n = (v) => Number(v || 0).toLocaleString();
+    const sign = (v) => (v > 0 ? '+' : '') + Number(v || 0).toLocaleString();
+    $('icKind').textContent = o.session.mode === 'cycle' ? 'CYCLE' : 'FULL';
+    $('icSub').textContent = `${o.session.name}${o.session.closed || o.session.status === 'closed' ? ' · closed' : ''}`;
+    const pct = o.session.bins ? Math.round((o.session.binsCounted / o.session.bins) * 1000) / 10 : 0;
+    const stats = [
+      [`${pct}%`, `counted · ${n(o.session.binsCounted)} of ${n(o.session.bins)} bins`, 'progress'],
+      [n(o.recounts.stillOpen), `second counts still open${o.recounts.thirdOpen ? ` · ${n(o.recounts.thirdOpen)} third` : ''}`, 'second'],
+      [n(o.recounts.done), 'second counts done', 'second'],
+      [sign(o.adjustments.positive.units), `positive · ${n(o.adjustments.positive.pallets)} pallet${o.adjustments.positive.pallets === 1 ? '' : 's'}`, 'adjust'],
+      [sign(o.adjustments.negative.units), `negative · ${n(o.adjustments.negative.pallets)} pallet${o.adjustments.negative.pallets === 1 ? '' : 's'}`, 'adjust'],
+      [sign(o.adjustments.net), 'net units', 'adjust'],
+    ];
+    if (o.adjustments.approvals) stats.push([n(o.adjustments.pending), `adjustments to approve · ${n(o.adjustments.approved)} approved`, 'adjust']);
+    stats.push([`${n(o.erp.entered)} / ${n(o.erp.lines)}`, `lines in the ERP · ${n(o.erp.aislesAll)} of ${n(o.erp.aisles)} aisles done`, 'adjust']);
+    if (o.erp.changed) stats.push([n(o.erp.changed), 'lines changed since they went in', 'adjust']);
+    const box = $('icStats');
+    box.replaceChildren();
+    for (const [big, label, go] of stats) {
+      const d = document.createElement('button');
+      d.type = 'button';
+      d.className = 'stat';
+      d.dataset.icStat = go;
+      d.innerHTML = '<div class="n"></div><div class="l"></div>';
+      d.querySelector('.n').textContent = big;
+      d.querySelector('.l').textContent = label;
+      if (go !== 'progress' && tab(go)) d.onclick = () => api.showSub(go); else d.disabled = true;
+      box.appendChild(d);
+    }
+    const fin = $('icFinal');
+    if (o.final.closed) { fin.className = 'feedback show ok'; fin.textContent = 'This count is closed. Its reports and the ERP sheets are under Reports and Adjustments.'; }
+    else if (o.final.ready) { fin.className = 'feedback show ok'; fin.textContent = 'No second counts open: the final report can be filed (Reports → Filed as the count goes).'; }
+    else { fin.className = 'feedback show warn'; fin.textContent = `${n(o.final.blockedBy)} second count${o.final.blockedBy === 1 ? ' is' : 's are'} still open — the final report waits until the list is at zero.`; }
+    // the cycle counts still open, while cycle counts are on
+    $('icCycleCard').hidden = !o.cycles || !o.cycles.length;
+    if (o.cycles && o.cycles.length) {
+      table($('icCycles'), [{ label: 'Cycle count' }, { label: 'Bins counted', num: true }, { label: 'Second counts open', num: true }, { label: '' }], o.cycles, (c) => {
+        const tr = document.createElement('tr');
+        tr.dataset.cycle = c.id;
+        tr.append(cell(c.name), cell(`${n(c.bins_counted)} of ${n(c.bins)}`), cell(n(c.recounts_open)));
+        const td = document.createElement('td');
+        td.appendChild(c.id === sessionId ? tag('showing', 'ok') : button('Show it here', 'sm', () => api.pickSession(c.id)));
+        tr.appendChild(td);
+        return tr;
+      }, 'None open.');
+    }
+    $('icMissingCard').hidden = !o.missing;
+    if (o.missing) {
+      const mb = $('icMissing');
+      mb.replaceChildren();
+      for (const [big, label] of [[n(o.missing.missing), 'still being looked for'], [n(o.missing.found), 'found'], [n(o.missing.closed), 'closed']]) {
+        const d = document.createElement('div'); d.className = 'stat';
+        d.innerHTML = '<div class="n"></div><div class="l"></div>';
+        d.querySelector('.n').textContent = big; d.querySelector('.l').textContent = label;
+        mb.appendChild(d);
+      }
+    }
+  }
+  for (const b of document.querySelectorAll('[data-ic-go]')) b.onclick = () => api.showSub(b.dataset.icGo);
+  if ($('icMissingLink')) $('icMissingLink').onclick = () => { location.href = '/missing'; };
+
   async function refreshAll() {
     if (!sessionId) return;
     const jobs = [refreshSources, refreshPicker, refreshProgress, refreshAlerts];

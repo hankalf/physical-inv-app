@@ -35,6 +35,7 @@ import { raiseAlert, tellTeams, listAlerts, seeAlert, closeAlert, alertsForDevic
 import { teamsConfig, saveTeamsConfig, postToTeams, testCard, alertCard } from './util/teams.js';
 import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout, scannerJobs, saveScannerJobs, jobsOffered, JOBS } from './routes/scanner-prompts.js';
 import { features, saveFeatures, FEATURES, PRESETS, offNames } from './routes/features.js';
+import { inventoryOverview } from './routes/inventory-control.js';
 import { withEntries, markEntered, markFromFile, worksheetRows, WORKSHEET_COLUMNS } from './routes/erp-entries.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
@@ -318,6 +319,7 @@ async function serveStatic(req, res, pathname) {
     : /^\/teams\/?$/.test(pathname) ? '/teams.html'
     : /^\/cycle\/?$/.test(pathname) ? '/cycle.html'
     : /^\/full\/?$/.test(pathname) ? '/full.html'
+    : /^\/inventory\/?$/.test(pathname) ? '/admin.html'      // Inventory Control: the dashboard's own tabs, under a tab of their own
     : /^\/settings\/?$/.test(pathname) ? '/settings.html'
     : /^\/board\/?$/.test(pathname) ? '/board.html'
     : /^\/testing\/?$/.test(pathname) ? '/testing.html'
@@ -819,8 +821,9 @@ async function handleAdmin(req, res, url, m) {
     // and a login sees only the kinds of count it may work: cycle counts need the
     // Cycle counts page, full counts any of the pages that work a full count
     // ...and only the kinds the site has switched on (Settings → Site & systems → What is switched on)
-    const mayCycle = allowed(who, 'cycle') && features().cycle;
-    const mayFull = ['dashboard', 'full', 'teams', 'front', 'missing'].some((k) => allowed(who, k));
+    // Inventory Control (?inventory=1) works the cycle counts' second counts and adjustments too
+    const mayCycle = (allowed(who, 'cycle') || (url.searchParams.get('inventory') === '1' && allowed(who, 'inventory'))) && features().cycle;
+    const mayFull = ['dashboard', 'full', 'inventory', 'teams', 'front', 'missing'].some((k) => allowed(who, k));
     const landing = defaultSessionId();          // the count the scanners land on: the page opens on it too
     return sendJson(req, res, 200, listSessions().filter((s) => {
       if (s.practice) { if (!withPractice || !(admin || s.practice_owner === mine) || s.status !== 'open') return false; }
@@ -1999,6 +2002,12 @@ async function handleAdmin(req, res, url, m) {
     const out = markEntered(m[1], { ...body, actor });
     audit(actor, body.on === false ? 'unmarked adjustments as entered in the ERP' : 'marked adjustments as entered in the ERP', `${body.on === false ? out.unmarked : out.marked} pallet(s)${body.note ? ' - ' + String(body.note).slice(0, 120) : ''}`, m[1]);
     return sendJson(req, res, 200, out);
+  }
+  // Inventory Control: where the count stands, for the people who turn it into stock
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/inventory-control$/)) && method === 'GET') {
+    const who = currentUser(req, url);
+    const on = features();
+    return sendJson(req, res, 200, inventoryOverview(m[1], { cycleOn: on.cycle && (allowed(who, 'cycle') || allowed(who, 'inventory')), missingOn: on.missing && allowed(who, 'missing') }));
   }
   // the ERP, an aisle at a time: every aisle's state, and one aisle's sheet to fill in
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/erp-entries\/aisles$/)) && method === 'GET') {

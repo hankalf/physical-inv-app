@@ -48,7 +48,7 @@ page.on('dialog', (d) => d.accept());
 await page.goto(`${BASE}/full`);
 await signIn(page, { user: 'DANA-WHITFIELD' });
 await page.waitForSelector('#fcTable tbody tr');
-check('Full Counts sits in the sidebar between Dashboard and Cycle counts', (await page.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).slice(0, 3).join(',') === '/admin,/full,/cycle');
+check('Full Counts sits in the sidebar after the Dashboard, then Inventory Control and Cycle counts', (await page.$$eval('#navTabs .tab', (a) => a.map((x) => x.getAttribute('href')))).slice(0, 4).join(',') === '/admin,/full,/inventory,/cycle');
 const rows = await page.$$eval('#fcTable tbody tr', (trs) => trs.map((t) => t.textContent));
 check('It lists the full counts only, open and closed, newest first', rows.length === 2 && /Q4 physical/.test(rows[0]) && /Q3 physical/.test(rows[1]) && !rows.join(' ').includes('Cycle 2026'), rows.map((r) => r.slice(0, 50)).join(' | '));
 check('…the closed one marked closed, the default one marked as where scanners land', /closed/.test(rows[1]) && /scanners land here/.test(rows[0]));
