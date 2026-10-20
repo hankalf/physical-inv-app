@@ -629,6 +629,15 @@
   $('btnExport').onclick = () => api.download('/api/admin/people/export/employees.csv', 'employees.csv')
     .catch((err) => msg($('uploadMsg'), 'err', err.message));
 
+  /* the team numbers as QR codes: a printable page, every team or one shift */
+  $('btnTeamCodes').onclick = () => {
+    const shift = $('fTeamCodesShift').value;
+    if (!state.teams.length) { msg($('teamMsg'), 'err', 'No teams yet', 'Add a team first, or upload the team sheet.'); return; }
+    const q = new URLSearchParams({ t: window.appApi.token });
+    if (shift) q.set('shift', shift);
+    window.open(`/api/admin/print/team-codes?${q}`, '_blank');
+  };
+
   $('btnAddPerson').onclick = async () => {
     try {
       const equipment = [...$('equipPicker').querySelectorAll('input:checked')].map((i) => i.value);

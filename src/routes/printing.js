@@ -182,6 +182,57 @@ ${devices.length ? `<div class="sheet">${cards}</div>` : '<div class="none">No s
 }
 
 /*
+ * Team number codes: a card a team, with the team number as a QR. The gun's
+ * sign-on screen takes a scan in its Team box like any typed number, so a crew
+ * scans the card on the cradle or the lanyard instead of typing S1-DS01 with a
+ * trigger and a keypad in gloves. The QR holds the team number and nothing
+ * else; the number is printed large under it for anyone without a scanner.
+ */
+export function teamCodes(teams, { title = 'Team number codes', scope = '' } = {}) {
+  const shiftWord = (s) => (s === '1' ? '1st shift' : s === '2' ? '2nd shift' : '');
+  const cards = teams.map((t) => `
+    <div class="card" data-team="${esc(t.name)}">
+      <div class="kicker">TEAM${t.shift ? ` · ${esc(shiftWord(t.shift))}` : ''}</div>
+      <div class="qr" data-code="${esc(t.name)}"></div>
+      <div class="name">${esc(t.name)}</div>
+      ${t.notes ? `<div class="note">${esc(t.notes)}</div>` : ''}
+      <div class="how">Scan at sign-on, in <b>Team number</b></div>
+    </div>`).join('');
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>${esc(title)}</title>
+<style>
+  @page { size: letter portrait; margin: 12mm; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #000; background: #fff; margin: 0; padding: 12px; }
+  h1 { font-size: 16pt; margin: 0 0 2px; }
+  .sub { color: #444; font-size: 9.5pt; margin-bottom: 12px; }
+  .sheet { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .card { border: 1.5px dashed #888; border-radius: 8px; padding: 10px 8px; text-align: center; break-inside: avoid; page-break-inside: avoid; }
+  .kicker { font-size: 8.5pt; font-weight: 800; letter-spacing: .14em; color: #444; margin-bottom: 6px; }
+  .qr { display: flex; justify-content: center; min-height: 150px; align-items: center; }
+  .qr img, .qr canvas { display: block; }
+  .name { font-size: 22pt; font-weight: 900; letter-spacing: .02em; margin-top: 6px; font-family: ui-monospace, Menlo, Consolas, monospace; word-break: break-all; }
+  .note { font-size: 8.5pt; color: #444; margin-top: 2px; font-style: italic; }
+  .how { font-size: 8pt; color: #555; margin-top: 4px; }
+  .none { padding: 30px; text-align: center; color: #666; }
+  @media print { .noprint { display: none; } }
+</style></head>
+<body>
+<h1>${esc(title)}</h1>
+<div class="sub">${teams.length} team${teams.length === 1 ? '' : 's'}${scope ? ` · ${esc(scope)}` : ''} · printed ${esc(localDate())} · cut along the dashed lines</div>
+<button class="noprint" onclick="window.print()" style="margin-bottom:10px;padding:6px 12px">Print</button>
+${teams.length ? `<div class="sheet">${cards}</div>` : '<div class="none">No teams yet — add them under Teams &amp; crew.</div>'}
+<script src="/vendor/qrcode.min.js"></script>
+<script>
+  for (const box of document.querySelectorAll('.qr')) {
+    try { new QRCode(box, { text: box.dataset.code, width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M }); }
+    catch (e) { box.textContent = 'QR unavailable — type the team number'; }
+  }
+</script>
+</body></html>`;
+}
+
+/*
  * The test book: a printed page of bin and pallet barcodes.
  *
  * Training a crew, or dry-running a count before the real one, needs something

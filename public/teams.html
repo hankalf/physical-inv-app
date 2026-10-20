@@ -150,6 +150,10 @@
           <select id="fTeamShift" class="sm"><option value="">Not set</option><option value="1">1st shift</option><option value="2">2nd shift</option></select></div>
         <div><label for="fTeamNotes">Notes</label><input id="fTeamNotes" placeholder="e.g. freezer, dock side"></div>
         <div class="auto"><button class="primary" id="btnAddTeam">Add team</button></div>
+        <!-- each team number as a QR on a card, for the gun's sign-on to scan -->
+        <div class="auto"><label for="fTeamCodesShift">Team QR codes for</label>
+          <select id="fTeamCodesShift" class="sm"><option value="">Every team</option><option value="1">1st shift</option><option value="2">2nd shift</option></select></div>
+        <div class="auto"><button id="btnTeamCodes" title="A card a team with its number as a QR — scanned in the gun's Team number box at sign-on">🖨 Print team QR codes</button></div>
       </div>
       <div class="feedback" id="teamMsg"></div>
       <!-- the team sheet the floor already keeps: a row per seat on each team -->

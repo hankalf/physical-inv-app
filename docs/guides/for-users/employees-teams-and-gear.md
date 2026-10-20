@@ -90,6 +90,9 @@ them **Jacket**, **Bibs**, **Boots**. **⬇ Sample CSV** downloads one in the ri
 - **The crew board** (`/crew`) is the same list for a screen by the time clock: each shift's teams
   and who is on them, the shift on now marked, and where each team is counting — its aisle, last
   scan, and **Scanning** or a red **Stopped scanning**. No sign-in, no clock-in numbers.
+- **🖨 Print team QR codes** prints a card per team with its number as a QR code, for every team
+  or one shift. At sign-on, scan the card into **Team number** on the gun instead of typing it.
+  The number is printed large under the code too.
 
 ## 6 — Gear sizes, and the order
 

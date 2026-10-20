@@ -114,6 +114,14 @@ The columns are matched by name, in any order:
   shift 6am–2pm, 2nd shift 2pm–10pm, the one on now marked — with each team's aisle, its last
   scan, and **Scanning** or a red **Stopped scanning**. No sign-in, no clock-in numbers. Open it from the Dashboard's **Crew board ↗** chip; `?shift=2` pins a screen to one
   shift.
+- **🖨 Print team QR codes** prints a card for each team with its number as a QR code, three
+  across a letter page. Pick **Every team**, **1st shift** or **2nd shift** in the box beside
+  it first. At sign-on the counter scans the card into **Team number** on the gun instead of
+  typing it; the number is printed large under the code for anyone without a scanner. The QR
+  holds the team number and nothing else, so a lost card signs nobody in. It needs
+  **Downloads** on the login, and the Log records who printed them.
+
+![](../images/teams-qr-codes.png)
 
 ## 6 — Gear sizes, and the order
 

@@ -1151,6 +1151,19 @@ keeps, one row per seat on each team: **Team #**, **Department**, **Employee**, 
 or on the team's card (a team from the team sheet takes it from the S1 / S2 in its number). The page can show one shift at a time, and so can the team table on the
 dashboard, so the 2nd-shift lead sees only their crews.
 
+**Team number QR codes.** **🖨 Print team QR codes** on Teams & crew prints a card for each team
+with the team number as a QR code, three across a letter page, ready to cut out and tape to a
+cradle or clip to a lanyard. The box beside the button picks **Every team**, **1st shift** or
+**2nd shift**. At sign-on the counter points the gun at the card with the cursor in **Team
+number**: the gun types the number and moves on to the clock-in numbers, so nobody types
+*S1-DS01* on a keypad in gloves. The number is printed large under the code as well. The code
+holds the team number and nothing else, so a lost card is no risk; print it again whenever teams
+change. Printing needs **Downloads** on the login, and the Log records who printed the cards.
+
+![](images/teams-qr-codes.png)
+
+*The 1st shift's team cards: the QR holds the team number, printed large underneath.*
+
 **Departments and gear sizes.** Every crew card shows the person's **department** as a blue chip
 beside their name (*No department* when it is blank), and their **jacket**, **bibs (overalls)**
 and **boots** sizes under their equipment. **Edit** on the card opens the same form as the

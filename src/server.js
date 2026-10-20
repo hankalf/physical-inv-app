@@ -76,7 +76,7 @@ function systemsView(req) {
 }
 import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, unlockPlace, PER_LOGIN, PER_PLACE } from './routes/login-limit.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
-import { countSheet, scannerCards, barcodeBook } from './routes/printing.js';
+import { countSheet, scannerCards, barcodeBook, teamCodes } from './routes/printing.js';
 import {
   countUsers, countAdmins, listUsers, createUser, updateUser, deleteUser, authenticate, changeOwnPassword, getUser, ensureSuperadmin,
   makeInvite, inviteFor, acceptInvite,
@@ -1499,6 +1499,16 @@ async function handleAdmin(req, res, url, m) {
   }
 
   // --- setup cards: one QR per scanner, to cut up and tape to the cradles
+  // team numbers as QR codes, a card a team: scanned at sign-on instead of typed
+  if (p === '/api/admin/print/team-codes') {
+    const shift = ['1', '2'].includes(url.searchParams.get('shift') || '') ? url.searchParams.get('shift') : '';
+    const only = (url.searchParams.get('only') || '').split(',').map((x) => x.trim().toUpperCase()).filter(Boolean);
+    const teams = listTeams().filter((t) => (!shift || t.shift === shift) && (!only.length || only.includes(String(t.name).toUpperCase())))
+      .sort((a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true }));
+    const scope = [shift ? (shift === '1' ? '1st shift' : '2nd shift') : '', only.length ? `teams ${only.join(', ')}` : ''].filter(Boolean).join(' · ') || 'every team';
+    audit(actor, 'printed team number codes', `${teams.length} team(s), ${scope}`);
+    return send(req, res, 200, teamCodes(teams, { scope }), { 'content-type': 'text/html; charset=utf-8' });
+  }
   if (p === '/api/admin/print/scanner-cards') {
     const only = (url.searchParams.get('only') || '').split(',').map((x) => x.trim()).filter(Boolean);
     const all = listDevices();
