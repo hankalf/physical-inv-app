@@ -46,6 +46,7 @@
             { q: 'Where is the Count session card?', a: 'Under Settings → Count setup. The list of full counts, with Open on the dashboard, Close and Scanners land here, is the Full Counts page.', goto: S('/full', 'counts', 'Full Counts') },
             { q: 'Why is a count missing from the picker?', a: 'The picker shows only the kinds of count your login may work: no Cycle counts page, no cycle counts in the picker; a cycle-counter login sees no full count.' },
             { q: 'What is the office board?', a: 'A read-only page at /board for the office TV: progress, teams, alerts and notes. It needs no login.', goto: S('/board', '', 'Open the board') },
+            { q: 'Is there a board of who is on which team?', a: 'The crew board at /crew: every team and its people, by shift — 1st shift 6am–2pm, 2nd shift 2pm–10pm — with the shift on now marked by the warehouse clock. Read-only, no login, no clock-in numbers; for a screen by the time clock. ?shift=1 or ?shift=2 pins it to one shift.', goto: S('/crew', '', 'Open the crew board') },
             { q: 'Why do some cards show only their heading?', a: 'They are folded: the ones a site sets once and then leaves, like the counting-screen layout, the barcode test book or the site logo. Click the heading (or the ▸) to open one and again to fold it; this computer remembers. A search hit or a Ready for count day link opens the card it takes you to.' },
           ],
         },

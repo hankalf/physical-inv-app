@@ -13,6 +13,7 @@ import {
   enrollDevice, deviceByToken, resetDevice, saveAdminToken, adminTokenInfo, dropAdminToken, dropAdminTokensFor, purgeAdminTokens } from './db.js';
 import { importMaster, pruneAreaAisles } from './routes/master.js';
 import { boardData } from './routes/board.js';
+import { crewBoard } from './routes/crew-board.js';
 import { countClock } from './routes/count-clock.js';
 import { sendMessage, listMessages, messagesFor, ackMessage, clearMessage } from './routes/messages.js';
 import { listAdjustments, adjustmentView, decideAdjustments, adjustmentReasons, saveAdjustmentReasons } from './routes/adjustments.js';
@@ -321,6 +322,7 @@ async function serveStatic(req, res, pathname) {
     : /^\/inventory\/?$/.test(pathname) ? '/admin.html'      // Inventory Control: the dashboard's own tabs, under a tab of their own
     : /^\/settings\/?$/.test(pathname) ? '/settings.html'
     : /^\/board\/?$/.test(pathname) ? '/board.html'
+    : /^\/crew\/?$/.test(pathname) ? '/crew.html'           // the crew board: who is on which team, by shift, for a wall screen
     : /^\/testing\/?$/.test(pathname) ? '/testing.html'
     : /^\/practice\/?$/.test(pathname) ? '/practice.html'
     : /^\/front\/?$/.test(pathname) ? '/front.html'
@@ -2260,6 +2262,8 @@ location.replace(${JSON.stringify(path)});
     if (p === '/api/board' && req.method === 'GET') {
       return sendJson(req, res, 200, memo(`board:${url.searchParams.get('session') || ''}`, () => boardData(url.searchParams.get('session'))));
     }
+    // the crew board: names, teams and shifts, no clock-in numbers - a TV by the time clock
+    if (p === '/api/board/crew' && req.method === 'GET') return sendJson(req, res, 200, memo('board:crew', () => crewBoard()));
     // the pallet system, shown through this app (see pallet-proxy.js)
     if (p === PS_PREFIX || p.startsWith(PS_PREFIX + '/')) return await proxyPalletSystem(req, res, url, readBody);
     if (p.startsWith('/api/admin/')) return await handleAdmin(req, res, url, null);

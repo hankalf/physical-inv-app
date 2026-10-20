@@ -110,6 +110,10 @@ The columns are matched by name, in any order:
   Employee, Equipment*, a row per seat) builds every team at once: *S1-DS01* reads as 1st shift,
   dock stocker, truck 01; a blank name is an open seat whose equipment still counts.
 - **1st shift / 2nd shift** and **Department** above the board show one at a time.
+- **The crew board** (`/crew`) puts the teams and their people on a wall screen by shift — 1st
+  shift 6am–2pm, 2nd shift 2pm–10pm, the one on now marked — with no sign-in and no clock-in
+  numbers. Open it from the Dashboard's **Crew board ↗** chip; `?shift=2` pins a screen to one
+  shift.
 
 ## 6 — Gear sizes, and the order
 

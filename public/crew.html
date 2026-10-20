@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crew board</title>
+<link rel="icon" href="/icon.svg">
+<link rel="stylesheet" href="/admin.css">
+<style>
+  /* A screen by the time clock, read from ten feet away: who is on which
+     team, this shift and the next. Nothing is clickable. */
+  body { padding: 0; }
+  .board { display: flex; flex-direction: column; min-height: 100vh; padding: 2.2vh 2vw; gap: 1.8vh; }
+  .bhead { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+  .bhead .site { font-size: clamp(12px, 1.2vw, 16px); color: var(--muted, #8b95a7); margin-top: 2px; }
+  .bhead h1 { margin: 0; font-size: clamp(20px, 2.4vw, 34px); font-weight: 800; letter-spacing: -.02em; }
+  .bhead .now { color: var(--muted); font-size: clamp(13px, 1.3vw, 19px); font-weight: 600; }
+  .bhead .now b { color: var(--text); }
+  .bhead .clock { margin-left: auto; color: var(--muted); font-size: clamp(13px, 1.2vw, 18px); font-variant-numeric: tabular-nums; }
+  .bhead .clock b { color: var(--text); font-weight: 700; }
+  .stale-warn { color: var(--warn); font-weight: 700; }
+
+  .shifts { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 1.4vw; flex: 1; min-height: 0; }
+  .shift { display: flex; flex-direction: column; gap: 1vh; min-height: 0; border: 2px solid var(--line); border-radius: 16px; padding: 1.2vh 1.1vw; background: var(--surface); }
+  .shift.on { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-dim) inset; }
+  .shift .sh { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .shift .sh h2 { margin: 0; font-size: clamp(18px, 2vw, 30px); font-weight: 800; letter-spacing: -.02em; }
+  .shift .sh .hours { color: var(--muted); font-weight: 700; font-size: clamp(13px, 1.3vw, 19px); }
+  .shift .sh .onnow { margin-left: auto; font-size: clamp(11px, 1vw, 15px); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent-dim); border-radius: 999px; padding: 3px 12px; background: var(--accent-ink); }
+  .shift .sh .count { color: var(--muted); font-size: clamp(12px, 1.1vw, 16px); font-weight: 600; }
+  .shift .teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(220px, 16vw, 320px), 1fr)); gap: .9vw; align-content: start; overflow: auto; }
+  .team { background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 1vh 1vw; }
+  .team .th { display: flex; align-items: baseline; gap: 10px; }
+  .team .th b { font-size: clamp(16px, 1.6vw, 24px); font-weight: 800; }
+  .team .th .reach { color: var(--muted); font-size: clamp(11px, .95vw, 14px); font-weight: 600; margin-left: auto; white-space: nowrap; }
+  .team .th .inf { color: var(--muted); font-size: clamp(10px, .85vw, 12px); font-weight: 600; }
+  .team .notes { color: var(--muted); font-size: clamp(11px, 1vw, 14px); margin-top: 2px; }
+  .team ul { list-style: none; margin: .6vh 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+  .team li { display: flex; align-items: baseline; gap: 8px; font-size: clamp(14px, 1.3vw, 20px); font-weight: 600; line-height: 1.25; }
+  .team li .dept { color: var(--muted); font-size: .72em; font-weight: 600; white-space: nowrap; }
+  .team li .kit { color: var(--muted); font-size: .68em; font-weight: 500; margin-left: auto; text-align: right; }
+  .team li.open { color: var(--muted); font-style: italic; font-weight: 500; }
+  .team li.open::before { content: '○'; }
+  .shift .loose { color: var(--muted); font-size: clamp(12px, 1.1vw, 16px); border-top: 1px dashed var(--line); padding-top: .8vh; }
+  .shift .loose b { color: var(--text); font-weight: 700; }
+  .shift .empty { color: var(--muted); font-size: clamp(13px, 1.2vw, 18px); font-weight: 600; padding: 2vh 0; text-align: center; }
+  .shift.unset { grid-column: 1 / -1; border-style: dashed; }
+  .shift.unset .teams { grid-template-columns: repeat(auto-fill, minmax(clamp(200px, 14vw, 280px), 1fr)); }
+</style>
+</head>
+<body>
+<div class="board">
+  <div class="bhead">
+    <h1>Crew board</h1>
+    <div class="site" id="bSite"></div>
+    <span class="now" id="bNow"></span>
+    <span class="clock" id="bClock"></span>
+  </div>
+  <div class="shifts" id="bShifts"></div>
+</div>
+<script src="/crew.js"></script>
+</body>
+</html>

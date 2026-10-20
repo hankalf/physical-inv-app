@@ -1673,6 +1673,20 @@ one team, or all of them, with a read receipt — use **Message the floor** unde
 
 *The office board, for the TV: percentage counted, aisles complete, every team, and every aisle colored by state.*
 
+**The crew board.** `/crew` is the same idea for the time clock: every team and the people on it,
+by shift — **1st shift 6am–2pm** and **2nd shift 2pm–10pm** side by side, the one on now marked
+by the warehouse's clock (*On now · until 2pm*; between shifts it says when the next starts).
+Each team card has its people with their department and equipment, the levels the team reaches,
+its note, and any open seat from the team sheet; under each shift, who is on that shift but not
+on a team. A team's shift is the one set on Teams & crew; a team with none set takes its
+people's shift when they all share one (*shift from its people*). Teams with neither sit under
+*Shift not set*. It needs no sign-in, is read-only, refreshes every half minute, and shows no
+clock-in numbers. `/crew?shift=1` or `?shift=2` pins a screen to one shift.
+
+![](images/crew-board.png)
+
+*The crew board: 1st and 2nd shift, each team's people, and the shift on now marked.*
+
 ---
 
 ## Part 5 — Finishing a count

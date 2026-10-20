@@ -121,10 +121,15 @@ try {
     const [dept, jacket, bibs, boots] = SIZES[badge] || [];
     if (dept) await post(`/api/admin/people/employees/${badge}/gear`, { dept, jacket, bibs, boots }).catch(() => {});
   }
+  // teams 1 and 2 work days, team 3 nights: the crew board has both shifts to show
+  const SHIFT_OF = { 1: '1', 2: '1', 3: '2' };
   for (const name of ['1', '2', '3']) {
-    const team = await post('/api/admin/people/teams', { name }).catch(() => null);
+    const team = await post('/api/admin/people/teams', { name, shift: SHIFT_OF[name] }).catch(() => null);
     if (!team || !team.id) continue;
-    for (const [badge, , , t] of CREW) if (t === name) await post('/api/admin/people/assign', { badge, teamId: team.id }).catch(() => {});
+    for (const [badge, , , t] of CREW) if (t === name) {
+      await post('/api/admin/people/assign', { badge, teamId: team.id }).catch(() => {});
+      await post(`/api/admin/people/employees/${badge}`, { shift: SHIFT_OF[name] }).catch(() => {});
+    }
   }
   const crewOf = (team) => CREW.filter(([, , , t]) => t === team).map(([b]) => b);
 
@@ -606,6 +611,12 @@ try {
   const strip = await board.$('#bNote');
   if (strip) await save(strip, 'board-note');
   await board.close();
+
+  /* ---------- the crew board: who is on which team, by shift ---------- */
+  const crew = await browser.newPage({ viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1 });
+  await crew.goto(`${BASE}/crew`); await wait(2600);
+  await save(crew, 'crew-board');
+  await crew.close();
 
   /* ---------- the handheld ---------- */
   const gun = await browser.newPage({ viewport: { width: 360, height: 640 }, deviceScaleFactor: 2 });
