@@ -88,7 +88,8 @@ them **Jacket**, **Bibs**, **Boots**. **⬇ Sample CSV** downloads one in the ri
   teams in one go: *S1-DS01* is 1st shift, dock stocker, truck 01.
 - **1st shift / 2nd shift** and **Department** show one at a time.
 - **The crew board** (`/crew`) is the same list for a screen by the time clock: each shift's teams
-  and who is on them, the shift on now marked. No sign-in, no clock-in numbers.
+  and who is on them, the shift on now marked, and where each team is counting — its aisle, last
+  scan, and **Scanning** or a red **Stopped scanning**. No sign-in, no clock-in numbers.
 
 ## 6 — Gear sizes, and the order
 

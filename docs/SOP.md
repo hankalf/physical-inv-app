@@ -1676,12 +1676,18 @@ one team, or all of them, with a read receipt — use **Message the floor** unde
 **The crew board.** `/crew` is the same idea for the time clock: every team and the people on it,
 by shift — **1st shift 6am–2pm** and **2nd shift 2pm–10pm** side by side, the one on now marked
 by the warehouse's clock (*On now · until 2pm*; between shifts it says when the next starts).
-Each team card has its people with their department and equipment, the levels the team reaches,
-its note, and any open seat from the team sheet — the teams and who is on them, nobody else. A
+Each team card has **where the team is** on the count — *Aisle F04 · levels A–C*, its last scan
+(*last scan 3 min ago · F04A012*) and the aisle queued next — and **what it is doing**: a green
+**Scanning**, a red **Stopped scanning · 14 min** once it has been quiet past the site's
+stopped-scanning limit (the same limit that raises the alert, Settings → Scanners), or *Finished*,
+*Signed off*, *Not signed on*. Under that, the people on the team by name — no departments, no
+equipment — its note, and any open seat from the team sheet. The teams and who is on them,
+nobody else. It reads the count the office board shows; `?session=12` pins it to another. A
 team's shift is the one set on Teams & crew; a team with none set takes its
 people's shift when they all share one (*shift from its people*). Teams with neither sit under
 *Shift not set*. It needs no sign-in, is read-only, refreshes every half minute, and shows no
-clock-in numbers. `/crew?shift=1` or `?shift=2` pins a screen to one shift.
+clock-in numbers. `/crew?shift=1` or `?shift=2` pins a screen to one shift; the two combine
+(`/crew?shift=2&session=12`).
 
 ![](images/crew-board.png)
 

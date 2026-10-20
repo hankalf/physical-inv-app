@@ -2263,7 +2263,7 @@ location.replace(${JSON.stringify(path)});
       return sendJson(req, res, 200, memo(`board:${url.searchParams.get('session') || ''}`, () => boardData(url.searchParams.get('session'))));
     }
     // the crew board: names, teams and shifts, no clock-in numbers - a TV by the time clock
-    if (p === '/api/board/crew' && req.method === 'GET') return sendJson(req, res, 200, memo('board:crew', () => crewBoard()));
+    if (p === '/api/board/crew' && req.method === 'GET') return sendJson(req, res, 200, memo(`board:crew:${url.searchParams.get('session') || ''}`, () => crewBoard(url.searchParams.get('session'))));
     // the pallet system, shown through this app (see pallet-proxy.js)
     if (p === PS_PREFIX || p.startsWith(PS_PREFIX + '/')) return await proxyPalletSystem(req, res, url, readBody);
     if (p.startsWith('/api/admin/')) return await handleAdmin(req, res, url, null);

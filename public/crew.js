@@ -7,28 +7,46 @@
   const $ = (id) => document.getElementById(id);
   const q = new URLSearchParams(location.search);
   const ONLY = ['1', '2'].includes(q.get('shift') || '') ? q.get('shift') : '';
+  const SESSION = q.get('session') || '';
   const EVERY = Math.max(5, Number(q.get('every') || 30)) * 1000;
   let boardBrand = '';
   let lastGood = 0;
   let siteTime = '';         // the warehouse's clock, from the server: what "on now" was judged by
 
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  /** How long since the team last scanned, in words. */
+  const since = (iso) => {
+    if (!iso) return '';
+    const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    return mins < 1 ? 'just now' : mins < 120 ? `${mins} min ago` : `${Math.floor(mins / 60)} h ago`;
+  };
+  const levels = (l) => (!l ? '' : l.length === 1 ? `level ${l}` : [...l].every((c, i) => i === 0 || c.charCodeAt(0) === l.charCodeAt(i - 1) + 1) ? `levels ${l[0]}–${l[l.length - 1]}` : `levels ${[...l].join(', ')}`);
 
   function teamCard(t) {
     const box = el('div', 'team');
     box.dataset.team = t.name;
+    const n = t.now;
+    const cls = n.stopped ? 'stopped' : n.state === 'scanning' ? 'live' : n.state === 'not signed on' ? 'off' : 'done';
+    box.classList.add(cls);
     const th = el('div', 'th');
     th.append(el('b', '', `Team ${t.name}`));
     if (t.shiftInferred) th.append(el('span', 'inf', 'shift from its people'));
-    if (t.members.length) th.append(el('span', 'reach', `reaches ${t.reachLabel}`));
+    const pill = el('span', 'st ' + cls, n.state === 'stopped scanning' && n.quietMinutes != null ? `Stopped scanning · ${n.quietMinutes} min` : n.state[0].toUpperCase() + n.state.slice(1));
+    th.append(pill);
     box.append(th);
+    /* where it is on the count, and when it last scanned */
+    const where = el('div', 'where');
+    if (n.aisle) where.append(el('b', '', `Aisle ${n.aisle}`), document.createTextNode(`${n.levels ? ' · ' + levels(n.levels) : ''}${n.fromFarEnd ? ' · from the far end' : ''}`));
+    else if (n.state === 'not signed on') where.append(document.createTextNode('No aisle yet'));
+    else where.append(document.createTextNode('No aisle assigned'));
+    if (n.lastScan) where.append(el('span', 'last', `last scan ${since(n.lastScan)}${n.lastBin ? ' · ' + n.lastBin : ''}`));
+    if (n.next) where.append(el('span', 'next', `next ${n.next.aisle}${n.next.more ? ` +${n.next.more}` : ''}`));
+    box.append(where);
     if (t.notes) box.append(el('div', 'notes', t.notes));
     const ul = el('ul');
     for (const m of t.members) {
       const li = el('li');
       li.append(el('span', 'nm', m.name));
-      if (m.dept) li.append(el('span', 'dept', m.dept));
-      if (m.equipment.length) li.append(el('span', 'kit', m.equipment.join(' · ')));
       ul.append(li);
     }
     for (const o of t.open) ul.append(el('li', 'open', ` open seat${o.role ? ` · ${o.role}` : ''}${o.dept ? ` · ${o.dept}` : ''}`));
@@ -58,6 +76,7 @@
     const now = $('bNow');
     now.innerHTML = '';
     now.append(el('b', '', d.now.shift ? 'On now: ' : ''), document.createTextNode(d.now.label + (d.now.until ? ` · until ${d.now.until}` : '')));
+    $('bSession').textContent = d.session ? d.session.name : 'No open count';
     const wrap = $('bShifts');
     wrap.innerHTML = '';
     const shown = d.shifts.filter((s) => (ONLY ? s.key === ONLY : s.key || s.teams.length));
@@ -82,7 +101,7 @@
   async function tick() {
     try {
       if (!boardBrand) fetch('/api/branding', { cache: 'no-cache' }).then((r) => r.json()).then((b) => { boardBrand = b.name || ''; $('bSite').textContent = [b.name, b.place].filter(Boolean).join(' · '); }).catch(() => {});
-      const res = await fetch('/api/board/crew', { cache: 'no-store' });
+      const res = await fetch('/api/board/crew' + (SESSION ? `?session=${encodeURIComponent(SESSION)}` : ''), { cache: 'no-store' });
       if (!res.ok) throw new Error(String(res.status));
       paint(await res.json());
       lastGood = Date.now();
