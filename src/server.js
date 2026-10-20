@@ -40,8 +40,7 @@ import { inventoryOverview } from './routes/inventory-control.js';
 import { withEntries, markEntered, markFromFile, worksheetRows, WORKSHEET_COLUMNS } from './routes/erp-entries.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
-  setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks, partnerOf,
-} from './routes/assignments.js';
+  setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks, partnerOf, planRows, planTeams, PLAN_COLUMNS } from './routes/assignments.js';
 import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot, labelsToReplace } from './routes/reports.js';
 import {
   listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
@@ -1092,6 +1091,21 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, listAssignments(m[1]));
   }
   // a staggered plan for every team at once: preview, then apply
+  // Team plan: the teams on Teams & crew, the plan out as a file, and a plan file in
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/plan$/)) && method === 'GET') {
+    return sendJson(req, res, 200, { teams: planTeams() });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/plan\.csv$/)) && method === 'GET') {
+    const sess = getSession(m[1]);
+    const name = String((sess && sess.name) || 'count').replace(/[^A-Za-z0-9 _-]+/g, '').trim().replace(/\s+/g, '-') || 'count';
+    return sendCsv(req, res, `plan-${name}.csv`, toCsv(planRows(m[1]), PLAN_COLUMNS));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/plan$/)) && method === 'POST') {
+    const replace = url.searchParams.get('replace') === '1';
+    const stats = importMaster(m[1], 'plan', await readBody(req), { replace });
+    audit(actor, 'uploaded a counting plan', `${stats.planned} aisle assignment(s) from ${stats.rows} row(s), ${stats.skipped} skipped${replace ? ', replacing what was queued' : ''}`, m[1]);
+    return sendJson(req, res, 200, stats);
+  }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments\/auto$/)) && method === 'POST') {
     const body = await readJson(req);
     if (body.preview) return sendJson(req, res, 200, autoPlan(m[1], body));

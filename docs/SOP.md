@@ -1009,9 +1009,26 @@ comes back as "already counted", and a trial line a gun sends late is dropped.
 
 **Dashboard → Team plan.**
 
-Either upload a **counting plan** (Settings → Lists & racking → Counting plan: one row
-per aisle, in the order each team counts it, with the levels their equipment reaches),
-or queue aisles by hand here.
+**Every team on Teams & crew has a row here** from the start — *nothing queued · reaches levels
+A–F* — with **Queue aisles for this team**, which puts the team and the levels it reaches into the
+form below and the cursor in *Aisles*. The **Team** box offers the teams by name.
+
+Fill the plan any of three ways: queue aisles by hand here, let **Auto-assign the aisles** plan it
+(below), or **upload a counting plan** — one row per aisle, in the order each team counts it, with
+the levels their equipment reaches. The plan file is on this tab:
+
+- **⬇ Export the plan (CSV)** — every team's aisles in counting order: **Team**, **Aisle**,
+  **Levels** (*A-C*), **Start** (*001 end* / *far end*) and **Status** (*counting*, *queued*,
+  *done*). It is the same layout the upload reads, so the way to rework a plan is to export it,
+  change it in Excel, and bring it back; *Status* is for reading and ignored on the way in.
+- **Upload a plan** — a CSV or Excel file, then **Upload**. It adds to what is queued; tick
+  **Replace what is queued** to take every aisle still queued or being counted off first
+  (finished aisles stay). It says how many rows came in, which teams started, and how many were
+  skipped and why (an aisle not on the count's bin list, a row with no levels).
+- **⬇ Sample plan** — a starting file with the columns filled in.
+
+The same upload is under Teams & crew → Counting plan, for a count other than the one on the
+dashboard. Uploading needs *Queue aisles*; the export needs *Downloads*.
 
 - A team's next aisle starts automatically as soon as the block it belongs to is clear.
   That is what staggers the crews apart.

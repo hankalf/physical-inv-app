@@ -1,6 +1,6 @@
 import { db, norm, resolveAisle } from '../db.js';
 import { aisleNumber, normLevels, levelsOverlap, levelsLabel } from '../util/bincode.js';
-import { reachShortfall } from './people.js';
+import { reachShortfall, listTeams } from './people.js';
 
 /*
  * Guided counting.
@@ -379,4 +379,32 @@ export function applyLayoutBlocks(sessionId, layout) {
     throw err;
   }
   return { applied, aisles: aisleOverview(id) };
+}
+
+/* ------------------------------------------------------------- the plan as a file
+   Dashboard → Team plan: the plan out as a file, in the columns the plan upload
+   reads - so an exported plan can be edited and brought back - and the teams
+   from Teams & crew, so every team has a row on the plan before anything is
+   queued for it. */
+
+/** "ABCDEF" -> "A-F"; letters that are not a run stay a list: "A, C". */
+export const levelsCell = (l) => {
+  const s = String(l || '');
+  if (!s) return '';
+  const run = [...s].every((c, i) => i === 0 || c.charCodeAt(0) === s.charCodeAt(i - 1) + 1);
+  return run ? (s.length === 1 ? s : `${s[0]}-${s[s.length - 1]}`) : [...s].join(', ');
+};
+const STATE = { queued: 'queued', active: 'counting', done: 'done' };
+export const PLAN_COLUMNS = ['Team', 'Aisle', 'Levels', 'Start', 'Status'];
+
+/** Every assignment on the count, team by team in counting order. Status is for reading; the upload ignores it. */
+export function planRows(sessionId) {
+  return db.prepare('SELECT team, aisle, levels, direction, status, position, id FROM assignments WHERE session_id = ?').all(Number(sessionId))
+    .sort((a, b) => String(a.team).localeCompare(String(b.team), undefined, { numeric: true }) || a.position - b.position || a.id - b.id)
+    .map((a) => ({ Team: a.team, Aisle: a.aisle, Levels: levelsCell(a.levels), Start: a.direction === 'down' ? 'far end' : '001 end', Status: STATE[a.status] || a.status }));
+}
+
+/** The teams on Teams & crew, with what they reach: the rows the plan starts from. */
+export function planTeams() {
+  return listTeams().map((t) => ({ name: t.name, shift: t.shift || '', reach: t.reach || '', reachLabel: t.reachLabel, people: t.members.length }));
 }

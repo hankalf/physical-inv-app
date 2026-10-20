@@ -255,8 +255,19 @@
     <div class="card" id="teamPlanCard">
       <h2>Team assignments</h2>
       <div class="hint">Queue aisles per team in counting order, with the <b>levels</b> that team's equipment covers (A–C on foot, D–F with the lift, A–F for all). Levels are required. Two teams can share an aisle on different levels — or on the same levels from <b>opposite ends</b>: queue one from the 001 end and the other from the far end, and they meet in the middle. A team's next aisle waits while another team holds those levels in its racking block — that is what staggers them. Which aisles share racking is set under <a href="/settings" style="color:var(--accent)">Settings</a>.</div>
+      <!-- the plan as a file: out to edit, back in, and a sample to start from -->
+      <div class="inline" style="margin-top:8px" id="planFileRow">
+        <div class="auto"><button class="fit" id="btnPlanExport" title="Every team's aisles in counting order: Team, Aisle, Levels, Start, Status - the same columns the upload reads">⬇ Export the plan (CSV)</button></div>
+        <div><label for="fPlanFile">Upload a plan</label><input type="file" id="fPlanFile" accept=".csv,.xlsx,.xls,text/csv"></div>
+        <div class="auto"><label class="cb" title="Drop every aisle still queued or being counted first; finished aisles are left alone"><input type="checkbox" id="fPlanFileReplace"> Replace what is queued</label></div>
+        <div class="auto"><button class="primary fit" id="btnPlanUpload">Upload</button></div>
+        <div class="auto"><a id="lnkPlanSample" href="/templates/plan-template.csv" download="plan-template.csv" style="color:var(--accent);font-weight:700;text-decoration:none">⬇ Sample plan</a></div>
+      </div>
+      <div class="hint" style="margin-top:4px">Columns: <b>Team</b>, <b>Aisle</b>, <b>Levels</b> (A-C, D-F, A-F), and <b>Start</b> (<i>001 end</i> or <i>far end</i>, optional). An exported plan comes back as it is — its <b>Status</b> column is for reading and is ignored. Every team on <a href="/teams" style="color:var(--accent)">Teams &amp; crew</a> has a row below, queued or not.</div>
+      <div class="feedback" id="planFileMsg"></div>
+      <datalist id="planTeamNames"></datalist>
       <div class="inline" style="margin-top:8px">
-        <div class="auto"><label for="fAssignTeam">Team</label><input id="fAssignTeam" class="sm" style="width:70px" placeholder="3"></div>
+        <div class="auto"><label for="fAssignTeam">Team</label><input id="fAssignTeam" class="sm" style="width:70px" placeholder="3" list="planTeamNames" autocomplete="off"></div>
         <div><label for="fAssignAisles">Aisles, in order</label><input id="fAssignAisles" placeholder="F01, F03, F05"></div>
         <div class="auto"><label for="fAssignLevels">Levels (required)</label><input id="fAssignLevels" class="sm" placeholder="A-C" required title="Which levels this team counts, by equipment: A-C on foot, D-F with the lift, A-F for every level."></div>
         <div class="auto"><label for="fAssignFrom">Start from</label>

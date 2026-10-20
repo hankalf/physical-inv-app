@@ -1127,6 +1127,7 @@
     ['Upload the bin list', '/settings', 'lists', 'bin list locations upload import csv excel master file racking'],
     ['Upload the inventory report', '/settings', 'lists', 'inventory report pallets upload import csv excel expected quantity erp export'],
     ['Upload a counting plan', '/teams', 'crew', 'plan counting plan teams aisles upload csv', 'planCard'],
+    ['Export or upload the team plan', '/admin', 'teams', 'team plan export download upload plan csv excel sample template assignments aisles teams'],
     ['Racking blocks', '/settings', 'lists', 'racking block back to back pair aisles conflict'],
     ['Send to the ERP', '/settings', 'erp', 'erp export send file layout columns adjustments posting'],
     ['Backups and the log', '/settings', 'backups', 'backup restore log audit who did what download'],

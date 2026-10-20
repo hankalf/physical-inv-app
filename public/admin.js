@@ -443,20 +443,27 @@
   /* ------------------------------------------------------------ assignments */
   async function refreshAssignments() {
     if (!planShown) postJson(`/api/admin/sessions/${sessionId}/assignments/auto`, { preview: true, teams: 'x' }).then((p) => renderRules(p.rules)).catch(() => {});
-    const [rows, aisles] = await Promise.all([
+    const [rows, aisles, crew] = await Promise.all([
       apiJson(`/api/admin/sessions/${sessionId}/assignments`),
       apiJson(`/api/admin/sessions/${sessionId}/aisles`),
+      // the teams on Teams & crew: each gets a row on the plan before anything is queued for it
+      apiJson(`/api/admin/sessions/${sessionId}/plan`).catch(() => ({ teams: [] })),
     ]);
+    const crewTeams = new Map((crew.teams || []).map((t) => [String(t.name), t]));
+    $('planTeamNames').replaceChildren(...[...crewTeams.keys()].map((n) => Object.assign(document.createElement('option'), { value: n })));
     const blockOf = new Map(aisles.map((a) => [a.aisle, a.block]));
     const activeInBlock = new Map(); // block -> [{team, levels}]
     const overlap = (a, b) => !a || !b || [...a].some((c) => b.includes(c));
     for (const r of rows) if (r.status === 'active') { const k = blockOf.get(r.aisle) || r.aisle; if (!activeInBlock.has(k)) activeInBlock.set(k, []); activeInBlock.get(k).push(r); }
 
     const teams = new Map();
+    for (const name of crewTeams.keys()) teams.set(name, []);
     for (const r of rows) { if (!teams.has(r.team)) teams.set(r.team, []); teams.get(r.team).push(r); }
     const list = $('teamList');
     list.innerHTML = '';
-    if (!teams.size) { list.innerHTML = '<div class="muted">No aisles queued yet. Queue some above or upload a counting plan.</div>'; return; }
+    if (!teams.size) { list.innerHTML = '<div class="muted">No teams yet. Add them on Teams &amp; crew, queue aisles above, or upload a counting plan.</div>'; return; }
+    /* "ABCDEF" -> "A-F", for the Levels box */
+    const levelsBox = (l) => (!l ? '' : [...l].every((c, i) => i === 0 || c.charCodeAt(0) === l.charCodeAt(i - 1) + 1) ? (l.length === 1 ? l : `${l[0]}-${l[l.length - 1]}`) : [...l].join(','));
 
     for (const [team, items] of [...teams.entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0]), undefined, { numeric: true }))) {
       const box = document.createElement('div');
@@ -466,8 +473,25 @@
       const active = items.find((i) => i.status === 'active');
       head.innerHTML = `<span>Team <b></b></span><span class="muted"></span>`;
       head.querySelector('b').textContent = team;
-      head.querySelector('.muted').textContent = active ? `in ${aisleLabel(active.aisle, zoneByAisle.get(active.aisle))}, ${levelsLabel(active.levels)}` : (items.every((i) => i.status === 'done') ? 'finished' : 'waiting');
+      const ct = crewTeams.get(String(team));
+      head.querySelector('.muted').textContent = !items.length ? `nothing queued${ct && ct.reach ? ` · reaches ${ct.reachLabel}` : ''}${ct && !ct.people ? ' · nobody on it yet' : ''}`
+        : active ? `in ${aisleLabel(active.aisle, zoneByAisle.get(active.aisle))}, ${levelsLabel(active.levels)}` : (items.every((i) => i.status === 'done') ? 'finished' : 'waiting');
+      box.dataset.team = team;
+      if (!items.length) box.classList.add('empty');
       box.appendChild(head);
+      if (!items.length) {
+        /* a team with nothing queued: one tap fills the form for it, levels from what it reaches */
+        const go = button('Queue aisles for this team', 'sm', () => {
+          $('fAssignTeam').value = team;
+          if (ct && ct.reach) $('fAssignLevels').value = levelsBox(ct.reach);
+          $('fAssignAisles').focus();
+        });
+        go.dataset.queueFor = team;
+        go.disabled = !api.can('assign');
+        box.appendChild(go);
+        list.appendChild(box);
+        continue;
+      }
 
       const seq = document.createElement('div');
       seq.className = 'seq';
@@ -2019,6 +2043,33 @@
       { team: $('fAssignTeam').value, aisles: $('fAssignAisles').value, levels: $('fAssignLevels').value, direction: $('fAssignFrom').value, force });
     return r;
   }
+
+  /* the plan as a file: out, and back in */
+  $('btnPlanExport').onclick = () => {
+    if (!needSession($('planFileMsg'))) return;
+    const s = currentSession();
+    api.download(`/api/admin/sessions/${sessionId}/export/plan.csv`, `plan-${String((s && s.name) || 'count').replace(/[^A-Za-z0-9 _-]+/g, '').trim().replace(/\s+/g, '-') || 'count'}.csv`)
+      .catch((err) => msg($('planFileMsg'), 'err', err.message));
+  };
+  $('btnPlanUpload').onclick = async () => {
+    if (!needSession($('planFileMsg'))) return;
+    const file = $('fPlanFile').files[0];
+    if (!file) { msg($('planFileMsg'), 'err', 'Choose a plan file first', 'A CSV or Excel file: Team, Aisle, Levels, and Start if you use it. ⬇ Sample plan shows the layout.'); return; }
+    const replace = $('fPlanFileReplace').checked;
+    if (replace && !confirm('Replace what is queued? Every aisle still queued or being counted comes off first; finished aisles stay.')) return;
+    msg($('planFileMsg'), 'warn', `Reading ${file.name}…`);
+    try {
+      const stats = await apiJson(`/api/admin/sessions/${sessionId}/plan?replace=${replace ? 1 : 0}`,
+        { method: 'POST', headers: { 'content-type': 'text/csv' }, body: await window.appUi.fileToCsv(file) });
+      const started = (stats.activated || []).map((a) => `team ${a.team} in ${a.aisle}`);
+      msg($('planFileMsg'), stats.skipped ? 'warn' : 'ok', `${stats.planned.toLocaleString()} aisle assignment${stats.planned === 1 ? '' : 's'} from ${file.name}${replace ? ', replacing what was queued' : ''}`,
+        [started.length ? `started ${started.join('; ')}` : '',
+          stats.skipped ? `${stats.skipped} row${stats.skipped === 1 ? '' : 's'} skipped${stats.skippedNoLevels ? ` (${stats.skippedNoLevels} with no levels)` : ''} — a missing team or aisle, an aisle not on this count's bin list, or no levels` : ''].filter(Boolean).join(' · '));
+      $('fPlanFile').value = '';
+      await refreshAll();
+    } catch (err) { msg($('planFileMsg'), 'err', 'Upload failed', err.message); }
+  };
+  $('btnPlanUpload').disabled = !api.can('assign');
 
   $('btnAssign').onclick = async () => {
     if (!needSession($('assignMsg'))) return;
