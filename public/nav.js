@@ -97,6 +97,12 @@
     for (const sel of document.querySelectorAll('.themepick select[data-look]')) sel.value = look[sel.dataset.look];
   }
   applyLook();
+  /* The side panel can be put away for room - it is a desk thing, so it is kept
+     in this browser like the theme, and set before the page draws so it never
+     flashes open first. */
+  const SIDE_KEY = 'adminSide:collapsed';
+  const sideCollapsed = () => { try { return localStorage.getItem(SIDE_KEY) === '1'; } catch { return false; } };
+  if (!EMBED && sideCollapsed()) document.documentElement.classList.add('side-collapsed');
   function mountThemePicker() {
     const foot = document.getElementById('lookPick');     // Settings → Site & systems
     if (!foot || foot.querySelector('.themepick')) return;
@@ -1214,6 +1220,50 @@
     side.insertBefore(btn, brand ? brand.nextSibling : side.firstChild);
   }
 
+  /* Collapsed, the panel sits off the left edge with a thin strip showing: the
+     mouse on the strip slides it out over the page, off it slides it back. The
+     same button that put it away pins it open again. Keyboard focus inside it
+     brings it out too. On a narrow screen it is the bar along the top, as ever. */
+  function mountSideToggle() {
+    const side = document.querySelector('aside.side');
+    if (!side || EMBED || document.getElementById('navCollapse')) return;
+    const root = document.documentElement;
+    const btn = document.createElement('button');
+    btn.id = 'navCollapse';
+    btn.type = 'button';
+    btn.className = 'sidetoggle ghost sm';
+    const label = () => {
+      const c = root.classList.contains('side-collapsed');
+      btn.textContent = c ? '»' : '«';
+      btn.title = c ? 'Keep the side panel open' : 'Hide the side panel for more room — the mouse on the left edge brings it back';
+      btn.setAttribute('aria-label', btn.title);
+      btn.setAttribute('aria-pressed', String(c));
+    };
+    const peek = document.createElement('div');
+    peek.id = 'sidePeek';
+    peek.title = 'The side panel';
+    peek.innerHTML = '<span aria-hidden="true">›</span>';
+    let hideTimer = null;
+    const show = () => { clearTimeout(hideTimer); side.classList.add('peek'); };
+    const hide = (ms = 250) => { clearTimeout(hideTimer); hideTimer = setTimeout(() => side.classList.remove('peek'), ms); };
+    peek.addEventListener('mouseenter', show);
+    peek.addEventListener('click', show);                  // a touch screen has no hover
+    side.addEventListener('mouseenter', () => { if (side.classList.contains('peek')) show(); });
+    side.addEventListener('mouseleave', () => { if (root.classList.contains('side-collapsed')) hide(); });
+    btn.addEventListener('click', () => {
+      const now = !root.classList.contains('side-collapsed');
+      root.classList.toggle('side-collapsed', now);
+      side.classList.remove('peek');
+      try { localStorage.setItem(SIDE_KEY, now ? '1' : '0'); } catch { /* private window */ }
+      if (now) btn.blur();                                // put away means away, not held out by the focus on its own button
+      label();
+      window.dispatchEvent(new Event('resize'));         // the map and the tables fill the room
+    });
+    label();
+    side.appendChild(btn);
+    document.body.appendChild(peek);
+  }
+
   function closeSearch() {
     const r = document.getElementById('navResults');
     if (r) r.hidden = true;
@@ -1481,6 +1531,7 @@
     mountThemePicker();
     mountSearch();
     mountPhoneMenu();
+    mountSideToggle();
     renderSubTabs();
     applyPendingGoto();
     const btn = document.getElementById('btnLogin');
