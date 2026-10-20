@@ -17,6 +17,7 @@ counts side by side.
 - [5 — How a second count is judged](#5--how-a-second-count-is-judged)
 - [6 — Third counts](#6--third-counts)
 - [7 — On the dashboard: work them to zero](#7--on-the-dashboard-work-them-to-zero)
+- [7a — One team for the second counts, and handing them on](#7a--one-team-for-the-second-counts-and-handing-them-on)
 - [8 — Export the 2nd and 3rd counts with the 1st](#8--export-the-2nd-and-3rd-counts-with-the-1st)
 - [9 — When something is not right](#9--when-something-is-not-right)
 
@@ -47,6 +48,7 @@ counts side by side.
 | **Third count when the second settles nothing** | A bin whose second count agrees with neither the first count nor the report is counted a third time, by a team that did neither | On for a wall-to-wall |
 | **Over N units / or over N %** | A quantity difference smaller than both raises no second count. Either one is enough to raise it | 2–5 units, 5–10 % |
 | **Cap open** | Stop raising automatic second counts once this many are open | 0 (no cap), or 50–100 on a big count |
+| **Send them all to team** … | Every new second count is given to that team — inventory control's, say. A bin the team counted first stays open for any other team | On, with the team number, when one team does the second counts |
 
 Press **Save settings**. A change applies from then on; it does not go back over lines already in.
 
@@ -144,6 +146,36 @@ team), **3rd count** (on a finished second count), **✕** (delete).
 
 **Before you close the count:** nothing open. A count closed with open second or third counts has
 known-wrong numbers in it, and **Final report** is not offered while one is open.
+
+## 7a — One team for the second counts, and handing them on
+
+When one team does all the second counts — inventory control's, say:
+
+1. **Settings → Count setup → Count session → Second counts**: tick **Send them all to team** and
+   type the team number (*90*). **Save settings**.
+2. Every new second count is given to that team, and the open ones nobody had yet go to it at once.
+   Its guns have them all; the other teams' guns are offered none.
+3. The Second counts card says **new second counts go to team 90**.
+
+It stays blind. A bin team 90 counted **first** is never its own second count: that one stays open
+for any other team. A **third count** goes to team 90 only if it did neither earlier count.
+
+**When the team is swamped**, use the bar above the table:
+
+| | |
+|---|---|
+| **Hand open second counts from** | The team that has them (*team 90 — 24 open*), or *any team* |
+| **to team** | The team to give them to; blank is back to *any team* |
+| **How many** | Blank for all of them, or a number |
+| **In aisle** | Only that aisle's |
+
+**Hand them over** moves them, nearest bins first, and says how many moved. A bin a team has
+**already started** stays with it. A bin the receiving team **counted first** stays where it is, and
+the message names it. The **Team** box on each row still moves one at a time. Every hand-over is in
+the log.
+
+**Untick** *Send them all to team* and new second counts are for any team again; the ones already
+handed out stay where they are (hand them back to *any team* with the bar if you want).
 
 ## 8 — Export the 2nd and 3rd counts with the 1st
 

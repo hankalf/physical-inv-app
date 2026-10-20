@@ -14,6 +14,7 @@ it once more: a **third count**. This guide is how that works on the gun and on 
 - [4 — What the second count decides](#4--what-the-second-count-decides)
 - [5 — Third counts](#5--third-counts)
 - [6 — On the dashboard](#6--on-the-dashboard)
+- [6a — When one team does the second counts](#6a--when-one-team-does-the-second-counts)
 - [7 — The 1st, 2nd and 3rd counts side by side](#7--the-1st-2nd-and-3rd-counts-side-by-side)
 - [8 — When something is not right](#8--when-something-is-not-right)
 
@@ -107,6 +108,21 @@ Supervisors: **Request second count** sends a bin back by hand (type a bin or a 
 list to zero before the count is closed — a count closed with open second counts has known-wrong
 numbers in it.
 
+## 6a — When one team does the second counts
+
+On many counts one team does all the second counts — inventory control's, say. Then:
+
+- **Every new second count is given to that team.** Its guns have them all; other teams' guns
+  show *Second counts available* only for bins left open for them.
+- The Second counts card says **new second counts go to team …**.
+- A bin that team counted **first** never goes to it — another team does that one. A third count
+  goes to it only if it did neither earlier count.
+
+**When that team is swamped**, a supervisor hands some to another team with the bar above the
+table: **Hand open second counts from** *team 90* **to team** *4*, **How many** (blank for all), **In
+aisle** (optional), **Hand them over**. Bins a team has already started stay with it. On the gun,
+the handed-over ones simply appear under *Second counts available*.
+
 ## 7 — The 1st, 2nd and 3rd counts side by side
 
 **Dashboard → Second counts → ⬇ Export 2nd & 3rd counts with the 1st (Excel).** Leave **Aisle**
@@ -132,3 +148,4 @@ count has not been done. A *Summary* sheet says how every bin was settled.
 | *a third team must do the third count* | Your team did the first or second count of that bin | Leave it; another team takes it |
 | A bin you finished still shows *taken* | *Bin done* has not reached the office yet | Get the gun into Wi-Fi; it sends by itself |
 | Nobody can take a third count | Every team on the count did one of the earlier counts | A supervisor gives it to a team by name |
+| Your team has no second counts, but there are plenty open | They are given to the second-count team | A supervisor hands some to your team (section 6a) |

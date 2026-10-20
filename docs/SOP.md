@@ -1685,6 +1685,18 @@ supervisor.
     The line goes to Adjustments as counted;
   - **it agrees with the report** — the first count was wrong, and the line now matches;
   - **it agrees with neither** — nobody knows which number is right. That is what a third count is for.
+- **One team for the second counts.** If one team does them all — inventory control's, say —
+  tick **Send them all to team** in the count's settings (*Settings → Count setup → Count session →
+  Second counts*) and type its team number. Every new second count is given to that team, and the
+  open ones nobody had yet go to it at once. It stays blind: a bin that team counted first is never
+  its own second count — that one stays open for any other team — and a third count only goes to it
+  if it did neither earlier count. The Second counts card says *new second counts go to team …*.
+  **When it is swamped**, the **Hand open second counts from … to team …** bar on the card moves
+  some or all of a team's open ones to another team (or back to *any team*): leave *How many* blank
+  for all of them, or give a number; *In aisle* for one aisle. A bin a team has already started stays
+  with it, and a bin the other team counted first stays where it is — the message says which. The
+  **Team** box on each row still moves one at a time. Untick it, and new second counts are for any
+  team again; the ones already handed out stay where they are.
 - **Third count.** Tick **Third count when the second settles nothing** in the count's settings
   (*Settings → Count setup → Count session → Second counts*; off on a new count). From then on a bin
   whose second count agrees with neither its first count nor the report is sent back a **third

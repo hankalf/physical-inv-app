@@ -386,6 +386,9 @@ if (!hasCol('recounts', 'round')) db.exec('ALTER TABLE recounts ADD COLUMN round
 if (!hasCol('recounts', 'second_team')) db.exec('ALTER TABLE recounts ADD COLUMN second_team TEXT');
 if (!hasCol('recounts', 'parent_id')) db.exec('ALTER TABLE recounts ADD COLUMN parent_id INTEGER');
 if (!hasCol('sessions', 'third_count')) db.exec('ALTER TABLE sessions ADD COLUMN third_count INTEGER NOT NULL DEFAULT 0');
+/* One team for the second counts - inventory control's, say: every new one goes to it while this is on. */
+if (!hasCol('sessions', 'recount_team')) db.exec('ALTER TABLE sessions ADD COLUMN recount_team TEXT');
+if (!hasCol('sessions', 'recount_team_on')) db.exec('ALTER TABLE sessions ADD COLUMN recount_team_on INTEGER NOT NULL DEFAULT 0');
 // a second count supersedes the first in its bin: the reports ask that of every line
 db.exec('CREATE INDEX IF NOT EXISTS idx_counts_loc_pass ON counts(session_id, location_code, pass, voided)');
 /* Adjustment lines keyed into the ERP by hand, so none is keyed twice; the

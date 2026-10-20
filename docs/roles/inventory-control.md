@@ -69,6 +69,9 @@ A count compares the floor with a report. If the report is wrong, every variance
 4. **Agree the thresholds** with whoever sets the count up (*Settings → Count session*):
    - **Recount over N units / or over N %**: a difference smaller than both raises no second count. 2 to 5 units and 5 to 10 % is usual; at 0/0 every difference is recounted and the list becomes unworkable;
    - **a cap** on second counts;
+   - **Send them all to team** …: when your team does the second counts, every new one is given to
+     your team number (a bin your team counted first still goes to another team). When you are
+     swamped, Dashboard → Second counts → **Hand open second counts from … to team …** passes some on;
    - **Third count when the second settles nothing**: a bin whose second count agrees with neither
      the first count nor the report is counted a third time, by a team that did neither, and the third
      count stands. Recommended for a wall-to-wall that goes to the ERP;

@@ -63,6 +63,8 @@ export function createRecount(sessionId, { bin, palletId, reason = 'MANUAL', det
   if (!b) throw Object.assign(new Error('bin required'), { status: 400 });
   const existing = openTaskForBin(id, b);
   if (existing) return { id: existing.id, created: false };
+  // the count's second-count team takes it, unless it is a team that already counted this bin
+  if (!team && reason !== 'CYCLE') team = recountTeamFor(getSession(id), { round, firstTeam, secondTeam });
   const info = db
     .prepare(
       `INSERT INTO recounts (session_id, bin, pallet_id, reason, detail, source, first_team, team, status, created_at, round, second_team, parent_id)
@@ -72,6 +74,73 @@ export function createRecount(sessionId, { bin, palletId, reason = 'MANUAL', det
          firstTeam ? norm(firstTeam) : null, team ? norm(team) : null, now(),
          Number(round) === 3 ? 3 : 2, secondTeam ? norm(secondTeam) : null, parentId ? Number(parentId) : null);
   return { id: info.lastInsertRowid, created: true };
+}
+
+/* ---------------------------------------------------- the second-count team
+   A count can send every second count to one team - inventory control's, who
+   do the second counts - while that is ticked. It is still blind: a team never
+   gets the second count of a bin it counted first, nor a third count of a bin
+   it counted at all; those stay open for any other team. */
+export function recountTeamFor(session, { round = 2, firstTeam = null, secondTeam = null } = {}) {
+  if (!session || !session.recount_team_on || !norm(session.recount_team)) return null;
+  const t = norm(session.recount_team);
+  if (norm(firstTeam) === t) return null;
+  if (Number(round) === 3 && norm(secondTeam) === t) return null;
+  return t;
+}
+const mayDo = (task, team) => {
+  const t = norm(team);
+  if (!t) return true;
+  if (task.reason === 'CYCLE') return true;
+  if (norm(task.first_team) === t) return false;
+  return !(Number(task.round) === 3 && norm(task.second_team) === t);
+};
+
+/** When the team is switched on: the open second counts nobody has yet go to it. */
+export function assignOpenToRecountTeam(sessionId) {
+  const id = Number(sessionId);
+  const s = getSession(id);
+  if (!s || !s.recount_team_on || !norm(s.recount_team)) return { assigned: 0, left: 0 };
+  const team = norm(s.recount_team);
+  let assigned = 0;
+  let left = 0;
+  for (const r of db.prepare("SELECT * FROM recounts WHERE session_id = ? AND status = 'open' AND team IS NULL AND reason != 'CYCLE'").all(id)) {
+    if (!mayDo(r, team)) { left++; continue; }
+    db.prepare('UPDATE recounts SET team = ? WHERE id = ?').run(team, r.id);
+    assigned++;
+  }
+  return { assigned, left, team };
+}
+
+/**
+ * Hand second counts from one team to another: when the second-count team is
+ * swamped, some or all of its open ones - not the ones it has started - go to
+ * another team, or back to any team. A bin the other team counted itself is
+ * left where it is.
+ */
+export function reassignRecounts(sessionId, { from = '', to = '', limit = 0, aisle = '' } = {}) {
+  const id = Number(sessionId);
+  if (!getSession(id)) throw Object.assign(new Error('session not found'), { status: 404 });
+  const f = norm(from);
+  const t = norm(to);
+  if (f && f === t) throw Object.assign(new Error('they are with that team already'), { status: 400 });
+  const a = norm(aisle);
+  const aisleOf = new Map(db.prepare('SELECT code, aisle FROM locations WHERE session_id = ?').all(id).map((l) => [l.code, l.aisle]));
+  const open = db.prepare(`SELECT * FROM recounts WHERE session_id = ? AND status = 'open' AND reason != 'CYCLE' AND ${f ? 'team = ?' : 'team IS NULL'} ORDER BY bin`)
+    .all(...(f ? [id, f] : [id]))
+    .filter((r) => !a || (aisleOf.get(r.bin) || '') === a)
+    .sort((x, y) => x.bin.localeCompare(y.bin, undefined, { numeric: true }));
+  const want = Number(limit) > 0 ? Number(limit) : Infinity;
+  let moved = 0;
+  const skipped = [];
+  for (const r of open) {
+    if (moved >= want) break;
+    if (!mayDo(r, t)) { skipped.push(r.bin); continue; }
+    db.prepare('UPDATE recounts SET team = ? WHERE id = ?').run(t || null, r.id);
+    moved++;
+  }
+  const taken = f ? db.prepare("SELECT COUNT(*) n FROM recounts WHERE session_id = ? AND status = 'taken' AND team = ?").get(id, f).n : 0;
+  return { moved, skipped, taken, from: f, to: t, left: open.length - moved - skipped.length };
 }
 
 /**

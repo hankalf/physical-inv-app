@@ -162,6 +162,10 @@ by the thresholds when a line disagrees with the report, and by you.
   first time. A team taps **Start second counts** on its assignment screen.
 - The counter sees the bin and the reason type, never the numbers and never who counted it
   first.
+- **One team doing the second counts** (*Send them all to team* on the count): every new one is
+  given to that team. When it is swamped, **Hand open second counts from … to team …** on the card
+  moves some or all of its open ones to another team — a number, or one aisle; bins it has started
+  stay with it. The **Team** box on a row moves one.
 
 Keep the list moving while teams are still on the floor. Inventory control will not close a
 count with open second counts; a list that is hundreds deep means the thresholds are at 0 or

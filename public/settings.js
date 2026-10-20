@@ -2142,6 +2142,8 @@
     $('fAskComments').checked = !!s.ask_comments;
     $('fAutoRecount').checked = !!s.auto_recount;
     $('fThirdCount').checked = !!s.third_count;
+    $('fRecountTeamOn').checked = !!s.recount_team_on;
+    $('fRecountTeam').value = s.recount_team || '';
     $('fRecMinQty').value = s.recount_min_qty || 0;
     $('fRecMinPct').value = s.recount_min_pct || 0;
     $('fRecCap').value = s.recount_cap || 0;
@@ -2259,9 +2261,11 @@
   $('btnSaveSettings').onclick = async () => {
     if (!needSession($('sessionMsg'))) return;
     try {
-      await api.post(`/api/admin/sessions/${sessionId}/settings`, {
+      if ($('fRecountTeamOn').checked && !$('fRecountTeam').value.trim()) { msg($('sessionMsg'), 'err', 'Which team?', 'Type the team number the second counts go to, or untick Send them all to team.'); $('fRecountTeam').focus(); return; }
+      const saved = await api.post(`/api/admin/sessions/${sessionId}/settings`, {
         palletMode: $('fPalletMode').value, guided: $('fGuided').checked, askComments: $('fAskComments').checked,
         autoRecount: $('fAutoRecount').checked, thirdCount: $('fThirdCount').checked, layout: $('fLayout').value,
+        recountTeamOn: $('fRecountTeamOn').checked, recountTeam: $('fRecountTeam').value,
         recountMinQty: $('fRecMinQty').value, recountMinPct: $('fRecMinPct').value, recountCap: $('fRecCap').value,
         askLot: $('fAskLot').checked, askExpiry: $('fAskExpiry').checked,
         requireApproval: $('fRequireApproval').checked,
@@ -2273,8 +2277,10 @@
         await api.post('/api/admin/default-session', { sessionId: wantDefault ? sessionId : 0 });
         await refreshDefaultSession();
       }
+      const handed = saved && saved.recountTeamHanded;
       msg($('sessionMsg'), 'ok', 'Settings saved. Scanners pick them up within about half a minute.',
-        defaultSessionId === sessionId ? 'Every scanner will land on this count at sign-on.' : '');
+        [defaultSessionId === sessionId ? 'Every scanner will land on this count at sign-on.' : '',
+          handed && handed.assigned ? `${handed.assigned} open second count${handed.assigned === 1 ? '' : 's'} went to team ${handed.team}${handed.left ? `; ${handed.left} stay open for other teams (team ${handed.team} counted those bins first)` : ''}.` : ''].filter(Boolean).join(' '));
       await loadSessions();
     } catch (err) { msg($('sessionMsg'), 'err', err.message); }
   };

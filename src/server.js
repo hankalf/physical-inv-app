@@ -44,6 +44,7 @@ import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions
 import {
   listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
   tasksForTeam, takeRecount, finishRecount, updateRecount, deleteRecount, raiseThirdCount, thirdCountsForBins,
+  assignOpenToRecountTeam, reassignRecounts,
 } from './routes/recounts.js';
 import { generateBatch, previewBatch, binList, listBatches, deleteBatch, coverage, runSchedules, STRATEGIES, levelsOnOpenTasks } from './routes/cycles.js';
 import {
@@ -998,11 +999,11 @@ async function handleAdmin(req, res, url, m) {
     // how big an adjustment has to be before somebody has to sign for it
     const apprQty = num(body.approvalMinQty, s.approval_min_qty, 1e6);
     const apprPct = num(body.approvalMinPct, s.approval_min_pct, 100);
-    audit(actor, 'changed session settings', JSON.stringify({ palletMode: mode, guided: body.guided, askComments: body.askComments, layout, autoRecount: body.autoRecount, recount: { minQty, minPct, cap, third: body.thirdCount },
+    audit(actor, 'changed session settings', JSON.stringify({ palletMode: mode, guided: body.guided, askComments: body.askComments, layout, autoRecount: body.autoRecount, recount: { minQty, minPct, cap, third: body.thirdCount, team: body.recountTeamOn ? body.recountTeam : (body.recountTeamOn === false ? 'off' : undefined) },
       approvals: { on: body.requireApproval, minQty: apprQty, minPct: apprPct }, showOnGuns: body.showOnGuns }), m[1]);
     if (body.showOnGuns != null) db.prepare('UPDATE sessions SET show_on_guns = ? WHERE id = ?').run(body.showOnGuns ? 1 : 0, s.id);
     db.prepare(`UPDATE sessions SET pallet_mode = ?, guided = ?, ask_comments = ?, layout = ?, auto_recount = ?,
-                  recount_min_qty = ?, recount_min_pct = ?, recount_cap = ?, third_count = ?,
+                  recount_min_qty = ?, recount_min_pct = ?, recount_cap = ?, third_count = ?, recount_team = ?, recount_team_on = ?,
                   ask_lot = ?, ask_expiry = ?,
                   require_approval = ?, approval_min_qty = ?, approval_min_pct = ?, track_abc = ?,
                   master_version = master_version + 1 WHERE id = ?`)
@@ -1011,12 +1012,21 @@ async function handleAdmin(req, res, url, m) {
            body.autoRecount == null ? s.auto_recount : (body.autoRecount ? 1 : 0),
            minQty, minPct, cap,
            body.thirdCount == null ? s.third_count : (body.thirdCount ? 1 : 0),
+           body.recountTeam == null ? s.recount_team : (norm(body.recountTeam).slice(0, 24) || null),
+           body.recountTeamOn == null ? s.recount_team_on : (body.recountTeamOn && norm(body.recountTeam ?? s.recount_team) ? 1 : 0),
            body.askLot == null ? s.ask_lot : (body.askLot ? 1 : 0),
            body.askExpiry == null ? s.ask_expiry : (body.askExpiry ? 1 : 0),
            body.requireApproval == null ? s.require_approval : (body.requireApproval ? 1 : 0),
            apprQty, apprPct,
            body.trackAbc == null ? s.track_abc : (body.trackAbc ? 1 : 0), s.id);
-    return sendJson(req, res, 200, getSession(m[1]));
+    // switched on (or pointed at another team): the open ones nobody has yet go to it now
+    const after = getSession(m[1]);
+    let handed = null;
+    if (after.recount_team_on && (!s.recount_team_on || norm(s.recount_team) !== norm(after.recount_team))) {
+      handed = assignOpenToRecountTeam(m[1]);
+      if (handed.assigned) audit(actor, 'sent the open second counts to the second-count team', `${handed.assigned} to team ${handed.team}${handed.left ? `, ${handed.left} left open (that team counted those bins)` : ''}`, m[1]);
+    }
+    return sendJson(req, res, 200, handed ? { ...after, recountTeamHanded: handed } : after);
   }
 
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/master$/)) && method === 'POST') {
@@ -1760,6 +1770,14 @@ async function handleAdmin(req, res, url, m) {
       + (gen.skippedSmall ? `, ${gen.skippedSmall} under the threshold` : '')
       + (gen.cappedAt ? `, stopped at the cap of ${gen.cappedAt}` : ''), m[1]);
     return sendJson(req, res, 200, gen);
+  }
+  // hand open second counts from one team to another (or back to any team)
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts\/reassign$/)) && method === 'POST') {
+    requireAccess('assign');
+    const body = await readJson(req);
+    const out = reassignRecounts(m[1], body);
+    audit(actor, 'handed second counts to another team', `${out.moved} from ${out.from ? 'team ' + out.from : 'any team'} to ${out.to ? 'team ' + out.to : 'any team'}${body.aisle ? ` in ${norm(body.aisle)}` : ''}${out.skipped.length ? `, ${out.skipped.length} left (team ${out.to} counted those bins)` : ''}`, m[1]);
+    return sendJson(req, res, 200, out);
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts\/(\d+)\/third$/)) && method === 'POST') {
     requireAccess('assign');

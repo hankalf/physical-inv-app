@@ -134,6 +134,10 @@
             <div class="auto"><label class="cb"><input type="checkbox" id="fAutoRecount"> Raise them automatically</label></div>
             <div class="auto"><label class="cb" title="A bin whose second count agrees with neither the first count nor the report is counted a third time, by a team that did neither"><input type="checkbox" id="fThirdCount"> Third count when the second settles nothing</label></div>
           </div>
+          <div class="inline" style="margin-top:8px">
+            <div class="auto"><label class="cb" title="Every new second count is given to this team - inventory control's, say. A bin the team counted first, it never gets; that one stays open for any other team. Dashboard → Second counts hands them to other teams when it is swamped."><input type="checkbox" id="fRecountTeamOn"> Send them all to team</label></div>
+            <div class="auto"><input id="fRecountTeam" class="sm" style="width:90px" placeholder="e.g. 90" aria-label="The team the second counts go to"></div>
+          </div>
           <div class="inline" style="margin-top:10px">
             <div class="auto"><label for="fRecMinQty" title="A quantity difference smaller than this and than the percentage below does not raise a second count. 0 raises every difference.">Over</label><input id="fRecMinQty" class="sm" type="number" min="0" style="width:74px" placeholder="0"><span class="muted"> units</span></div>
             <div class="auto"><label for="fRecMinPct" title="...or a difference of at least this percentage of the expected quantity. Either threshold is enough.">or over</label><input id="fRecMinPct" class="sm" type="number" min="0" max="100" style="width:66px" placeholder="0"><span class="muted"> %</span></div>

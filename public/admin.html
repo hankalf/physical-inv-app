@@ -280,7 +280,7 @@
 
       <div data-sub="second" data-sub-label="Second counts">
     <div class="card">
-      <h2>Second counts <span class="muted" id="recountSub"></span></h2>
+      <h2>Second counts <span class="chip" id="recTeamChip" hidden></span> <span class="muted" id="recountSub"></span></h2>
       <div class="hint">
         A second count is a bin somebody goes back to. They are raised automatically when a first count disagrees with the
         inventory report (quantity differs, wrong bin, not on the report, counted twice), when an aisle is handed back with
@@ -303,6 +303,14 @@
       <div class="inline" style="margin-top:8px">
         <div class="auto"><label for="fRecAisle">Aisle</label><input id="fRecAisle" class="sm" style="width:80px" placeholder="all"></div>
         <div class="auto"><button id="btnExportSideBySide" title="Every bin counted again: the report, the 1st, 2nd and 3rd counts, who did each, and which number stands">⬇ Export 2nd &amp; 3rd counts with the 1st (Excel)</button></div>
+      </div>
+      <!-- when the second-count team is swamped: some or all of its open ones to another team -->
+      <div class="inline" id="recMoveBar" style="margin-top:8px" hidden>
+        <div class="auto"><label for="fMoveFrom">Hand open second counts from</label><select id="fMoveFrom" class="sm"></select></div>
+        <div class="auto"><label for="fMoveTo">to team</label><input id="fMoveTo" class="sm" style="width:80px" placeholder="any team"></div>
+        <div class="auto"><label for="fMoveHow">How many</label><input id="fMoveHow" class="sm" type="number" min="0" style="width:74px" placeholder="all"></div>
+        <div class="auto"><label for="fMoveAisle">In aisle</label><input id="fMoveAisle" class="sm" style="width:74px" placeholder="any"></div>
+        <div class="auto"><button id="btnMove" title="Bins a team has already started stay with it; a bin the new team counted itself stays where it is">Hand them over</button></div>
       </div>
       <div class="feedback" id="recountMsg"></div>
       <div class="scroll" style="margin-top:10px"><table id="recountTable"></table></div>

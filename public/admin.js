@@ -8,6 +8,7 @@
   const { $, msg, clearMsg, cell, tag, table, button } = window.appUi;
   const apiJson = (p, o) => api.json(p, o);
   const postJson = (p, body, method) => api.post(p, body, method);
+  const norm = (v) => String(v == null ? '' : v).trim().toUpperCase();
 
   let sessionId = null;
   let sessions = [];
@@ -520,6 +521,21 @@
   async function refreshRecounts() {
     const rows = await apiJson(`/api/admin/sessions/${sessionId}/recounts`);
     const thirdOn = !!(currentSession() && currentSession().third_count);
+    /* where new second counts go, and who has the open ones - for the hand-over bar */
+    const cur = currentSession();
+    const rteam = cur && cur.recount_team_on && cur.recount_team ? cur.recount_team : '';
+    $('recTeamChip').hidden = !rteam;
+    $('recTeamChip').textContent = rteam ? `new second counts go to team ${rteam}` : '';
+    $('recTeamChip').className = 'chip online';
+    const byTeam = new Map();
+    for (const r of rows) if (r.status === 'open' && r.reason !== 'CYCLE') byTeam.set(r.team || '', (byTeam.get(r.team || '') || 0) + 1);
+    const fromSel = $('fMoveFrom');
+    const was = fromSel.value;
+    fromSel.replaceChildren(...[...byTeam].sort((a, b) => (b[0] === rteam) - (a[0] === rteam) || b[1] - a[1]).map(([t, n]) => {
+      const o = document.createElement('option'); o.value = t; o.textContent = `${t ? 'team ' + t : 'any team'} — ${n} open`; return o;
+    }));
+    if ([...fromSel.options].some((o) => o.value === was)) fromSel.value = was;
+    $('recMoveBar').hidden = !byTeam.size;
     const open = rows.filter((r) => r.status !== 'done').length;
     $('recountSub').textContent = rows.length ? `${open} open · ${rows.length - open} done` : '';
     api.subCount('second', open);   // so an open second count is visible from any tab
@@ -570,6 +586,21 @@
       }, 'No second counts yet.');
   }
 
+  $('btnMove').onclick = async () => {
+    if (!needSession($('recountMsg'))) return;
+    const from = $('fMoveFrom').value;
+    const to = $('fMoveTo').value.trim();
+    if (norm(from) === norm(to)) return msg($('recountMsg'), 'warn', `They are with ${to ? 'team ' + to : 'any team'} already.`);
+    try {
+      const out = await postJson(`/api/admin/sessions/${sessionId}/recounts/reassign`, { from, to, limit: $('fMoveHow').value || 0, aisle: $('fMoveAisle').value });
+      msg($('recountMsg'), out.moved ? 'ok' : 'warn',
+        `${out.moved} second count${out.moved === 1 ? '' : 's'} handed from ${out.from ? 'team ' + out.from : 'any team'} to ${out.to ? 'team ' + out.to : 'any team'}.`,
+        [out.skipped.length ? `${out.skipped.length} stayed: team ${out.to} counted ${out.skipped.length === 1 ? 'that bin' : 'those bins'} itself (${out.skipped.slice(0, 4).join(', ')}${out.skipped.length > 4 ? '…' : ''}).` : '',
+          out.taken ? `${out.taken} already started stay with team ${out.from}.` : '', out.left ? `${out.left} more still with ${out.from ? 'team ' + out.from : 'any team'}.` : ''].filter(Boolean).join(' '));
+      $('fMoveHow').value = '';
+      await refreshAll();
+    } catch (err) { msg($('recountMsg'), 'err', err.message); }
+  };
   $('btnRecAdd').onclick = async () => {
     if (!needSession($('recountMsg'))) return;
     try {
