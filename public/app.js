@@ -1625,7 +1625,8 @@
   async function handleEntry(raw) {
     const value = norm(raw);
     const step = state.steps[state.stepIndex];
-    if (!value && step !== 'comments') return;
+    // a blank is an answer on the steps that can be skipped - comments, a lot, an expiry - and nothing on the others
+    if (!value && !['comments', 'lot', 'expiry'].includes(step)) return;
     // a site can insist on a comment: no blank, no skip, no moving on by itself
     if (!value && step === 'comments' && prompts().commentsRequired === true) {
       beep('err');

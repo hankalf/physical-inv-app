@@ -23,6 +23,7 @@ PLT-C,SKU-3,Salmon 10lb,60,F01A003,LOT-4471,${soon}
 PLT-D,SKU-4,Corn 20lb,12,F01A004,,2028-01-01
 PLT-E,SKU-5,Beans 5lb,18,F01A005,LOT-4471,2027-06-01
 PLT-F,SKU-6,Cod 8lb,30,F01A006,LOT-9000,${past}
+PLT-G,SKU-7,Rice 10lb,9,F01A007,,
 `;
 const sess = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'lot count' }) }));
 await fetch(`${BASE}/api/admin/sessions/${sess.id}/master?kind=bins`, { method: 'POST', headers: csv, body: readFileSync(`${S}fixtures/front-royal-bins.csv`, 'utf8') });
@@ -116,6 +117,22 @@ await scan('PLT-F'); await scan('30'); await scan('LOT-9000'); await scan(past);
 check('Gun: an out-of-date pallet warns the counter at the pallet, not a week later in a report',
   /has passed/i.test(clean(await gun.textContent('#scanMsg'))), clean(await gun.textContent('#scanMsg')).slice(0, 90));
 await scan('F01A006'); await gun.waitForTimeout(1200);
+
+/* a pallet with no lot and no date on it: Skip takes the counter past both */
+// the line before may still be on its comments: finish it, so the next scan is a pallet
+for (let i = 0; i < 4 && !/PALLET/.test(await gun.textContent('#prompt')); i++) { if (await gun.isVisible('#btnSkip')) await gun.click('#btnSkip'); await gun.waitForTimeout(450); }
+await scan('PLT-G'); await scan('9');
+check('Gun: on a pallet with no lot, Skip is offered on the lot', /LOT/.test(await gun.textContent('#prompt')) && await gun.isVisible('#btnSkip'), clean(await gun.textContent('#prompt')));
+await gun.click('#btnSkip'); await gun.waitForTimeout(450);
+check('…and Skip moves on to the expiry, saying no lot was recorded', /EXPIRY/.test(await gun.textContent('#prompt')) && /No lot recorded/.test(await gun.textContent('#scanMsg')), clean(await gun.textContent('#prompt')) + ' | ' + clean(await gun.textContent('#scanMsg')));
+await gun.click('#btnSkip'); await gun.waitForTimeout(450);
+check('…and on past the expiry, to the bin', /BIN/.test(await gun.textContent('#prompt')) && /No expiry recorded/.test(await gun.textContent('#scanMsg')), clean(await gun.textContent('#prompt')));
+await scan('F01A007'); await gun.waitForTimeout(500);
+for (let i = 0; i < 3 && await gun.isVisible('#btnSkip'); i++) { await gun.click('#btnSkip'); await gun.waitForTimeout(450); }
+await gun.waitForTimeout(1000);
+let pd = null;
+for (let i = 0; i < 20 && !pd; i++) { pd = (await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/pallets?limit=50`, { headers: A }))).rows.find((r) => r.pallet_id === 'PLT-G' && Number(r.counted_qty) === 9); if (!pd) await gun.waitForTimeout(500); }
+check('…and the pallet is counted, with no lot and no date', !!pd && !pd.found_lot, JSON.stringify(pd && [pd.counted_qty, pd.found_lot]));
 await gun.close();
 
 /* ---- and with them off, the gun asks three questions as before ---- */
