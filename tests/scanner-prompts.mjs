@@ -205,7 +205,7 @@ const gun2 = await browser.newPage({ viewport: { width: 480, height: 800 } });
 gun2.on('dialog', (d) => d.accept());
 await gun2.goto(`${BASE}/?d=${dev.uid}`); await gun2.waitForSelector('#scrSignon.active'); await gun2.waitForTimeout(600);
 await intoCounting(gun2);
-const scan2 = async (v) => { await gun2.fill('#fScan', v); await gun2.press('#fScan', 'Enter'); await gun2.waitForTimeout(400); };
+const scan2 = async (v) => { await gun2.waitForSelector('#fScan', { state: 'visible', timeout: 15000 }).catch(() => {}); await gun2.fill('#fScan', v); await gun2.press('#fScan', 'Enter'); await gun2.waitForTimeout(400); };
 const atPallet2 = () => gun2.waitForFunction(() => /PALLET/.test(document.getElementById('prompt').textContent), null, { timeout: 15000 });
 const pReq = pallets.filter((c) => /^F01/.test(c[5] || ''))[5] || pallets[5];
 await atPallet2(); await scan2(pReq[0]); await scan2(String(pReq[4])); await scan2(pReq[5]); await gun2.waitForTimeout(500);

@@ -110,7 +110,10 @@ await post('/api/admin/pallet-system', { url: `${BASE}/board` });
 await gun.click('#btnSignoff').catch(() => {});
 await gun.goto(`${BASE}/?d=${dev.uid}`); await gun.waitForTimeout(1500);
 check('With pallets on the list, sign-on offers "Not in Location"', await gun.isVisible('#btnModeFind') && clean(await gun.textContent('#btnModeFind')) === 'Not in Location');
-await gun.click('#btnModeFind'); await gun.waitForTimeout(300);
+await gun.click('#btnModeFind');
+// the sign-on screen redraws for the job: wait for it rather than a fixed moment, which a busy machine outruns
+await gun.waitForSelector('#teamBlock', { state: 'hidden', timeout: 5000 }).catch(() => {});
+await gun.waitForSelector('#fSession', { state: 'hidden', timeout: 5000 }).catch(() => {});
 check('…and asks for a badge alone, no team and no count', await gun.isHidden('#teamBlock') && await gun.isHidden('#fSession'));
 await gun.fill('#fEmployee', 'E9'); await gun.press('#fEmployee', 'Enter');
 await gun.click('#btnStart');

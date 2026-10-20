@@ -190,7 +190,7 @@ gun = await gunFrame();
 for (let t = 0; t < 8000 && !(await gun.isVisible('#btnModeMove')); t += 200) await wait(200);
 check('The tip says to tap Front2Back on the gun', await waitTip(/tap Front2Back/i), await tip());
 await gun.click('#btnModeMove');
-await wait(400);
+await gun.waitForSelector('#teamBlock', { state: 'hidden', timeout: 5000 }).catch(() => {});
 check('Front2Back asks for a badge alone, and the tip says so', await gun.isHidden('#teamBlock') && await waitTip(/just a clock-in number/i), await tip());
 await click(paneChip('T1001'));
 await gun.click('#btnStart');
