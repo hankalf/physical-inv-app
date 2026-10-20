@@ -614,7 +614,7 @@ try {
 
   /* ---------- the crew board: who is on which team, by shift ---------- */
   const crew = await browser.newPage({ viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1 });
-  await crew.goto(`${BASE}/crew`); await wait(2600);
+  await crew.goto(`${BASE}/crew?session=${sess.id}`); await wait(2600);     // the count the manual's teams are on
   await save(crew, 'crew-board');
   await crew.close();
 

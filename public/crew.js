@@ -36,7 +36,12 @@
     box.append(th);
     /* where it is on the count, and when it last scanned */
     const where = el('div', 'where');
-    if (n.aisle) where.append(el('b', '', `Aisle ${n.aisle}`), document.createTextNode(`${n.levels ? ' · ' + levels(n.levels) : ''}${n.fromFarEnd ? ' · from the far end' : ''}`));
+    if (n.aisle) {
+      // the aisle and its levels stay together on one line; the last scan and next aisle wrap after it
+      const pos = el('span', 'pos');
+      pos.append(el('b', '', `Aisle ${n.aisle}`), document.createTextNode(`${n.levels ? ' · ' + levels(n.levels) : ''}${n.fromFarEnd ? ' · from the far end' : ''}`));
+      where.append(pos);
+    }
     else if (n.state === 'not signed on') where.append(document.createTextNode('No aisle yet'));
     else where.append(document.createTextNode('No aisle assigned'));
     if (n.lastScan) where.append(el('span', 'last', `last scan ${since(n.lastScan)}${n.lastBin ? ' · ' + n.lastBin : ''}`));
