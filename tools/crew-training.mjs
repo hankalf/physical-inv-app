@@ -707,6 +707,16 @@ try {
     console.log(`\n${out} written - ${(statSync(out).size / 1048576).toFixed(1)} MB, ${Math.round(secs / 60 * 10) / 10} min, ${beeps.length} scans`);
   }
   console.log(`${shotN} scanner pictures in ${SHOTS}`);
+} catch (err) {
+  /* a step that fails leaves a picture of the stage and the gun's state behind */
+  console.error('[film] failed:', err && err.message);
+  try {
+    const pg = browser && browser.contexts()[0] && browser.contexts()[0].pages()[0];
+    const g = pg && pg.frames().find((f) => f.url().includes('/?d='));
+    if (g) console.error('[film] gun was at:', await g.evaluate(() => `${document.querySelector('.screen.active')?.id} · ${document.getElementById('prompt')?.textContent} · ${document.getElementById('scanMsg')?.textContent}`.replace(/\s+/g, ' ').slice(0, 200)));
+    if (pg) await pg.screenshot({ path: join(OUT, `failed-${LANG}.png`) });
+  } catch { /* gone */ }
+  process.exitCode = 1;
 } finally {
   if (browser) await browser.close();
   server.kill();

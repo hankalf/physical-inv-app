@@ -589,6 +589,124 @@
     render();
   }
 
+  /* ------------------------------------------------------------ the crew workbook
+     Employees and teams in one file. The file is read here - every sheet of an
+     Excel workbook, or the one sheet of a CSV - and each sheet is told apart by
+     its columns: a Team # column makes it the team sheet, a clock-in number
+     column the crew list, both at once a combined sheet that is sent as each.
+     The server checks the two against each other and says what does not match;
+     Apply is offered only when nothing would stop it. */
+  let wb = null;                   // { name, employees, teams, sheets }
+  const wbHead = (csv) => (csv.split(/\r?\n/)[0] || '').split(',').map((h) => h.toLowerCase().replace(/[^a-z#]/g, ''));
+  const wbKind = (csv, sheetName = '') => {
+    const head = wbHead(csv);
+    const hasTeam = head.some((h) => /^(team|team#|teamno|teamnumber|teamid|crew|truck)$/.test(h));
+    const hasBadge = head.some((h) => /^(clockinnumber|clocknumber|clockin|clockno|badge|badgeid|employeeid|empid|employeenumber|employeeno|id)$/.test(h));
+    const hasName = head.some((h) => /^(name|employeename|fullname|employee|person)$/.test(h));
+    if (/how|read ?me|instruction/i.test(sheetName)) return '';
+    if (hasTeam && hasBadge) return 'both';
+    if (hasTeam) return 'teams';
+    if (hasBadge || hasName) return 'employees';
+    return '';
+  };
+  async function readWorkbook(file) {
+    const out = { name: file.name, employees: '', teams: '', sheets: [] };
+    const take = (csv, sheetName) => {
+      const kind = wbKind(csv, sheetName);
+      if (!kind || csv.trim().split(/\r?\n/).length < 2) return;
+      out.sheets.push(`${sheetName || 'the sheet'}: ${kind === 'both' ? 'employees and teams' : kind}`);
+      if ((kind === 'employees' || kind === 'both') && !out.employees) out.employees = csv;
+      if ((kind === 'teams' || kind === 'both') && !out.teams) out.teams = csv;
+    };
+    if (!/\.xls[xm]?$/i.test(file.name)) { take(await file.text(), ''); return out; }
+    const XLSX = await window.appUi.loadXlsx();
+    const book = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    for (const n of book.SheetNames) take(XLSX.utils.sheet_to_csv(book.Sheets[n]), n);
+    return out;
+  }
+  function drawReport(r) {
+    const box = $('wbReport');
+    box.innerHTML = '';
+    box.hidden = false;
+    const sum = document.createElement('div'); sum.className = 'sum';
+    const s = r.summary;
+    sum.textContent = `${s.employees} ${s.employees === 1 ? 'person' : 'people'} · ${s.teams} ${s.teams === 1 ? 'team' : 'teams'} (${s.byShift[1]} on 1st shift, ${s.byShift[2]} on 2nd) · ${s.seats} seats: ${s.onTeams} filled from the crew list, ${s.open} open · ${s.noTeam} on no team`;
+    box.appendChild(sum);
+    const group = (title, cls, items) => {
+      if (!items.length) return;
+      const g = document.createElement('div'); g.className = cls;
+      const h = document.createElement('h4'); h.textContent = title; g.appendChild(h);
+      const ul = document.createElement('ul');
+      for (const it of items) { const li = document.createElement('li'); li.textContent = typeof it === 'string' ? it : it.text; ul.appendChild(li); }
+      g.appendChild(ul); box.appendChild(g);
+    };
+    group(`${r.problems.length} ${r.problems.length === 1 ? 'thing stops' : 'things stop'} this upload — fix the file and check again`, 'bad', r.problems);
+    group(`${r.warnings.length} worth knowing — the upload goes ahead with these`, 'warn', r.warnings);
+    group('What it will do', 'note', r.notes);
+  }
+  const wbQuery = () => `replaceEmployees=${$('fWbReplaceEmp').checked ? 1 : 0}&replaceTeams=${$('fWbReplaceTeams').checked ? 1 : 0}`;
+  $('fWbFile').onchange = () => { wb = null; $('btnWbApply').disabled = true; $('wbReport').hidden = true; clearMsg($('wbMsg')); };
+  $('btnWbCheck').onclick = async () => {
+    const file = $('fWbFile').files[0];
+    if (!file) return msg($('wbMsg'), 'err', 'Choose the workbook first');
+    msg($('wbMsg'), 'warn', `Reading ${file.name}…`);
+    $('btnWbApply').disabled = true;
+    try {
+      wb = await readWorkbook(file);
+      if (!wb.employees && !wb.teams) throw new Error('No sheet with a Clock In Number column or a Team # column was found. The sample workbook shows the columns.');
+      const r = await apiJson(`/api/admin/people/crew-workbook?apply=0&${wbQuery()}`, { method: 'POST', body: JSON.stringify({ employees: wb.employees, teams: wb.teams }) });
+      drawReport(r);
+      $('btnWbApply').disabled = !r.ok;
+      $('btnWbApply').title = r.ok ? '' : 'Fix what stops it, then check again';
+      msg($('wbMsg'), r.ok ? (r.warnings.length ? 'warn' : 'ok') : 'err', r.ok ? `${file.name} checks out${r.warnings.length ? ', with things worth knowing' : ''} — press Apply to load it.` : `${file.name} has ${r.problems.length} ${r.problems.length === 1 ? 'thing' : 'things'} to fix before it can be loaded.`, `Read as: ${wb.sheets.join('; ')}.`);
+    } catch (err) { msg($('wbMsg'), 'err', 'Could not check the workbook', err.message); }
+  };
+  $('btnWbApply').onclick = async () => {
+    if (!wb) return;
+    if (($('fWbReplaceEmp').checked || $('fWbReplaceTeams').checked) && !confirm(`${$('fWbReplaceEmp').checked ? 'Replace the whole crew list' : ''}${$('fWbReplaceEmp').checked && $('fWbReplaceTeams').checked ? ' and ' : ''}${$('fWbReplaceTeams').checked ? 'remove every team not in the workbook' : ''}?`)) return;
+    msg($('wbMsg'), 'warn', `Loading ${wb.name}…`);
+    $('btnWbApply').disabled = true;
+    try {
+      const r = await apiJson(`/api/admin/people/crew-workbook?apply=1&${wbQuery()}`, { method: 'POST', body: JSON.stringify({ employees: wb.employees, teams: wb.teams }) });
+      drawReport(r);
+      if (!r.applied) { msg($('wbMsg'), 'err', 'Not loaded — the file changed since it was checked, or something now stops it.', ''); return; }
+      const e = r.employees, t = r.teams;
+      msg($('wbMsg'), r.warnings.length ? 'warn' : 'ok', `Loaded ${wb.name}`, `${e ? `${e.imported} ${e.imported === 1 ? 'person' : 'people'} on the crew list. ` : ''}${t ? `${t.teams} ${t.teams === 1 ? 'team' : 'teams'} (${t.created} new, ${t.updated} brought up to date${t.removed ? `, ${t.removed} removed` : ''}), ${t.seats} seats, ${t.matched} of ${t.people} people on them${t.open ? `, ${t.open} open` : ''}.` : ''}`);
+      $('fWbFile').value = ''; wb = null;
+      await refresh();
+    } catch (err) { msg($('wbMsg'), 'err', 'Upload failed', err.message); }
+  };
+  $('btnWbSample').onclick = async () => {
+    try {
+      const XLSX = await window.appUi.loadXlsx();
+      const book = XLSX.utils.book_new();
+      const emp = [
+        { 'Clock In Number': 'E1043', 'Name': 'Marcus Obi', 'Department': 'Warehouse', 'Shift': '1', 'Equipment': 'High reach; Scissor lift', 'Jacket': 'XL', 'Bibs': 'L', 'Boots': '10' },
+        { 'Clock In Number': 'E1088', 'Name': 'Priya Raman', 'Department': 'Warehouse', 'Shift': '1', 'Equipment': 'Dock truck', 'Jacket': 'M', 'Bibs': 'M', 'Boots': '7.5' },
+        { 'Clock In Number': 'E1102', 'Name': 'Tom Zielinski', 'Department': 'Warehouse', 'Shift': '2', 'Equipment': 'High reach; Scissor lift', 'Jacket': 'L', 'Bibs': 'L', 'Boots': '11' },
+        { 'Clock In Number': 'E1157', 'Name': 'Ava Delgado', 'Department': 'Production', 'Shift': '2', 'Equipment': '', 'Jacket': 'S', 'Bibs': 'S', 'Boots': '6' },
+      ];
+      const teams = [
+        { 'Team #': 'S1-DS01', 'Department': 'Warehouse', 'Employee': 'Marcus Obi', 'Equipment': 'Dock Stocker', 'Clock In Number': 'E1043' },
+        { 'Team #': 'S1-DS01', 'Department': 'Production', 'Employee': '', 'Equipment': 'On Foot with Dock Stockers', 'Clock In Number': '' },
+        { 'Team #': 'S1-RT05', 'Department': 'Warehouse', 'Employee': 'Priya Raman', 'Equipment': 'High Reach', 'Clock In Number': 'E1088' },
+        { 'Team #': 'S2-DS01', 'Department': 'Warehouse', 'Employee': 'Tom Zielinski', 'Equipment': 'Dock Stocker', 'Clock In Number': 'E1102' },
+        { 'Team #': 'S2-DS01', 'Department': 'Production', 'Employee': 'Ava Delgado', 'Equipment': 'On Foot with Dock Stockers', 'Clock In Number': 'E1157' },
+      ];
+      const how = [
+        ['Crew workbook — employees and teams in one file'],
+        ['Employees: one row per person. Clock In Number and Name are needed; Department, Shift (1 or 2), Equipment (separate with ;) and the sizes are optional.'],
+        ['Teams: one row per seat on a team. Team # like S1-DS01 reads as 1st shift, dock stocker, truck 01; S2-… is 2nd shift. Employee is the name; Clock In Number is best, so the person is matched by number. A row with no name is an open seat — its equipment still counts for the team.'],
+        ['Or put both on one sheet: the Employees columns plus Team #, a row per person with their team, and a row with a team and equipment but no name for an open seat.'],
+        ['Under Teams & crew → Employees → Crew workbook, press Check: it says what does not match — a person on a team who is not on the employees sheet, one clock-in number with two names, a person on two teams, a shift that disagrees with the team\'s. Fix the file, check again, then Apply.'],
+      ];
+      XLSX.utils.book_append_sheet(book, XLSX.utils.json_to_sheet(emp), 'Employees');
+      XLSX.utils.book_append_sheet(book, XLSX.utils.json_to_sheet(teams), 'Teams');
+      XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(how), 'How to use');
+      XLSX.writeFile(book, 'crew-workbook-sample.xlsx');
+    } catch (err) { msg($('wbMsg'), 'err', 'Could not make the sample', err.message); }
+  };
+
   /* ------------------------------------------------------------ actions */
   $('btnUpload').onclick = async () => {
     const file = $('fFile').files[0];

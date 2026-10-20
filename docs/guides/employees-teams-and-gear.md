@@ -98,6 +98,13 @@ The columns are matched by name, in any order:
 - **⬇ Sample CSV** downloads a file in the right shape. **Export current list** downloads the
   crew list as it stands, sizes included.
 
+**Employees and teams at once.** **Teams & crew → Employees → Crew workbook** takes one Excel file
+with an **Employees** sheet and a **Teams** sheet — or one sheet with both sets of columns, a row
+per person with their team. **Check the workbook** says what does not match before anything
+changes: a person on a team who is not on the employees sheet, one clock-in number with two names,
+a person on two teams, a shift that disagrees with the team's. Fix the file, check again, then
+**Apply** loads both in one go. **⬇ Sample workbook** is the file to start from.
+
 ## 5 — Teams
 
 **Teams & crew → Teams.**

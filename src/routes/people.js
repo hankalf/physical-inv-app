@@ -356,13 +356,13 @@ const SIZE_COLUMNS = [
 export const shiftWord = (s) => (s === '1' ? '1st shift' : s === '2' ? '2nd shift' : '');
 
 /** Import a roster CSV: badge, name, department, shift, equipment, and sizes when it has them. */
-export function importEmployees(text, { replace = false } = {}) {
+export function importEmployees(text, { replace = false, nested = false } = {}) {
   const { parseRecords, pick } = importHelpers;
   const { headers, records } = parseRecords(text);
   if (!records.length) throw Object.assign(new Error('no data rows found'), { status: 400 });
   const known = getEquipment();
   const stats = { rows: records.length, imported: 0, skipped: 0, unknownEquipment: new Set(), headers };
-  db.exec('BEGIN');
+  if (!nested) db.exec('BEGIN');
   try {
     if (replace) { db.exec('DELETE FROM team_members'); db.exec('DELETE FROM employees'); }
     for (const rec of records) {
@@ -386,9 +386,9 @@ export function importEmployees(text, { replace = false } = {}) {
       if (Object.keys(sizes).length) { setGear(badge, sizes); stats.sizes = (stats.sizes || 0) + 1; }
       stats.imported++;
     }
-    db.exec('COMMIT');
+    if (!nested) db.exec('COMMIT');
   } catch (err) {
-    db.exec('ROLLBACK');
+    if (!nested) db.exec('ROLLBACK');
     throw err;
   }
   stats.unknownEquipment = [...stats.unknownEquipment];
@@ -470,7 +470,7 @@ export function readTeamCode(code) {
  * list - by clock-in number, else by name - is put on the team; a blank name is
  * an open seat; teams not on the sheet are left alone.
  */
-export function importTeamSheet(text, { replace = false } = {}) {
+export function importTeamSheet(text, { replace = false, nested = false } = {}) {
   const { parseRecords, pick } = importHelpers;
   const { records, headers } = parseRecords(text);
   if (!records.length) throw Object.assign(new Error('no data rows found'), { status: 400 });
@@ -487,7 +487,7 @@ export function importTeamSheet(text, { replace = false } = {}) {
     if (!groups.has(team)) groups.set(team, []);
     groups.get(team).push(rec);
   }
-  db.exec('BEGIN');
+  if (!nested) db.exec('BEGIN');
   try {
     if (replace) {
       const keep = new Set(groups.keys());
@@ -524,12 +524,130 @@ export function importTeamSheet(text, { replace = false } = {}) {
         stats.seats++;
       });
     }
-    db.exec('COMMIT');
-  } catch (err) { db.exec('ROLLBACK'); throw err; }
+    if (!nested) db.exec('COMMIT');
+  } catch (err) { if (!nested) db.exec('ROLLBACK'); throw err; }
   stats.unknownEquipment = [...stats.unknownEquipment];
   const teams = listTeams().filter((t) => groups.has(t.name));
   stats.reach = teams.map((t) => ({ team: t.name, shift: t.shift, reach: t.reach, label: t.reachLabel }));
   return stats;
+}
+
+/* ------------------------------------------------------------ the crew workbook
+ * The crew list and the team sheet in one file, checked against each other
+ * before either is touched. A workbook with an Employees sheet and a Teams
+ * sheet, or one sheet carrying both - a row with a clock-in number is a
+ * person, a row with a team number is a seat, and a row with both is a person
+ * on that team. The check lists what would stop the upload (a seat naming
+ * somebody who is not on the crew list, one clock-in number with two names,
+ * a person on two teams, a clock-in number twice) and what is only worth
+ * knowing (a shift that disagrees with the team's, equipment nobody knows, a
+ * team number that says no shift, people on no team). Apply runs both
+ * uploads in one transaction, so a failure half-way leaves nothing changed.
+ */
+const BADGE_COLS = ['clockinnumber', 'clocknumber', 'clockin', 'clockno', 'badge', 'badgeid', 'employeeid', 'empid', 'id', 'employeenumber', 'employeeno', 'number'];
+const NAME_COLS = ['name', 'employeename', 'fullname', 'employee', 'employe', 'person'];
+const TEAM_COLS = ['team', 'teamno', 'teamnumber', 'teamid', 'crew', 'truck'];
+const EQUIP_COLS = ['equipment', 'equipmentcertified', 'certifications', 'certified', 'licences', 'licenses', 'canoperate', 'machines', 'role', 'position', 'job', 'machine'];
+const cleanName = (v) => String(v ?? '').replace(/\s+/g, ' ').trim();
+const shiftOfText = (v) => { const t = String(v ?? '').trim().toLowerCase(); return /^(1|1st|first|day|days|morning|am|a)$/.test(t) ? '1' : /^(2|2nd|second|night|nights|evening|afternoon|pm|b)$/.test(t) ? '2' : ''; };
+
+export function checkCrewWorkbook({ employees = '', teams = '' } = {}, { replaceEmployees = false, replaceTeams = false } = {}) {
+  const { parseRecords, pick } = importHelpers;
+  const bad = (m) => Object.assign(new Error(m), { status: 400 });
+  const empRecs = String(employees || '').trim() ? parseRecords(employees).records : [];
+  const teamRecs = String(teams || '').trim() ? parseRecords(teams).records : [];
+  if (!empRecs.length && !teamRecs.length) throw bad('no data rows found - the workbook needs an Employees sheet, a Teams sheet, or one sheet with a Clock In Number column and a Team # column');
+  const known = getEquipment();
+  const problems = []; const warnings = []; const notes = [];
+  /* the people: by clock-in number */
+  const people = new Map();              // badge -> { name, shift, dept, equipment, row }
+  const seen = new Map();
+  empRecs.forEach((rec, i) => {
+    const badge = norm(pick(rec, BADGE_COLS));
+    if (!badge) return;                                                     // an open seat, on a combined sheet
+    const name = cleanName(pick(rec, NAME_COLS));
+    const row = i + 2;
+    if (seen.has(badge)) { problems.push({ kind: 'duplicate badge', text: `Clock-in number ${badge} is on two rows of the employees sheet (rows ${seen.get(badge)} and ${row}): ${people.get(badge).name || '?'} and ${name || '?'}` }); return; }
+    seen.set(badge, row);
+    if (!name) warnings.push({ kind: 'no name', text: `Clock-in number ${badge} (row ${row}) has no name` });
+    const shiftRaw = pick(rec, ['shift', 'shiftno', 'shiftnumber', 'shiftnum', 'crewshift']);
+    const shift = shiftOfText(shiftRaw);
+    if (String(shiftRaw || '').trim() && !shift) warnings.push({ kind: 'shift', text: `${name || badge}: the shift "${shiftRaw}" is not 1 or 2, so it will be left blank` });
+    const rawEquip = String(pick(rec, EQUIP_COLS) || '');
+    for (const part of rawEquip.split(/[,;/|]+/)) {
+      const t = norm(part).replace(/[^A-Z ]/g, ' ').replace(/\s+/g, ' ').trim();
+      if (t && !parseEquipment(t, known).length && !isRoleWord(t)) warnings.push({ kind: 'equipment', text: `${name || badge}: equipment "${part.trim()}" is not one the site knows, so it will not count toward reach` });
+    }
+    people.set(badge, { name, shift, dept: cleanName(pick(rec, ['dept', 'department', 'area'])), equipment: parseEquipment(rawEquip, known), row });
+  });
+  /* the people already on the crew list, for a workbook that adds to it */
+  const onList = new Map(db.prepare('SELECT badge, name, shift FROM employees').all().map((e) => [e.badge, e]));
+  const byName = new Map();
+  for (const [badge, p] of people) if (p.name) byName.set(p.name.toLowerCase(), badge);
+  if (!replaceEmployees) for (const e of onList.values()) if (e.name && !byName.has(String(e.name).toLowerCase())) byName.set(String(e.name).toLowerCase(), e.badge);
+  /* the seats: who is on which team */
+  const teamsSeen = new Map();           // team -> { shift, seats, people }
+  const onTeam = new Map();              // badge -> team
+  teamRecs.forEach((rec, i) => {
+    const team = norm(pick(rec, TEAM_COLS));
+    if (!team) return;
+    const row = i + 2;
+    const code = readTeamCode(team);
+    if (!teamsSeen.has(team)) {
+      teamsSeen.set(team, { shift: code.shift, seats: 0, people: 0, open: 0 });
+      if (!code.shift) warnings.push({ kind: 'team shift', text: `Team ${team} does not say which shift it is (S1-… is 1st, S2-… is 2nd), so it will have no shift` });
+    }
+    const t = teamsSeen.get(team);
+    t.seats++;
+    const name = cleanName(pick(rec, NAME_COLS));
+    let badge = norm(pick(rec, BADGE_COLS));
+    const role = cleanName(pick(rec, EQUIP_COLS));
+    if (role && !parseEquipment(role, known).length && !isRoleWord(role)) warnings.push({ kind: 'equipment', text: `Team ${team}, row ${row}: equipment "${role}" is not one the site knows, so it will not count toward reach` });
+    if (!name && !badge) { t.open++; if (!role) warnings.push({ kind: 'empty seat', text: `Team ${team}, row ${row}: a seat with nobody in it and no equipment` }); return; }
+    t.people++;
+    const fromList = badge ? (people.get(badge) || (!replaceEmployees && onList.get(badge) ? { name: onList.get(badge).name, shift: onList.get(badge).shift || '' } : null)) : null;
+    if (badge && !fromList) { problems.push({ kind: 'not on crew list', text: `Team ${team}: clock-in number ${badge} (${name || 'no name'}) is not on the employees sheet${replaceEmployees ? '' : ' or the crew list'}` }); return; }
+    if (badge && fromList && name && fromList.name && fromList.name.toLowerCase() !== name.toLowerCase()) { problems.push({ kind: 'name differs', text: `Clock-in number ${badge} is ${fromList.name} on the employees sheet but ${name} on team ${team}` }); return; }
+    if (!badge) {
+      badge = byName.get(name.toLowerCase()) || '';
+      if (!badge) { problems.push({ kind: 'not on crew list', text: `Team ${team}: ${name} is not on the employees sheet${replaceEmployees ? '' : ' or the crew list'} - add them with their clock-in number, or write the number on the team row` }); return; }
+    }
+    if (onTeam.has(badge) && onTeam.get(badge) !== team) { problems.push({ kind: 'two teams', text: `${name || badge} (${badge}) is on two teams: ${onTeam.get(badge)} and ${team}` }); return; }
+    onTeam.set(badge, team);
+    const person = people.get(badge) || (onList.get(badge) ? { shift: onList.get(badge).shift || '' } : null);
+    if (person && t.shift && person.shift && person.shift !== t.shift) warnings.push({ kind: 'shift', text: `${name || badge} is ${person.shift === '1' ? '1st' : '2nd'} shift but team ${team} is ${t.shift === '1' ? '1st' : '2nd'} shift` });
+  });
+  const noTeam = [...people.keys()].filter((b) => !onTeam.has(b));
+  if (noTeam.length) notes.push(`${noTeam.length} ${noTeam.length === 1 ? 'person' : 'people'} on the employees sheet ${noTeam.length === 1 ? 'is' : 'are'} on no team${noTeam.length <= 12 ? `: ${noTeam.map((b) => people.get(b).name || b).join(', ')}` : ''}`);
+  if (replaceEmployees) {
+    const gone = [...onList.keys()].filter((b) => !people.has(b)).length;
+    if (gone) notes.push(`Replace the crew list: ${gone} ${gone === 1 ? 'person' : 'people'} on it now and not in the workbook will be removed`);
+  }
+  if (replaceTeams && teamsSeen.size) {
+    const gone = db.prepare('SELECT name FROM teams').all().filter((t) => !teamsSeen.has(t.name)).length;
+    if (gone) notes.push(`Remove teams not on the sheet: ${gone} ${gone === 1 ? 'team' : 'teams'} will be removed`);
+  }
+  const summary = {
+    employees: people.size, teams: teamsSeen.size,
+    seats: [...teamsSeen.values()].reduce((n, t) => n + t.seats, 0),
+    onTeams: onTeam.size, open: [...teamsSeen.values()].reduce((n, t) => n + t.open, 0),
+    noTeam: noTeam.length,
+    byShift: { 1: [...teamsSeen.values()].filter((t) => t.shift === '1').length, 2: [...teamsSeen.values()].filter((t) => t.shift === '2').length },
+  };
+  return { ok: !problems.length, problems, warnings, notes, summary, hasEmployees: people.size > 0, hasTeams: teamsSeen.size > 0 };
+}
+
+/** The check, and if it passes, both uploads in one transaction. */
+export function applyCrewWorkbook(body = {}, opts = {}) {
+  const report = checkCrewWorkbook(body, opts);
+  if (!report.ok) return { ...report, applied: false };
+  db.exec('BEGIN');
+  try {
+    const employees = report.hasEmployees ? importEmployees(body.employees, { replace: !!opts.replaceEmployees, nested: true }) : null;
+    const teams = report.hasTeams ? importTeamSheet(body.teams, { replace: !!opts.replaceTeams, nested: true }) : null;
+    db.exec('COMMIT');
+    return { ...report, applied: true, employees, teams };
+  } catch (err) { db.exec('ROLLBACK'); throw err; }
 }
 
 /* 1 or 2 - however it was written: "1st", "first", "day", "2nd", "second", "night" */

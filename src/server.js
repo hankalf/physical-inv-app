@@ -51,7 +51,7 @@ import { generateBatch, previewBatch, binList, listBatches, deleteBatch, coverag
 import {
   listEmployees, upsertEmployee, updateEmployee, setGear, gearReport, deleteEmployee, importEmployees, importHelpers,
   listTeams, createTeam, deleteTeam, setTeamShift, assignMember, getConfig, setConfig, getEmployee,
-  crewCheck, crewShortfall, importTeamSheet, shiftWord } from './routes/people.js';
+  crewCheck, crewShortfall, importTeamSheet, shiftWord, checkCrewWorkbook, applyCrewWorkbook } from './routes/people.js';
 
 import { toCsv, parseRecords, pick } from './util/csv.js';
 import { listLayouts, loadLayout } from './util/layouts.js';
@@ -1302,6 +1302,16 @@ async function handleAdmin(req, res, url, m) {
     const st = importEmployees(text, { replace: url.searchParams.get('replace') === '1' });
     audit(actor, 'uploaded the crew list', `${st.imported} of ${st.rows} rows${url.searchParams.get('replace') === '1' ? ', replacing the list' : ''}`);
     return sendJson(req, res, 200, st);
+  }
+  /* the crew workbook: employees and teams in one file, checked against each
+     other first; apply=1 runs both uploads in one transaction when the check passes */
+  if (p === '/api/admin/people/crew-workbook' && method === 'POST') {
+    const body = await readJson(req);
+    const opts = { replaceEmployees: url.searchParams.get('replaceEmployees') === '1', replaceTeams: url.searchParams.get('replaceTeams') === '1' };
+    if (url.searchParams.get('apply') !== '1') return sendJson(req, res, 200, checkCrewWorkbook(body, opts));
+    const out = applyCrewWorkbook(body, opts);
+    if (out.applied) audit(actor, 'uploaded the crew workbook', `${out.summary.employees} people, ${out.summary.teams} teams, ${out.summary.seats} seats${opts.replaceEmployees ? ', replacing the crew list' : ''}${opts.replaceTeams ? ', removing teams not on it' : ''}${out.warnings.length ? `, ${out.warnings.length} warnings` : ''}`);
+    return sendJson(req, res, 200, out);
   }
   if (p === '/api/admin/people/teams/import' && method === 'POST') {
     const text = await readBody(req);

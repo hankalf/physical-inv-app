@@ -77,6 +77,12 @@ them **Jacket**, **Bibs**, **Boots**. **⬇ Sample CSV** downloads one in the ri
   without size columns leaves the sizes already there.
 - **Export current list** downloads the list as it stands.
 
+**Employees and teams at once.** **Teams & crew → Employees → Crew workbook** takes one Excel file
+with an **Employees** sheet and a **Teams** sheet, or one sheet with both. **Check the workbook**
+says what does not match — a person on a team who is not on the list, a person on two teams, a
+shift that disagrees with the team's — then **Apply** loads both. **⬇ Sample workbook** shows the
+columns.
+
 ## 5 — Teams
 
 **Teams & crew → Teams.**

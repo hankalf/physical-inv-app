@@ -1111,6 +1111,20 @@ changed.
 
 *Teams &amp; crew → Employees: everyone on the crew list, with Edit and Remove on every row — here one row open for editing.*
 
+**Employees and teams in one workbook.** *Teams & crew → Employees → Crew workbook* takes one
+Excel file with an **Employees** sheet (the crew list's columns) and a **Teams** sheet (the team
+sheet's columns), or one sheet carrying both — the employee columns plus **Team #**, a row per
+person with their team, and a row with a team and equipment but no name for an open seat.
+**Check the workbook** reads it and lists, before anything changes, what **stops** the upload — a
+person on a team who is not on the employees sheet, one clock-in number with two names, a person
+on two teams, a clock-in number on two rows — and what is only **worth knowing** — a person's
+shift that disagrees with the team's, equipment the site does not know, a team number that says
+no shift, people on no team — with the sums: people, teams by shift, seats filled and open. Fix
+the file and check again; **Apply** is offered when nothing stops it, and loads the crew list and
+the teams in one go (a failure half-way leaves nothing changed). **Replace the whole crew list**
+and **Remove teams not in the workbook** work as on the two separate uploads, and the check says
+how many would go. **⬇ Sample workbook** is the file to start from, with a *How to use* sheet.
+
 **The team sheet.** *Teams & crew → Teams → Upload the team sheet* takes the sheet the floor already
 keeps, one row per seat on each team: **Team #**, **Department**, **Employee**, **Equipment** (and a
 **Clock In Number** column, if the sheet has one).
@@ -2367,6 +2381,11 @@ the template (Type / Code) are still read.
 | Team | team, team number, crew, group |
 | Aisle | aisle, row, aisle no |
 | Levels | level, levels, tier, shelf — e.g. `A-C`, `D-F`, `A-F` |
+
+**Crew workbook** — the crew list and the team sheet in one Excel file: an *Employees* sheet with the
+crew-list columns and a *Teams* sheet with the counting-team columns below, told apart by their
+columns (a sheet with both a clock-in number and a *Team #* column is read as both). A *How to use*
+sheet is ignored.
 
 **Crew list** — one row per person.
 

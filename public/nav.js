@@ -1128,6 +1128,7 @@
     ['One-tap reasons on the gun', '/settings', 'gun', 'reason comment override one tap chips damaged', 'offComments'],
     ['Adjustment reasons', '/settings', 'erp', 'adjustment reason code write off why', 'reasonsCard'],
     ['Back up to OneDrive', '/settings', 'backups', 'onedrive off site offsite cloud backup microsoft copy restore', 'onedriveCard'],
+    ['Crew workbook: employees and teams in one file', '/teams', 'people', 'crew workbook upload employees teams one excel file check validate match apply sample', 'workbookCard'],
     ['Export the teams', '/teams', 'crew', 'teams export csv shifts compare team sheet download', 'btnTeamsExport'],
     ['Crew board: what the wall screen shows', '/settings', 'advanced', 'crew board kiosk wall screen shift auto scroll speed tv time clock', 'crewBoardCard'],
     ['Back up to a Teams channel', '/settings', 'backups', 'teams microsoft channel workflow power automate sharepoint files off site offsite backup copy restore', 'teamsBackupCard'],
