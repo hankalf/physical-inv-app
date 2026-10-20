@@ -389,6 +389,13 @@ Sign in as the superadmin, press **Change my password** at the foot of the sideb
 pick one only you know. The environment variable no longer opens the account after that;
 a restart never puts the old password back.
 
+---
+
+## Part 2 — First-time setup: the warehouse
+
+> Once, before the first count: the bin list, the racking, the scanners, the counting screen and
+> the reasons the guns offer. A count of its own comes in Part 3.
+
 ### Step 6 — Upload the bin list
 
 **Settings → Lists & racking → Bin list.**
@@ -734,10 +741,15 @@ or may not do. It follows this SOP job by job and is the first place to send a n
   **what tends to go wrong here** — the message you will see, what it means, what to do — and
   **what people ask at this point**. Tick a step when it is done; the ticks stay in that browser,
   so each person keeps their own place.
+- **How-to guides.** Step-by-step guides with pictures — second and third counts, the ERP upload
+  an aisle at a time, employees teams and gear sizes, LIVE and TEST. **Read** shows one on the page
+  (its contents list jumps within it, and it stays open on a reload); **⬇ PDF** downloads it to
+  print. Every login gets the guides for users; an admin also gets the admin editions, with the
+  setting up in, under *For admins*. They are the same files as [docs/guides](guides/README.md).
 - **Ask the guide.** Type a question in your own words (*"the gun says offline — did we lose the
   counts?"*, *"how do I approve adjustments"*) or paste a message straight off the gun or the
-  dashboard. It searches every step, every question, and every message the gun and the server can
-  show, and answers with the fix and a link. *Gun*, *handheld* and *Zebra* all mean the scanner;
+  dashboard. It searches every step, every question, every section of the how-to guides, and every
+  message the gun and the server can show, and answers with the fix and a link. *Gun*, *handheld* and *Zebra* all mean the scanner;
   *Wi-Fi* means signal; *variance* means adjustment.
 - **Right now.** The guide reads the count in the picker — the guided setup, open SOS, second
   counts, the thresholds, the scanners, the Teams channel — and lists what is missing, red for

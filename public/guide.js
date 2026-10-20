@@ -104,6 +104,10 @@
     }
     for (const q of G.questions) add({ kind: 'ask', title: q.q, text: q.a, from: 'General', goto: q.goto });
     for (const e of G.errors) add({ kind: 'issue', title: e.see, text: `${e.means} ${e.fix}`, from: 'What the screen says', goto: e.goto, means: e.means, fix: e.fix });
+    // the how-to guides, a section at a time: the user editions only, so an answer is never the setup version
+    for (const g of guides.filter((x) => x.edition === 'user')) {
+      for (const sec of g.sections) add({ kind: 'howto', title: `${g.title.replace(/ — .*$/, '')}: ${sec.title}`, text: sec.text.slice(0, 320) + (sec.text.length > 320 ? '…' : ''), extra: sec.text, from: 'How-to guide', guide: g, section: sec.id });
+    }
     INDEX = out;
     return out;
   }
@@ -144,6 +148,12 @@
     } else box.appendChild(el('div', 'a', e.text));
     const go = goLink(e.goto);
     if (go) box.appendChild(go);
+    if (e.guide) {
+      const r = el('a', 'go', 'Read it in the guide →');
+      r.href = '#guide';
+      r.onclick = (ev) => { ev.preventDefault(); openGuide(e.guide, e.section).catch(() => {}); };
+      box.appendChild(r);
+    }
     if (e.j) {
       const j = el('a', 'go', 'See the step →');
       j.href = '#' + e.j;
@@ -167,6 +177,72 @@
     }
     for (const e of hits) out.appendChild(answerCard(e));
   }
+
+  /* ------------------------------------------------------- how-to guides
+     The same files that print as PDFs, shown here. Everyone gets the guides
+     for users; an admin also gets the admin editions, with the setting up in. */
+  let guides = [];
+  let reading = null;
+  async function loadGuides() {
+    try { guides = (await api.json('/api/admin/guides')).guides || []; } catch { guides = []; }
+    INDEX = null;
+    const tile = (g) => {
+      const t = el('div', 'howto');
+      t.dataset.guide = `${g.edition}/${g.name}`;
+      if (g.edition === 'admin') t.appendChild(el('div', 'ed', 'Admin edition'));
+      t.append(el('div', 't', g.title), el('div', 'w', g.who), el('div', 'b', g.blurb));
+      const acts = el('div', 'acts');
+      const read = el('button', 'sm primary', 'Read');
+      read.type = 'button';
+      read.onclick = () => openGuide(g).catch((err) => alert(err.message));
+      acts.appendChild(read);
+      if (g.pdf) {
+        const pdf = el('button', 'sm', '⬇ PDF');
+        pdf.type = 'button';
+        pdf.onclick = () => downloadGuide(g, pdf);
+        acts.appendChild(pdf);
+      }
+      t.appendChild(acts);
+      return t;
+    };
+    const users = guides.filter((g) => g.edition === 'user');
+    const admins = guides.filter((g) => g.edition === 'admin');
+    $('howtoCard').hidden = !guides.length;
+    $('howtos').replaceChildren(...users.map(tile));
+    $('howtosAdmin').hidden = !admins.length;
+    $('howtosAdminList').replaceChildren(...admins.map(tile));
+  }
+  async function downloadGuide(g, btn) {
+    const was = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+    try { await api.download(`/api/admin/guides/${g.edition}/${g.name}.pdf`, `${g.name}${g.edition === 'admin' ? '-admin' : ''}.pdf`); }
+    catch (err) { alert(err.message); }
+    finally { if (btn) { btn.disabled = false; btn.textContent = was; } }
+  }
+  async function openGuide(g, section = '') {
+    const doc = await api.json(`/api/admin/guides/${g.edition}/${g.name}`);
+    reading = doc;
+    $('readerTitle').textContent = doc.title + (doc.edition === 'admin' ? ' (admin edition)' : '');
+    $('readerWho').textContent = doc.who ? `For ${doc.who}` : '';
+    $('readerBody').innerHTML = doc.html;          // our own Markdown, rendered and escaped on the server
+    $('readerPdf').hidden = !doc.pdf;
+    $('readerCard').hidden = false;
+    for (const t of document.querySelectorAll('.howto')) t.classList.toggle('on', t.dataset.guide === `${doc.edition}/${doc.name}`);
+    try { sessionStorage.setItem('guide:reading', `${doc.edition}/${doc.name}`); } catch { /* fine */ }
+    const target = section ? document.getElementById(section) : null;
+    (target || $('readerCard')).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (target) { target.classList.remove('lit'); void target.offsetWidth; target.classList.add('lit'); }
+  }
+  // the contents list links within the page
+  $('readerBody').addEventListener('click', (e) => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    e.preventDefault();
+    const t = document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1)));
+    if (t) { t.scrollIntoView({ behavior: 'smooth', block: 'start' }); t.classList.remove('lit'); void t.offsetWidth; t.classList.add('lit'); }
+  });
+  $('readerClose').onclick = () => { $('readerCard').hidden = true; reading = null; try { sessionStorage.removeItem('guide:reading'); } catch { /* fine */ } $('howtoCard').scrollIntoView({ block: 'start' }); };
+  $('readerPdf').onclick = () => { if (reading) downloadGuide(reading, $('readerPdf')); };
 
   /* ------------------------------------------------------------- right now
      What the APIs say about the count in the picker, each read turned into a
@@ -375,13 +451,18 @@
 
   async function start() {
     INDEX = null;                    // access may have changed what links show
-    await loadSessions();
+    await Promise.all([loadSessions(), loadGuides()]);
     drawJourneys();
     let key = '';
     try { key = sessionStorage.getItem('guide:journey') || ''; } catch { /* fine */ }
     const fromHash = (location.hash || '').replace('#', '');
     if (journeysOn().some((j) => j.key === fromHash)) key = fromHash;
     openJourney(journeysOn().some((j) => j.key === key) ? key : journeysOn()[0].key);
+    // a guide that was open stays open when the page is reloaded
+    let open = '';
+    try { open = sessionStorage.getItem('guide:reading') || ''; } catch { /* fine */ }
+    const g = open && guides.find((x) => `${x.edition}/${x.name}` === open);
+    if (g) openGuide(g).catch(() => {});
     await rightNow();
     ask();
   }

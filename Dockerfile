@@ -5,6 +5,9 @@ WORKDIR /app
 COPY package.json ./
 COPY src ./src
 COPY public ./public
+# the how-to guides and their pictures: the User guide page shows them and offers their PDFs
+COPY docs/guides ./docs/guides
+COPY docs/images ./docs/images
 
 ENV NODE_ENV=production
 ENV PORT=3000

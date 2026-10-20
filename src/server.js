@@ -25,6 +25,7 @@ import { autoPlan, applyPlan } from './routes/auto-plan.js';
 import { endTrial, setTrial } from './routes/trial.js';
 import { exportEverything } from './routes/export-all.js';
 import { recountSideBySide } from './routes/recount-sheet.js';
+import { listGuides, getGuide, guidePdf, guideImage } from './routes/guides.js';
 import { erpAisles, erpAisleSheet } from './routes/erp-aisles.js';
 import { archiveAisle, finalReadiness, finalReport, listArchives, archivePath } from './routes/archive.js';
 import { idleConfig, saveIdleConfig, teamClocks, checkIdle, answerIdle, openIdleAlerts, recentIdleAlerts, tellTeamsIdle, idleTick, recordSignoff } from './routes/idle.js';
@@ -1788,6 +1789,18 @@ async function handleAdmin(req, res, url, m) {
   }
 
   /* --- SOS: the list the gun offers, the alerts themselves, and the channel */
+  // --- the how-to guides, for the User guide page: the user guides for everyone, the admin ones for an admin
+  if (p === '/api/admin/guides' && method === 'GET') {
+    return sendJson(req, res, 200, { guides: listGuides({ admin: whoNow && whoNow.role === 'admin' }) });
+  }
+  if ((m = p.match(/^\/api\/admin\/guides\/(user|admin)\/([a-z0-9-]+)\.pdf$/)) && method === 'GET') {
+    const pdf = guidePdf(m[1], m[2], { admin: whoNow && whoNow.role === 'admin' });
+    return send(req, res, 200, pdf.body, { 'content-type': 'application/pdf', 'content-disposition': `attachment; filename="${pdf.filename}"`, 'cache-control': 'no-cache' });
+  }
+  if ((m = p.match(/^\/api\/admin\/guides\/(user|admin)\/([a-z0-9-]+)$/)) && method === 'GET') {
+    return sendJson(req, res, 200, getGuide(m[1], m[2], { admin: whoNow && whoNow.role === 'admin' }));
+  }
+
   // --- the logo (Settings → Site & systems)
   if (p === '/api/admin/logo' && method === 'GET') return sendJson(req, res, 200, branding());
   if (p === '/api/admin/logo' && method === 'POST') {
@@ -2153,6 +2166,12 @@ const server = http.createServer(async (req, res) => {
       const who = acceptInvite(body.token, body.password);
       audit(who.name, 'took up an invite and chose a password', who.username);
       return sendJson(req, res, 200, { ok: true, username: who.username });
+    }
+    // the pictures in the how-to guides: screenshots of the made-up demo count, nothing of the site's
+    if ((m = p.match(/^\/guide-images\/([a-z0-9-]+\.png)$/)) && req.method === 'GET') {
+      const img = guideImage(m[1]);
+      if (!img) return send(req, res, 404, 'not found');
+      return send(req, res, 200, img, { 'content-type': 'image/png', 'cache-control': 'public, max-age=3600' });
     }
     if (p === '/api/system' && req.method === 'GET') return sendJson(req, res, 200, publicSystems());
     // the home's link check: would this hand-off be taken? Nothing is used up
