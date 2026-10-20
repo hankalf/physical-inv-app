@@ -480,9 +480,9 @@ the scanners, the counting screen, the racking blocks, the crew and the team pla
 4. Charge the scanners and put the team QR cards out.
 5. Open the **Dashboard** on the supervisor's computer. Put **`/board`** (the office board, no
    sign-in) or **`/crew`** (the crew board, teams by shift) on a wall screen if you have one.
-6. Brief the crews on step 19. Play `docs/training/scanner-training-en.mp4` (or `-es.mp4` for a Spanish-speaking crew),
-   about fifteen minutes on the real scanner, then go through the slides in
-   `docs/training/scanner-training-en.pptx` with scanners in hand.
+6. Brief the crews on step 19. Play `docs/training/scanner-training-full-en.mp4` (or `-es.mp4` for a Spanish-speaking crew),
+   under ten minutes on the real scanner, then go through the slides in
+   `docs/training/scanner-training-full-en.pptx` with scanners in hand.
 
 ## 19 — Count day: what the counters do
 

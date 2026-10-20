@@ -24,8 +24,9 @@ const HERE = new URL('.', import.meta.url).pathname;
 const ROOT = join(HERE, '..');
 const LANG = process.env.LANG_FILM === 'es' ? 'es' : 'en';
 const L = (en, es) => (LANG === 'es' ? es : en);
-const SHOTS = process.env.SHOTS || join(ROOT, 'docs', 'training', 'shots', LANG);
-const OUT = join(ROOT, 'docs', 'training', `scanner-training-${LANG}.pptx`);
+const JOB = 'full';                                     // the deck is the full count's; the films cover each job
+const SHOTS = process.env.SHOTS || join(ROOT, 'docs', 'training', 'shots', JOB, LANG);
+const OUT = join(ROOT, 'docs', 'training', `scanner-training-${JOB}-${LANG}.pptx`);
 
 /* the pictures, by the name the film gave them (01-signon.png -> signon) */
 const files = existsSync(SHOTS) ? readdirSync(SHOTS) : [];

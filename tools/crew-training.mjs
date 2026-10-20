@@ -32,9 +32,11 @@ const HERE = new URL('.', import.meta.url).pathname;
 const ROOT = join(HERE, '..');
 const LANG = process.env.LANG_FILM === 'es' ? 'es' : 'en';
 const L = (en, es) => (LANG === 'es' ? es : en);
+/* which job the film teaches - the scanner offers that job alone */
+const JOB = process.env.JOB === 'cycle' ? 'cycle' : 'full';
 const OUT = join(ROOT, 'docs', 'training');
-const SHOTS = join(OUT, 'shots', LANG);
-const PORT = Number(process.env.PORT || (LANG === 'es' ? 3412 : 3411));
+const SHOTS = join(OUT, 'shots', JOB, LANG);
+const PORT = Number(process.env.PORT || (3411 + (JOB === 'cycle' ? 2 : 0) + (LANG === 'es' ? 1 : 0)));
 const BASE = `http://127.0.0.1:${PORT}`;
 const hdr = { 'content-type': 'application/json' };
 const j = (r) => r.json();
@@ -68,7 +70,7 @@ try {
   const csv = { authorization: 'Bearer ' + tok, 'content-type': 'text/csv' };
   const post = (p, body, h = A) => fetch(BASE + p, { method: 'POST', headers: h, body: typeof body === 'string' ? body : JSON.stringify(body) }).then(j);
 
-  const sess = await post('/api/admin/sessions', { name: L('Q4 wall-to-wall', 'Inventario Q4') });
+  const sess = await post('/api/admin/sessions', JOB === 'cycle' ? { name: L('2026 cycle counts', 'Conteos cíclicos 2026'), mode: 'cycle' } : { name: L('Q4 wall-to-wall', 'Inventario Q4') });
   const binCsv = readFileSync(join(ROOT, 'tests', 'fixtures', 'front-royal-bins.csv'), 'utf8');
   await post(`/api/admin/sessions/${sess.id}/master?kind=bins`, binCsv, csv);
   const { report, expected, palletAt, binsOf } = buildReport(binCsv);
@@ -83,16 +85,25 @@ try {
   await post('/api/admin/scanner-prompts', { commentTimeout: 0 });
   // the site counts the bin first: the rack label, then the pallet label, then the quantity
   await post('/api/admin/scanner-layout', { order: ['bin', 'pallet', 'qty'] });
+  // the scanner offers the one job this film is about
+  await post('/api/admin/scanner-jobs', { full: JOB === 'full', cycle: JOB === 'cycle', move: false, missing: false });
   await post('/api/admin/site-name', { name: 'Full Harvest Inventory', place: 'Front Royal' }).catch(() => {});
   for (const [badge, name, equipment] of CREW) {
     await post('/api/admin/people/employees', { badge, name, dept: 'Warehouse', shift: '1', equipment }).catch(() => {});
   }
   const TEAM = 'S1-DS01';
   const team = await post('/api/admin/people/teams', { name: TEAM, shift: '1', notes: 'Dock stocker · truck 01' });
-  for (const [badge, , , t] of CREW) if (t === '1') await post('/api/admin/people/assign', { badge, teamId: team.id }).catch(() => {});
+  // a cycle counter signs on alone, by clock-in number; on a team as well, the scanner would say "Check the team"
+  if (JOB === 'full') for (const [badge, , , t] of CREW) if (t === '1') await post('/api/admin/people/assign', { badge, teamId: team.id }).catch(() => {});
   const device = await post('/api/admin/devices', { name: 'SCANNER-07' });
-  await post(`/api/admin/sessions/${sess.id}/assignments`, { team: TEAM, aisles: 'F01', levels: 'A-C' });
-  await post(`/api/admin/sessions/${sess.id}/assignments`, { team: TEAM, aisles: 'F03', levels: 'A-C' });
+  if (JOB === 'full') {
+    await post(`/api/admin/sessions/${sess.id}/assignments`, { team: TEAM, aisles: 'F01', levels: 'A-C' });
+    await post(`/api/admin/sessions/${sess.id}/assignments`, { team: TEAM, aisles: 'F03', levels: 'A-C' });
+  } else {
+    /* today's list: a handful of bins on level A of F01 (one holds two pallets, one three), and two empty ones higher up */
+    await post(`/api/admin/sessions/${sess.id}/cycle/batches`, { target: 5, strategy: 'oldest', aisle: 'F01', levels: 'A' });
+    await post(`/api/admin/sessions/${sess.id}/cycle/batches`, { target: 1, strategy: 'oldest', aisle: 'F01', levels: 'F' });
+  }
 
   const onLevelA = binsOf('F01').filter((b) => /^F01A/.test(b));
   const stocked = onLevelA.filter((b) => (palletAt.get(b) || []).length);
@@ -396,13 +407,13 @@ try {
     await atStep(P.comments, 8000);
   };
 
-  /* ================================================================ the film */
-  await cover(L('Day 1 · Counting crew', 'Día 1 · Equipo de conteo'), L('How to count with the scanner', 'Cómo contar con el escáner'),
-    L('Scan the rack. Scan the pallet. Type what is there. That is the whole job — this film shows every step, slowly.', 'Escanea el rack. Escanea la tarima. Escribe lo que hay. Ese es todo el trabajo — este video muestra cada paso, despacio.'), 7000);
-
+  /* part one, the same for every job: the scanner and your language */
+  const partOne = async () => {
   /* ---------------------------------------------------------- 1 */
   await part(1, L('Before you start', 'Antes de empezar'), L('The scanner, its buttons, and your language.', 'El escáner, sus botones y tu idioma.'));
   await gun().waitForSelector('#scrSignon.active', { timeout: 30000 });
+  /* an installed scanner never shows the "Running in the browser" banner or the install buttons; neither does the film */
+  await gun().addStyleTag({ content: '#installHint, #btnInstall, #btnFullScreen { display: none !important; }' });
   await show('note', L('<b>The trigger</b> reads a barcode.<br><b>The number keys</b> type a quantity.<br><b>The screen</b> tells you what to scan next.', '<b>El gatillo</b> lee un código de barras.<br><b>Las teclas</b> escriben una cantidad.<br><b>La pantalla</b> te dice qué escanear.'), L('Three things to know', 'Tres cosas que saber'));
   await say(L('This is your scanner', 'Este es tu escáner'), L('The screen in the middle is the counting app. It asks <b>one thing at a time</b>, in big letters. Read the top of the screen, do what it says, and wait for the beep.', 'La pantalla del centro es la app de conteo. Te pide <b>una cosa a la vez</b>, con letras grandes. Lee la parte de arriba, haz lo que dice y espera el bip.'));
   await shotPhone('signon');
@@ -418,6 +429,15 @@ try {
     await beat(6500);
     await page.evaluate(() => document.getElementById('ring').classList.remove('on'));
   }
+
+  };
+
+  if (JOB === 'full') {
+  /* ================================================================ the film */
+  await cover(L('Day 1 · Counting crew', 'Día 1 · Equipo de conteo'), L('How to count with the scanner', 'Cómo contar con el escáner'),
+    L('Scan the rack. Scan the pallet. Type what is there. That is the whole job — this film shows every step, slowly.', 'Escanea el rack. Escanea la tarima. Escribe lo que hay. Ese es todo el trabajo — este video muestra cada paso, despacio.'), 7000);
+
+  await partOne();
 
   /* ---------------------------------------------------------- 2 */
   await part(2, L('Signing on', 'Iniciar sesión'), L('Your team card, your badges, and your aisle.', 'Tu tarjeta de equipo, tus gafetes y tu pasillo.'));
@@ -653,6 +673,214 @@ try {
   await cover(L('That is the job', 'Ese es el trabajo'), L('Rack · Pallet · Quantity', 'Rack · Tarima · Cantidad'),
     L('Count what is <b>really there</b>. Never skip a pallet. Not sure? Ask your lead — or press <b>SOS</b> if you need help now.', 'Cuenta lo que <b>de verdad hay</b>. Nunca te saltes una tarima. ¿Dudas? Pregunta a tu líder — o toca <b>SOS</b> si necesitas ayuda ya.'), 9000);
 
+  } else {
+
+  /* ================================================================ the cycle-count film */
+  const taskBin = () => gun().getAttribute('#recountBanner', 'data-bin');
+  /* the next bin on the list, once the scanner has moved on from the last one */
+  const nextTask = async (prev) => {
+    await gun().waitForFunction((p) => { const b = document.getElementById('recountBanner'); return b && !b.hidden && b.dataset.bin && b.dataset.bin !== p; }, prev, { timeout: 25000, polling: 200 }).catch(() => {});
+    return taskBin();
+  };
+  const binDone = async () => { await tap('#btnRecountDone', { hold: 2000 }); await beat(1200); };
+
+  await cover(L('Day 1 · Cycle counts', 'Día 1 · Conteos cíclicos'), L('How to count with the scanner', 'Cómo contar con el escáner'),
+    L('A cycle count is a few bins each day. The scanner gives you the list. You count each bin as it stands — the rack, the pallet, the quantity — and tap <b>Bin done</b>.', 'Un conteo cíclico son unas ubicaciones cada día. El escáner te da la lista. Cuentas cada ubicación tal como está — el rack, la tarima, la cantidad — y tocas <b>Ubicación terminada</b>.'), 7000);
+
+  await partOne();
+
+  /* ---------------------------------------------------------- 2 */
+  await part(2, L('Signing on', 'Iniciar sesión'), L('Your badge, and your list of bins for today.', 'Tu gafete, y tu lista de ubicaciones de hoy.'));
+  await say(L('Scan your badge', 'Escanea tu gafete'), L('A cycle count is <b>one person with a scanner</b> — no team card. Scan your <b>badge</b> into the box. Your name shows on the screen.', 'Un conteo cíclico es <b>una persona con un escáner</b> — sin tarjeta de equipo. Escanea tu <b>gafete</b> en el cuadro. Tu nombre aparece en la pantalla.'), '', { hold: false });
+  await beat(2400);
+  await gun().focus('#fEmployee');
+  await scanLabel('badge', B1, { sel: '#fEmployee' });
+  await shotProp('badge');
+  await clearProp();
+  await say(L('Sign on', 'Entrar'), L('Tap <b>Sign on &amp; load list</b>. The scanner downloads your bins and can keep working even with <b>no Wi-Fi</b>.', 'Toca <b>Entrar y cargar la lista</b>. El escáner descarga tus ubicaciones y puede seguir trabajando aunque <b>no haya Wi-Fi</b>.'), '', { hold: false });
+  await beat(3000);
+  await tap('#btnStart', { hold: 2400, shot: 'signon-filled' });
+  await gun().waitForSelector('#scrAssign.active', { timeout: 60000 });
+  await beat(1600);
+  await say(L('Your bins for today', 'Tus ubicaciones de hoy'), L('The scanner shows <b>how many bins</b> are on your list. Nobody else is sent to them while you have them. Tap <b>Start counting the list</b>.', 'El escáner muestra <b>cuántas ubicaciones</b> hay en tu lista. A nadie más lo mandan a ellas mientras las tengas. Toca <b>Empezar a contar la lista</b>.'), { text: L('A few bins a day, every day', 'Unas ubicaciones al día, cada día'), ok: true });
+  await shotPhone('your-list');
+  await tap('#btnRecounts', { hold: 2200 });
+  await gun().waitForSelector('#scrScan.active', { timeout: 60000 });
+  await beat(1400);
+
+  /* ---------------------------------------------------------- 3 */
+  await part(3, L('Counting a bin', 'Contar una ubicación'), L('The scanner names the bin. You go there and count what is in it: the rack, the pallet, the quantity, then Bin done.', 'El escáner nombra la ubicación. Vas ahí y cuentas lo que hay: el rack, la tarima, la cantidad, luego Ubicación terminada.'));
+  let bin = await taskBin();
+  await say(L('Go to the bin', 'Ve a la ubicación'), L(`The box at the top says <b>CYCLE COUNT</b> and the bin — <b>${bin}</b>, with its level and position. Walk to that spot.`, `El cuadro de arriba dice <b>CONTEO CÍCLICO</b> y la ubicación — <b>${bin}</b>, con su nivel y posición. Camina a ese lugar.`), { text: L('One bin at a time', 'Una ubicación a la vez') });
+  await toTop(); await beat(500);
+  await shotPhone('task-banner');
+  {
+    const ids = palletAt.get(bin) || [];
+    await countPallet(ids[0]);
+    await shotPhone('comments');
+    await say(L('4 · A comment, if there is one', '4 · Un comentario, si hay'), L('The scanner offers quick reasons — damaged, partial, and so on. Tap one if it fits. Nothing to say? Tap <b>Skip</b>.', 'El escáner ofrece razones rápidas — dañada, incompleta, etc. Toca una si aplica. ¿Nada que decir? Toca <b>Saltar</b>.'));
+    await tap('#btnSkip', { hold: 1600 });
+    for (const id of ids.slice(1)) await countLine(id, bin);
+    await say(L('5 · Bin done', '5 · Ubicación terminada'), L('Everything in the bin is counted? Tap <b>Bin done — nothing more here</b>. The next bin on your list comes up by itself.', '¿Todo lo de la ubicación está contado? Toca <b>Ubicación terminada — no hay más aquí</b>. La siguiente ubicación de tu lista aparece sola.'), { text: L('Rack · pallet · quantity · Bin done', 'Rack · tarima · cantidad · Ubicación terminada'), ok: true }, { hold: false });
+    await beat(3600);
+    await shotPhone('bin-done-button');
+    await binDone();
+  }
+  /* the wrong bin: the scanner holds you to the one on the list */
+  bin = await nextTask(bin);
+  {
+    const ids = palletAt.get(bin) || [];
+    const other = expected.get(palletAt.get(binsOf('F01').find((b) => /^F01B/.test(b) && (palletAt.get(b) || []).length))[0]).bin;
+    await say(L('The wrong bin? It tells you', '¿Ubicación equivocada? Te avisa'), L(`Scan a rack label that is not the bin on the list, and the scanner says so and records nothing. It only takes <b>${bin}</b>. Scan the right one.`, `Escanea una etiqueta de rack que no sea la ubicación de la lista, y el escáner te avisa y no guarda nada. Solo acepta <b>${bin}</b>. Escanea la correcta.`), '', { hold: false });
+    await beat(2400);
+    await scanLabel('rack', other, { bad: true });
+    await beat(1400);
+    await shotPhone('wrong-bin');
+    await beat(dwell('read the message on the screen this cycle count is for the bin on the list'));
+    for (const id of ids) await countLine(id, bin);
+    await binDone();
+  }
+  /* several pallets in the bin: every one, then Bin done */
+  bin = await nextTask(bin);
+  {
+    const ids = palletAt.get(bin) || [];
+    await say(L('More than one pallet in the bin', 'Más de una tarima en la ubicación'), L(`This bin holds <b>${ids.length} pallets</b>. Count every one — rack, pallet, quantity, each time — and only then tap <b>Bin done</b>. The box turns orange and counts them off while you are in the bin.`, `Esta ubicación tiene <b>${ids.length} tarimas</b>. Cuenta cada una — rack, tarima, cantidad, cada vez — y solo entonces toca <b>Ubicación terminada</b>. El cuadro se pone naranja y las va contando mientras estás en la ubicación.`), { text: `${bin} · ${ids.length} ${L('pallets', 'tarimas')}` });
+    let k = 0;
+    for (const id of ids) { await countLine(id, bin); if (++k === 1 && ids.length > 1) { await shotPhone('still-in-bin'); await beat(1800); } }
+    await binDone();
+  }
+  bin = await nextTask(bin);
+
+  /* ---------------------------------------------------------- 4 */
+  await part(4, L('Labels', 'Etiquetas'), L('A label that will not scan, and a pallet nobody expected.', 'Una etiqueta que no escanea, y una tarima que nadie esperaba.'));
+  {
+    const ids = palletAt.get(bin) || [];
+    if (ids.length) {
+      const id = ids[0]; const e = expected.get(id);
+      await atStep(P.bin); await scanLabel('rack', bin);
+      await atStep(P.pallet);
+      await prop(`<div class="prop"><div class="k">${L('PALLET LABEL', 'ETIQUETA DE TARIMA')}</div><div class="line"><b>${e.sku}</b> · ${e.desc}</div><div class="bars" style="filter:blur(3px) contrast(.4); opacity:.55">${svg(id)}</div><div class="line" style="margin-top:6px">${id}</div></div>`, L('Iced over — it will not scan', 'Con hielo — no escanea'));
+      await say(L('A label that will not scan', 'Una etiqueta que no escanea'), L('Ice, a rip, a faded label. <b>Never skip the pallet.</b> Tap <b>Label will not scan</b>. If you can read the number, tap <b>I can read it — let me type it</b> and type it. The office gets a list of labels to replace.', 'Hielo, rota, borrosa. <b>Nunca te saltes la tarima.</b> Toca <b>La etiqueta no escanea</b>. Si puedes leer el número, toca <b>La puedo leer — la escribo</b> y escríbelo. La oficina recibe una lista de etiquetas para cambiar.'), '', { hold: false });
+      await beat(5200);
+      await tap('#btnNoScan', { hold: 2200 });
+      await shotPhone('no-scan');
+      await tap('#btnNoScanType', { hold: 2200 });
+      await gun().type('#fScan', id, { delay: Math.round(260 * PACE) });
+      await beat(900);
+      await gun().press('#fScan', 'Enter');
+      await beat(1400);
+      await atStep(P.qty); await keyIn(e.qty);
+      await skipComments();
+      for (const other of ids.slice(1)) await countLine(other, bin);
+      await say(L('A pallet nobody expected', 'Una tarima que nadie esperaba'), L('A pallet in the bin that is not on the list? Scan it: the scanner asks <b>Count it anyway?</b> Tap <b>YES</b> and count it like any other. Wrong barcode? Tap <b>NO</b>.', '¿Una tarima en la ubicación que no está en la lista? Escanéala: el escáner pregunta <b>¿Contarla de todos modos?</b> Toca <b>SÍ</b> y cuéntala como cualquier otra. ¿Código equivocado? Toca <b>NO</b>.'), '', { hold: false });
+      await beat(3600);
+      await atStep(P.bin); await scanLabel('rack', bin);
+      await atStep(P.pallet);
+      await scanLabel('pallet', 'HANDWRITTEN-91');
+      await beat(1200);
+      await shotPhone('not-on-list');
+      await tap('#btnOvYes', { hold: 3000 });
+      await atStep(P.qty); await keyIn(30);
+      if (await gun().isVisible('#scrOverride.active').catch(() => false)) await tap('#btnOverrideAccept', { hold: 1600 }).catch(() => {});
+      await skipComments().catch(() => {});
+      await say(L('Found stock is never lost', 'La mercancía encontrada no se pierde'), L('The office sees it and adds it to the system. Then <b>Bin done</b>, as always.', 'La oficina la ve y la agrega al sistema. Luego <b>Ubicación terminada</b>, como siempre.'), { text: L('Not sure? Ask your lead', '¿No estás seguro? Pregunta a tu líder') }, { hold: false });
+      await beat(3000);
+      await binDone();
+      bin = await nextTask(bin);
+    }
+  }
+
+  /* ---------------------------------------------------------- 5 */
+  await part(5, L('Help and fixes', 'Ayuda y correcciones'), L('Mistakes, messages, no Wi-Fi, problems, and the SOS button.', 'Errores, mensajes, sin Wi-Fi, problemas y el botón SOS.'));
+  await atStep(P.bin);
+  await say(L('Made a mistake?', '¿Te equivocaste?'), L('Typed the wrong number before finishing? <b>Back</b> goes back one step. Already saved? Tap <b>History</b>: your last 50 lines. <b>Void this line</b> takes a wrong one out.', '¿Escribiste mal antes de terminar? <b>Atrás</b> regresa un paso. ¿Ya se guardó? Toca <b>Historial</b>: tus últimas 50 líneas. <b>Anular esta línea</b> quita una mal hecha.'), '', { hold: false });
+  await beat(4800);
+  await tap('#btnHistory', { hold: 2000 });
+  await beat(1600);
+  await shotPhone('history');
+  await beat(2800);
+  await tap('#btnHistoryBack', { hold: 1800 });
+  await post(`/api/admin/sessions/${sess.id}/messages`, { team: B1, urgent: true, body: L('Bring the pallet jack to dock 4 when you finish your list', 'Lleva el patín a la puerta 4 cuando termines tu lista') });
+  await gun().evaluate(() => window.dispatchEvent(new Event('online')));
+  await say(L('A message from the office', 'Un mensaje de la oficina'), L('Your lead can send a message to your scanner. It buzzes and stays on the screen. Read it, then tap <b>Got it</b> — the office sees that you read it.', 'Tu líder puede mandar un mensaje a tu escáner. Vibra y se queda en la pantalla. Léelo y toca <b>Entendido</b> — la oficina ve que lo leíste.'), '', { hold: false });
+  await gun().waitForFunction(() => { const el = document.getElementById('msgBar'); return el && !el.hidden; }, null, { timeout: 45000, polling: 600 }).catch(() => {});
+  await beat(4800);
+  await shotPhone('message');
+  await tap('#btnMsgAck', { hold: 2400 });
+  await say(L('No Wi-Fi? Keep counting', '¿Sin Wi-Fi? Sigue contando'), L('In the freezer the Wi-Fi can drop. The top of the screen says <b>OFFLINE</b>. <b>Keep counting.</b> Everything is saved on the scanner and sends by itself when the signal is back.', 'En el congelador el Wi-Fi se puede caer. Arriba dice <b>SIN SEÑAL</b>. <b>Sigue contando.</b> Todo se guarda en el escáner y se manda solo cuando regresa la señal.'), '', { hold: false });
+  await ctx.setOffline(true);
+  await gun().evaluate(() => window.dispatchEvent(new Event('offline')));
+  await beat(3600);
+  for (const id of (palletAt.get(bin) || [])) await countLine(id, bin);
+  await shotPhone('offline');
+  await binDone();
+  await beat(2000);
+  await ctx.setOffline(false);
+  await gun().evaluate(() => window.dispatchEvent(new Event('online')));
+  await say(L('…and it catches up', '…y se pone al día'), L('Signal back: the lines go to the office on their own. Nothing to type again.', 'Regresó la señal: las líneas se van a la oficina solas. No hay que escribir nada otra vez.'), { text: L('Nothing is lost', 'No se pierde nada'), ok: true });
+  bin = await nextTask(bin);
+  await atStep(P.bin);
+  await say(L('Something is wrong with the bin', 'Algo está mal en la ubicación'), L('Damaged pallet, broken rack, a bin blocked by a truck? Tap <b>Report a problem</b>, pick what it is, and scan to confirm. It goes on the office’s fix list. It is <b>not</b> an emergency.', '¿Tarima dañada, rack roto, una ubicación bloqueada por un montacargas? Toca <b>Reportar un problema</b>, escoge qué es y escanea para confirmar. Va a la lista de arreglos de la oficina. <b>No</b> es una emergencia.'), '', { hold: false });
+  await beat(5600);
+  await tap('#btnIssue', { hold: 2200 });
+  await beat(2200);
+  await shotPhone('report-problem');
+  await beat(2200);
+  await tap('#btnIssueBack', { hold: 1600 });
+  await say(L('SOS — when you need help now', 'SOS — cuando necesitas ayuda ya'), L('Hurt, stuck, equipment broken, or you need a supervisor: tap the red <b>SOS — I need help</b> and pick what is wrong. The office sees who you are, where you are and your last bin right away.', 'Si alguien se lastima, se queda atrapado, se rompe el equipo o necesitas un supervisor: toca el botón rojo <b>SOS — necesito ayuda</b> y escoge qué pasa. La oficina ve quién eres, dónde estás y tu última ubicación de inmediato.'), '', { hold: false });
+  await beat(5600);
+  await tap('#btnSos', { hold: 2400 });
+  await gun().waitForSelector('#scrSos.active', { timeout: 10000 }).catch(() => {});
+  await beat(2200);
+  await shotPhone('sos-list');
+  const sosBtns = await gun().$$('#sosReasons button');
+  if (sosBtns[2]) {
+    const box = await sosBtns[2].boundingBox();
+    await page.evaluate((b) => { const r = document.getElementById('ring'); Object.assign(r.style, { left: (b.x - 6) + 'px', top: (b.y - 6) + 'px', width: (b.width + 12) + 'px', height: (b.height + 12) + 'px' }); r.classList.add('on'); }, box);
+    await beat(2400);
+    await sosBtns[2].click();
+    await page.evaluate(() => document.getElementById('ring').classList.remove('on'));
+  }
+  await beat(2400);
+  const alerts = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/alerts`, { headers: A })).catch(() => ({}));
+  const open = (alerts.alerts || alerts || []).find?.((a) => a.status === 'open');
+  if (open) await post(`/api/admin/sessions/${sess.id}/alerts/${open.id}/seen`, {});
+  await gun().evaluate(() => window.dispatchEvent(new Event('online')));
+  await say(L('Help is coming', 'La ayuda viene'), L('When a supervisor picks it up, your scanner says <b>who has seen your SOS</b>. With no signal it tells you it has <b>not</b> been sent — then go and find someone.', 'Cuando un supervisor lo atiende, tu escáner dice <b>quién vio tu SOS</b>. Sin señal te dice que <b>no</b> se mandó — entonces ve a buscar a alguien.'), { text: L('Use it for real emergencies', 'Úsalo para emergencias de verdad') });
+  await gun().waitForFunction(() => /seen|vio|visto/i.test(document.getElementById('sosBar')?.textContent || ''), null, { timeout: 30000, polling: 600 }).catch(() => {});
+  await toTop(); await beat(600);
+  await shotPhone('sos-seen');
+  await beat(2000);
+  if (await gun().isVisible('#btnSosBack').catch(() => false)) await tap('#btnSosBack', { hold: 1600 });
+  /* the last bin on the list is empty */
+  if (!(palletAt.get(bin) || []).length) {
+    await atStep(P.bin);
+    await say(L('An empty bin', 'Una ubicación vacía'), L('Nothing in the bin? That counts too. Scan the rack label, then tap <b>Bin is EMPTY</b> and <b>Yes — it is empty</b>. The bin is done and the next one comes up.', '¿No hay nada en la ubicación? Eso también cuenta. Escanea la etiqueta del rack, luego toca <b>Ubicación VACÍA</b> y <b>Sí — está vacía</b>. La ubicación queda terminada y aparece la siguiente.'), '', { hold: false });
+    await beat(3600);
+    await scanLabel('rack', bin);
+    await atStep(P.pallet);
+    await tap('#btnEmpty', { hold: 2200, shot: 'empty-button' });
+    await tap('#btnEmptyYes', { hold: 2000 });
+    await beat(2000);
+  }
+
+  /* ---------------------------------------------------------- 6 */
+  await part(6, L('Finishing', 'Terminar'), L('The end of the list, and the end of your shift.', 'El final de la lista, y el final de tu turno.'));
+  if (!(await gun().isVisible('#scrAssign.active').catch(() => false))) await tap('#btnToAssign', { hold: 1800 });
+  await gun().waitForSelector('#scrAssign.active', { timeout: 20000 });
+  await beat(1200);
+  await say(L('What is left', 'Lo que falta'), L('<b>My list</b> shows how many bins are still to do. Work them down. When the list is empty the scanner says so — nothing more to count right now. Tomorrow’s bins appear by themselves.', '<b>Mi lista</b> muestra cuántas ubicaciones faltan. Termínalas. Cuando la lista está vacía el escáner lo dice — no hay más que contar por ahora. Las ubicaciones de mañana aparecen solas.'));
+  await shotPhone('list-left');
+  await say(L('End of your shift', 'Fin de tu turno'), L('Going on break or home? Tap <b>Sign off this scanner</b> and put the scanner on its charger. Bins you did not finish go back on the list for the next person.', '¿Te vas al descanso o a casa? Toca <b>Salir de este escáner</b> y pon el escáner en su cargador. Las ubicaciones que no terminaste regresan a la lista para la siguiente persona.'), '', { hold: false });
+  await beat(4200);
+  await tap('#btnSignoff', { hold: 2400, shot: 'sign-off' });
+  await beat(1800);
+  await clearProp();
+
+  await cover(L('That is the job', 'Ese es el trabajo'), L('Rack · Pallet · Quantity · Bin done', 'Rack · Tarima · Cantidad · Ubicación terminada'),
+    L('Count what is <b>really there</b>, one bin at a time. Never skip a pallet. Not sure? Ask your lead — or press <b>SOS</b> if you need help now.', 'Cuenta lo que <b>de verdad hay</b>, una ubicación a la vez. Nunca te saltes una tarima. ¿Dudas? Pregunta a tu líder — o toca <b>SOS</b> si necesitas ayuda ya.'), 9000);
+  }
+
   /* ------------------------------------------------------------- the file */
   const video = page.video();
   await ctx.close();
@@ -679,7 +907,7 @@ try {
     Buffer.from(pcm.buffer).copy(wav, 44);
     const wavPath = join(videoDir, 'beeps.wav');
     writeFileSync(wavPath, wav);
-    const out = join(OUT, `scanner-training-${LANG}.mp4`);
+    const out = join(OUT, `scanner-training-${JOB}-${LANG}.mp4`);
     const ff = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', raw, '-i', wavPath, '-map', '0:v', '-map', '1:a',
       '-c:v', 'libx264', '-preset', 'slow', '-crf', '23', '-pix_fmt', 'yuv420p', '-r', '25', '-movflags', '+faststart',
       '-c:a', 'aac', '-b:a', '96k', '-shortest', out], { stdio: 'inherit' });

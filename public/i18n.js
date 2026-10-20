@@ -87,7 +87,7 @@
     'Start counting the list': 'Empezar a contar la lista',
     'Refresh': 'Actualizar', 'History': 'Historial',
     'Sign off this scanner': 'Salir de este escáner',
-    'My aisle': 'Mi pasillo', 'My list': 'Mi lista',
+    'My aisle': 'Mi pasillo', 'My list': 'Mi lista', 'My list': 'Mi lista',
     'Count without an assignment': 'Contar sin asignación',
     'Count anyway (flagged)': 'Contar de todos modos (marcado)',
     'No plan': 'Sin plan',

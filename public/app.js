@@ -954,6 +954,7 @@
         ? 'bins on your list — scan every pallet in each, or mark it empty.'
         : 'Nothing on your list right now. Tap Refresh once a supervisor has generated today\'s bins.';
       $('btnRecounts').textContent = 'Start counting the list';
+      $('btnToAssign').textContent = 'My list';            // a cycle count has a list, not an aisle
       return;
     }
     $('btnCount').hidden = false;
@@ -970,6 +971,7 @@
       ? 'bins on today\'s list — scan every pallet in each, or mark it empty.'
       : 'bins to go back to — the first count didn\'t agree with the inventory report, or a supervisor asked.';
     $('btnRecounts').textContent = cycleOnly ? 'Start counting the list' : 'Start second counts';
+    $('btnToAssign').textContent = cycleOnly ? 'My list' : 'My aisle';
 
     if (!a) {
       card.innerHTML = '<div class="assign waiting"><div class="aisle">No plan</div><div class="sub">No assignment loaded for this team. Refresh once Wi-Fi is back, or count freely.</div></div>';

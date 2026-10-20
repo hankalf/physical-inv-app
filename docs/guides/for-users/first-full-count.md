@@ -136,8 +136,9 @@ it off the plan. A team's next aisle starts by itself when its block is free.
 pallets. Nothing there touches a real count. Count a few pallets, an empty bin, and a pallet not on
 the list, so the buttons are familiar before count day.
 
-The training film `docs/training/scanner-training-en.mp4` (in Spanish, `-es.mp4`) shows a counter's
-whole routine on a real scanner, slowly, in about fifteen minutes. The slides beside it are the same lesson.
+The training film `docs/training/scanner-training-full-en.mp4` (in Spanish, `-es.mp4`) shows a counter's
+whole routine on a real scanner, slowly, in under ten minutes. The slides beside it are the same lesson. For
+cycle counts there is `scanner-training-cycle-en.mp4` (and `-es.mp4`).
 
 ## 8 — On the scanner: signing on
 
