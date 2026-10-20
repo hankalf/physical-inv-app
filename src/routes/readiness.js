@@ -20,6 +20,7 @@ import { onedriveStatus } from './onedrive.js';
 import { gdriveStatus } from './gdrive.js';
 import { teamsConfig } from '../util/teams.js';
 import { passwordIs } from './users.js';
+import { selfSystem } from './systems.js';
 
 const DAY = 24 * 60 * 60 * 1000;
 const fix = (sub, card, label, page = '/settings') => ({ page, sub, card, label });
@@ -67,7 +68,12 @@ export function readiness(sessionId) {
   const devices = listDevices();
   const enrolled = devices.filter((d) => d.token_hash || d.enrolled_at);
   const recent = enrolled.filter((d) => d.last_seen && Date.now() - Date.parse(d.last_seen) < 14 * DAY);
-  if (!devices.length) add('fail', 'No scanners registered', 'Add each handheld and open its link on the device once.', fix('gun', 'devicesCard', 'Scanner setup'));
+  const sys = selfSystem();
+  /* TEST: the scanners are LIVE's, and come over when they switch - nothing to register here */
+  if (sys.role === 'linked') {
+    if (!devices.length) add('warn', `No scanner has switched to ${sys.name} yet`, `Scanners are registered on ${sys.homeName}. Tick Scanners may switch on its ${sys.name} row, then tap ${sys.name} on a gun's sign-on screen.`);
+    else add('ok', `${devices.length} scanner${devices.length === 1 ? ' has' : 's have'} come over from ${sys.homeName}`, `They are registered there; each arrives here under its own name and link when it switches.`);
+  } else if (!devices.length) add('fail', 'No scanners registered', 'Add each handheld and open its link on the device once.', fix('gun', 'devicesCard', 'Scanner setup'));
   else if (!enrolled.length) add('fail', 'No scanner has opened its link', `${devices.length} registered, none signed in. Open each link on its device once.`, fix('gun', 'devicesCard', 'Scanner setup'));
   else if (enrolled.length < devices.length) add('warn', `${devices.length - enrolled.length} of ${devices.length} scanners have never opened their link`, 'They cannot send counts until they do.', fix('gun', 'devicesCard', 'Scanner setup'));
   else add('ok', `All ${devices.length} scanners are signed in`, recent.length < enrolled.length ? `${enrolled.length - recent.length} not seen in the last two weeks - switch them on and check they still open the app.` : 'Each has been seen in the last two weeks.');

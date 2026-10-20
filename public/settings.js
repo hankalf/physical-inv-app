@@ -982,6 +982,26 @@
     $('authChip').hidden = false;
     $('authChip').textContent = data.authRequired ? 'scanners must sign in' : 'scanner sign-in OFF';
     $('authChip').className = 'chip ' + (data.authRequired ? 'online' : 'offline');
+    /* TEST: scanners are LIVE's. No adding, no new links, no setup cards here - just the guns that came over. */
+    const home = data.home;
+    for (const el of [$('devAddRow'), $('devHowTo')]) if (el) el.hidden = !!home;
+    let note = $('devLinkedNote');
+    if (home && !note) {
+      note = document.createElement('div');
+      note.id = 'devLinkedNote';
+      note.className = 'feedback show';
+      $('devicesCard').querySelector('h2').insertAdjacentElement('afterend', note);
+    }
+    if (note) {
+      note.hidden = !home;
+      if (home) {
+        note.innerHTML = '<b></b> <span></span> <a target="_top"></a>';
+        note.querySelector('b').textContent = `Scanners are registered on ${home.name}.`;
+        note.querySelector('span').textContent = `A gun comes to ${home.self} when someone taps ${home.self} on its sign-on screen, under the same name and link — so nothing is added, reset or printed here. Do that on ${home.name}, and tick Scanners may switch on its ${home.self} row.`;
+        const a = note.querySelector('a');
+        a.href = `${home.url}/settings#gun`; a.textContent = `${home.name} → Settings → Scanners`;
+      }
+    }
     table($('deviceTable'),
       [{ label: 'Scanner' }, { label: 'Link' }, { label: '' }, { label: 'Signed in' }, { label: 'Last seen' }, { label: 'Team' }, { label: 'Notes' }, { label: '' }],
       data.devices,
@@ -998,7 +1018,8 @@
         });
         const qr = button('QR', 'sm', () => showQr(d));
         qr.style.marginLeft = '4px';
-        tdBtns.append(copy, qr); tr.appendChild(tdBtns);
+        if (!home) tdBtns.append(copy, qr);
+        tr.appendChild(tdBtns);
         const tdEnrol = document.createElement('td');
         if (d.enrolled_at) {
           tdEnrol.append(new Date(d.enrolled_at).toLocaleDateString());
@@ -1024,15 +1045,15 @@
         });
         reset.style.marginRight = '4px';
         reset.title = 'Issue a new link and stop the old one working — use if a link leaks or a scanner is lost';
-        tdDel.appendChild(reset);
+        if (!home) tdDel.appendChild(reset);
         tdDel.appendChild(button('Remove', 'sm danger', async () => {
-          if (!confirm(`Remove ${d.name}? Its link will stop working on the device.`)) return;
+          if (!confirm(home ? `Remove ${d.name} from ${home.self}? It comes back the next time it switches here from ${home.name}.` : `Remove ${d.name}? Its link will stop working on the device.`)) return;
           try { await api.call(`/api/admin/devices/${d.uid}`, { method: 'DELETE' }); await refreshDevices(); }
           catch (err) { msg($('deviceMsg'), 'err', err.message); }
         }));
         tr.appendChild(tdDel);
         return tr;
-      }, 'No scanners registered yet.');
+      }, home ? `No scanner has switched to ${home.self} yet.` : 'No scanners registered yet.');
   }
 
   async function showQr(d) {

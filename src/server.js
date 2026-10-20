@@ -754,8 +754,19 @@ async function handleAdmin(req, res, url, m) {
   }
 
   // --- scanners
-  if (p === '/api/admin/devices' && method === 'GET') return sendJson(req, res, 200, { devices: listDevices(), authRequired: SCANNER_AUTH });
+  /* On a linked system (TEST) a scanner is never registered by hand: it is registered on the home
+     and made here, under the same name and link, when it switches. A second one made here would
+     be a second link the home knows nothing of. */
+  const scannersAtHome = () => {
+    const me = selfSystem();
+    if (me.role === 'linked') throw httpError(409, `scanners are registered on ${me.homeName} - Settings → Scanners there. A gun arrives here, under its own name and link, when it switches to ${me.name}.`);
+  };
+  if (p === '/api/admin/devices' && method === 'GET') {
+    const me = selfSystem();
+    return sendJson(req, res, 200, { devices: listDevices(), authRequired: SCANNER_AUTH, home: me.role === 'linked' ? { name: me.homeName, url: me.homeUrl, self: me.name } : null });
+  }
   if (p === '/api/admin/devices' && method === 'POST') {
+    scannersAtHome();
     const body = await readJson(req);
     const dev = createDevice(body);
     audit(actor, 'registered a scanner', dev.name);
@@ -766,6 +777,7 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, updateDevice(m[1], body));
   }
   if ((m = p.match(/^\/api\/admin\/devices\/([a-z0-9]+)\/reset$/)) && method === 'POST') {
+    scannersAtHome();
     const before = getDevice(m[1]);
     const after = resetDevice(m[1]);
     audit(actor, 'reset a scanner link', `${before?.name}: the old link and token no longer work`);

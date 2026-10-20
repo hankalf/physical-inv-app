@@ -224,6 +224,34 @@ check('No script errors', errors.length === 0, errors.join(' | '));
   await pg.close();
 }
 
+/* ---- DEV's scanners are LIVE's: nothing is registered, reset or printed on DEV */
+{
+  const DA = H((await login(DEV, { username: 'DEV-ADMIN', password: 'dev-only-pass' })).token);
+  r = await post(DEV, '/api/admin/devices', { name: 'MADE-ON-DEV' }, DA);
+  const why = (await j(r)).error || '';
+  check('DEV refuses to register a scanner, and says where to', r.status === 409 && /registered on LIVE/.test(why), why);
+  const devs = await get(DEV, '/api/admin/devices', DA);
+  check('…its scanner list says the home is LIVE, and still has the gun that came over', devs.home && devs.home.name === 'LIVE' && devs.devices.some((d) => d.name === 'MC93-07'));
+  const came = devs.devices.find((d) => d.name === 'MC93-07');
+  r = await post(DEV, `/api/admin/devices/${came.uid}/reset`, {}, DA);
+  check('…and will not give a gun a new link there', r.status === 409);
+  const ready = await get(DEV, '/api/admin/readiness', DA);
+  const sc = (ready.checks || []).find((c) => /scanner/.test(c.title) && /LIVE/.test(c.title));
+  check('…Ready for count day on DEV counts the guns that came from LIVE, not ones to register', sc && sc.level !== 'fail', JSON.stringify(sc));
+  r = await post(DEV, '/api/admin/practice', {}, DA);
+  check('…while the Testing Suite\'s own practice gun still works on DEV', r.status === 200 && !!(await j(r)).device, String(r.status));
+  check('LIVE still registers scanners as before', (await post(BASE, '/api/admin/devices', { name: 'MC93-12' }, A)).status === 200);
+  const dp = await ctx.newPage();
+  dp.on('pageerror', (e) => errors.push('dev scanners: ' + e.message));
+  await dp.goto(`${DEV}/settings#gun`);
+  await dp.fill('#fUser', 'DEV-ADMIN'); await dp.fill('#fPassword', 'dev-only-pass'); await dp.click('#btnLogin');
+  await dp.waitForSelector('#devLinkedNote', { timeout: 8000 }).catch(() => {});
+  check('DEV\'s Scanner setup: no Add scanner, no setup cards, a note pointing to LIVE', !(await dp.isVisible('#btnAddDevice')) && !(await dp.isVisible('#btnCards'))
+    && /registered on LIVE/.test(await dp.textContent('#devLinkedNote').catch(() => '')) && (await dp.getAttribute('#devLinkedNote a', 'href').catch(() => '')).startsWith(BASE.replace(/\/$/, '')));
+  check('…and no Reset link or Copy on the gun that came over', (await dp.locator('#deviceTable tbody tr', { hasText: 'MC93-07' }).locator('button', { hasText: /Reset link|Copy/ }).count()) === 0);
+  await dp.close();
+}
+
 /* a new key here, and DEV still holding the old one: the check says which key to copy where */
 await post(BASE, '/api/admin/systems', { newKey: true }, A);
 ck = await j(await post(BASE, '/api/admin/systems/check', { name: 'DEV' }, A));

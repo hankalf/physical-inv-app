@@ -1,4 +1,5 @@
 import { db } from '../db.js';
+import { selfSystem } from './systems.js';
 
 /*
  * What a count still needs before anyone can scan.
@@ -29,6 +30,7 @@ export function setupState(sessionId) {
   const teams = one('SELECT COUNT(*) n FROM teams').n;
   const crew = one('SELECT COUNT(*) n FROM employees').n;
   const scanners = one('SELECT COUNT(*) n FROM devices').n;
+  const linked = selfSystem().role === 'linked' ? selfSystem() : null;   // TEST: the scanners come from the home
   const enrolled = one("SELECT COUNT(*) n FROM devices WHERE COALESCE(enrolled_at,'') != ''").n;
   const batches = cycle ? one('SELECT COUNT(*) n FROM cycle_batches WHERE session_id = ?', id).n : 0;
   const counted = one('SELECT COUNT(DISTINCT location_code) n FROM counts WHERE session_id = ? AND voided = 0', id).n;
@@ -58,12 +60,21 @@ export function setupState(sessionId) {
     },
     {
       key: 'scanners', need: 'required', done: scanners > 0,
-      title: 'Register the scanners',
-      why: 'Each handheld gets its own link. The server only takes counts from a scanner that has signed in with one.',
-      detail: scanners
-        ? `${scanners} registered · ${enrolled} signed in`
-        : 'none registered yet',
-      goto: { page: '/settings', sub: 'gun' }, label: 'Add scanners',
+      ...(linked
+        ? {
+          title: `Bring a scanner over from ${linked.homeName}`,
+          why: `Scanners are registered on ${linked.homeName}; one comes here, under its own name and link, when someone taps ${linked.name} on its sign-on screen.`,
+          detail: scanners ? `${scanners} come over · ${enrolled} signed in` : `none yet — tick Scanners may switch on ${linked.homeName}`,
+          goto: { page: '/settings', sub: 'gun' }, label: 'Scanners here',
+        }
+        : {
+          title: 'Register the scanners',
+          why: 'Each handheld gets its own link. The server only takes counts from a scanner that has signed in with one.',
+          detail: scanners
+            ? `${scanners} registered · ${enrolled} signed in`
+            : 'none registered yet',
+          goto: { page: '/settings', sub: 'gun' }, label: 'Add scanners',
+        }),
     },
   ];
 

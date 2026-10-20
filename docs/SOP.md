@@ -353,7 +353,11 @@ switched over from LIVE are not listed: they are LIVE's already. The log records
   link under **LIVE → Settings → Scanners**, as always. When it switches, LIVE hands the scanner
   over and TEST makes it there under the same name and the same link; it is never registered on
   TEST by hand (a gun registered on TEST would be a second scanner with a second link, and LIVE
-  would not know it). Reset or remove a scanner on LIVE.
+  would not know it). So on TEST, **Settings → Scanners → Scanner setup** has no *Add scanner*,
+  *Print setup cards*, *Copy* or *Reset link* — just the guns that have come over, and a note
+  linking to LIVE's scanner page. Reset a scanner on LIVE. *Ready for count day* on TEST counts
+  the guns that have come over instead of asking for scanners to be registered. The Testing
+  Suite's own practice gun works on TEST as it does anywhere.
 
 *What to know:*
 
