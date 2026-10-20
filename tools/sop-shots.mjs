@@ -713,12 +713,21 @@ try {
   await wait(900);
 
   // another label on the pallet just counted: the bin is kept, the label and its own quantity go in
+  const top = async () => {
+    if (await gun.isVisible('#btnMsgAck').catch(() => false)) { await gun.click('#btnMsgAck').catch(() => {}); await wait(400); }
+    await gun.evaluate(() => { document.querySelector('main')?.scrollTo(0, 0); window.scrollTo(0, 0); });
+    await wait(300);
+  };
+  await top();
   await gun.click('#btnSameLabel'); await wait(700);
+  await top();
   await save(gun, 'gun-second-label-ask');
   await scan('OLD-TAG-88'); await wait(500);
   if (await gun.isVisible('#btnOvYes')) { await gun.click('#btnOvYes'); await wait(500); }
   await scan('6'); await wait(500);
-  if (await gun.isVisible('#btnSkip')) { await gun.click('#btnSkip'); await wait(500); }
+  // lot, expiry, comments: skipped, so the picture is the label saved, not a line half done
+  for (let i = 0; i < 4 && await gun.isVisible('#btnSkip').catch(() => false); i++) { await gun.click('#btnSkip'); await wait(500); }
+  await top();
   await save(gun, 'gun-second-label-done');
   await gun.click('#btnMultiDone').catch(() => {}); await wait(500);
 

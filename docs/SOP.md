@@ -1314,7 +1314,7 @@ label on the pallet with P-…**, which goes straight to its quantity in that bi
 
 | | |
 |:--:|:--:|
-| ![](images/gun-second-label-ask.png)<br>The next label on the pallet: the bin is kept, and the gun asks for label 2 | ![](images/gun-second-label-done.png)<br>Each label counted with its own quantity, in the same bin |
+| ![](images/gun-second-label-ask.png)<br>Another label on the pallet just counted: the bin is kept, and the gun asks for label 2 | ![](images/gun-second-label-done.png)<br>Label 2 counted with its own quantity, in the same bin — scan the next, or Done |
 
 Counts taken before this change may show a tag as **SECOND LABEL** on the pallet report (a tag
 saved with no quantity of its own); those still read as before.
