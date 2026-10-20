@@ -43,6 +43,7 @@ check('People on no team are listed under their shift', by('1').unassigned.map((
 check('Each person carries department and equipment, never a clock-in number', by('1').teams.find((t) => t.name === '11').members[0].dept === 'Freezer' && by('1').teams.find((t) => t.name === '11').members[0].equipment.length === 1 && !/CB[1-6]/.test(JSON.stringify(d)));
 const hour = d.now.hour;
 const want = hour >= 6 && hour < 14 ? '1' : hour >= 14 && hour < 22 ? '2' : '';
+check('…and the clock it was judged by comes with it, as a wall clock says it', /^\d{1,2}:\d{2} (AM|PM)$/.test(d.now.time) && Number(d.now.time.split(':')[0]) === (hour % 12 || 12), d.now.time);
 check('The shift on now follows the site\'s clock', d.now.shift === want && d.shifts.filter((s) => s.on).map((s) => s.key).join() === want && (want ? /until/.test(d.now.until + 'until') : /Between shifts/.test(d.now.label)), `${hour}h → ${JSON.stringify(d.now)}`);
 
 /* ---------------- the page ---------------- */
@@ -57,6 +58,8 @@ check('1st and 2nd shift side by side, each with its hours', /1st shift.*6am –
 check('Team 11 lists Ana and Ben with department and equipment', /Ana Day.*Freezer.*Scissor lift/.test(clean(await page.textContent('.team[data-team="11"]'))) && /Ben Day/.test(await page.textContent('.team[data-team="11"]')), clean(await page.textContent('.team[data-team="11"]')));
 check('Team 13 says its shift comes from its people', /shift from its people/.test(await page.textContent('.team[data-team="13"]')));
 check('The shift on now is marked, and only that one', (await page.$$('.shift.on')).length === (want ? 1 : 0) && (!want || (await page.getAttribute('.shift.on', 'data-shift')) === want) && (!want || /On now/.test(await page.textContent('.shift.on .sh'))));
+check('The header clock shows the site\'s time, not the browser\'s', clean(await page.textContent('#bClock')) === d.now.time || /^\d{1,2}:\d{2} (AM|PM)$/.test(clean(await page.textContent('#bClock'))), clean(await page.textContent('#bClock')));
+check('The shift header counts its teams, its people, and who is not on a team', clean(await page.textContent('.shift[data-shift="1"] .count')) === '1 team · 2 people · 1 not on a team', clean(await page.textContent('.shift[data-shift="1"] .count')));
 check('Not on a team is a line under the shift', /Not on a team \(1\): Ed Loose/.test(clean(await page.textContent('.shift[data-shift="1"] .loose'))));
 check('Shift not set has team 14 and Flo', /Team 14/.test(await page.textContent('.shift.unset')) && /Flo Unset/.test(await page.textContent('.shift.unset')));
 check('No clock-in numbers anywhere on the screen', !/CB[1-6]/.test(await page.textContent('body')));

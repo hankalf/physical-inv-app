@@ -10,6 +10,7 @@
   const EVERY = Math.max(5, Number(q.get('every') || 30)) * 1000;
   let boardBrand = '';
   let lastGood = 0;
+  let siteTime = '';         // the warehouse's clock, from the server: what "on now" was judged by
 
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
@@ -43,7 +44,7 @@
     head.append(el('h2', '', s.label));
     if (s.hours) head.append(el('span', 'hours', s.hours));
     const people = s.teams.reduce((n, t) => n + t.members.length, 0);
-    head.append(el('span', 'count', `${s.teams.length} team${s.teams.length === 1 ? '' : 's'} · ${people} ${people === 1 ? 'person' : 'people'}`));
+    head.append(el('span', 'count', `${s.teams.length} team${s.teams.length === 1 ? '' : 's'} · ${people} ${people === 1 ? 'person' : 'people'}${s.unassigned.length ? ` · ${s.unassigned.length} not on a team` : ''}`));
     if (s.on) head.append(el('span', 'onnow', 'On now'));
     box.append(head);
     const grid = el('div', 'teams');
@@ -67,6 +68,7 @@
     const shown = d.shifts.filter((s) => (ONLY ? s.key === ONLY : s.key || s.teams.length || s.unassigned.length));
     wrap.style.setProperty('--cols', String(Math.max(1, Math.min(2, shown.filter((s) => s.key).length))));
     for (const s of shown) wrap.append(shiftPanel(s));
+    siteTime = d.now.time || '';
     const on = d.shifts.find((s) => s.on);
     document.title = `${on ? on.label + ' · ' : ''}Crew board${boardBrand ? ' — ' + boardBrand : ''}`;
   }
@@ -75,7 +77,7 @@
     const now = new Date();
     const c = $('bClock');
     c.innerHTML = '';
-    c.append(el('b', '', now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })));
+    c.append(el('b', '', ok && siteTime ? siteTime : now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })));
     if (!ok) {
       const mins = Math.floor((Date.now() - lastGood) / 60000);
       c.append(el('span', 'stale-warn', lastGood ? `  · not updating (${mins || 1} min)` : '  · cannot reach the server'));

@@ -11,7 +11,7 @@
  * clock, not the browser's.
  */
 import { listTeams, listEmployees, getConfig } from './people.js';
-import { localHour } from '../util/localtime.js';
+import { localHour, localTime } from '../util/localtime.js';
 
 export const SHIFTS = [
   { key: '1', label: '1st shift', hours: '6am – 2pm', from: 6, to: 14 },
@@ -49,7 +49,7 @@ export function crewBoard() {
   });
   const onTeam = new Set(listTeams().flatMap((t) => t.members.map((m) => m.badge)));
   const loose = listEmployees().filter((e) => e.active && !onTeam.has(e.badge));
-  const now = shiftNow();
+  const now = { ...shiftNow(), time: localTime() };     // the site's clock, so the screen and "on now" agree
   const group = (key) => ({
     teams: teams.filter((t) => t.shift === key).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })),
     unassigned: loose.filter((e) => (e.shift || '') === key).sort((a, b) => a.name.localeCompare(b.name)).map(person),

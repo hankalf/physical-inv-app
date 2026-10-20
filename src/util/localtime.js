@@ -27,6 +27,13 @@ export function localHour(date = new Date()) {
   return h === 24 ? 0 : h;   // some locales render midnight as 24
 }
 
+/** The time of day at the site, as a wall clock says it: "5:40 PM". */
+export function localTime(date = new Date()) {
+  const p = parts(date);
+  const h = Number(p.hour) % 24;
+  return `${h % 12 || 12}:${p.minute} ${h >= 12 ? 'PM' : 'AM'}`;
+}
+
 /** Day of the week at the site, 0 = Sunday. */
 export function localWeekday(date = new Date()) {
   return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts(date).weekday);
