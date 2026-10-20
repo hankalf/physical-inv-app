@@ -631,6 +631,53 @@
       <div class="scroll" style="max-height:420px"><table id="auditTable"></table></div>
     </div>
 
+    <div class="card" id="teamsBackupCard">
+      <h2>Off-site copy: a Teams channel <span class="tag" id="tbState">not set up</span>
+        <span class="muted">every backup also goes into a Teams channel's Files, through a Workflow you build in Teams — nothing for IT to do</span></h2>
+      <div class="feedback show" id="tbStatus"></div>
+      <div class="inline" style="margin-top:12px">
+        <div>
+          <label for="fTbUrl">Workflow address, from its first step</label>
+          <input id="fTbUrl" type="password" autocomplete="off" spellcheck="false" placeholder="https://…/workflows/…/triggers/manual/paths/invoke?…">
+        </div>
+        <div class="auto">
+          <label for="fTbEvery">Send a copy</label>
+          <select id="fTbEvery">
+            <option value="24">With each daily backup</option>
+            <option value="12">Every 12 hours</option>
+            <option value="6">Every 6 hours</option>
+            <option value="2">Every 2 hours</option>
+            <option value="1">Every hour</option>
+          </select>
+        </div>
+      </div>
+      <div class="inline" style="margin-top:12px">
+        <div class="auto"><button class="primary fit" id="btnTbSave">Save</button></div>
+        <div class="auto"><button class="fit" id="btnTbTest" hidden>Send a test file</button></div>
+        <div class="auto"><button class="fit" id="btnTbUpload" hidden>Back up to Teams now</button></div>
+        <div class="auto"><button class="ghost danger fit" id="btnTbDisconnect" hidden>Stop sending</button></div>
+      </div>
+      <div class="feedback" id="tbMsg"></div>
+      <details class="hint" id="tbHow" style="margin-top:12px">
+        <summary><b>One-time set-up in Teams (about ten minutes)</b></summary>
+        <ol style="margin:8px 0 0 18px; padding:0">
+          <li>In Teams, pick the channel the backups should go to (a private one is best: whoever can open its Files can open the backups). Click <b>⋯</b> beside the channel's name → <b>Workflows</b> → <b>Post to a channel when a webhook request is received</b>. Name it <i>Inventory backups</i>, press <b>Next</b>, check the team and channel, and press <b>Add workflow</b>. Close the box that shows an address — it is copied later.</li>
+          <li>Open the Workflow to change it: <b>⋯</b> in the left bar → <b>Workflows</b> → <i>Inventory backups</i> → <b>Edit</b>.</li>
+          <li>Click the first step, <b>When a Teams webhook request is received</b>, and check <b>Who can trigger the flow</b> is <b>Anyone</b>.</li>
+          <li>At the very bottom, below every other step, press <b>+</b> (<b>New step</b>) and search for <b>SharePoint</b> → <b>Create file</b>. Fill it in:
+            <ul style="margin:4px 0 4px 18px; padding:0">
+              <li><b>Site Address</b> — pick the team's site (it has the team's name).</li>
+              <li><b>Folder Path</b> — the folder button → <b>Shared Documents</b> → the channel's folder (for example <i>General</i>). That folder is what the channel's <b>Files</b> tab shows.</li>
+              <li><b>File Name</b> — click in the box, choose <b>Expression</b> (<b>fx</b>), type <code>triggerBody()?['backup']?['name']</code> and press <b>Add</b>.</li>
+              <li><b>File Content</b> — the same way, the expression <code>base64ToBinary(triggerBody()?['backup']?['contentBase64'])</code>.</li>
+            </ul></li>
+          <li><b>Save</b>. Click the first step again and copy the address under <b>HTTP URL</b> (or <b>HTTP POST URL</b>).</li>
+          <li>Paste it in the box above, press <b>Save</b>, then <b>Send a test file</b>. Within a minute a card says so in the channel, and a small text file is in its <b>Files</b> tab. If the file is there, the backups will land there too.</li>
+        </ol>
+        <div style="margin-top:8px">Each copy is the backup <b>gzipped</b>, named <i>inventory-….db.gz</i>; unzip it (7-Zip, or double-click on a Mac) to get the database back. A card goes into the channel with each one — take the <b>Post card</b> step out of the Workflow if the channel should stay quiet. A Workflow cannot tidy up after itself, so delete old copies from the folder now and then. The Workflow answers before it saves the file, so this card can only say Microsoft took the copy: the channel's Files tab is where to check it arrived. The address carries its own signature, so treat it like a password: it is kept here and never shown again in full. A copy can be up to 25 MB squeezed, far more than a site's database; the card says so if one is ever bigger. If your company has switched Workflows off, use Google Drive.</div>
+      </details>
+    </div>
+
     <div class="card" id="gdriveCard">
       <h2>Off-site copy: Google Drive <span class="tag" id="gdState">not set up</span>
         <span class="muted">every backup also goes to a Google Drive folder — set up in ten minutes, nothing for IT to do</span></h2>

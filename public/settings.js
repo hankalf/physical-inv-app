@@ -1847,6 +1847,82 @@
      Through an Apps Script the admin deploys in their own Google account: no
      app registration, nothing for IT. The script, with this server's key in it,
      comes with the status. */
+  /* ------------------------------------------------------------ off-site: a Teams channel's Files */
+  let tbTimer = null;
+  function drawTeamsBackup(st) {
+    const state = $('tbState');
+    state.textContent = st.on ? (st.lastError ? 'last copy failed' : 'on') : st.configured ? 'paused' : 'not set up';
+    state.className = 'tag ' + (st.on ? (st.lastError ? 'queued' : 'MATCH') : 'off');
+    $('fTbUrl').placeholder = st.masked ? `${st.masked} (saved — paste a new one to change it)` : 'https://…/workflows/…/triggers/manual/paths/invoke?…';
+    if (document.activeElement !== $('fTbEvery')) $('fTbEvery').value = String(st.every || 24);
+    const status = $('tbStatus');
+    status.replaceChildren();
+    let kind = 'warn';
+    const line = (t, cls) => { const d = document.createElement('div'); if (cls) d.className = cls; d.textContent = t; status.appendChild(d); return d; };
+    if (st.on) {
+      kind = st.lastError ? 'err' : 'ok';
+      line(`Backups go to the Workflow at ${st.masked}, which saves each one into its channel's Files.`);
+      line(st.every >= 24
+        ? 'A copy goes with each daily backup, and with any backup taken by hand — squeezed (gzip), so it is small. Unzip it to get the database back.'
+        : `A fresh copy every ${st.every === 1 ? 'hour' : `${st.every} hours`}${st.nextAt ? `, the next around ${new Date(st.nextAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}, as well as each daily backup.`, 'detail');
+      if (st.lastTest) line(`Test file ${st.lastTest.name} sent ${new Date(st.lastTest.at).toLocaleString()}${st.lastTest.by ? ` by ${st.lastTest.by}` : ''} — check it is in the channel's Files.`, 'detail');
+      else line('No test file sent yet: press Send a test file, then look in the channel\'s Files tab.', 'detail');
+      if (st.uploading) line('Sending a backup now…', 'detail');
+      if (st.lastUpload) line(`Last copy: ${st.lastUpload.name} (${kb(st.lastUpload.bytes)}${st.lastUpload.rawBytes ? `, ${kb(st.lastUpload.rawBytes)} unzipped` : ''}), taken by Microsoft ${new Date(st.lastUpload.at).toLocaleString()}.`, 'detail');
+      else line('No backup sent yet — the next one goes by itself, or press Back up to Teams now.', 'detail');
+      if (st.lastError) line(`The last try failed (${new Date(st.lastError.at).toLocaleString()}): ${st.lastError.message}. It is tried again every half hour.`, 'detail');
+    } else if (st.configured) {
+      line('The address is saved but sending is stopped.');
+    } else {
+      line('Not set up. Follow the steps below — a Teams channel and ten minutes, nothing for IT to do.');
+      if (st.lastError) { kind = 'err'; line(st.lastError.message, 'detail'); }
+    }
+    status.className = `feedback show ${kind}`;
+    $('tbHow').open = !st.on;
+    $('btnTbTest').hidden = !st.configured;
+    $('btnTbUpload').hidden = !st.on;
+    $('btnTbDisconnect').hidden = !st.configured;
+    clearTimeout(tbTimer);
+    if (st.uploading) tbTimer = setTimeout(() => refreshTeamsBackup().catch(() => {}), 3000);
+  }
+  async function refreshTeamsBackup() {
+    if (!api.me || api.me.role !== 'admin') { $('teamsBackupCard').hidden = true; return; }
+    $('teamsBackupCard').hidden = false;
+    drawTeamsBackup(await api.json('/api/admin/teams-backup'));
+  }
+  const tbDo = async (path, body, okText) => {
+    try {
+      const st = await api.post(path, body || {});
+      drawTeamsBackup(st);
+      if (okText) msg($('tbMsg'), 'ok', typeof okText === 'function' ? okText(st) : okText); else clearMsg($('tbMsg'));
+      return st;
+    } catch (err) { msg($('tbMsg'), 'err', err.message); await refreshTeamsBackup().catch(() => {}); return null; }
+  };
+  $('btnTbSave').onclick = async () => {
+    const url = $('fTbUrl').value.trim();
+    const st = await tbDo('/api/admin/teams-backup/config', { url, every: Number($('fTbEvery').value), on: true });
+    if (!st) return;
+    $('fTbUrl').value = '';
+    if (!st.configured) { msg($('tbMsg'), 'warn', 'Paste the Workflow address first.', 'It is under HTTP URL in the Workflow\'s first step.'); return; }
+    msg($('tbMsg'), 'ok', 'Saved.', st.lastTest ? '' : 'Now press Send a test file, and look for it in the channel\'s Files tab.');
+  };
+  $('btnTbTest').onclick = async () => {
+    $('btnTbTest').disabled = true;
+    msg($('tbMsg'), 'warn', 'Sending a test file…');
+    await tbDo('/api/admin/teams-backup/test', {}, (st) => `Microsoft took it. In a minute, ${st.lastTest.name} should be in the channel's Files tab, with a card in the channel.`);
+    $('btnTbTest').disabled = false;
+  };
+  $('btnTbUpload').onclick = async () => {
+    $('btnTbUpload').disabled = true;
+    msg($('tbMsg'), 'warn', 'Sending the newest backup…');
+    await tbDo('/api/admin/teams-backup/upload', {}, (st) => `Sent — Microsoft took ${st.sent.name} (${kb(st.sent.bytes)}). It shows in the channel's Files in a minute.`);
+    $('btnTbUpload').disabled = false;
+  };
+  $('btnTbDisconnect').onclick = () => {
+    if (!confirm('Stop sending backups to Teams and forget the Workflow address? The copies already in the channel stay where they are.')) return;
+    tbDo('/api/admin/teams-backup/disconnect', {}, 'Stopped — backups stay on this server only until an off-site copy is set up again.');
+  };
+
   let gdTimer = null;
   let gdScript = '';
   function drawGdrive(st) {
@@ -2430,7 +2506,7 @@
 
   async function load() {
     await refreshMe();
-    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshJobs().catch(() => {}), refreshReasons(), refreshSosSettings(), refreshIssueMenu().catch(() => {}), refreshLogo(), refreshPalletSystem().catch(() => {}), refreshOnedrive().catch(() => {}), refreshGdrive().catch(() => {}), refreshSystems().catch(() => {})]);
+    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshJobs().catch(() => {}), refreshReasons(), refreshSosSettings(), refreshIssueMenu().catch(() => {}), refreshLogo(), refreshPalletSystem().catch(() => {}), refreshOnedrive().catch(() => {}), refreshGdrive().catch(() => {}), refreshTeamsBackup().catch(() => {}), refreshSystems().catch(() => {})]);
     await refreshFeatures().catch(() => {});
     await refreshGun().catch(() => {});
     await loadLayouts().catch(() => {});

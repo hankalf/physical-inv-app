@@ -62,6 +62,7 @@ import { palletSystem, savePalletSystem, probePalletSystem } from './routes/pall
 import { proxyPalletSystem, makeTicket, ticketCookie, PREFIX as PS_PREFIX } from './routes/pallet-proxy.js';
 import { onedriveStatus, setOnedriveConfig, startSignIn, cancelSignIn, disconnect, uploadNow, startOnedrive } from './routes/onedrive.js';
 import { gdriveStatus, setGdriveConfig, checkConnection, disconnectGdrive, uploadToGdrive, startGdrive } from './routes/gdrive.js';
+import { teamsBackupStatus, setTeamsBackupConfig, sendTestFile, disconnectTeamsBackup, uploadToTeams, startTeamsBackup } from './routes/teams-backup.js';
 import { selfSystem, systemsConfig, saveSystems, systemsFor, systemAccess, setSystemAccess, makeTicket as makeHandoff, readTicket as readHandoff, checkTicket, checkLink, provisionUser, provisionDevice, publicSystems, otherSystems, scannersOn, homeScannersOn, loginsForHome, fetchLogins, loginsPreview, copyLogins } from './routes/systems.js';
 
 /* The address a request came in on, behind Railway's proxy too: the host alone, as http and https are one site there. */
@@ -1569,6 +1570,34 @@ async function handleAdmin(req, res, url, m) {
     }
     throw httpError(404, 'unknown Google Drive endpoint');
   }
+  /* --- the off-site copy: a Teams channel's Files, through a Workflow the
+     admin builds in Teams. Admins only, reads included: it is where the
+     database goes. The address is a key, so it is never sent back in full. */
+  if (p === '/api/admin/teams-backup' || p.startsWith('/api/admin/teams-backup/')) {
+    if (whoNow.role !== 'admin') throw httpError(403, 'only an admin can see or change where the backups go');
+    if (p === '/api/admin/teams-backup' && method === 'GET') return sendJson(req, res, 200, teamsBackupStatus());
+    if (p === '/api/admin/teams-backup/config' && method === 'POST') {
+      const body = await readJson(req);
+      const st = setTeamsBackupConfig(body, actor);
+      audit(actor, 'changed the Teams backup settings', `${st.masked || 'no address'}, every ${st.every} h${st.on ? '' : ', paused'}${body.url ? ', new address' : ''}`);
+      return sendJson(req, res, 200, st);
+    }
+    if (p === '/api/admin/teams-backup/test' && method === 'POST') {
+      const st = await sendTestFile(actor);
+      audit(actor, 'sent a test file to the Teams backup channel', st.lastTest ? st.lastTest.name : '');
+      return sendJson(req, res, 200, st);
+    }
+    if (p === '/api/admin/teams-backup/disconnect' && method === 'POST') {
+      audit(actor, 'stopped sending backups to Teams', teamsBackupStatus().masked);
+      return sendJson(req, res, 200, disconnectTeamsBackup());
+    }
+    if (p === '/api/admin/teams-backup/upload' && method === 'POST') {
+      const sent = await uploadToTeams();
+      audit(actor, 'sent a backup to Teams', `${sent.name} (${Math.round(sent.bytes / 1024)} KB)`);
+      return sendJson(req, res, 200, { ...teamsBackupStatus(), sent });
+    }
+    throw httpError(404, 'unknown Teams backup endpoint');
+  }
 
   /* --- the off-site copy: OneDrive. Admins only, reads included - the
      status names the Microsoft account the backups go to. */
@@ -2339,6 +2368,7 @@ startBackupSchedule().unref();
 // and each one copied to OneDrive, once an admin has connected it
 startOnedrive();
 startGdrive();
+startTeamsBackup();
 
 server.listen(PORT, HOST, () => {
   console.log(`physical-inv-app listening on http://${HOST}:${PORT}`);

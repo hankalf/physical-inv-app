@@ -65,7 +65,7 @@ r = await ready();
 check('The stopped-scanning alert switched off is a warning', has(r, 'warn', /stopped-scanning alert is off/));
 await post('/api/admin/idle-config', { minutes: 10 });
 
-check('Backups only on this server are a warning, pointing at Google Drive (no IT needed)', has(r, 'warn', /only on this server/) && r.checks.find((c) => /only on this server/.test(c.title)).fix.card === 'gdriveCard');
+check('Backups only on this server are a warning, pointing at the Teams copy (no IT needed)', has(r, 'warn', /only on this server/) && r.checks.find((c) => /only on this server/.test(c.title)).fix.card === 'teamsBackupCard');
 
 // the site admin changes the password
 await post('/api/admin/me/password', { current: 'changeme', next: 'cold-store-2026' });
@@ -92,7 +92,7 @@ const rows = await page.$$eval('#readyList .check', (li) => li.map((x) => x.clas
 check('…worst first, every line marked', rows.length > 6 && rows.indexOf('ok') > rows.lastIndexOf('warn'), rows.join(','));
 await page.click('#readyList .check.warn:has-text("only on this server") button');
 await page.waitForTimeout(900);
-check('A line\'s button opens the section and the card that fixes it', await page.$eval('[data-sub="backups"]', (el) => el.classList.contains('active')) && await page.$eval('#gdriveCard', (el) => el.classList.contains('flash')));
+check('A line\'s button opens the section and the card that fixes it', await page.$eval('[data-sub="backups"]', (el) => el.classList.contains('active')) && await page.$eval('#teamsBackupCard', (el) => el.classList.contains('flash')));
 await page.evaluate(() => window.appApi.showSub('start'));
 await page.waitForTimeout(400);
 await page.click('#readyList .check.warn:has-text("No inventory") button').catch(() => {});

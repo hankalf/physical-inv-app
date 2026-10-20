@@ -657,9 +657,17 @@ uploaded**. The guide **The ERP upload, an aisle at a time** has the whole routi
 **Delete** is separate and deliberately hard: the count must be closed, you type its name, and a
 backup is taken first. Delete only a count created by mistake.
 
-**Off-site copies.** The app backs itself up every day and keeps the last 14. **Off-site copy:
-Google Drive** or **Off-site copy: OneDrive** on the same tab sends each backup to a folder you own.
-Set one up before the first count, so a lost server never loses the count.
+**Off-site copies.** The app backs itself up every day and keeps the last 14, and **Download** on
+any row saves one to your computer. Set up an off-site copy before the first count, so a lost
+server never loses the count. Three cards on the same tab do it:
+
+- **Off-site copy: a Teams channel** — each backup goes into a channel's Files tab, through a
+  Workflow you build in Teams. Nothing for IT to do. The card lists the steps.
+- **Off-site copy: Google Drive** — a folder in a Google account, through a short script you
+  paste in. Nothing for IT to do.
+- **Off-site copy: OneDrive** — needs an app registered in Microsoft, which is usually IT's.
+
+After setting one up, press its test or send button and check the file arrived.
 
 ## 26 — When something is not right
 

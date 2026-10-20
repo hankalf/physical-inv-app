@@ -935,7 +935,7 @@ puts it right. It looks at:
 - the scanners — registered, each one's link opened on its device, seen lately;
 - the crew list — without one any clock-in number can sign on;
 - the stopped-scanning alert, the override reasons, the Teams channel;
-- the backups — taken in the last day, and copied off-site (Google Drive or OneDrive);
+- the backups — taken in the last day, and copied off-site (a Teams channel, Google Drive or OneDrive);
 - the site admin's password — still *changeme* is red.
 
 Run it the afternoon before, and again first thing. **Check again** re-reads it after a change.
@@ -2031,6 +2031,49 @@ against it goes with it. Close counts; delete only the ones created by mistake.
 ![](images/settings-backups.png)
 
 *The backups kept on the server, and the log under them. Both export.*
+
+**Off-site copy: a Teams channel — nothing for IT to do.** Every backup also goes into a Teams
+channel's **Files** tab. A Teams post cannot carry a file, so the copy goes through a **Workflow**
+built in Teams: it takes what the app sends, posts a card in the channel, and saves the file into
+the channel's folder with SharePoint's **Create file**. Workflows use the standard connectors every
+Microsoft 365 user has, so there is no app registration and nothing in Azure. *Settings → Backups
+& log → Off-site copy: a Teams channel.*
+
+*One-time set-up (about ten minutes):*
+
+1. In Teams, pick the channel the backups go to. A private channel is best, because anyone who can
+   open its Files can open the backups. Click **⋯** beside the channel's name → **Workflows** →
+   **Post to a channel when a webhook request is received**. Name it *Inventory backups*, **Next**,
+   check the team and channel, **Add workflow**, and close the box with the address.
+2. Open it to edit: **⋯** in the left bar → **Workflows** → *Inventory backups* → **Edit**.
+3. In the first step, **When a Teams webhook request is received**, check **Who can trigger the
+   flow** is **Anyone**.
+4. At the very bottom, below every other step, add **SharePoint → Create file**:
+   - **Site Address**: the team's site;
+   - **Folder Path**: **Shared Documents** → the channel's folder (*General*, say) — the folder the
+     channel's Files tab shows;
+   - **File Name**: the expression `triggerBody()?['backup']?['name']`;
+   - **File Content**: the expression `base64ToBinary(triggerBody()?['backup']?['contentBase64'])`.
+5. **Save**, and copy the **HTTP URL** from the first step.
+6. Paste it on the card, press **Save**, then **Send a test file**. Within a minute a card says so in
+   the channel and a small text file is in its Files tab. If the file is there, the backups land
+   there too.
+
+**Send a copy** sets how often: with each daily backup, or a fresh copy every 12, 6, 2 hours or
+every hour. **Back up to Teams now** sends the newest at once; **Stop sending** forgets the
+address. Each copy is the backup **gzipped**, *inventory-…db.gz*; unzip it (7-Zip, or double-click
+on a Mac) to get the database back. A Workflow answers before it saves the file, so the card can
+only say Microsoft *took* the copy: the channel's Files tab is where to see it arrived. A refusal is
+put in words on the card — *Who can trigger the flow* not set to Anyone, a Workflow deleted or
+turned off, a copy too big (over 25 MB squeezed, far more than a site's database) — and a failed
+copy is tried again every half hour. A Workflow cannot tidy up after itself, so delete old copies
+from the folder now and then. Take the **Post card** step out of the Workflow if the channel should
+stay quiet. The address carries its own signature, so it is a key: kept here, never shown again in
+full. If your company has switched Workflows off, use Google Drive.
+
+![](images/settings-teams-backup.png)
+
+*Off-site copy: a Teams channel — the Workflow's host, the test file, the last copy, and the set-up steps.*
 
 **Off-site copy: Google Drive — nothing for IT to do.** The same, to a folder in a Google
 Drive, through a small **Apps Script** the admin deploys in that Google account: no Google Cloud

@@ -18,6 +18,7 @@ import { listEmployees } from './people.js';
 import { listBackups } from './admin-ops.js';
 import { onedriveStatus } from './onedrive.js';
 import { gdriveStatus } from './gdrive.js';
+import { teamsBackupStatus } from './teams-backup.js';
 import { teamsConfig } from '../util/teams.js';
 import { passwordIs } from './users.js';
 import { selfSystem } from './systems.js';
@@ -101,8 +102,9 @@ export function readiness(sessionId) {
   /* off-site: Google Drive or OneDrive, either will do */
   const od = onedriveStatus();
   const gd = gdriveStatus();
-  const where = [gd.connected ? ['Google Drive', gd, 'gdriveCard'] : null, od.connected ? ['OneDrive', od, 'onedriveCard'] : null].filter(Boolean);
-  if (!where.length) add('warn', 'Backups are only on this server', 'If the server is lost, so are they. Connect Google Drive (no IT needed) or OneDrive so each one is copied off-site.', fix('backups', 'gdriveCard', 'Off-site copy'));
+  const tb = teamsBackupStatus();
+  const where = [gd.connected ? ['Google Drive', gd, 'gdriveCard'] : null, od.connected ? ['OneDrive', od, 'onedriveCard'] : null, tb.on ? ['Teams', tb, 'teamsBackupCard'] : null].filter(Boolean);
+  if (!where.length) add('warn', 'Backups are only on this server', 'If the server is lost, so are they. Send them to a Teams channel or Google Drive (no IT needed), or OneDrive, so each one is copied off-site.', fix('backups', 'teamsBackupCard', 'Off-site copy'));
   else {
     const failed = where.filter(([, s]) => s.lastError);
     if (failed.length === where.length) add('warn', `The last ${failed[0][0]} copy failed`, failed[0][1].lastError.message, fix('backups', failed[0][2], 'Off-site copy'));

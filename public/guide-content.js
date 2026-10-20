@@ -553,7 +553,7 @@
         },
         {
           title: 'Close the count, then back it up',
-          do: 'Count session → Close. Closed counts stay readable and exportable; guns can no longer scan to them. Settings → Backups & log makes a database backup. Connect OneDrive there (Off-site copy) and every backup is copied off the server too; otherwise download one after every count, a volume is not a backup.',
+          do: 'Count session → Close. Closed counts stay readable and exportable; guns can no longer scan to them. Settings → Backups & log makes a database backup. Set up an off-site copy there — a Teams channel, Google Drive or OneDrive — and every backup is copied off the server too; otherwise download one after every count, a volume is not a backup.',
           where: S('/settings', 'backups', 'Settings → Backups & log'),
           watch: [
             { see: '"session is closed"', means: 'A scan or change was tried on a closed count.', fix: 'Reopen it from the Count session card if the work is not finished.' },
@@ -723,7 +723,9 @@
   const questions = [
     { q: 'How many teams and bins can the system take?', a: 'A 20-team, 20,000-bin count was simulated end to end; the dashboard stayed under a second a refresh. Part 8 of the SOP has the figures.' },
     { q: 'Where is the SOP?', a: 'docs/SOP.pdf in the repository, and the same text as docs/SOP.md. This guide follows its steps.' },
-    { q: 'Where is the backup kept?', a: 'On the server’s volume, under Settings → Backups & log, and in a OneDrive folder too once Off-site copy is connected there. Without OneDrive, download one after every count; a volume is not a backup.', goto: S('/settings', 'backups', 'Settings → Backups & log') },
+    { q: 'Where is the backup kept?', a: 'On the server’s volume, under Settings → Backups & log (Download on any row saves one to this computer). With an off-site copy set up — a Teams channel, Google Drive or OneDrive — each one is copied there too. Without one, download a backup after every count; a volume is not a backup.', goto: S('/settings', 'backups', 'Settings → Backups & log') },
+    { q: 'Can the backups go to a Teams channel?', a: 'Yes, into the channel’s Files, with nothing for IT to do. Settings → Backups & log → Off-site copy: a Teams channel. In Teams, add the Workflow “Post to a channel when a webhook request is received” to the channel, edit it, and add a SharePoint “Create file” step with the two expressions the card shows. Paste the Workflow’s address on the card, Save, then Send a test file and look for it in the channel’s Files tab. Each backup then goes there gzipped, with a card in the channel.', goto: S('/settings', 'backups', 'Settings → Backups & log') },
+    { q: 'What off-site backup can I use without IT?', a: 'A Teams channel (a Workflow you build in Teams saves each backup into the channel’s Files) or Google Drive (an Apps Script in a personal Google account). OneDrive needs an app registered in Microsoft, which is usually IT’s. Any backup can also be downloaded from Settings → Backups & log.', goto: S('/settings', 'backups', 'Settings → Backups & log') },
     { q: 'How do I send backups to OneDrive?', a: 'Settings → Backups & log → Off-site copy: OneDrive. Register the app in Microsoft once (the steps are on the card), paste its Application (client) ID, press Connect OneDrive and type the code at microsoft.com/devicelogin. From then on every backup is copied there and the newest 30 are kept.', goto: S('/settings', 'backups', 'Settings → Backups & log') },
     { q: 'What is the practice count?', a: 'A count of your own the Testing Suite makes, with test data, that nobody else sees.', goto: S('/testing', '', 'Testing Suite') },
     { q: 'How do I change the look?', a: 'Settings → Site & systems → Appearance sets the theme, accent and text size for your computer; the site logo is in the same section.', goto: S('/settings', 'advanced', 'Settings → Site & systems') },

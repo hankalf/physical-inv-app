@@ -1128,6 +1128,7 @@
     ['One-tap reasons on the gun', '/settings', 'gun', 'reason comment override one tap chips damaged', 'offComments'],
     ['Adjustment reasons', '/settings', 'erp', 'adjustment reason code write off why', 'reasonsCard'],
     ['Back up to OneDrive', '/settings', 'backups', 'onedrive off site offsite cloud backup microsoft copy restore', 'onedriveCard'],
+    ['Back up to a Teams channel', '/settings', 'backups', 'teams microsoft channel workflow power automate sharepoint files off site offsite backup copy restore', 'teamsBackupCard'],
     ['Back up to Google Drive', '/settings', 'backups', 'google drive gdrive off site offsite cloud backup apps script copy restore'],
     ['Barcode test book', '/settings', 'gun', 'barcode test book practice print code 128 training', 'bookCard'],
     ['Upload the bin list', '/settings', 'lists', 'bin list locations upload import csv excel master file racking'],
