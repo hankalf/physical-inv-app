@@ -128,7 +128,9 @@ neither count. With only two teams on the count, hand it to one by name.
 ## 7 — On the dashboard: work them to zero
 
 **Dashboard → Second counts** has every task. The tab shows how many are open from anywhere on the
-dashboard.
+dashboard. The same tab is under **Inventory Control** in the sidebar, beside Adjustments and
+Reports, with an **Overview** in front — how many are still open, and whether the final report
+can be filed yet.
 
 | Column | What it is |
 |---|---|

@@ -1,6 +1,6 @@
 # How to — The ERP upload, an aisle at a time
 
-**Role:** Inventory control  **Login profile:** *Inventory control* (or Supervisor, Admin) — needs *Approve adjustments* and *Downloads*  **Pages:** Dashboard → Adjustments  **Functions:** downloading an aisle for the ERP, marking lines as uploaded, the ERP worksheet
+**Role:** Inventory control  **Login profile:** *Inventory control* (or Supervisor, Admin) — needs *Approve adjustments* and *Downloads*  **Pages:** Dashboard → Adjustments, or Inventory Control → Adjustments  **Functions:** downloading an aisle for the ERP, marking lines as uploaded, the ERP worksheet
 
 A wall-to-wall goes into the ERP aisle by aisle, as the aisles are finished, rather than in one
 sitting at the end. This guide is that routine: download an aisle's Excel sheet, put its lines
@@ -20,7 +20,8 @@ knows what is in the ERP — so nothing is keyed twice, and nothing is missed.
 
 ## 1 — In one minute
 
-1. **Dashboard → Adjustments → ERP upload, an aisle at a time.** Pick the count at the top.
+1. **Dashboard → Adjustments → ERP upload, an aisle at a time** (the same card is under **Inventory
+   Control → Adjustments**). Pick the count at the top.
 2. Wait for the aisle's **second and third counts** to finish.
 3. **⬇ Excel** on the aisle: every pallet in it, with an **Uploaded to ERP** column.
 4. Put the lines into the ERP. Write **yes** in *Uploaded to ERP* as each goes in.

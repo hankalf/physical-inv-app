@@ -1,6 +1,6 @@
 # The ERP upload, an aisle at a time — how it works
 
-**Role:** Inventory control  **Login profile:** your own login  **Pages:** Dashboard → Adjustments  **Functions:** downloading an aisle for the ERP, marking lines as uploaded
+**Role:** Inventory control  **Login profile:** your own login  **Pages:** Dashboard → Adjustments, or Inventory Control → Adjustments  **Functions:** downloading an aisle for the ERP, marking lines as uploaded
 
 A count goes into the ERP aisle by aisle, as the aisles are finished. For each aisle you
 download an Excel sheet, put its lines into the ERP, write *yes* against each line as it goes
@@ -19,7 +19,8 @@ nothing is missed.
 
 ## 1 — In one minute
 
-1. **Dashboard → Adjustments → ERP upload, an aisle at a time.** Pick the count at the top.
+1. **Dashboard → Adjustments → ERP upload, an aisle at a time** (the same card is under **Inventory
+   Control → Adjustments**). Pick the count at the top.
 2. Pick an aisle whose **second and third counts are finished**.
 3. **⬇ Excel** on the aisle: every pallet in it, with an **Uploaded to ERP** column.
 4. Put the lines into the ERP. Write **yes** in *Uploaded to ERP* as each goes in.

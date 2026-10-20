@@ -87,7 +87,8 @@ third count on any finished second count, with the **3rd count** button on the d
 ## 6 — On the dashboard
 
 **Dashboard → Second counts** lists every second and third count; the tab shows how many are
-open from anywhere on the dashboard.
+open from anywhere on the dashboard. The same tab is under **Inventory Control** in the sidebar,
+beside Adjustments and Reports, with an overview of where the count stands in front of it.
 
 ![](../../images/guide-dashboard-third-count.png)
 
