@@ -18,8 +18,12 @@ const S = { ...hdr, authorization: 'Bearer ' + await login({ username: 'GUIDE-SU
 
 const adminList = (await j(await fetch(`${BASE}/api/admin/guides`, { headers: A }))).guides;
 const supList = (await j(await fetch(`${BASE}/api/admin/guides`, { headers: S }))).guides;
-check('Every login gets the four guides for users, second counts first', supList.map((g) => `${g.edition}/${g.name}`).join() === 'user/second-and-third-counts,user/erp-upload-by-aisle,user/employees-teams-and-gear,user/live-and-test', supList.map((g) => g.name).join());
-check('…an admin gets the admin editions too', adminList.length === 8 && adminList.filter((g) => g.edition === 'admin').length === 4);
+check('Every login gets the five guides for users, second counts first', supList.map((g) => `${g.edition}/${g.name}`).join() === 'user/second-and-third-counts,user/erp-upload-by-aisle,user/reports-and-exports,user/employees-teams-and-gear,user/live-and-test', supList.map((g) => g.name).join());
+check('…an admin gets the admin editions too', adminList.length === 10 && adminList.filter((g) => g.edition === 'admin').length === 5);
+const exRes = await fetch(`${BASE}/api/admin/guides/user/reports-and-exports`, { headers: S });
+const ex = await j(exRes);
+check('The exports guide is there for every login, a section for each export button', exRes.status === 200 && ['Download this list (CSV)', 'ERP worksheet', 'Adjustments CSV', 'Fix list CSV', 'Final report', 'Export everything', 'Pallet report CSV', 'Raw counts CSV', 'Exceptions CSV', 'Uncounted bins CSV', 'Count sheets'].every((t) => ex.html.includes(t)), exRes.status);
+check('…and says nothing about Railway or setting the system up', !/railway|SYSTEM_|link key|Settings → Logins/i.test(ex.html));
 check('…each with its title, who it is for, a lead and its sections', supList.every((g) => g.title && g.who && g.blurb.length > 40 && g.sections.length >= 5 && g.pdf));
 let r = await fetch(`${BASE}/api/admin/guides/admin/live-and-test`, { headers: S });
 check('A supervisor cannot open an admin edition', r.status === 403);
@@ -45,7 +49,7 @@ page.on('pageerror', (e) => errors.push(e.message));
 await page.goto(`${BASE}/guide`);
 await page.fill('#fUser', 'GUIDE-SUP'); await page.fill('#fPassword', 'reads-the-guide-1'); await page.click('#btnLogin');
 await page.waitForSelector('#howtos .howto');
-check('User guide: a How-to guides card with the four for users', (await page.locator('#howtos .howto').count()) === 4 && !(await page.isVisible('#howtosAdmin')));
+check('User guide: a How-to guides card with the five for users', (await page.locator('#howtos .howto').count()) === 5 && !(await page.isVisible('#howtosAdmin')));
 await page.locator('#howtos .howto[data-guide="user/erp-upload-by-aisle"] button.primary').click();
 await page.waitForSelector('#readerCard:not([hidden]) #readerBody h2');
 check('Read shows the guide on the page', /The ERP upload, an aisle at a time/.test(await page.textContent('#readerTitle')) && (await page.locator('#readerBody h2').count()) >= 6 && (await page.locator('#readerBody img').count()) >= 3);
@@ -74,7 +78,7 @@ const ap = await ctx.newPage();
 await ap.goto(`${BASE}/guide`);
 await ap.fill('#fPassword', 'changeme'); await ap.click('#btnLogin');
 await ap.waitForSelector('#howtosAdminList .howto');
-check('An admin sees the admin editions under For admins', (await ap.locator('#howtosAdminList .howto').count()) === 4 && /Admin edition/.test(await ap.textContent('#howtosAdminList')));
+check('An admin sees the admin editions under For admins', (await ap.locator('#howtosAdminList .howto').count()) === 5 && /Admin edition/.test(await ap.textContent('#howtosAdminList')));
 await browser.close();
 
 const passed = results.filter(Boolean).length;
