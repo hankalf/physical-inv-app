@@ -1066,7 +1066,7 @@
     $('recountBanner').innerHTML = '';
     $('recountBanner').dataset.bin = t.bin;
     $('recountBanner').dataset.kind = t.kind || 'recount';
-    $('recountBanner').appendChild(document.createTextNode(`${t.kind === 'cycle' ? 'CYCLE COUNT' : 'SECOND COUNT'} · bin ${t.bin}`));
+    $('recountBanner').appendChild(document.createTextNode(`${t.kind === 'cycle' ? 'CYCLE COUNT' : Number(t.round) === 3 ? 'THIRD COUNT' : 'SECOND COUNT'} · bin ${t.bin}`));
     const d = document.createElement('div'); d.className = 'detail';
     d.textContent = `${describeBin(t.bin)} — ${t.reason}. Scan every pallet in this bin, then tap Bin done.`;
     $('recountBanner').appendChild(d);
@@ -1081,7 +1081,7 @@
     await flushRecountsDone();
     const next = nextRecountTask();
     if (next) {
-      feedback($('scanMsg'), 'ok', `Bin ${t.bin} second count done`, `Next: bin ${next.bin}`);
+      feedback($('scanMsg'), 'ok', `Bin ${t.bin} ${Number(t.round) === 3 ? 'third' : 'second'} count done`, `Next: bin ${next.bin}`);
       await startRecount(next);
       feedback($('scanMsg'), 'ok', `Bin ${t.bin} done`, `Now bin ${next.bin} — ${describeBin(next.bin)}`);
     } else {
@@ -2132,7 +2132,7 @@
       qty: d.emptyBin ? 0 : d.qty,
       emptyBin: d.emptyBin ? 1 : 0,
       // a cycle count is the count for that bin, not a second one
-      pass: state.recount && state.recount.kind !== 'cycle' ? 2 : 1,
+      pass: state.recount && state.recount.kind !== 'cycle' ? (Number(state.recount.round) === 3 ? 3 : 2) : 1,
       recountId: state.recount ? state.recount.id : null,
       location: d.location,
       comments: d.comments || null,
@@ -2794,7 +2794,7 @@
       top.append(left, right);
       const sub = document.createElement('div');
       sub.className = 'sub';
-      sub.textContent = `${new Date(l.ts).toLocaleTimeString()} · ${l.synced ? 'synced' : 'queued'}${l.pass === 2 ? ' · 2nd count' : ''}` +
+      sub.textContent = `${new Date(l.ts).toLocaleTimeString()} · ${l.synced ? 'synced' : 'queued'}${l.pass === 2 ? ' · 2nd count' : l.pass === 3 ? ' · 3rd count' : ''}` +
         (l.comments ? ` · ${l.comments}` : '') + (l.overrideReason ? ` · flagged: ${l.overrideReason}` : '');
       div.append(top, sub);
       if (!l.voidedLocal) {

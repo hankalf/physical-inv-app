@@ -58,7 +58,7 @@ check('Uploading it back marks the lines whose In ERP cell was filled - an x, in
 r = await j(await post(`/api/admin/sessions/${sid}/erp-entries/upload`, 'Pallet,In ERP\nP-2,no\nP-1,\nP-7,yes\n', csv));
 check('A "no" takes a mark off, a blank leaves it, an unknown pallet is reported', r.unmarked === 1 && r.marked === 0 && r.unknown.join() === 'P-7' && r.entered === 2, JSON.stringify(r));
 r = await post(`/api/admin/sessions/${sid}/erp-entries/upload`, 'Pallet,Qty\nP-2,3\n', csv);
-check('A file with no In ERP column is refused with a word on what to upload', r.status === 400 && /no "In ERP" column/.test((await j(r)).error));
+check('A file with no In ERP column is refused with a word on what to upload', r.status === 400 && /no "In ERP" or "Uploaded to ERP" column/.test((await j(r)).error));
 
 /* a second count after the mark: the ERP has the old number */
 await post(`/api/sessions/${sid}/counts`, [{ clientId: 'e4', palletId: 'P-1', qty: 38, location: 'F01A001', team: '2', pass: 2, scannedAt: new Date().toISOString() }], T);

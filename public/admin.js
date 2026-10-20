@@ -499,19 +499,41 @@
     }
   }
 
+  /** The count being looked at, as the session list has it. */
+  const currentSession = () => sessions.find((x) => x.id === sessionId) || null;
+  /* A workbook from the server's sheets: { filename, sheets: [{ name, columns, rows }] }. */
+  function writeWorkbook(XLSX, data) {
+    const wb = XLSX.utils.book_new();
+    for (const sh of data.sheets) {
+      const ws = XLSX.utils.json_to_sheet(sh.rows, { header: sh.columns });
+      // wide enough to read without dragging every column
+      ws['!cols'] = sh.columns.map((c) => ({
+        wch: Math.min(60, Math.max(String(c).length, ...sh.rows.slice(0, 500).map((r) => String(r[c] ?? '').length)) + 2),
+      }));
+      if (sh.rows.length && sh.name !== 'Summary') ws['!autofilter'] = { ref: ws['!ref'] };
+      XLSX.utils.book_append_sheet(wb, ws, sh.name.slice(0, 31));
+    }
+    XLSX.writeFile(wb, data.filename);
+  }
+
   /* ------------------------------------------------------------ second counts */
   async function refreshRecounts() {
     const rows = await apiJson(`/api/admin/sessions/${sessionId}/recounts`);
+    const thirdOn = !!(currentSession() && currentSession().third_count);
     const open = rows.filter((r) => r.status !== 'done').length;
     $('recountSub').textContent = rows.length ? `${open} open · ${rows.length - open} done` : '';
     api.subCount('second', open);   // so an open second count is visible from any tab
     table($('recountTable'),
       [{ label: 'Bin' }, { label: 'Pallet' }, { label: 'Reason' }, { label: 'Detail' }, { label: 'Source' }, { label: '1st team' },
-       { label: 'Team' }, { label: 'Status' }, { label: '1st count' }, { label: '2nd count' }, { label: '' }],
+       { label: 'Team' }, { label: 'Status' }, { label: '1st count' }, { label: '2nd count' }, ...(thirdOn || rows.some((x) => Number(x.round) === 3) ? [{ label: '3rd count' }] : []), { label: '' }],
       rows,
       (r) => {
         const tr = document.createElement('tr');
-        tr.append(cell(r.bin), cell(r.pallet_id || '—'), cell(r.reason), cell(r.detail || '', 'wrap'), cell(r.source), cell(r.first_team || '—'));
+        tr.dataset.recount = r.id;
+        const third = Number(r.round) === 3;
+        if (third) tr.classList.add('third');
+        const reason = cell(third ? `3rd count · ${r.reason}` : r.reason);
+        tr.append(cell(r.bin), cell(r.pallet_id || '—'), reason, cell(r.detail || '', 'wrap'), cell(r.source), cell(third && r.second_team ? `${r.first_team || '—'} · 2nd ${r.second_team}` : (r.first_team || '—')));
         const tdTeam = document.createElement('td');
         const inp = document.createElement('input'); inp.className = 'sm'; inp.style.width = '60px'; inp.value = r.team || ''; inp.placeholder = 'any';
         inp.title = 'Assign to a team and press Enter; blank = any team (except the first-count team)';
@@ -519,6 +541,7 @@
         tdTeam.appendChild(inp); tr.appendChild(tdTeam);
         const tdSt = document.createElement('td'); tdSt.appendChild(tag(r.status)); tr.appendChild(tdSt);
         tr.append(cell(r.first_result || (r.first_lines ? '' : 'nothing'), 'wrap'), cell(r.second_result || '', 'wrap'));
+        if (thirdOn || rows.some((x) => Number(x.round) === 3)) tr.append(cell(r.third_result || '', 'wrap'));
         const tdBtn = document.createElement('td');
         const act = (label, body, method = 'POST') => {
           const b = document.createElement('button'); b.className = 'sm ghost'; b.textContent = label; b.style.marginRight = '4px';
@@ -527,6 +550,20 @@
         };
         if (r.status !== 'done') tdBtn.appendChild(act('done', { status: 'done' }));
         else tdBtn.appendChild(act('reopen', { status: 'open' }));
+        /* a finished second count that has not settled things: a third, by a team that did neither */
+        if (r.status === 'done' && !third && r.reason !== 'CYCLE' && !r.third_id) {
+          const b = document.createElement('button'); b.className = 'sm'; b.textContent = '3rd count'; b.style.marginRight = '4px';
+          b.dataset.third = r.id;
+          b.title = 'Count this bin a third time, by a team that did neither the first nor the second count';
+          b.onclick = async () => {
+            try {
+              const out = await postJson(`/api/admin/sessions/${sessionId}/recounts/${r.id}/third`, {});
+              msg($('recountMsg'), out.created ? 'ok' : 'warn', out.created ? `Third count raised for ${out.bin}.` : `${out.bin} already has an open count.`, out.created ? `${out.why[0].toUpperCase()}${out.why.slice(1)}.` : '');
+              await refreshAll();
+            } catch (err) { msg($('recountMsg'), 'err', err.message); }
+          };
+          tdBtn.appendChild(b);
+        }
         tdBtn.appendChild(act('✕', null, 'DELETE'));
         tr.appendChild(tdBtn);
         return tr;
@@ -556,6 +593,19 @@
     } catch (err) { msg($('recountMsg'), 'err', err.message); }
   };
   $('btnExportRecounts').onclick = () => download(`/api/admin/sessions/${sessionId}/export/recounts.csv`, `second-counts-session-${sessionId}.csv`);
+  /* every bin counted again: the first, second and third counts beside the report, one aisle or all */
+  $('btnExportSideBySide').onclick = async () => {
+    if (!needSession($('recountMsg'))) return;
+    const b = $('btnExportSideBySide'); const was = b.textContent;
+    b.disabled = true; b.textContent = 'Building…';
+    try {
+      const aisle = $('fRecAisle').value;
+      const [data, XLSX] = await Promise.all([apiJson(`/api/admin/sessions/${sessionId}/export/recounts-side-by-side${aisle ? `?aisle=${encodeURIComponent(aisle)}` : ''}`), window.appUi.loadXlsx()]);
+      writeWorkbook(XLSX, data);
+      msg($('recountMsg'), 'ok', `Exported ${data.tally.bins} bin${data.tally.bins === 1 ? '' : 's'} counted again${aisle ? ` in ${aisle}` : ''}`, data.filename);
+    } catch (err) { msg($('recountMsg'), 'err', 'Could not build the export', err.message); }
+    finally { b.disabled = false; b.textContent = was; }
+  };
 
   /* ------------------------------------------------ ERP, printing, housekeeping */
   $('btnPrint').onclick = () => {
@@ -1199,7 +1249,7 @@
   function paneJobs() {
     return {
       progress: [refreshNotes, refreshProgress], teams: [refreshAssignments], reports: [refreshPallets, refreshLabels, refreshArchives], map: [refreshMap],
-      second: [refreshRecounts], alerts: [refreshMessages, refreshAlerts], adjust: [refreshAdjustments],
+      second: [refreshRecounts], alerts: [refreshMessages, refreshAlerts], adjust: [refreshAdjustments, () => refreshErpAisles().catch(() => {})],
     };
   }
   async function refreshAll() {
@@ -1322,6 +1372,78 @@
     } catch (err) { msg($('erpMsg'), 'err', 'Not applied', err.message); }
     $('fErpFile').value = '';
   };
+  /* ------------------------------------------- the ERP, an aisle at a time */
+  async function refreshErpAisles() {
+    if (!sessionId || !$('erpAislesTable')) return;
+    const { aisles } = await apiJson(`/api/admin/sessions/${sessionId}/erp-entries/aisles`);
+    const done = aisles.filter((a) => a.state === 'all').length;
+    $('erpAislesChip').hidden = !aisles.length;
+    $('erpAislesChip').textContent = `${done} of ${aisles.length} aisles uploaded`;
+    $('erpAislesChip').className = 'chip ' + (aisles.length && done === aisles.length ? 'online' : '');
+    const rows = $('fErpAislesTodo').checked ? aisles.filter((a) => a.state !== 'all' || a.changed) : aisles;
+    table($('erpAislesTable'),
+      [{ label: 'Aisle' }, { label: 'Pallets', num: true }, { label: 'Counted', num: true }, { label: 'Differences', num: true },
+       { label: 'Uploaded to ERP' }, { label: 'Still being counted' }, { label: '' }],
+      rows,
+      (a) => {
+        const tr = document.createElement('tr');
+        tr.dataset.aisle = a.aisle;
+        tr.append(cell(a.aisle), cell(a.lines.toLocaleString(), 'num'), cell(a.counted.toLocaleString(), 'num'), cell(a.differences.toLocaleString(), 'num'));
+        const up = document.createElement('td');
+        up.appendChild(tag(a.state === 'all' ? 'MATCH' : a.state === 'some' ? 'queued' : 'off', a.state === 'all' ? 'all in the ERP' : a.state === 'some' ? `${a.uploaded} of ${a.lines}` : 'not yet'));
+        if (a.changed) { const w = tag('QTY VARIANCE', `${a.changed} changed since`); w.style.marginLeft = '6px'; w.title = 'Counted again after it went into the ERP: the ERP has the old number'; up.appendChild(w); }
+        tr.appendChild(up);
+        const busy = [a.openRecounts ? `${a.openRecounts} 2nd/3rd count${a.openRecounts === 1 ? '' : 's'} open` : '', a.binsNotCounted ? `${a.binsNotCounted} bin${a.binsNotCounted === 1 ? '' : 's'} not counted` : ''].filter(Boolean).join(' · ');
+        tr.appendChild(cell(busy || (a.handedBack ? 'done' : '—'), busy ? 'warn' : ''));
+        const act = document.createElement('td');
+        const b = document.createElement('button'); b.className = 'sm'; b.textContent = '⬇ Excel'; b.dataset.erpAisle = a.aisle;
+        b.title = `Every pallet in ${a.aisle}, with an "Uploaded to ERP" column to fill in`;
+        b.onclick = async () => {
+          b.disabled = true;
+          try {
+            const [data, XLSX] = await Promise.all([apiJson(`/api/admin/sessions/${sessionId}/export/erp-aisle?aisle=${encodeURIComponent(a.aisle)}`), window.appUi.loadXlsx()]);
+            writeWorkbook(XLSX, data);
+            msg($('erpAislesMsg'), busy ? 'warn' : 'ok', `${a.aisle}: ${data.lines} lines`, busy ? `Still being counted (${busy}) — numbers there may change.` : data.filename);
+          } catch (err) { msg($('erpAislesMsg'), 'err', err.message); }
+          finally { b.disabled = false; }
+        };
+        act.appendChild(b);
+        tr.appendChild(act);
+        return tr;
+      }, aisles.length ? 'Every aisle is in the ERP.' : 'Nothing counted on this count yet.');
+  }
+  $('fErpAislesTodo').onchange = () => refreshErpAisles().catch(() => {});
+  /* A filled-in sheet back: every sheet in the workbook that has the column is read, so a
+     workbook with several aisles' sheets pasted into it works too. */
+  $('fErpAisleFile').onchange = async () => {
+    const file = $('fErpAisleFile').files[0];
+    $('fErpAisleFile').value = '';
+    if (!file || !needSession($('erpAislesMsg'))) return;
+    try {
+      let parts;
+      if (/\.xls[xm]?$/i.test(file.name)) {
+        const XLSX = await window.appUi.loadXlsx();
+        const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+        parts = wb.SheetNames.map((n) => ({ name: n, csv: XLSX.utils.sheet_to_csv(wb.Sheets[n]) })).filter((x) => /uploaded to erp|in erp/i.test(x.csv.split('\n')[0] || ''));
+      } else parts = [{ name: file.name, csv: await file.text() }];
+      if (!parts.length) throw new Error('no sheet in it has an "Uploaded to ERP" column - download an aisle with ⬇ Excel, fill that column in, and upload it');
+      const tot = { marked: 0, unmarked: 0, already: 0, skipped: 0, unknown: [] };
+      for (const part of parts) {
+        const aisle = (part.name.match(/^Aisle\s+(\S+)/i) || [])[1] || '';
+        const res = await fetch(`/api/admin/sessions/${sessionId}/erp-entries/upload${aisle ? `?aisle=${encodeURIComponent(aisle)}` : ''}`,
+          { method: 'POST', headers: { 'content-type': 'text/csv', authorization: 'Bearer ' + api.token }, body: part.csv });
+        const out = await res.json();
+        if (!res.ok) throw new Error(out.error || 'the upload failed');
+        for (const k of ['marked', 'unmarked', 'already', 'skipped']) tot[k] += out[k] || 0;
+        tot.unknown.push(...(out.unknown || []));
+      }
+      msg($('erpAislesMsg'), 'ok', `${file.name}: ${tot.marked} line${tot.marked === 1 ? '' : 's'} marked as uploaded to the ERP${tot.unmarked ? `, ${tot.unmarked} unmarked` : ''}`,
+        [tot.already ? `${tot.already} were marked already.` : '', tot.skipped ? `${tot.skipped} left blank, left as they were.` : '',
+          tot.unknown.length ? `Not on this count, ignored: ${tot.unknown.slice(0, 5).join(', ')}${tot.unknown.length > 5 ? '…' : ''}.` : ''].filter(Boolean).join(' '));
+      await Promise.all([refreshErpAisles(), refreshPositiveNegative().catch(() => {})]);
+    } catch (err) { msg($('erpAislesMsg'), 'err', 'Not applied', err.message); }
+  };
+
   $('btnPnCsv').onclick = () => {
     const rows = pnRows();
     const head = ['Pallet', 'Item', 'Bin', 'Why', 'System qty', 'Counted qty', 'Adjustment', 'Approval', 'In ERP'];
@@ -1850,17 +1972,7 @@
     b.textContent = 'Building the workbook…';
     try {
       const [data, XLSX] = await Promise.all([apiJson(`/api/admin/sessions/${sessionId}/export/everything`), window.appUi.loadXlsx()]);
-      const wb = XLSX.utils.book_new();
-      for (const sh of data.sheets) {
-        const ws = XLSX.utils.json_to_sheet(sh.rows, { header: sh.columns });
-        // wide enough to read without dragging every column
-        ws['!cols'] = sh.columns.map((c) => ({
-          wch: Math.min(60, Math.max(String(c).length, ...sh.rows.slice(0, 500).map((r) => String(r[c] ?? '').length)) + 2),
-        }));
-        if (sh.rows.length && sh.name !== 'Summary') ws['!autofilter'] = { ref: ws['!ref'] };
-        XLSX.utils.book_append_sheet(wb, ws, sh.name.slice(0, 31));
-      }
-      XLSX.writeFile(wb, data.filename);
+      writeWorkbook(XLSX, data);
     } catch (err) {
       alert('Could not build the export: ' + err.message);
     } finally {

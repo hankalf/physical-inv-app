@@ -12,6 +12,7 @@
 import { db, norm, getSession } from '../db.js';
 import { parseRecords, pick } from '../util/csv.js';
 import { adjustmentView } from './adjustments.js';
+import { palletReport } from './reports.js';
 
 const now = () => new Date().toISOString();
 
@@ -40,10 +41,24 @@ export function withEntries(view, sessionId) {
   return { ...view, positive, negative, erp: { entered, total, changed } };
 }
 
-/* The lines that exist to be entered: the adjustment view's rows, by pallet. */
+/** A report line's difference as the ERP sees it: not found is all of the report, not on the report is all of the count. */
+export function lineVariance(r) {
+  if (r.variance_qty !== '' && r.variance_qty != null) return Number(r.variance_qty);
+  const counted = r.counted_qty === '' || r.counted_qty == null ? 0 : Number(r.counted_qty);
+  return r.expected_qty === '' || r.expected_qty == null ? counted : counted - Number(r.expected_qty);
+}
+
+/* The lines that exist to be entered: the adjustment view's rows, by pallet - and, for the
+   aisle sheets, every other pallet on the count too, a match included, since an ERP that is
+   given the counted quantity of every pallet in an aisle is given the matches as well. */
 function liveRows(sessionId) {
   const v = adjustmentView(sessionId);
-  return new Map([...v.positive.rows, ...v.negative.rows].map((r) => [r.pallet_id, r]));
+  const out = new Map([...v.positive.rows, ...v.negative.rows].map((r) => [r.pallet_id, r]));
+  for (const r of palletReport(sessionId)) {
+    if (out.has(r.pallet_id)) continue;
+    out.set(r.pallet_id, { pallet_id: r.pallet_id, variance_qty: lineVariance(r), counted_qty: r.counted_qty === '' ? null : Number(r.counted_qty) });
+  }
+  return out;
 }
 
 /** Mark lines as entered (or not), a list of pallets at a time. */
@@ -55,7 +70,7 @@ export function markEntered(sessionId, { pallets = [], on = true, note = '', act
   const at = now();
   /* A line already marked keeps its first mark - the number the ERP was
      given and when - so a change since still shows; marking it again is a no-op. */
-  const ins = db.prepare(`INSERT INTO erp_entries (session_id, pallet_id, variance_qty, entered_by, entered_at, note) VALUES (?, ?, ?, ?, ?, ?)
+  const ins = db.prepare(`INSERT INTO erp_entries (session_id, pallet_id, variance_qty, entered_by, entered_at, note, counted_qty) VALUES (?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(session_id, pallet_id) DO NOTHING`);
   const del = db.prepare('DELETE FROM erp_entries WHERE session_id = ? AND pallet_id = ?');
   let marked = 0;
@@ -69,7 +84,7 @@ export function markEntered(sessionId, { pallets = [], on = true, note = '', act
       if (!p) continue;
       const row = live.get(p);
       if (!row) { unknown.push(p); continue; }
-      if (on) { if (ins.run(id, p, row.variance_qty, String(actor || '').slice(0, 80), at, String(note || '').slice(0, 200)).changes) marked++; else already++; }
+      if (on) { if (ins.run(id, p, row.variance_qty, String(actor || '').slice(0, 80), at, String(note || '').slice(0, 200), row.counted_qty ?? null).changes) marked++; else already++; }
       else { unmarked += del.run(id, p).changes; }
     }
     db.exec('COMMIT');
@@ -91,13 +106,13 @@ export function readFlag(v) {
 }
 
 /** The worksheet uploaded back: every row with the "In ERP" cell filled is marked or unmarked. */
-export function markFromFile(sessionId, text, actor = 'supervisor') {
+export function markFromFile(sessionId, text, actor = 'supervisor', note = '') {
   const id = Number(sessionId);
   if (!getSession(id)) throw Object.assign(new Error('session not found'), { status: 404 });
   const { records, headers } = parseRecords(String(text || ''));
   if (!records.length) throw Object.assign(new Error('no rows found in the file'), { status: 400 });
   const hasFlag = headers.some((h) => /in\s*erp|entered|uploaded/i.test(h));
-  if (!hasFlag) throw Object.assign(new Error('the file has no "In ERP" column - download the ERP worksheet, fill that column in, and upload it back'), { status: 400 });
+  if (!hasFlag) throw Object.assign(new Error('the file has no "In ERP" or "Uploaded to ERP" column - download the ERP worksheet or an aisle\'s sheet, fill that column in, and upload it back'), { status: 400 });
   const yes = [];
   const no = [];
   let skipped = 0;
@@ -109,7 +124,7 @@ export function markFromFile(sessionId, text, actor = 'supervisor') {
     (flag ? yes : no).push(pallet);
   }
   const out = { marked: 0, already: 0, unmarked: 0, unknown: [], skipped, rows: records.length };
-  if (yes.length) { const r = markEntered(id, { pallets: yes, on: true, actor, note: 'from the worksheet' }); out.marked = r.marked; out.already = r.already; out.unknown.push(...r.unknown); }
+  if (yes.length) { const r = markEntered(id, { pallets: yes, on: true, actor, note: note || 'from the worksheet' }); out.marked = r.marked; out.already = r.already; out.unknown.push(...r.unknown); }
   if (no.length) { const r = markEntered(id, { pallets: no, on: false, actor }); out.unmarked = r.unmarked; out.unknown.push(...r.unknown); }
   return { ...out, ...withEntries(adjustmentView(id), id).erp };
 }

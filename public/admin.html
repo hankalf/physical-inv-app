@@ -286,6 +286,9 @@
         inventory report (quantity differs, wrong bin, not on the report, counted twice), when an aisle is handed back with
         expected pallets nobody saw, or by hand here. The counter is told the bin and the reason type, never the numbers,
         and the team that did the first count is never offered the second. Lines from a second count replace the first for that bin.
+        With <b>Third count</b> on for the count (Settings → Count setup), a bin whose second count agrees with neither the first
+        count nor the report is counted a third time, by a team that did neither; <b>3rd count</b> on a finished row asks for one by hand.
+        A third count's lines stand over both.
       </div>
       <div class="inline" style="margin-top:10px">
         <div class="auto"><label for="fRecBin">Bin</label><input id="fRecBin" class="sm" placeholder="F03B012"></div>
@@ -296,6 +299,10 @@
         <div class="auto"><button class="primary" id="btnRecAdd">Request second count</button></div>
         <div class="auto"><button id="btnRecGenerate">Raise from all variances now</button></div>
         <div class="auto"><button id="btnExportRecounts">Export CSV</button></div>
+      </div>
+      <div class="inline" style="margin-top:8px">
+        <div class="auto"><label for="fRecAisle">Aisle</label><input id="fRecAisle" class="sm" style="width:80px" placeholder="all"></div>
+        <div class="auto"><button id="btnExportSideBySide" title="Every bin counted again: the report, the 1st, 2nd and 3rd counts, who did each, and which number stands">⬇ Export 2nd &amp; 3rd counts with the 1st (Excel)</button></div>
       </div>
       <div class="feedback" id="recountMsg"></div>
       <div class="scroll" style="margin-top:10px"><table id="recountTable"></table></div>
@@ -338,6 +345,24 @@
         <div class="auto"><label class="btn" for="fErpFile" id="lblErpFile">Upload the worksheet back…</label><input type="file" id="fErpFile" accept=".csv,.xlsx,.xls,text/csv" hidden></div>
       </div>
       <div class="feedback" id="erpMsg"></div>
+    </div>
+
+    <div class="card" id="erpAislesCard">
+      <h2>ERP upload, an aisle at a time <span class="chip" id="erpAislesChip" hidden></span>
+        <span class="muted">an Excel sheet per aisle with an "Uploaded to ERP" column — fill it in, upload it back</span></h2>
+      <div class="hint" style="margin-top:0">
+        <b>Excel</b> on an aisle downloads every pallet in it: the report, the count (the latest one — a 2nd or 3rd count stands
+        over the 1st) and the difference. Put the lines into the ERP and write <i>yes</i> (or an <i>x</i>, a date or your initials)
+        in <b>Uploaded to ERP</b> as you go; upload the sheet back and those lines are marked here as in the ERP — the same marks as
+        <b>Entered in the ERP</b> above. Only that column is read back; a count changes only by being counted. Wait for an aisle's
+        <b>2nd/3rd counts</b> to finish before you put it in: a line counted again afterwards is flagged <b>changed</b>.
+      </div>
+      <div class="inline" style="margin-top:8px">
+        <div class="auto"><label class="btn" for="fErpAisleFile" id="lblErpAisleFile">⬆ Upload a filled-in sheet…</label><input type="file" id="fErpAisleFile" accept=".xlsx,.xls,.csv" hidden></div>
+        <div class="auto"><label class="cb"><input type="checkbox" id="fErpAislesTodo"> Only aisles not fully uploaded</label></div>
+      </div>
+      <div class="feedback" id="erpAislesMsg"></div>
+      <div class="scroll" style="margin-top:10px"><table id="erpAislesTable"></table></div>
     </div>
 
     <div class="card" id="adjustCard">

@@ -2141,6 +2141,7 @@
     $('fGuided').checked = !!s.guided;
     $('fAskComments').checked = !!s.ask_comments;
     $('fAutoRecount').checked = !!s.auto_recount;
+    $('fThirdCount').checked = !!s.third_count;
     $('fRecMinQty').value = s.recount_min_qty || 0;
     $('fRecMinPct').value = s.recount_min_pct || 0;
     $('fRecCap').value = s.recount_cap || 0;
@@ -2260,7 +2261,7 @@
     try {
       await api.post(`/api/admin/sessions/${sessionId}/settings`, {
         palletMode: $('fPalletMode').value, guided: $('fGuided').checked, askComments: $('fAskComments').checked,
-        autoRecount: $('fAutoRecount').checked, layout: $('fLayout').value,
+        autoRecount: $('fAutoRecount').checked, thirdCount: $('fThirdCount').checked, layout: $('fLayout').value,
         recountMinQty: $('fRecMinQty').value, recountMinPct: $('fRecMinPct').value, recountCap: $('fRecCap').value,
         askLot: $('fAskLot').checked, askExpiry: $('fAskExpiry').checked,
         requireApproval: $('fRequireApproval').checked,

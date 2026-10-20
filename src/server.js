@@ -24,6 +24,8 @@ import { buildMoves, importMoves, listMoves, movesForGun, finishMove, clearOpenM
 import { autoPlan, applyPlan } from './routes/auto-plan.js';
 import { endTrial, setTrial } from './routes/trial.js';
 import { exportEverything } from './routes/export-all.js';
+import { recountSideBySide } from './routes/recount-sheet.js';
+import { erpAisles, erpAisleSheet } from './routes/erp-aisles.js';
 import { archiveAisle, finalReadiness, finalReport, listArchives, archivePath } from './routes/archive.js';
 import { idleConfig, saveIdleConfig, teamClocks, checkIdle, answerIdle, openIdleAlerts, recentIdleAlerts, tellTeamsIdle, idleTick, recordSignoff } from './routes/idle.js';
 import { practiceJobs, practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, practiceReadiness, practiceFromFile, practiceOptions, setPracticeOptions, practiceSandbox, setPracticeSandbox, practiceExport, ownerOf, practiceModes, startPracticeMode, MODE_ACCESS, practiceAll, deletePracticeOf } from './routes/practice.js';
@@ -40,7 +42,7 @@ import {
 import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot, labelsToReplace } from './routes/reports.js';
 import {
   listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
-  tasksForTeam, takeRecount, finishRecount, updateRecount, deleteRecount,
+  tasksForTeam, takeRecount, finishRecount, updateRecount, deleteRecount, raiseThirdCount, thirdCountsForBins,
 } from './routes/recounts.js';
 import { generateBatch, previewBatch, binList, listBatches, deleteBatch, coverage, runSchedules, STRATEGIES, levelsOnOpenTasks } from './routes/cycles.js';
 import {
@@ -611,6 +613,7 @@ async function handleHandheld(req, res, url, m) {
     // the device is whoever the token says, not whatever the payload claims
     const result = saveCounts(m[1], device ? rows.map((r) => ({ ...r, deviceId: device.name })) : rows);
     if (result.firstCountPallets.length || result.firstCountBins.length) result.recounts = autoAfterCounts(m[1], result.firstCountPallets, result.firstCountBins);
+    if (result.secondCountBins.length) result.thirdCounts = thirdCountsForBins(m[1], result.secondCountBins);
     /* a pallet on the Not in Location list, scanned anywhere, is found */
     const ok = new Set(result.accepted);
     result.found = [];
@@ -994,11 +997,11 @@ async function handleAdmin(req, res, url, m) {
     // how big an adjustment has to be before somebody has to sign for it
     const apprQty = num(body.approvalMinQty, s.approval_min_qty, 1e6);
     const apprPct = num(body.approvalMinPct, s.approval_min_pct, 100);
-    audit(actor, 'changed session settings', JSON.stringify({ palletMode: mode, guided: body.guided, askComments: body.askComments, layout, autoRecount: body.autoRecount, recount: { minQty, minPct, cap },
+    audit(actor, 'changed session settings', JSON.stringify({ palletMode: mode, guided: body.guided, askComments: body.askComments, layout, autoRecount: body.autoRecount, recount: { minQty, minPct, cap, third: body.thirdCount },
       approvals: { on: body.requireApproval, minQty: apprQty, minPct: apprPct }, showOnGuns: body.showOnGuns }), m[1]);
     if (body.showOnGuns != null) db.prepare('UPDATE sessions SET show_on_guns = ? WHERE id = ?').run(body.showOnGuns ? 1 : 0, s.id);
     db.prepare(`UPDATE sessions SET pallet_mode = ?, guided = ?, ask_comments = ?, layout = ?, auto_recount = ?,
-                  recount_min_qty = ?, recount_min_pct = ?, recount_cap = ?,
+                  recount_min_qty = ?, recount_min_pct = ?, recount_cap = ?, third_count = ?,
                   ask_lot = ?, ask_expiry = ?,
                   require_approval = ?, approval_min_qty = ?, approval_min_pct = ?, track_abc = ?,
                   master_version = master_version + 1 WHERE id = ?`)
@@ -1006,6 +1009,7 @@ async function handleAdmin(req, res, url, m) {
            body.askComments == null ? s.ask_comments : (body.askComments ? 1 : 0), layout,
            body.autoRecount == null ? s.auto_recount : (body.autoRecount ? 1 : 0),
            minQty, minPct, cap,
+           body.thirdCount == null ? s.third_count : (body.thirdCount ? 1 : 0),
            body.askLot == null ? s.ask_lot : (body.askLot ? 1 : 0),
            body.askExpiry == null ? s.ask_expiry : (body.askExpiry ? 1 : 0),
            body.requireApproval == null ? s.require_approval : (body.requireApproval ? 1 : 0),
@@ -1756,6 +1760,13 @@ async function handleAdmin(req, res, url, m) {
       + (gen.cappedAt ? `, stopped at the cap of ${gen.cappedAt}` : ''), m[1]);
     return sendJson(req, res, 200, gen);
   }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts\/(\d+)\/third$/)) && method === 'POST') {
+    requireAccess('assign');
+    const body = await readJson(req);
+    const out = raiseThirdCount(m[1], m[2], { team: body.team || null });
+    audit(actor, 'raised a third count', `${out.bin}${out.created ? '' : ' (one was open already)'}`, m[1]);
+    return sendJson(req, res, 200, out);
+  }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts\/(\d+)$/)) && method === 'POST') {
     const body = await readJson(req);
     audit(actor, 'changed a second count', `#${m[2]} ${JSON.stringify(body)}`, m[1]);
@@ -1765,9 +1776,14 @@ async function handleAdmin(req, res, url, m) {
     audit(actor, 'removed a second count', `#${m[2]}`, m[1]);
     return sendJson(req, res, 200, { deleted: deleteRecount(m[1], m[2]) });
   }
+  // second and third counts beside the first, for Excel (the browser writes the workbook)
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/recounts-side-by-side$/)) && method === 'GET') {
+    const out = recountSideBySide(m[1], { aisle: url.searchParams.get('aisle') || '' });
+    return sendJson(req, res, 200, { filename: out.filename, sheets: out.sheets, tally: out.tally });
+  }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/recounts\.csv$/))) {
     return sendCsv(req, res, `second-counts-session-${m[1]}.csv`, toCsv(listRecounts(m[1]), [
-      'id', 'bin', 'pallet_id', 'reason', 'detail', 'source', 'first_team', 'team', 'status', 'first_result', 'second_result', 'created_at', 'done_at',
+      'id', 'bin', 'pallet_id', 'round', 'reason', 'detail', 'source', 'first_team', 'second_team', 'team', 'status', 'first_result', 'second_result', 'third_result', 'created_at', 'done_at',
     ]));
   }
 
@@ -1936,9 +1952,19 @@ async function handleAdmin(req, res, url, m) {
     audit(actor, body.on === false ? 'unmarked adjustments as entered in the ERP' : 'marked adjustments as entered in the ERP', `${body.on === false ? out.unmarked : out.marked} pallet(s)${body.note ? ' - ' + String(body.note).slice(0, 120) : ''}`, m[1]);
     return sendJson(req, res, 200, out);
   }
+  // the ERP, an aisle at a time: every aisle's state, and one aisle's sheet to fill in
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/erp-entries\/aisles$/)) && method === 'GET') {
+    return sendJson(req, res, 200, { aisles: erpAisles(m[1]) });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/erp-aisle$/)) && method === 'GET') {
+    const out = erpAisleSheet(m[1], url.searchParams.get('aisle') || '');
+    audit(actor, 'downloaded an aisle for the ERP', `${out.aisle}: ${out.lines} lines`, m[1]);
+    return sendJson(req, res, 200, out);
+  }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/erp-entries\/upload$/)) && method === 'POST') {
-    const out = markFromFile(m[1], await readBody(req), actor);
-    audit(actor, 'marked adjustments as entered in the ERP from the worksheet', `${out.marked} marked, ${out.unmarked} unmarked, ${out.unknown.length} not on the count`, m[1]);
+    const fromAisle = norm(url.searchParams.get('aisle') || '');
+    const out = markFromFile(m[1], await readBody(req), actor, fromAisle ? `from the aisle ${fromAisle} sheet` : '');
+    audit(actor, fromAisle ? `marked lines as uploaded to the ERP from the aisle ${fromAisle} sheet` : 'marked adjustments as entered in the ERP from the worksheet', `${out.marked} marked, ${out.unmarked} unmarked, ${out.unknown.length} not on the count`, m[1]);
     return sendJson(req, res, 200, out);
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/erp-worksheet\.csv$/))) {

@@ -439,7 +439,9 @@
             { see: 'Final report is not offered', means: 'A second count is still open.', fix: 'Finish or delete it; the card says how many are left.' },
           ],
           ask: [
-            { q: 'Both counts differ from the report and from each other?', a: 'The second count stands on the reports. Request a third by hand if it matters, or settle it on the Adjustments tab with a reason.' },
+            { q: 'Both counts differ from the report and from each other?', a: 'Nobody knows which is right, so count it a third time. With Third count when the second settles nothing ticked (Settings → Count setup → Count session → Second counts) that happens on its own: the bin goes to a team that did neither count, the gun says THIRD COUNT, and the third count stands. Or press 3rd count on the finished row.' },
+            { q: 'A second count agreed with the first, or with the report?', a: 'With the first: the difference is real, two teams found the same — it goes to Adjustments. With the report: the first count was wrong, and the line now matches. Either way it is settled; no third count.' },
+            { q: 'Can I see the first, second and third counts together?', a: 'Export 2nd & 3rd counts with the 1st (Excel), on the Second counts card: every bin counted again, a row a pallet — the report, each count with its team, the final count and which number stands. Type an aisle first for one aisle.' },
           ],
         },
         {
@@ -708,6 +710,7 @@
     { q: 'How do I rename the app, or change the location under the name?', a: 'Settings → Logins & site → Site name. The name and the location change at once on every page, the sign-in screen, the scanners, the board and the installed app. A blank name goes back to Full Harvest Inventory.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },
     { q: 'What time zone are the scan times in?', a: 'The server’s. A scanner with a wrong clock is corrected by its own send time, so the times on the dashboard are right either way.' },
     { q: 'Where do I put jacket, bibs and boot sizes?', a: 'Teams & crew → Gear sizes: everyone in one table, a size saved as soon as it is picked, the total of each size above it, and Export names and sizes for an Excel workbook with grand totals and totals by department. Each crew card also shows the department and sizes, with Dept & sizes to change them.', goto: S('/teams', 'gear', 'Teams & crew → Gear sizes') },
+    { q: 'How do I put the count into the ERP an aisle at a time?', a: 'Dashboard → Adjustments → ERP upload, an aisle at a time. ⬇ Excel on an aisle gives every pallet in it — the report, the latest count, the adjustment — with an Uploaded to ERP column. Fill it in as the lines go into the ERP, then ⬆ Upload a filled-in sheet: those lines are marked as in the ERP here. Only that column is read back.', goto: S('/admin', 'adjust', 'Dashboard → Adjustments') },
     { q: 'Can I export everything?', a: 'Reports → Export everything gives a workbook with every sheet: counts, pallets, teams, adjustments, alerts, the log.', goto: S('/admin', 'reports', 'Dashboard → Reports') },
     { q: 'Who did what?', a: 'The log under Settings → Backups & log records every change with the login that made it.', goto: S('/settings', 'backups', 'Settings → Backups & log') },
     { q: 'How do I invite someone by email?', a: 'Settings → Logins & site → Supervisor logins: type their name, username and email (the invite box ticks itself) and Add login. Email the invite opens a ready-made message in your own email; Copy link is for a text. The link works once, for three days, and they choose their own password on it. Invite again on their row makes a new link.', goto: S('/settings', 'advanced', 'Settings → Logins & site') },

@@ -156,7 +156,7 @@
     'Carry on as normal. It will be named after its bin, and a supervisor gets that bin on the relabel list.':
       'Sigue normal. Tomará el nombre de su ubicación, y un supervisor la tendrá en la lista para re-etiquetar.',
     'Empty bin': 'Ubicación vacía', 'Scan the location of the empty bin.': 'Escanea la ubicación vacía.',
-    'flagged': 'marcado', 'empty': 'vacía', 'synced': 'enviado', 'queued': 'en espera', '2nd count': '2º conteo',
+    'flagged': 'marcado', 'empty': 'vacía', 'synced': 'enviado', 'queued': 'en espera', '2nd count': '2º conteo', '3rd count': '3er conteo',
 
     // a run of empty bins
     'Scan the FIRST empty bin': 'Escanea la PRIMERA ubicación vacía',
@@ -359,9 +359,11 @@
     [/^(.+) \((\S+)\) is on team (\S+) today, not team (\S+)\.$/, (m) => `${m[1]} (${m[2]}) está hoy en el equipo ${m[3]}, no en el ${m[4]}.`],
     [/^Between you: (.+) — reaches (.+)\.$/, (m) => `Entre ustedes: ${T(m[1])} — alcanzan ${T(m[2])}.`],
     [/^(.+) · reaches (.+)$/, (m) => `${T(m[1])} · alcanzan ${T(m[2])}`],
-    [/^(CYCLE COUNT|SECOND COUNT) · bin (\S+)$/, (m) => `${m[1] === 'CYCLE COUNT' ? 'CONTEO CÍCLICO' : 'SEGUNDO CONTEO'} · ubicación ${m[2]}`],
+    [/^(CYCLE COUNT|SECOND COUNT|THIRD COUNT) · bin (\S+)$/, (m) => `${m[1] === 'CYCLE COUNT' ? 'CONTEO CÍCLICO' : m[1] === 'THIRD COUNT' ? 'TERCER CONTEO' : 'SEGUNDO CONTEO'} · ubicación ${m[2]}`],
     [/^(.*) — (.*)\. Scan every pallet in this bin, then tap Bin done\.$/, (m) => `${T(m[1])} — ${T(m[2])}. Escanea cada tarima de esta ubicación, luego toca Ubicación terminada.`],
     [/^Bin (\S+) second count done$/, (m) => `Segundo conteo de ${m[1]} terminado`],
+    [/^Bin (\S+) third count done$/, (m) => `Tercer conteo de ${m[1]} terminado`],
+    [/^Third count — (.*)$/, (m) => `Tercer conteo — ${T(m[1])}`],
     [/^Bin (\S+) done$/, (m) => `Ubicación ${m[1]} terminada`],
     [/^Next: bin (\S+)$/, (m) => `Siguiente: ubicación ${m[1]}`],
     [/^Now bin (\S+) — (.*)$/, (m) => `Ahora la ubicación ${m[1]} — ${T(m[2])}`],
@@ -397,7 +399,7 @@
     [/^Cached: session #(\d+), ([\d,]+) bins, ([\d,]+) pallets(.*)$/, (m) => `Guardado: sesión #${m[1]}, ${m[2]} ubicaciones, ${m[3]} tarimas${m[4].replace(' (downloaded ', ' (descargada ')}`],
     [/^(.+) \(cached\)$/, (m) => `${m[1]} (guardada)`],
     [/^(\d+) @ (\S+)(.*)$/, (m) => `${m[1]} @ ${m[2]}${m[3].replace('· flagged', '· marcado')}`],
-    [/^(.+) · (synced|queued)(.*)$/, (m) => `${m[1]} · ${m[2] === 'synced' ? 'enviado' : 'en espera'}${m[3].replace(' · 2nd count', ' · 2º conteo').replace(/ · flagged: (.*)$/, (x, why) => ` · marcado: ${T(why)}`).replace('marked empty as part of a run', 'marcada vacía en grupo').replace(/second label on (\S+)/, 'segunda etiqueta de $1')}`],
+    [/^(.+) · (synced|queued)(.*)$/, (m) => `${m[1]} · ${m[2] === 'synced' ? 'enviado' : 'en espera'}${m[3].replace(' · 2nd count', ' · 2º conteo').replace(' · 3rd count', ' · 3er conteo').replace(/ · flagged: (.*)$/, (x, why) => ` · marcado: ${T(why)}`).replace('marked empty as part of a run', 'marcada vacía en grupo').replace(/second label on (\S+)/, 'segunda etiqueta de $1')}`],
   ];
 
   /* the pieces that labels are built from: "Freezer – Aisle F01 · levels A–F" */

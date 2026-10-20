@@ -69,6 +69,9 @@ A count compares the floor with a report. If the report is wrong, every variance
 4. **Agree the thresholds** with whoever sets the count up (*Settings → Count session*):
    - **Recount over N units / or over N %**: a difference smaller than both raises no second count. 2 to 5 units and 5 to 10 % is usual; at 0/0 every difference is recounted and the list becomes unworkable;
    - **a cap** on second counts;
+   - **Third count when the second settles nothing**: a bin whose second count agrees with neither
+     the first count nor the report is counted a third time, by a team that did neither, and the third
+     count stands. Recommended for a wall-to-wall that goes to the ERP;
    - **Adjustments need approval**, and its own threshold under which a difference goes through as **AUTO** without a signature. Decide this before the count: switching it on afterwards is allowed but means signing everything at once.
 5. **Agree the reason codes** (*Settings → Integrations → Adjustment reasons*). They are what
    you will pick for every approval and what the ERP file carries. Match them to the ERP's own
@@ -109,7 +112,10 @@ When the floor reports every aisle handed back and *Progress* shows every bin wi
    to your gun, and one bin is yours to raise by hand.) A count
    closed with open second counts has known-wrong numbers in it. You can raise more by hand
    (**Request second count** on a bin) or **Raise from all variances now**: it skips aisles
-   nobody has reached and says how many it skipped.
+   nobody has reached and says how many it skipped. A finished second count that settled nothing
+   has a **3rd count** button. **Export 2nd & 3rd counts with the 1st (Excel)** gives every bin counted
+   again on one row a pallet — report, 1st, 2nd and 3rd counts with their teams, the final count and
+   which number stands — for one aisle (type it first) or all.
 2. **The pallet report, status by status.** Use the **Status** filter and work each list:
    - `QTY VARIANCE`: the real stock differences. Biggest first. Each will become an adjustment;
    - `WRONG BIN`: right pallet, right quantity, wrong place. No stock adjustment, but the bin on the ERP is wrong and a put-away or transfer is needed; the **Found in** column has the bin it is in;
@@ -167,6 +173,13 @@ your initials; *no* takes a mark off; blank leaves it) and **upload it back** �
 the table and **Mark as entered**. Nothing gets keyed twice: the column shows who entered what
 and when, **Hide lines already in the ERP** leaves only what is still to key, and a line counted
 again after it was entered is tagged **changed** with the number the ERP was given.
+
+**Aisle by aisle?** *Dashboard → Adjustments → ERP upload, an aisle at a time.* Each aisle's row
+says how much of it is counted, how much differs, how much is uploaded and what is still being
+counted. **⬇ Excel** gives every pallet in the aisle — the report, the latest count, the
+adjustment — with an **Uploaded to ERP** column: fill it in as the lines go into the ERP and
+**⬆ Upload a filled-in sheet** to mark them here. Same marks as the worksheet; only that column is
+read back, never the quantities.
 
 ## 6 — Exporting the data
 

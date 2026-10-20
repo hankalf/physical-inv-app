@@ -11,6 +11,13 @@ import { palletReport } from './reports.js';
  * from the dashboard. A task is offered to any team except the one that did the
  * first count. Lines recorded during a task are pass 2; for reporting they
  * supersede the pass-1 lines in that bin.
+ *
+ * A third count settles a bin the second count did not: when the bin's second
+ * count agrees with neither its first count nor the report, nobody knows which
+ * number is right. With the count's Third count option on, that raises a
+ * round-3 task for a team that did neither of the first two; its lines are
+ * pass 3 and stand over both. A supervisor can raise one by hand on any
+ * finished second count, option or not.
  */
 
 const now = () => new Date().toISOString();
@@ -34,7 +41,9 @@ export function listRecounts(sessionId) {
       `SELECT r.*,
               (SELECT COUNT(*) FROM counts c WHERE c.session_id = r.session_id AND c.location_code = r.bin AND c.voided = 0 AND c.pass = 1) AS first_lines,
               (SELECT GROUP_CONCAT(pallet_id || ' ×' || qty, ', ') FROM counts c WHERE c.session_id = r.session_id AND c.location_code = r.bin AND c.voided = 0 AND c.pass = 1) AS first_result,
-              (SELECT GROUP_CONCAT(pallet_id || ' ×' || qty, ', ') FROM counts c WHERE c.session_id = r.session_id AND c.location_code = r.bin AND c.voided = 0 AND c.pass = 2) AS second_result
+              (SELECT GROUP_CONCAT(pallet_id || ' ×' || qty, ', ') FROM counts c WHERE c.session_id = r.session_id AND c.location_code = r.bin AND c.voided = 0 AND c.pass = 2) AS second_result,
+              (SELECT GROUP_CONCAT(pallet_id || ' ×' || qty, ', ') FROM counts c WHERE c.session_id = r.session_id AND c.location_code = r.bin AND c.voided = 0 AND c.pass = 3) AS third_result,
+              (SELECT x.id FROM recounts x WHERE x.parent_id = r.id ORDER BY x.id DESC LIMIT 1) AS third_id
          FROM recounts r
         WHERE r.session_id = ?
         ORDER BY CASE r.status WHEN 'open' THEN 0 WHEN 'taken' THEN 1 ELSE 2 END, r.id`
@@ -48,7 +57,7 @@ function openTaskForBin(sessionId, bin) {
     .get(Number(sessionId), norm(bin));
 }
 
-export function createRecount(sessionId, { bin, palletId, reason = 'MANUAL', detail = '', source = 'manual', firstTeam = null, team = null }) {
+export function createRecount(sessionId, { bin, palletId, reason = 'MANUAL', detail = '', source = 'manual', firstTeam = null, team = null, round = 2, secondTeam = null, parentId = null }) {
   const id = Number(sessionId);
   const b = norm(bin);
   if (!b) throw Object.assign(new Error('bin required'), { status: 400 });
@@ -56,11 +65,12 @@ export function createRecount(sessionId, { bin, palletId, reason = 'MANUAL', det
   if (existing) return { id: existing.id, created: false };
   const info = db
     .prepare(
-      `INSERT INTO recounts (session_id, bin, pallet_id, reason, detail, source, first_team, team, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open', ?)`
+      `INSERT INTO recounts (session_id, bin, pallet_id, reason, detail, source, first_team, team, status, created_at, round, second_team, parent_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?)`
     )
     .run(id, b, palletId ? norm(palletId) : null, REASONS[reason] ? reason : 'MANUAL', String(detail || ''), source,
-         firstTeam ? norm(firstTeam) : null, team ? norm(team) : null, now());
+         firstTeam ? norm(firstTeam) : null, team ? norm(team) : null, now(),
+         Number(round) === 3 ? 3 : 2, secondTeam ? norm(secondTeam) : null, parentId ? Number(parentId) : null);
   return { id: info.lastInsertRowid, created: true };
 }
 
@@ -251,14 +261,15 @@ export function tasksForTeam(sessionId, team) {
   };
   return db
     .prepare(
-      `SELECT id, bin, pallet_id, reason, status, team, batch_id
+      `SELECT id, bin, pallet_id, reason, status, team, batch_id, round
          FROM recounts
         WHERE session_id = ? AND status != 'done'
-          AND (team = ? OR (team IS NULL AND COALESCE(first_team, '') != ?))
+          AND (team = ? OR (team IS NULL AND COALESCE(first_team, '') != ? AND COALESCE(second_team, '') != ?))
         ORDER BY CASE WHEN team = ? THEN 0 ELSE 1 END, bin`
     )
-    .all(id, t, t, t)
-    .map((r) => ({ id: r.id, bin: r.bin, palletId: r.pallet_id, reason: REASONS[r.reason] || r.reason,
+    .all(id, t, t, t, t)
+    .map((r) => ({ id: r.id, bin: r.bin, palletId: r.pallet_id, round: r.reason === 'CYCLE' ? 1 : (Number(r.round) === 3 ? 3 : 2),
+                   reason: Number(r.round) === 3 ? `Third count — ${REASONS[r.reason] || r.reason}` : (REASONS[r.reason] || r.reason),
                    kind: r.reason === 'CYCLE' ? 'cycle' : 'recount', mine: r.team === t, status: r.status }))
     .sort((a, b) => Number(b.mine) - Number(a.mine) || distance(a.bin) - distance(b.bin) || a.bin.localeCompare(b.bin, undefined, { numeric: true }));
 }
@@ -269,7 +280,10 @@ export function takeRecount(sessionId, recountId, team) {
   if (!r) throw Object.assign(new Error('recount not found'), { status: 404 });
   if (r.status === 'done') throw Object.assign(new Error('this recount is already done'), { status: 409 });
   if (r.team && r.team !== t) throw Object.assign(new Error(`team ${r.team} already has this recount`), { status: 409 });
-  if (r.reason !== 'CYCLE' && r.first_team && r.first_team === t) throw Object.assign(new Error('a different team must do the second count'), { status: 409 });
+  if (Number(r.round) === 3) {
+    // a supervisor who hands it to a team has made the call; an open one goes to a team that did neither count
+    if (!r.team && [r.first_team, r.second_team].includes(t)) throw Object.assign(new Error('a third team must do the third count - not one that did the first or the second'), { status: 409 });
+  } else if (r.reason !== 'CYCLE' && r.first_team && r.first_team === t) throw Object.assign(new Error('a different team must do the second count'), { status: 409 });
   db.prepare("UPDATE recounts SET team = ?, status = 'taken', taken_at = COALESCE(taken_at, ?) WHERE id = ?").run(t, now(), r.id);
   return db.prepare('SELECT * FROM recounts WHERE id = ?').get(r.id);
 }
@@ -279,7 +293,68 @@ export function finishRecount(sessionId, recountId, team) {
   if (!r) throw Object.assign(new Error('recount not found'), { status: 404 });
   db.prepare("UPDATE recounts SET status = 'done', done_at = ?, done_by_team = ?, team = COALESCE(team, ?) WHERE id = ?")
     .run(now(), norm(team) || null, norm(team) || null, r.id);
-  return db.prepare('SELECT * FROM recounts WHERE id = ?').get(r.id);
+  const done = db.prepare('SELECT * FROM recounts WHERE id = ?').get(r.id);
+  // the second count did not settle it: a third, when the count asks for them
+  const s = getSession(sessionId);
+  const third = s && s.third_count && r.status !== 'done' ? autoThirdCount(sessionId, done) : null;
+  return third ? { ...done, third } : done;
+}
+
+/* ------------------------------------------------------------- third counts */
+
+/** What a bin holds by one count: pallet -> quantity. An empty bin is an empty map. */
+function binByPass(id, bin, pass) {
+  const out = new Map();
+  for (const c of db.prepare('SELECT pallet_id, qty FROM counts WHERE session_id = ? AND location_code = ? AND pass = ? AND voided = 0 AND empty_bin = 0').all(id, bin, pass)) {
+    out.set(c.pallet_id, (out.get(c.pallet_id) || 0) + Number(c.qty || 0));
+  }
+  return out;
+}
+const binExpected = (id, bin) => new Map(db.prepare('SELECT pallet_id, expected_qty FROM pallets WHERE session_id = ? AND expected_location = ?').all(id, bin)
+  .map((p) => [p.pallet_id, Number(p.expected_qty || 0)]));
+const same = (a, b) => a.size === b.size && [...a].every(([k, v]) => b.has(k) && Number(b.get(k)) === Number(v));
+const words = (m) => (m.size ? [...m].map(([k, v]) => `${k} ×${v}`).join(', ') : 'nothing');
+
+/** Does this bin's second count leave it open? It agrees with neither the first count nor the report. */
+export function secondCountVerdict(sessionId, bin) {
+  const id = Number(sessionId);
+  const b = norm(bin);
+  const first = binByPass(id, b, 1);
+  const second = binByPass(id, b, 2);
+  const report = binExpected(id, b);
+  const counted = db.prepare('SELECT 1 FROM counts WHERE session_id = ? AND location_code = ? AND pass = 2 AND voided = 0 LIMIT 1').get(id, b);
+  if (!counted) return { settled: false, why: 'not second-counted yet', first, second, report };
+  if (same(second, first)) return { settled: true, why: 'the second count agrees with the first', first, second, report };
+  if (same(second, report)) return { settled: true, why: 'the second count agrees with the report', first, second, report };
+  return { settled: false, why: 'the second count agrees with neither the first count nor the report', first, second, report };
+}
+
+/** A third count of a bin: by hand, or when its second count settled nothing. */
+export function raiseThirdCount(sessionId, recountId, { source = 'manual', team = null } = {}) {
+  const id = Number(sessionId);
+  const r = db.prepare('SELECT * FROM recounts WHERE id = ? AND session_id = ?').get(Number(recountId), id);
+  if (!r) throw Object.assign(new Error('second count not found'), { status: 404 });
+  if (r.reason === 'CYCLE') throw Object.assign(new Error('a cycle count is not second-counted, so it has no third count'), { status: 409 });
+  if (Number(r.round) === 3) throw Object.assign(new Error('this is a third count already'), { status: 409 });
+  if (r.status !== 'done') throw Object.assign(new Error('the second count is not finished yet'), { status: 409 });
+  const v = secondCountVerdict(id, r.bin);
+  const created = createRecount(id, {
+    bin: r.bin, palletId: r.pallet_id, reason: r.reason, source, round: 3, parentId: r.id, team,
+    firstTeam: r.first_team || db.prepare('SELECT team FROM counts WHERE session_id = ? AND location_code = ? AND pass = 1 AND voided = 0 ORDER BY id LIMIT 1').get(id, r.bin)?.team || null,
+    secondTeam: r.done_by_team || r.team || db.prepare('SELECT team FROM counts WHERE session_id = ? AND location_code = ? AND pass = 2 AND voided = 0 ORDER BY id LIMIT 1').get(id, r.bin)?.team || null,
+    detail: `third count: first ${words(v.first)}; second ${words(v.second)}; report ${words(v.report)}`,
+  });
+  return { ...created, bin: r.bin, why: v.why };
+}
+
+function autoThirdCount(sessionId, task) {
+  if (task.reason === 'CYCLE' || Number(task.round) === 3) return null;
+  if (db.prepare('SELECT 1 FROM recounts WHERE parent_id = ?').get(task.id)) return null;   // raised already
+  const v = secondCountVerdict(sessionId, task.bin);
+  // its lines not in yet (a gun sends them when it has signal): judged when they arrive
+  if (v.settled || v.why === 'not second-counted yet') return null;
+  const out = raiseThirdCount(sessionId, task.id, { source: 'auto' });
+  return out.created ? out : null;
 }
 
 export function updateRecount(sessionId, recountId, { team, status }) {
@@ -293,3 +368,15 @@ export function updateRecount(sessionId, recountId, { team, status }) {
 
 export const deleteRecount = (sessionId, recountId) =>
   db.prepare('DELETE FROM recounts WHERE id = ? AND session_id = ?').run(Number(recountId), Number(sessionId)).changes;
+
+/** Second-count lines that reached the server after their task was finished: judged now. */
+export function thirdCountsForBins(sessionId, bins = []) {
+  const s = getSession(sessionId);
+  if (!s || !s.third_count || !bins.length) return { created: 0 };
+  let created = 0;
+  for (const bin of new Set(bins.map(norm))) {
+    const task = db.prepare("SELECT * FROM recounts WHERE session_id = ? AND bin = ? AND status = 'done' AND round = 2 AND reason != 'CYCLE' ORDER BY id DESC LIMIT 1").get(Number(sessionId), bin);
+    if (task && autoThirdCount(sessionId, task)) created++;
+  }
+  return { created };
+}

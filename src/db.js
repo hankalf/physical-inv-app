@@ -242,7 +242,7 @@ CREATE TABLE IF NOT EXISTS counts (
   off_assignment   INTEGER NOT NULL DEFAULT 0,
   duplicate_pallet INTEGER NOT NULL DEFAULT 0,
   empty_bin        INTEGER NOT NULL DEFAULT 0,   -- bin checked and found empty (no pallet)
-  pass             INTEGER NOT NULL DEFAULT 1,   -- 1 = first count, 2 = second count
+  pass             INTEGER NOT NULL DEFAULT 1,   -- 1 = first count, 2 = second count, 3 = third count
   recount_id       INTEGER,
   override_reason  TEXT,
   voided           INTEGER NOT NULL DEFAULT 0,
@@ -380,6 +380,12 @@ if (!hasCol('sessions', 'mode')) db.exec("ALTER TABLE sessions ADD COLUMN mode T
 if (!hasCol('sessions', 'cycle_schedule')) db.exec('ALTER TABLE sessions ADD COLUMN cycle_schedule TEXT');
 if (!hasCol('recounts', 'batch_id')) db.exec('ALTER TABLE recounts ADD COLUMN batch_id INTEGER');
 if (!hasCol('counts', 'pass')) db.exec('ALTER TABLE counts ADD COLUMN pass INTEGER NOT NULL DEFAULT 1');
+/* A third count: a bin whose second count agreed with neither the first count nor the report is
+   counted a third time, by a team that did neither. round 2 is a second count, 3 a third. */
+if (!hasCol('recounts', 'round')) db.exec('ALTER TABLE recounts ADD COLUMN round INTEGER NOT NULL DEFAULT 2');
+if (!hasCol('recounts', 'second_team')) db.exec('ALTER TABLE recounts ADD COLUMN second_team TEXT');
+if (!hasCol('recounts', 'parent_id')) db.exec('ALTER TABLE recounts ADD COLUMN parent_id INTEGER');
+if (!hasCol('sessions', 'third_count')) db.exec('ALTER TABLE sessions ADD COLUMN third_count INTEGER NOT NULL DEFAULT 0');
 // a second count supersedes the first in its bin: the reports ask that of every line
 db.exec('CREATE INDEX IF NOT EXISTS idx_counts_loc_pass ON counts(session_id, location_code, pass, voided)');
 /* Adjustment lines keyed into the ERP by hand, so none is keyed twice; the
@@ -393,6 +399,8 @@ db.exec(`CREATE TABLE IF NOT EXISTS erp_entries (
   note         TEXT,
   PRIMARY KEY (session_id, pallet_id)
 )`);
+// the counted quantity a line had when it was put in the ERP, for lines that are no adjustment (a match)
+if (!hasCol('erp_entries', 'counted_qty')) db.exec('ALTER TABLE erp_entries ADD COLUMN counted_qty REAL');
 if (!hasCol('counts', 'recount_id')) db.exec('ALTER TABLE counts ADD COLUMN recount_id INTEGER');
 if (!hasCol('sessions', 'auto_recount')) db.exec('ALTER TABLE sessions ADD COLUMN auto_recount INTEGER NOT NULL DEFAULT 1');
 /* Lot codes and expiry dates. Off unless a count asks for them: a frozen-food
@@ -529,11 +537,12 @@ if (!hasCol('assignments', 'levels')) {
 
 export const norm = (v) => (v == null ? '' : String(v).trim().toUpperCase());
 
-// A count line that still stands: not voided, and not a first-count line in a
-// bin that has since been second-counted. `c` is the counts alias.
+// A count line that still stands: not voided, and not from an earlier count of a
+// bin that has since been counted again - a second count supersedes the first, a
+// third the second. `c` is the counts alias.
 export const LIVE = (c = 'c') =>
-  `${c}.voided = 0 AND NOT (${c}.pass = 1 AND EXISTS (
-     SELECT 1 FROM counts s WHERE s.session_id = ${c}.session_id AND s.location_code = ${c}.location_code AND s.pass = 2 AND s.voided = 0))`;
+  `${c}.voided = 0 AND NOT EXISTS (
+     SELECT 1 FROM counts s WHERE s.session_id = ${c}.session_id AND s.location_code = ${c}.location_code AND s.pass > ${c}.pass AND s.voided = 0)`;
 
 /**
  * Find a session aisle from what a person typed: exact match first, then by
@@ -662,6 +671,7 @@ export const publicSession = (s) => ({
   askLot: !!s.ask_lot,
   askExpiry: !!s.ask_expiry,
   autoRecount: !!s.auto_recount,
+  thirdCount: !!s.third_count,
   masterVersion: s.master_version,
   layout: s.layout || null,
   // odd/even position -> Front/Back, so the gun can tell the counter which face a bin is on
@@ -750,6 +760,16 @@ ON CONFLICT(client_id) DO NOTHING
 /* The gun counts blind - it is never told what is on a pallet - so the line's
    SKU comes from the report, here. */
 const skuOf = db.prepare('SELECT sku FROM pallets WHERE session_id = ? AND pallet_id = ?');
+/* Which count a line is: the task it was counted for says, so a gun that only knows "second
+   count" still files a third count as one. A cycle-count task is a first count. */
+const taskOf = db.prepare('SELECT round, reason FROM recounts WHERE id = ? AND session_id = ?');
+function passOf(id, r) {
+  if (r.recountId) {
+    const t = taskOf.get(Number(r.recountId), id);
+    if (t) return t.reason === 'CYCLE' ? 1 : (Number(t.round) === 3 ? 3 : 2);
+  }
+  return [2, 3].includes(Number(r.pass)) ? Number(r.pass) : 1;
+}
 
 export function saveCounts(sessionId, rows) {
   const id = Number(sessionId);
@@ -759,6 +779,7 @@ export function saveCounts(sessionId, rows) {
   const rejected = [];
   const firstCountPallets = new Set();
   const firstCountBins = new Set();             // empty bins included: a bin counted is a bin looked in
+  const secondCountBins = new Set();            // a third count may hang on these
   const countedBins = new Set();
   /* A handheld's clock can be wrong by hours - nobody sets it, and a cradle in
      a freezer does not keep time. Each line says when it was scanned by that
@@ -790,6 +811,7 @@ export function saveCounts(sessionId, rows) {
       /* A line scanned before a trial run was cleared belongs to the trial. Taken
          as sent - so the gun stops offering it - and dropped. */
       if (sess.cleared_at && r.scannedAt && String(r.scannedAt) < sess.cleared_at) { accepted.push(r.clientId); continue; }
+      const pass = passOf(id, r);
       insertCount.run(
         String(r.clientId), id, empty ? 'EMPTY' : norm(r.palletId), qty, norm(r.location),
         r.comments ? String(r.comments).slice(0, 500) : null,
@@ -800,7 +822,7 @@ export function saveCounts(sessionId, rows) {
         r.aisle ? norm(r.aisle) : null,
         r.unknownPallet ? 1 : 0, r.unknownLocation ? 1 : 0,
         r.offAssignment ? 1 : 0, r.duplicatePallet ? 1 : 0, empty ? 1 : 0,
-        Number(r.pass) === 2 ? 2 : 1, r.recountId ? Number(r.recountId) : null,
+        pass, r.recountId ? Number(r.recountId) : null,
         r.overrideReason ? String(r.overrideReason) : null,
         r.lot ? norm(r.lot).slice(0, 64) : null,
         r.expiry ? String(r.expiry).slice(0, 10) : null,
@@ -812,8 +834,9 @@ export function saveCounts(sessionId, rows) {
         whenScanned(r), now
       );
       accepted.push(r.clientId);
-      if (!empty && Number(r.pass) !== 2) firstCountPallets.add(norm(r.palletId));
-      if (Number(r.pass) !== 2) firstCountBins.add(norm(r.location));
+      if (!empty && pass === 1) firstCountPallets.add(norm(r.palletId));
+      if (pass === 1) firstCountBins.add(norm(r.location));
+      if (pass === 2) secondCountBins.add(norm(r.location));
       countedBins.add(norm(r.location));
     }
     db.exec('COMMIT');
@@ -827,7 +850,7 @@ export function saveCounts(sessionId, rows) {
     const stamp = db.prepare('UPDATE locations SET last_counted = ? WHERE session_id = ? AND code = ?');
     for (const bin of countedBins) stamp.run(now, id, bin);
   }
-  return { accepted, rejected, firstCountPallets: [...firstCountPallets], firstCountBins: [...firstCountBins] };
+  return { accepted, rejected, firstCountPallets: [...firstCountPallets], firstCountBins: [...firstCountBins], secondCountBins: [...secondCountBins] };
 }
 
 // Pallets already counted, so a device can warn before the same pallet is

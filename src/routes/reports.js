@@ -115,6 +115,9 @@ export function palletReport(sessionId, { only = null } = {}) {
   const firstpass = new Map(db.prepare(
     `SELECT pallet_id, SUM(qty) AS first_qty, GROUP_CONCAT(DISTINCT location_code) AS first_locations
        FROM counts WHERE session_id = ? AND voided = 0 AND pass = 1 AND empty_bin = 0${inList} GROUP BY pallet_id`).all(...args).map((r) => [r.pallet_id, r]));
+  const secondpass = new Map(db.prepare(
+    `SELECT pallet_id, SUM(qty) AS second_qty
+       FROM counts WHERE session_id = ? AND voided = 0 AND pass = 2 AND empty_bin = 0${inList} GROUP BY pallet_id`).all(...args).map((r) => [r.pallet_id, r]));
   const tagged = new Map(db.prepare(
     `SELECT alias_of AS pallet_id, GROUP_CONCAT(DISTINCT pallet_id) AS also_tagged
        FROM counts WHERE session_id = ? AND voided = 0 AND alias_of IS NOT NULL GROUP BY alias_of`).all(id).map((r) => [r.pallet_id, r.also_tagged]));
@@ -192,8 +195,11 @@ export function palletReport(sessionId, { only = null } = {}) {
       teams: (c && c.teams) || '',
       comments: (c && c.comments) || '',
       last_scan: (c && c.last_scan) || '',
-      recounted: maxPass === 2 ? 1 : 0,
-      first_count_qty: maxPass === 2 ? ((f ? f.first_qty : null) ?? '') : '',
+      recounted: maxPass >= 2 ? 1 : 0,
+      first_count_qty: maxPass >= 2 ? ((f ? f.first_qty : null) ?? '') : '',
+      // the figure above is the latest count; with a third count, the second is kept here
+      second_count_qty: maxPass === 3 ? ((secondpass.get(k) || {}).second_qty ?? '') : '',
+      count_round: maxPass || 0,
       open_recounts: openRecounts.get(k) || 0,
       alias_of: (c && c.alias_of) || '',
       also_tagged: tagged.get(k) || '',

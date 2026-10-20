@@ -5,6 +5,7 @@ import { withEntries } from './erp-entries.js';
 import { teamClocks } from './idle.js';
 import { countClock, spanWords } from './count-clock.js';
 import { fixList } from './issues.js';
+import { recountSideBySide } from './recount-sheet.js';
 import { siteTimezone } from '../util/localtime.js';
 
 /*
@@ -98,14 +99,14 @@ export function exportEverything(sessionId, { by = '' } = {}) {
 
   const lines = sheet('Count lines', [
     'Line', 'Scanned', 'Team', 'Clock-in numbers', 'Scanner', 'Aisle', 'Bin', 'Pallet', 'System', 'Quantity', 'Empty bin',
-    'Item', 'Description', 'Lot', 'Best before', 'Second count', 'Pallet not on report', 'Bin not on list',
+    'Item', 'Description', 'Lot', 'Best before', 'Second count', 'Third count', 'Pallet not on report', 'Bin not on list',
     'Outside the team\'s aisle', 'Pallet counted twice', 'Pallet label', 'Rack label', 'Second label of',
     'Flag / reason', 'Comments', 'Voided', 'Reached the server',
   ], counts.map((c) => ({
     'Line': c.id, 'Scanned': when(c.scanned_at), 'Team': c.team, 'Clock-in numbers': c.employees, 'Scanner': c.device_id,
     'Aisle': c.aisle || '', 'Bin': c.location_code, 'Pallet': c.empty_bin ? '' : c.pallet_id, 'System': c.source || '', 'Quantity': c.qty,
     'Empty bin': yes(c.empty_bin), 'Item': c.sku || '', 'Description': c.description || '', 'Lot': c.lot || '',
-    'Best before': c.expiry || '', 'Second count': yes(c.pass === 2), 'Pallet not on report': yes(c.unknown_pallet),
+    'Best before': c.expiry || '', 'Second count': yes(c.pass === 2), 'Third count': yes(c.pass === 3), 'Pallet not on report': yes(c.unknown_pallet),
     'Bin not on list': yes(c.unknown_location), 'Outside the team\'s aisle': yes(c.off_assignment),
     'Pallet counted twice': yes(c.duplicate_pallet), 'Pallet label': LABEL[c.label_issue] || 'OK',
     'Rack label': LABEL[c.bin_label_issue] || 'OK', 'Second label of': c.alias_of || '',
@@ -183,13 +184,16 @@ export function exportEverything(sessionId, { by = '' } = {}) {
       'Why': a.why || (a.cleared_at ? '' : 'still open'), 'By': a.cleared_by || '', 'Teams channel': a.sent_to || '',
     })));
 
-  const second = sheet('Second counts', ['Bin', 'Pallet', 'Why', 'Raised by', 'First counted by', 'Team', 'State', 'Raised', 'Done', 'Done by'],
+  const second = sheet('Second counts', ['Bin', 'Pallet', 'Round', 'Why', 'Raised by', 'First counted by', 'Team', 'State', 'Raised', 'Done', 'Done by'],
     db.prepare('SELECT * FROM recounts WHERE session_id = ? ORDER BY id').all(id).map((r) => ({
-      'Bin': r.bin, 'Pallet': r.pallet_id || '', 'Why': STATUS[r.reason] || (r.reason === 'CYCLE' ? 'Cycle count' : r.reason === 'MANUAL' ? 'Asked for by a supervisor' : r.reason),
+      'Bin': r.bin, 'Pallet': r.pallet_id || '', 'Round': r.reason === 'CYCLE' ? 'Cycle count' : Number(r.round) === 3 ? 'Third count' : 'Second count', 'Why': STATUS[r.reason] || (r.reason === 'CYCLE' ? 'Cycle count' : r.reason === 'MANUAL' ? 'Asked for by a supervisor' : r.reason),
       'Raised by': r.source === 'auto' ? 'the app' : r.source === 'cycle' ? 'cycle program' : 'a supervisor',
       'First counted by': r.first_team || '', 'Team': r.team || '', 'State': r.status === 'done' ? 'Done' : r.status === 'taken' ? 'Being counted' : 'Open',
       'Raised': when(r.created_at), 'Done': when(r.done_at), 'Done by': r.done_by_team || '',
     })));
+
+  // every bin counted again: first, second and third counts beside the report
+  const sideBySide = recountSideBySide(id);
 
   const KIND = { label: 'Label to replace', damage: 'Damage', blocked: 'Blocked bin', other: 'Other' };
   const fixes = sheet('Fix list', ['Kind', 'What', 'Bin', 'Aisle', 'Pallet', 'Problem', 'Note', 'Reported by team', 'Reported', 'Confirmed', 'Status', 'Fixed by', 'Fixed', 'Outcome'],
@@ -207,6 +211,7 @@ export function exportEverything(sessionId, { by = '' } = {}) {
 
   return {
     filename: `${String(s.name).replace(/[^A-Za-z0-9 _-]+/g, '').trim().replace(/\s+/g, '-') || 'count'}-${new Date().toISOString().slice(0, 10)}.xlsx`,
-    sheets: [summary, lines, report, adjustments, bins, notCounted, teams, downtime, signons, sos, quiet, second, fixes, log],
+    sheets: [summary, lines, report, adjustments, bins, notCounted, teams, downtime, signons, sos, quiet, second,
+      sheet('Counts side by side', sideBySide.columns, sideBySide.rows), fixes, log],
   };
 }

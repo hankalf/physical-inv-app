@@ -404,6 +404,8 @@ try {
   if (sosBar && !(await sosBar.evaluate((el) => el.hidden))) await save(sosBar, 'dashboard-sos');
   await saveCard(desk, '#sosTable', 'dashboard-alerts', 6);
   await sub('adjust'); await saveCard(desk, '#adjustTable', 'dashboard-adjustments', 10);
+  await desk.waitForSelector('#erpAislesTable tbody tr[data-aisle]', { timeout: 8000 }).catch(() => {});
+  await saveCard(desk, '#erpAislesTable', 'dashboard-erp-aisles', 8);
   await sub('reports');
   await saveCard(desk, '#fixTable', 'dashboard-fix-list', 6);
   // a lot that really is in the seeded report, on a pallet in every aisle

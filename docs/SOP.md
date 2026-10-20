@@ -1662,7 +1662,28 @@ supervisor.
   assignment screen, counts the bin again, and presses **Bin done — nothing more here**. The
   list is **nearest first**: the aisle the team is in, then its racking block, then the aisles
   nearest by number, so a team finishing F11 is not sent to F01.
-- A second count that agrees with the first settles the line.
+- **How a second count is judged.** The second count of a bin replaces its first count for every
+  report — the bin's figures are the second count's from then on. What it means depends on what it
+  agrees with:
+  - **it agrees with the first count** — the difference is real: two teams found the same thing.
+    The line goes to Adjustments as counted;
+  - **it agrees with the report** — the first count was wrong, and the line now matches;
+  - **it agrees with neither** — nobody knows which number is right. That is what a third count is for.
+- **Third count.** Tick **Third count when the second settles nothing** in the count's settings
+  (*Settings → Count setup → Count session → Second counts*; off on a new count). From then on a bin
+  whose second count agrees with neither its first count nor the report is sent back a **third
+  time**, by a team that did **neither** count — on the gun it reads *THIRD COUNT · bin …* — and
+  its count stands over both. Judged when the second count's lines reach the server, so a gun that
+  finished the bin out of signal is judged when it sends. On the dashboard a third count is marked
+  *3rd count*, with both earlier teams, and a **3rd count** column shows what it found. **3rd count**
+  on any finished second count asks for one by hand, option or not. A supervisor who assigns a third
+  count to a team by hand has made the call; one left open goes only to a third team.
+- **Export 2nd & 3rd counts with the 1st (Excel)** — every bin counted again, one row a pallet:
+  the report's bin and quantity, the **1st, 2nd and 3rd counts** with the team that did each, the
+  **final count** and which count it is, the final against the report, and *which number stands*
+  (*the second count agrees with the first*, *…with the report*, *the third count stands*, or
+  *waiting for…*). A *Summary* sheet counts how each bin was settled. Type an **Aisle** first for
+  one aisle alone. The same sheet is in **Export everything** as *Counts side by side*.
 - **A pallet found in another bin than the report's** brings back the bin it was found in, as
   always — and also **the report's own bin**, once that bin has been counted (or its aisle handed
   back): reason *LABEL CHECK*, told on the gun as *Check for a pallet with a duplicate label*. It is
@@ -1796,6 +1817,33 @@ ERP by hand, from the worksheet, over a day or two — and must not key a line t
    is not on this count is named and ignored.
 4. Or mark a few at a time from the table: tick the lines, **Mark as entered**; **Take the mark
    off** undoes it. **Hide lines already in the ERP** leaves only what is still to key.
+
+**An aisle at a time: Dashboard → Adjustments → ERP upload, an aisle at a time.** For putting a
+wall-to-wall into the ERP aisle by aisle, as the aisles are finished:
+
+1. The table lists every aisle: its pallets, how many are counted, how many differ from the
+   report, how many are **uploaded to the ERP** (*not yet*, *2 of 40*, *all in the ERP*), and what
+   is **still being counted** there — open 2nd/3rd counts and bins nobody has counted. Wait for an
+   aisle's second and third counts before you put it in.
+2. **⬇ Excel** on an aisle downloads its sheet: **every pallet in the aisle**, matches included —
+   bin, pallet, item, lot, the report's bin and quantity, the **counted quantity** (the latest count:
+   a 2nd or 3rd count stands over the 1st), the **adjustment**, the result, which count it is — and
+   an **Uploaded to ERP** column. A *How to use* sheet goes with it.
+3. Put the lines into the ERP. As each goes in, write *yes* (or an *x*, a date or your initials) in
+   its **Uploaded to ERP** cell; *no* takes a mark off; blank leaves it.
+4. **⬆ Upload a filled-in sheet…** — the Excel file as it is (or a CSV). Those lines are marked as in
+   the ERP, with who and when; the aisle's row moves on, and the next download of that aisle shows
+   the marks. A workbook with several aisles' sheets in it is read sheet by sheet.
+5. **Only aisles not fully uploaded** hides the aisles that are done.
+
+![](images/dashboard-erp-aisles.png)
+
+*Dashboard &rarr; Adjustments &rarr; ERP upload, an aisle at a time: each aisle's state, and its Excel sheet to fill in and bring back.*
+
+These are the same marks as the worksheet's *In ERP* above, so the two never disagree. Only the
+**Uploaded to ERP** column is read back — the quantities in the file are not: a count changes only
+by being counted. A line second- or third-counted after it was uploaded is flagged **changed since
+uploaded**, with the number the ERP was given.
 
 The **In ERP** column shows the mark with who and when; the chip in the heading counts *entered
 of total*. A line **counted again after it was entered** is flagged **changed**, with the number
