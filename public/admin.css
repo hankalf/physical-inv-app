@@ -943,3 +943,19 @@ html.has-systems .splashbrand[data-system] {
 .icgrid button.stat { text-align: left; font: inherit; color: inherit; cursor: pointer; width: 100%; margin: 0; }
 .icgrid button.stat:hover:not(:disabled) { border-color: var(--accent); }
 .icgrid button.stat:disabled { cursor: default; opacity: 1; }
+
+/* The pallet report: sixteen columns on one screen, no scrolling across.
+   Compact type, long text wrapped to two lines (the whole of it on hover),
+   tags under their value rather than beside it. */
+table.palrep { width: 100%; font-size: 12.5px; }
+table.palrep th, table.palrep td { padding: 4px 4px; vertical-align: top; }
+table.palrep th { font-size: 10px; white-space: normal; line-height: 1.2; letter-spacing: .02em; }
+table.palrep td { white-space: nowrap; }
+table.palrep td.wrap { white-space: normal; min-width: 76px; }
+table.palrep .clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 220px; }
+table.palrep td.pid { font-weight: 700; }
+table.palrep td.strong { font-weight: 800; }
+table.palrep td.diff { color: var(--warn); font-weight: 700; }
+table.palrep td.st, table.palrep td.erp { white-space: normal; min-width: 84px; }
+table.palrep td .tag { font-size: 10.5px; margin-top: 2px; }
+table.palrep td.st button { margin-top: 4px; padding: 2px 8px; }

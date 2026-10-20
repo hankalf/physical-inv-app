@@ -37,7 +37,7 @@ import { teamsConfig, saveTeamsConfig, postToTeams, testCard, alertCard } from '
 import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout, scannerJobs, saveScannerJobs, jobsOffered, JOBS } from './routes/scanner-prompts.js';
 import { features, saveFeatures, FEATURES, PRESETS, offNames } from './routes/features.js';
 import { inventoryOverview } from './routes/inventory-control.js';
-import { withEntries, markEntered, markFromFile, worksheetRows, WORKSHEET_COLUMNS } from './routes/erp-entries.js';
+import { withEntries, markEntered, markFromFile, worksheetRows, WORKSHEET_COLUMNS, withErpMarks } from './routes/erp-entries.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks, partnerOf, planRows, planTeams, PLAN_COLUMNS } from './routes/assignments.js';
@@ -2102,7 +2102,8 @@ async function handleAdmin(req, res, url, m) {
        ready to send, so every screen on the same count between two scans
        shares the one answer - worked out, written out and zipped once. */
     const body = memo(`pallets-out:${m[1]}:${url.search}`, () => {
-      let rows = memo(`pallets:${m[1]}`, () => palletReport(m[1]));
+      // with each line's ERP mark: marking a line is a change, so this answer is worked out again after it
+      let rows = withErpMarks(m[1], memo(`pallets:${m[1]}`, () => palletReport(m[1])));
       // one system at a time, when three share the warehouse
       if (url.searchParams.has('source')) { const src = url.searchParams.get('source'); rows = rows.filter((r) => (r.source || '') === src); }
       /* A pallet with the right count of the wrong lot, or one that is out of
@@ -2148,8 +2149,9 @@ async function handleAdmin(req, res, url, m) {
   const PALLET_COLS = [
     'pallet_id', 'source', 'sku', 'description', 'variant', 'uom', 'entry_no', 'expected_qty', 'counted_qty', 'variance_qty',
     'expected_location', 'found_location', 'times_counted', 'teams', 'comments', 'last_scan', 'status',
-    'recounted', 'first_count_qty', 'open_recounts',
+    'recounted', 'first_count_qty', 'second_pass_qty', 'open_recounts',
     'expected_lot', 'found_lot', 'lot_status', 'expiry', 'expiry_status', 'alias_of', 'also_tagged',
+    'erp_uploaded', 'erp_by', 'erp_at', 'erp_changed',
   ];
   // --- what has been filed as the count went, and the final report at the end
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/archives$/)) && method === 'GET') {
@@ -2178,7 +2180,7 @@ async function handleAdmin(req, res, url, m) {
     return sendCsv(req, res, `exceptions-session-${m[1]}.csv`, toCsv(exceptions(m[1]), COUNT_COLS));
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/pallets\.csv$/))) {
-    return sendCsv(req, res, `pallets-session-${m[1]}.csv`, toCsv(palletReport(m[1]), PALLET_COLS));
+    return sendCsv(req, res, `pallets-session-${m[1]}.csv`, toCsv(withErpMarks(m[1], palletReport(m[1])), PALLET_COLS));
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/uncounted\.csv$/))) {
     return sendCsv(req, res, `uncounted-bins-session-${m[1]}.csv`, toCsv(uncountedBins(m[1]), ['aisle', 'code', 'zone']));

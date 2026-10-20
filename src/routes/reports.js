@@ -199,6 +199,8 @@ export function palletReport(sessionId, { only = null } = {}) {
       first_count_qty: maxPass >= 2 ? ((f ? f.first_qty : null) ?? '') : '',
       // the figure above is the latest count; with a third count, the second is kept here
       second_count_qty: maxPass === 3 ? ((secondpass.get(k) || {}).second_qty ?? '') : '',
+      // the second count, whenever there was one - the pallet report shows 1st, 2nd and the count that stands
+      second_pass_qty: maxPass >= 2 ? ((secondpass.get(k) || {}).second_qty ?? '') : '',
       count_round: maxPass || 0,
       open_recounts: openRecounts.get(k) || 0,
       alias_of: (c && c.alias_of) || '',

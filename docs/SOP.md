@@ -1841,9 +1841,16 @@ Headings are plain words, flags are *Yes* / *No*, and times are on the warehouse
 the file for an auditor, a manager or the shared drive. (The CSV buttons beside it are for
 machines — the ERP, a reconciliation sheet.)
 
-- **Pallet report** — one row per pallet: expected vs counted, which bin the ERP expected
-  and where it was actually found, and a status you can act on: `MATCH`, `QTY VARIANCE`,
-  `WRONG BIN`, `MISSING`, `NOT IN MASTER`, `COUNTED TWICE`. Lot and expiry get their own
+- **Pallet report** — one row per pallet, on one screen with no scrolling across: **Pallet ID**,
+  **System**, **SKU**, **Description**, **Expected**, **1st count** and **2nd count** (when it was
+  counted again), **Counted** (the count that stands), **Expected bin**, **Found in** (only when it is
+  not the expected bin), **Lot**, **Expiry**, **Team**, **Comments**, **Status** (with **Recount**
+  under it) and **ERP upload** — *✓ uploaded* with who marked it and when, *not yet*, *changed
+  since* (counted again after it went in: key it again), or — for a match, with nothing to upload.
+  Long descriptions and comments show two lines; hover for the rest. The status is one you can act
+  on: `MATCH`, `QTY VARIANCE`, `WRONG BIN`, `MISSING`, `NOT IN MASTER`, `COUNTED TWICE`. The
+  **Pallet report CSV** carries the same, with `second_pass_qty` and `erp_uploaded`, `erp_by`,
+  `erp_at`, `erp_changed`. Lot and expiry get their own
   columns, because the right count of the wrong lot is still wrong. **Only exceptions**
   narrows it to what needs attention — including a wrong lot or a date about to run out,
   even when the quantity is right.

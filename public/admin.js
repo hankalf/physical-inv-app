@@ -722,29 +722,39 @@
     // a cap on the rows shown, so the report is read, not scrolled; the CSV has all of it
     const lim = $('fPalletLimit').value;
     const data = { total: rows.length, rows: rows.slice(0, lim === 'all' ? rows.length : Number(lim)), all: palletRows.length };
+    /* The columns inventory control reads, in the order they read them, sized to
+       the page: long text wraps, the Recount button sits under the status, and a
+       found-in bin is shown only when it is not the bin the report expected. */
+    // long text: two lines in the cell, all of it on hover - the clamp is on a box inside, a cell stays a cell
+    const clampCell = (text) => { const td = document.createElement('td'); td.className = 'wrap'; const d = document.createElement('div'); d.className = 'clamp'; d.textContent = text || ''; td.title = text || ''; td.appendChild(d); return td; };
+    const when = (iso) => { if (!iso) return ''; const d = new Date(iso); return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); };
     table($('palletTable'),
-      [{ label: 'Pallet' }, { label: 'System' }, { label: 'SKU' }, { label: 'Description' }, { label: 'Expected', num: true }, { label: '1st count', num: true }, { label: 'Counted', num: true },
-       { label: 'Expected bin' }, { label: 'Found in' }, { label: 'Lot' }, { label: 'Expiry' }, { label: 'Team' }, { label: 'Comments' }, { label: 'Status' }, { label: '' }],
+      [{ label: 'Pallet ID' }, { label: 'System' }, { label: 'SKU' }, { label: 'Description' }, { label: 'Expected', num: true }, { label: '1st count', num: true }, { label: '2nd count', num: true }, { label: 'Counted', num: true },
+       { label: 'Expected bin' }, { label: 'Found in' }, { label: 'Lot' }, { label: 'Expiry' }, { label: 'Team' }, { label: 'Comments' }, { label: 'Status' }, { label: 'ERP upload' }],
       data.rows,
       (r) => {
         const tr = document.createElement('tr');
+        tr.dataset.pallet = r.pallet_id;
         /* a pallet wearing two labels: say which tag belongs to which pallet,
            so nobody reads the second one as stock that is missing */
         const tdPallet = document.createElement('td');
+        tdPallet.className = 'pid';
         tdPallet.append(r.pallet_id);
         if (r.alias_of) {
           const t = tag('SECOND LABEL');
           t.textContent = `2nd label of ${r.alias_of}`;
-          t.style.marginLeft = '5px';
-          tdPallet.appendChild(t);
+          tdPallet.append(document.createElement('br'), t);
         } else if (r.also_tagged) {
           const t = tag('SECOND LABEL');
           t.textContent = `also tagged ${r.also_tagged}`;
-          t.style.marginLeft = '5px';
-          tdPallet.appendChild(t);
+          tdPallet.append(document.createElement('br'), t);
         }
-        tr.append(tdPallet, cell(r.source || '—'), cell(r.sku), cell(r.description, 'wrap'), cell(r.expected_qty, 'num'), cell(r.recounted ? r.first_count_qty : '', 'num'), cell(r.counted_qty, 'num'),
-          cell(r.expected_location), cell(r.found_location));
+        // the found-in bin only when it differs: a column of the same bin twice says nothing
+        const found = r.found_location && r.found_location !== r.expected_location ? r.found_location : '';
+        const tdDesc = clampCell(r.description);
+        tr.append(tdPallet, cell(r.source || '—'), cell(r.sku), tdDesc, cell(r.expected_qty, 'num'),
+          cell(r.recounted ? r.first_count_qty : '', 'num'), cell(r.recounted ? r.second_pass_qty : '', 'num'), cell(r.counted_qty, 'num strong'),
+          cell(r.expected_location), cell(found, found ? 'diff' : ''));
         // lot and expiry are blank unless the site tracks them, so they cost nothing when it does not
         const tdLot = document.createElement('td');
         if (r.found_lot || r.expected_lot) {
@@ -752,9 +762,8 @@
           if (r.lot_status && r.lot_status !== 'LOT MATCH') {
             const t = tag(r.lot_status === 'WRONG LOT' ? 'MISSING' : 'queued');
             t.textContent = r.lot_status === 'WRONG LOT' ? 'wrong lot' : r.lot_status === 'NO LOT SCANNED' ? 'not scanned' : 'not on report';
-            t.style.marginLeft = '5px';
             t.title = r.expected_lot ? `The report says lot ${r.expected_lot}` : 'No lot for this pallet on the report';
-            tdLot.appendChild(t);
+            tdLot.append(document.createElement('br'), t);
           }
         }
         tr.appendChild(tdLot);
@@ -764,22 +773,37 @@
           if (r.expiry_status && r.expiry_status !== 'IN DATE') {
             const t = tag(r.expiry_status === 'EXPIRED' ? 'MISSING' : 'queued');
             t.textContent = r.expiry_status === 'EXPIRED' ? 'expired' : 'soon';
-            t.style.marginLeft = '5px';
-            tdExp.appendChild(t);
+            tdExp.append(document.createElement('br'), t);
           }
         }
         tr.appendChild(tdExp);
-        tr.append(cell(r.teams), cell(r.comments, 'wrap'));
-        const td = document.createElement('td'); td.appendChild(tag(r.status));
-        if (r.recounted) { td.append(' '); const t2 = tag('2nd'); t2.className = 'tag MATCH'; t2.textContent = '2nd count'; td.appendChild(t2); }
-        tr.appendChild(td);
-        const tdBtn = document.createElement('td');
+        const tdCom = clampCell(r.comments);
+        tr.append(cell(r.teams), tdCom);
+        // the status, with the Recount button under it rather than a column of its own
+        const td = document.createElement('td');
+        td.className = 'st';
+        td.appendChild(tag(r.status));
+        if (r.recounted) { const t2 = tag('MATCH'); t2.textContent = Number(r.count_round) === 3 ? '3rd count' : '2nd count'; td.append(document.createElement('br'), t2); }
         if (r.status !== 'MATCH' && r.status !== 'SECOND LABEL' && !r.open_recounts) {
           const b = document.createElement('button'); b.className = 'sm ghost'; b.textContent = 'Recount';
           b.onclick = async () => { try { await postJson(`/api/admin/sessions/${sessionId}/recounts`, { palletId: r.pallet_id, note: `from pallet report: ${r.status}` }); await refreshAll(); } catch (err) { alert(err.message); } };
-          tdBtn.appendChild(b);
-        } else if (r.open_recounts) tdBtn.append('recount pending');
-        tr.appendChild(tdBtn);
+          td.append(document.createElement('br'), b);
+        } else if (r.open_recounts) td.append(document.createElement('br'), Object.assign(document.createElement('span'), { className: 'muted', textContent: 'recount pending' }));
+        tr.appendChild(td);
+        /* uploaded to the ERP: by whom and when, or not yet - and a line that has
+           moved since it went in, so it is keyed again. A match has nothing to upload. */
+        const tdErp = document.createElement('td');
+        tdErp.className = 'erp';
+        if (r.erp_uploaded) {
+          tdErp.appendChild(tag(r.erp_changed ? 'queued' : 'ok', r.erp_changed ? 'changed since' : '✓ uploaded'));
+          tdErp.append(document.createElement('br'), Object.assign(document.createElement('span'), { className: 'muted', textContent: [r.erp_by, when(r.erp_at)].filter(Boolean).join(' · ') }));
+        } else if (r.status === 'MATCH' || r.status === 'SECOND LABEL' || r.status === 'NOT COUNTED') {
+          tdErp.append(Object.assign(document.createElement('span'), { className: 'muted', textContent: '—' }));
+          tdErp.title = r.status === 'NOT COUNTED' ? 'Not counted yet' : 'Nothing to upload: it matches the report';
+        } else {
+          tdErp.appendChild(tag('off', 'not yet'));
+        }
+        tr.appendChild(tdErp);
         return tr;
       }, 'No pallets to show.');
     $('palletNote').textContent = (data.total > data.rows.length

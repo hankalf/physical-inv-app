@@ -152,3 +152,15 @@ export function worksheetRows(sessionId) {
   return [...v.positive.rows.map(row('Positive')), ...v.negative.rows.map(row('Negative'))];
 }
 export const WORKSHEET_COLUMNS = ['Side', 'Pallet', 'System', 'Item', 'Bin', 'Why', 'Report quantity', 'Counted quantity', 'Adjustment', 'Approval', 'In ERP', 'Entered by', 'Entered at', 'Changed since entered'];
+
+/** Each pallet report row with its ERP mark: uploaded, by whom and when, and whether the line has moved since. */
+export function withErpMarks(sessionId, rows) {
+  const marks = erpEntries(sessionId);
+  if (!marks.size) return rows;
+  return rows.map((r) => {
+    const m = marks.get(r.pallet_id);
+    if (!m) return r;
+    const moved = m.variance_qty != null && Number(m.variance_qty) !== lineVariance(r);
+    return { ...r, erp_uploaded: 'yes', erp_by: m.entered_by || '', erp_at: m.entered_at || '', erp_changed: moved ? 1 : 0 };
+  });
+}
