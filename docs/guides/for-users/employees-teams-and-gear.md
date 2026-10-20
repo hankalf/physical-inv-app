@@ -102,7 +102,8 @@ columns.
   shift on every row, so the shifts compare side by side in Excel.
 - **🖨 Print team QR codes** prints a card per team with its number as a QR code, for every team
   or one shift. At sign-on, scan the card into **Team number** on the gun instead of typing it.
-  The number is printed large under the code too.
+  Each card has the number as a QR and as a barcode like the rack labels, so any scanner reads one
+  of them; the number is printed large as well.
 
 ## 6 — Gear sizes, and the order
 

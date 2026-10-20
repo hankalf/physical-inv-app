@@ -210,8 +210,9 @@ reach truck with a scissor lift reaches A and C–F. Change a rule here if your 
 **before** you plan the aisles.
 
 **Print the team QR codes.** **🖨 Print team QR codes** prints a card per team with its number as a
-QR code. Pick **Every team**, **1st shift** or **2nd shift** in the box beside it first. Cut the cards
-out and give one to each team. At sign-on the counter scans the card instead of typing the number.
+QR code and, under it, the same number as a Code 128 barcode like the rack labels. Pick **Every
+team**, **1st shift** or **2nd shift** in the box beside it first. Cut the cards out and give one to
+each team. At sign-on the counter scans either code instead of typing the number.
 
 **How you know it worked:** each team card shows its people, its shift and its equipment.
 
@@ -246,7 +247,9 @@ device is what signs that scanner in.
 3. Set up **DataWedge** (the Zebra's scanning settings) so a scan arrives as typing:
    - in the profile for Chrome, **Keystroke output: enabled**;
    - **Basic data formatting** → send **ENTER** (or TAB) after each scan;
-   - **Barcode input** → enable the barcode types your labels use (Code 128 for most racking).
+   - **Barcode input** → enable the barcode types your labels use: **Code 128** for the rack and
+     pallet labels, and **QR Code** too if crews will scan the QR on the team cards. The team cards
+     carry a Code 128 as well, so they scan either way.
 
 **How you know it worked:** the scanner shows its own name on the sign-on screen, and its row under
 Scanner setup says when it was last seen.

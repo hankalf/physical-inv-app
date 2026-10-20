@@ -195,8 +195,9 @@ export function teamCodes(teams, { title = 'Team number codes', scope = '' } = {
       <div class="kicker">TEAM${t.shift ? ` · ${esc(shiftWord(t.shift))}` : ''}</div>
       <div class="qr" data-code="${esc(t.name)}"></div>
       <div class="name">${esc(t.name)}</div>
+      <div class="bars" data-bars="${esc(t.name)}">${barcodeSvg(t.name, { module: 0.36, height: 9, quiet: 3, showText: false })}</div>
       ${t.notes ? `<div class="note">${esc(t.notes)}</div>` : ''}
-      <div class="how">Scan at sign-on, in <b>Team number</b></div>
+      <div class="how">Scan either code at sign-on, in <b>Team number</b></div>
     </div>`).join('');
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -211,6 +212,8 @@ export function teamCodes(teams, { title = 'Team number codes', scope = '' } = {
   .kicker { font-size: 8.5pt; font-weight: 800; letter-spacing: .14em; color: #444; margin-bottom: 6px; }
   .qr { display: flex; justify-content: center; min-height: 150px; align-items: center; }
   .qr img, .qr canvas { display: block; }
+  .bars { margin: 4px auto 0; max-width: 54mm; }
+  .bars svg { display: block; width: 100%; height: auto; }
   .name { font-size: 22pt; font-weight: 900; letter-spacing: .02em; margin-top: 6px; font-family: ui-monospace, Menlo, Consolas, monospace; word-break: break-all; }
   .note { font-size: 8.5pt; color: #444; margin-top: 2px; font-style: italic; }
   .how { font-size: 8pt; color: #555; margin-top: 4px; }
@@ -219,7 +222,7 @@ export function teamCodes(teams, { title = 'Team number codes', scope = '' } = {
 </style></head>
 <body>
 <h1>${esc(title)}</h1>
-<div class="sub">${teams.length} team${teams.length === 1 ? '' : 's'}${scope ? ` · ${esc(scope)}` : ''} · printed ${esc(localDate())} · cut along the dashed lines</div>
+<div class="sub">${teams.length} team${teams.length === 1 ? '' : 's'}${scope ? ` · ${esc(scope)}` : ''} · printed ${esc(localDate())} · cut along the dashed lines · each card carries the number as a QR and as a Code 128 barcode, the kind on the rack labels, so any scanner reads one of them</div>
 <button class="noprint" onclick="window.print()" style="margin-bottom:10px;padding:6px 12px">Print</button>
 ${teams.length ? `<div class="sheet">${cards}</div>` : '<div class="none">No teams yet — add them under Teams &amp; crew.</div>'}
 <script src="/vendor/qrcode.min.js"></script>

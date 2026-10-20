@@ -266,7 +266,7 @@ try {
     },
     rack: (bin) => [`<div class="prop rack"><div class="k">${L('RACK LABEL', 'ETIQUETA DEL RACK')}</div><div class="arrow">▲</div><div class="big">${bin}</div><div class="bars">${svg(bin)}</div></div>`, L('The label on the rack, under the pallet', 'La etiqueta del rack, debajo de la tarima')],
     badge: (b) => [`<div class="prop badge"><div class="face">${name(b).split(' ').map((w) => w[0]).join('')}</div><div class="line"><b>${name(b)}</b></div><div class="bars">${svg(b)}</div></div>`, L('Your badge', 'Tu gafete')],
-    team: (t) => [`<div class="prop team"><div class="k">${L('TEAM · 1st shift', 'EQUIPO · 1er turno')}</div><div class="qr" data-code="${t}"></div><div class="big">${t}</div></div>`, L('The team card', 'La tarjeta del equipo')],
+    team: (t) => [`<div class="prop team"><div class="k">${L('TEAM · 1st shift', 'EQUIPO · 1er turno')}</div><div class="qr" data-code="${t}"></div><div class="big">${t}</div><div class="bars" style="height:40px">${svg(t)}</div></div>`, L('The team card', 'La tarjeta del equipo')],
     cases: (n) => [`<div class="prop cases"><div class="k" style="color:#9fb4c8">${L('COUNT THE CASES', 'CUENTA LAS CAJAS')}</div><div class="grid">${Array.from({ length: Math.min(64, n) }, () => '<i></i>').join('')}</div><div class="big" id="caseN">0</div></div>`, L('What is really on the pallet', 'Lo que de verdad hay en la tarima')],
     keys: () => [`<div class="prop keys"><div class="shown" id="keyShown"></div><div class="grid">${['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', '⏎'].map((k) => `<b data-k="${k}">${k}</b>`).join('')}</div></div>`, L('The number keys on the scanner', 'Las teclas de números del escáner')],
     note: (html, what = '') => [`<div class="prop note">${html}</div>`, what],

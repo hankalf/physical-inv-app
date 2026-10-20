@@ -104,10 +104,12 @@
     </div>
     <button class="link" id="btnInstall" hidden>Install on this scanner</button>
     <button class="link" id="btnFullScreen" hidden>Hide the browser bar for this shift</button>
-    <button class="link" id="btnChangeDevice">Change scanner ID</button>
-    <div class="muted" id="deviceInfo"></div>
-    <div class="muted" id="screenInfo"></div>
-    <div class="muted" id="buildInfo"></div>
+    <!-- the scanner's own details - its ID, the screen, the build - are kept for support (readable in the page) but not shown:
+         a counter sees only the cached-list line at the foot of the screen -->
+    <button class="link" id="btnChangeDevice" hidden>Change scanner ID</button>
+    <div class="muted" id="deviceInfo" hidden></div>
+    <div class="muted" id="screenInfo" hidden></div>
+    <div class="muted" id="buildInfo" hidden></div>
 
     <div class="feedback" id="signonMsg"></div>
     <div class="spacer"></div>

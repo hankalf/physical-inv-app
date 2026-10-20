@@ -24,6 +24,7 @@ const teamsOn = (h) => [...h.matchAll(/data-team="([^"]+)"/g)].map((m) => m[1]);
 const codesOn = (h) => [...h.matchAll(/data-code="([^"]+)"/g)].map((m) => m[1]);
 check('A card for every team on Teams & crew', ['51', '52', 'S1-DS09'].every((t) => teamsOn(html).includes(t)), teamsOn(html).join());
 check('…each QR holds the team number and nothing else', ['51', '52', 'S1-DS09'].every((t) => codesOn(html).includes(t)) && codesOn(html).every((c) => teamsOn(html).includes(c)), codesOn(html).join());
+check('…and the same number as a Code 128 barcode under the QR, the kind the rack labels use, for a scanner with QR switched off', ['51', '52', 'S1-DS09'].every((t) => html.includes(`data-bars="${t}"`)) && (html.match(/<svg /g) || []).length >= 3 && /Code 128/.test(html));
 check('…with the number large, the shift, and the team\'s note', /class="name">S1-DS09</.test(html) && /TEAM · 1st shift/.test(html) && /dock side/.test(html));
 html = await page('&shift=2');
 check('One shift: the 2nd shift\'s teams alone', teamsOn(html).includes('52') && !teamsOn(html).includes('51') && !teamsOn(html).includes('S1-DS09') && /2nd shift/.test(html), teamsOn(html).join());

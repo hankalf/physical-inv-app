@@ -486,7 +486,9 @@ after that the server accepts counts from it and stamps its name on every line.
    - the profile associated with Chrome → **Keystroke output: enabled**
    - **Basic data formatting** → send a suffix: **ENTER** *(or TAB — the app takes
      either as the end of a scan, and neither moves the cursor off the box)*
-   - **Barcode input** → enable the symbologies your labels use.
+   - **Barcode input** → enable the symbologies your labels use — **Code 128** for the rack and
+     pallet labels, and **QR Code** if the crews will scan the QR on the team cards (the cards
+     carry a Code 128 as well, so this one is optional).
 
 **Kiosk mode.** Three levels, strongest last:
 
@@ -1174,9 +1176,12 @@ with the team number as a QR code, three across a letter page, ready to cut out 
 cradle or clip to a lanyard. The box beside the button picks **Every team**, **1st shift** or
 **2nd shift**. At sign-on the counter points the gun at the card with the cursor in **Team
 number**: the gun types the number and moves on to the clock-in numbers, so nobody types
-*S1-DS01* on a keypad in gloves. The number is printed large under the code as well. The code
-holds the team number and nothing else, so a lost card is no risk; print it again whenever teams
-change. Printing needs **Downloads** on the login, and the Log records who printed the cards.
+*S1-DS01* on a keypad in gloves. The number is printed large under the code as well, and under
+that as a **Code 128 barcode** — the kind on the rack labels — so a scanner set up for the rack
+labels alone reads the card as it is. (To read the QR itself, turn the **QR Code** decoder on in
+DataWedge, under *Barcode input → Decoders*; a scanner that beeps at rack labels but not at the
+QR has it off.) Either code holds the team number and nothing else, so a lost card is no risk;
+print the cards again whenever teams change. Printing needs **Downloads** on the login, and the Log records who printed the cards.
 
 ![](images/teams-qr-codes.png)
 

@@ -130,8 +130,9 @@ a person on two teams, a shift that disagrees with the team's. Fix the file, che
 - **🖨 Print team QR codes** prints a card for each team with its number as a QR code, three
   across a letter page. Pick **Every team**, **1st shift** or **2nd shift** in the box beside
   it first. At sign-on the counter scans the card into **Team number** on the gun instead of
-  typing it; the number is printed large under the code for anyone without a scanner. The QR
-  holds the team number and nothing else, so a lost card signs nobody in. It needs
+  typing it; the number is printed large under the code, and under that as a Code 128 barcode —
+  the kind on the rack labels — so a scanner set up for rack labels alone reads the card. Either
+  code holds the team number and nothing else, so a lost card signs nobody in. It needs
   **Downloads** on the login, and the Log records who printed them.
 
 ![](../images/teams-qr-codes.png)
