@@ -118,11 +118,12 @@ a person on two teams, a shift that disagrees with the team's. Fix the file, che
   dock stocker, truck 01; a blank name is an open seat whose equipment still counts.
 - **1st shift / 2nd shift** and **Department** above the board show one at a time.
 - **The crew board** (`/crew`) puts the teams and their people on a wall screen by shift — 1st
-  shift 6am–2pm, 2nd shift 2pm–10pm, the one on now marked — with each team's aisle, its last
-  scan, and **Scanning** or a red **Stopped scanning**. No sign-in, no clock-in numbers. It shows
-  **one shift at a time**: the one on now by the clock, or the one fixed under **Settings → Site &
-  systems → Crew board**, which also picks what each card shows and whether the list **scrolls by
-  itself**, and how fast. Open it from the Dashboard's **Crew board ↗** chip; `?shift=2` pins a
+  shift 6am–2pm, 2nd shift 2pm–10pm until an admin sets other hours, the one on now marked — with
+  each team's aisle, its last scan, and **Scanning** or a red **Stopped scanning**. No sign-in, no
+  clock-in numbers. It shows **one shift at a time**: the one on now by the clock, or the one fixed
+  under **Settings → Site & systems → Crew board**, which also holds the **shift times** the clock
+  is judged against, picks what each card shows and whether the list **scrolls by itself**, and
+  how fast. Open it from the Dashboard's **Crew board ↗** chip; `?shift=2` pins a
   screen to one shift and `?scroll=0` stops the scrolling on that screen.
 - **⬇ Export the teams (CSV)** downloads every team across both shifts, one row a seat, in the
   team sheet's own columns plus the shift, so the shifts compare side by side in Excel and the file

@@ -1,7 +1,8 @@
 /*
  * The crew board: a wall screen of who is on which team, by shift - 1st
- * 6am-2pm, 2nd 2pm-10pm - with the shift on now marked by the site's clock.
- * No sign-in, no controls, and no clock-in numbers on it.
+ * 6am-2pm, 2nd 2pm-10pm until an admin sets other hours - with the shift on
+ * now marked by the site's clock. No sign-in, no controls, and no clock-in
+ * numbers on it.
  */
 import { chromium } from 'playwright-core';
 
@@ -14,6 +15,8 @@ const j = (r) => r.json();
 const tok = (await j(await fetch(`${BASE}/api/admin/login`, { method: 'POST', headers: hdr, body: JSON.stringify({ password: 'changeme' }) }))).token;
 const A = { ...hdr, authorization: 'Bearer ' + tok };
 const post = (p, b = {}, h = A) => fetch(BASE + p, { method: 'POST', headers: h, body: JSON.stringify(b) });
+/* minutes of the day → "6:30am", as the board writes a shift's hours */
+const twelve = (mins) => { const m = ((mins % 1440) + 1440) % 1440, h = Math.floor(m / 60), mm = m % 60; return `${h % 12 || 12}${mm ? ':' + String(mm).padStart(2, '0') : ''}${h < 12 ? 'am' : 'pm'}`; };
 
 /* two teams on days, one on nights, one whose shift comes from its people, and two people on no team */
 const add = (badge, name, dept, shift, equipment = []) => post('/api/admin/people/employees?new=1', { badge, name, dept, shift, equipment });
@@ -75,7 +78,7 @@ check('The shift on now follows the site\'s clock', d.now.shift === want && d.sh
 /* ---------------- the page ---------------- */
 const wantShown = want || '1';            // between shifts the board shows the next one coming in
 const cfg = await j(await fetch(`${BASE}/api/admin/crew-board`, { headers: A }));
-check('The crew board’s options start as: the shift on now, everything shown, scrolling by itself at normal speed', cfg.shift === 'auto' && Object.values(cfg.show).every(Boolean) && cfg.scroll.on && cfg.scroll.speed === 'normal' && cfg.scroll.pause === 6 && cfg.pxPerSecond === 36 && cfg.isDefault, JSON.stringify(cfg));
+check('The crew board’s options start as: the shift on now, everything shown, scrolling by itself at normal speed, shifts 6–14 and 14–22', cfg.shift === 'auto' && Object.values(cfg.show).every(Boolean) && cfg.scroll.on && cfg.scroll.speed === 'normal' && cfg.scroll.pause === 6 && cfg.pxPerSecond === 36 && cfg.isDefault && cfg.shifts['1'].from === '06:00' && cfg.shifts['1'].to === '14:00' && cfg.shifts['2'].from === '14:00' && cfg.shifts['2'].to === '22:00' && cfg.shiftHours.map((s) => s.hours).join('|') === '6am – 2pm|2pm – 10pm', JSON.stringify(cfg));
 check('…and the screen is told them with the teams', d.config && d.config.shift === 'auto' && d.config.scroll.on && !('isDefault' in d.config), JSON.stringify(d.config));
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
@@ -137,6 +140,41 @@ await post('/api/admin/crew-board', { scroll: { on: false } });
 await tv.goto(`${BASE}/crew?session=${S}`);
 await tv.waitForSelector('.shift[data-shift="2"] .team');
 check('Scrolling switched off by the admin: the list stays put', (await farthest()) === 0);
+/* ---------------- the shift times ----------------
+   An admin moves the hours and the board judges "on now" by them. The clock is
+   whatever it is when the test runs, so the times are set around it. */
+const hhmm = (m) => `${String(Math.floor((((m % 1440) + 1440) % 1440) / 60)).padStart(2, '0')}:${String(((m % 60) + 60) % 60).padStart(2, '0')}`;
+const m0 = d.now.minutes;
+check('The board says the minute of the day it judged by', Number.isInteger(m0) && m0 >= 0 && m0 < 1440 && Math.floor(m0 / 60) === d.now.hour, String(m0));
+r = await post('/api/admin/crew-board', { shifts: { 1: { from: hhmm(m0 + 60), to: hhmm(m0 - 60) }, 2: { from: hhmm(m0 - 60), to: hhmm(m0 + 60) } } });
+const c3 = await j(r);
+check('The shift times are set on the clock, and one of them may run past midnight', r.status === 200 && c3.shifts['2'].from === hhmm(m0 - 60) && c3.shifts['2'].to === hhmm(m0 + 60) && c3.shifts['1'].from === hhmm(m0 + 60), JSON.stringify(c3.shifts));
+let d2 = await j(await fetch(`${BASE}/api/board/crew?session=${S}`));
+check('…and the board corrects itself: it is now the 2nd shift, until the hour set, whatever the clock says', d2.now.shift === '2' && d2.now.next === '2' && d2.shifts.find((s) => s.key === '2').on && /2nd shift/.test(d2.now.label), JSON.stringify(d2.now));
+check('…with the hours written as a clock says them', d2.shifts.find((s) => s.key === '2').hours === `${twelve(m0 - 60)} – ${twelve(m0 + 60)}` && c3.shiftHours.find((s) => s.key === '2').hours === d2.shifts.find((s) => s.key === '2').hours, d2.shifts.find((s) => s.key === '2').hours);
+await page.goto(`${BASE}/crew?session=${S}`);
+await page.waitForSelector('.shift[data-shift="2"] .team');
+check('The screen follows: the 2nd shift, marked On now, with the new hours in its header', (await page.getAttribute('.shift', 'data-shift')) === '2' && /On now/.test(await page.textContent('.shift .sh')) && clean(await page.textContent('.shift .hours')) === d2.shifts.find((s) => s.key === '2').hours, clean(await page.textContent('.shift .sh')));
+r = await post('/api/admin/crew-board', { shifts: { 1: { from: hhmm(m0 + 10), to: hhmm(m0 + 20) }, 2: { from: hhmm(m0 + 30), to: hhmm(m0 + 40) } } });
+d2 = await j(await fetch(`${BASE}/api/board/crew?session=${S}`));
+check('Between shifts by the new times, the board names the one coming in next and when it starts', r.status === 200 && d2.now.shift === '' && d2.now.next === '1' && d2.now.label === `Between shifts · 1st shift starts ${twelve(m0 + 10)}`, JSON.stringify(d2.now));
+check('A time that is not on the clock is refused', (await post('/api/admin/crew-board', { shifts: { 1: { from: '25:00' } } })).status === 400 && (await post('/api/admin/crew-board', { shifts: { 2: { to: '6am' } } })).status === 400);
+check('…and so is a shift that starts and ends at the same time', (await post('/api/admin/crew-board', { shifts: { 1: { from: '14:00', to: '14:00' } } })).status === 400);
+r = await post('/api/admin/crew-board', { shifts: { 1: { from: '06:00', to: '15:00' }, 2: { from: '14:00', to: '22:00' } } });
+check('…and shifts that overlap, naming both', r.status === 400 && /overlap.*6am – 3pm.*2pm – 10pm/.test((await j(r)).error || ''), JSON.stringify(await j(r).catch(() => null)));
+check('A refused save changes nothing', JSON.stringify((await j(await fetch(`${BASE}/api/admin/crew-board`, { headers: A }))).shifts) === JSON.stringify({ 1: { from: hhmm(m0 + 10), to: hhmm(m0 + 20) }, 2: { from: hhmm(m0 + 30), to: hhmm(m0 + 40) } }));
+/* the settings page shows and saves them */
+const adm = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
+adm.on('pageerror', (e) => errors.push(e.message));
+await adm.goto(`${BASE}/settings#advanced`);
+await adm.fill('#fPassword', 'changeme'); await adm.click('#btnLogin'); await adm.waitForSelector('#crewBoardCard:not([hidden])');
+await adm.waitForFunction(() => document.getElementById('fCbS1From').value !== '');
+check('Settings → Site & systems → Crew board shows the four times', await adm.$eval('#fCbS1From', (e) => e.value) === hhmm(m0 + 10) && await adm.$eval('#fCbS2To', (e) => e.value) === hhmm(m0 + 40) && /1st shift .* · 2nd shift/.test(clean(await adm.textContent('#cbShiftHours'))), clean(await adm.textContent('#cbShiftHours')));
+await adm.fill('#fCbS1From', '06:00'); await adm.fill('#fCbS1To', '14:00'); await adm.fill('#fCbS2From', '14:00'); await adm.fill('#fCbS2To', '22:00');
+await adm.click('#btnCrewBoardSave'); await adm.waitForTimeout(600);
+check('Save puts them back to 6–14 and 14–22, and says so', /Saved/.test(await adm.textContent('#crewBoardMsg')) && /1st shift 6am – 2pm, 2nd shift 2pm – 10pm/.test(clean(await adm.textContent('#crewBoardMsg'))) && JSON.stringify((await j(await fetch(`${BASE}/api/admin/crew-board`, { headers: A }))).shifts) === JSON.stringify({ 1: { from: '06:00', to: '14:00' }, 2: { from: '14:00', to: '22:00' } }), clean(await adm.textContent('#crewBoardMsg')));
+await adm.close();
+
 await post('/api/admin/users', { username: 'CREW-SUP', name: 'Crew Sup', password: 'crew-board-1', mustChange: false, profile: 'supervisor' });
 const SUP = { ...hdr, authorization: 'Bearer ' + (await j(await fetch(`${BASE}/api/admin/login`, { method: 'POST', headers: hdr, body: JSON.stringify({ username: 'CREW-SUP', password: 'crew-board-1' }) }))).token };
 check('Only an admin changes what the wall screen shows', (await post('/api/admin/crew-board', { shift: 'auto' }, SUP)).status === 403 && (await fetch(`${BASE}/api/admin/crew-board`, { headers: SUP })).status === 403);

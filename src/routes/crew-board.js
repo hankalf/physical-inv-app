@@ -7,30 +7,68 @@
  * teams and nothing else: no clock-in numbers, no departments or equipment,
  * and nobody who is not on a team.
  *
- * The site works two shifts, 1st 6am-2pm and 2nd 2pm-10pm. A team's shift is
- * what Teams & crew says it is; a team with no shift set takes its members'
- * shift when they all share one. The shift on now comes from the warehouse's
- * clock, not the browser's.
+ * The site works two shifts - 1st 6am-2pm and 2nd 2pm-10pm unless an admin
+ * sets other hours under Settings → Site & systems → Crew board. A team's
+ * shift is what Teams & crew says it is; a team with no shift set takes its
+ * members' shift when they all share one. The shift on now comes from the
+ * warehouse's clock, not the browser's, against those hours.
  */
 import { db } from '../db.js';
 import { listTeams } from './people.js';
 import { defaultBoardSession } from './board.js';
 import { teamClocks, idleConfig } from './idle.js';
-import { localHour, localTime } from '../util/localtime.js';
+import { localMinutes, localTime } from '../util/localtime.js';
 
-export const SHIFTS = [
-  { key: '1', label: '1st shift', hours: '6am – 2pm', from: 6, to: 14 },
-  { key: '2', label: '2nd shift', hours: '2pm – 10pm', from: 14, to: 22 },
-];
-const twelve = (h) => (h === 0 ? '12am' : h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h - 12}pm`);
+/* ------------------------------------------------------------ the shift times
+ * Kept as HH:MM on the clock, 24-hour, so a shift that starts on the half
+ * hour or runs past midnight (10pm-6am) is as easy to say as 6am-2pm. */
+const DEFAULT_SHIFTS = { 1: { from: '06:00', to: '14:00' }, 2: { from: '14:00', to: '22:00' } };
+const LABELS = { 1: '1st shift', 2: '2nd shift' };
+const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const toMinutes = (hhmm) => { const m = HHMM.exec(String(hhmm || '').trim()); return m ? Number(m[1]) * 60 + Number(m[2]) : NaN; };
+/** 390 → "6:30am", 840 → "2pm", 0 → "12am". */
+export const twelve = (mins) => {
+  const h = Math.floor(((mins % 1440) + 1440) % 1440 / 60), mm = ((mins % 60) + 60) % 60;
+  return `${h % 12 || 12}${mm ? ':' + String(mm).padStart(2, '0') : ''}${h < 12 ? 'am' : 'pm'}`;
+};
+/** Whether minute-of-day m falls in a shift; a shift whose end is not after its start runs past midnight. */
+const within = (s, m) => (s.toMin > s.fromMin ? m >= s.fromMin && m < s.toMin : m >= s.fromMin || m < s.toMin);
+
+/** The two shifts with their hours, as set, in the order they are shown. */
+export function shiftTimes(times = crewBoardConfig().shifts) {
+  return ['1', '2'].map((key) => {
+    const t = times[key] || DEFAULT_SHIFTS[key];
+    const fromMin = toMinutes(t.from), toMin = toMinutes(t.to);
+    return { key, label: LABELS[key], from: t.from, to: t.to, fromMin, toMin, hours: `${twelve(fromMin)} – ${twelve(toMin)}` };
+  });
+}
+/** The shift times from the body of a save, checked: HH:MM, a start and an end that differ, and no overlap. */
+function checkShiftTimes(body, current) {
+  const bad = (m) => Object.assign(new Error(m), { status: 400 });
+  const next = { 1: { ...current[1] }, 2: { ...current[2] } };
+  for (const key of ['1', '2']) {
+    const t = body[key];
+    if (!t || typeof t !== 'object') continue;
+    for (const end of ['from', 'to']) if (end in t) {
+      if (Number.isNaN(toMinutes(t[end]))) throw bad(`the ${LABELS[key]} ${end === 'from' ? 'start' : 'end'} is a time on the clock, such as 06:30 or 14:00`);
+      next[key][end] = String(t[end]).trim();
+    }
+    if (next[key].from === next[key].to) throw bad(`the ${LABELS[key]} cannot start and end at the same time`);
+  }
+  const [a, b] = shiftTimes(next);
+  // two stretches of the day overlap only when one starts inside the other
+  if (within(a, b.fromMin) || within(b, a.fromMin)) throw bad(`the shifts overlap: ${a.label} ${a.hours}, ${b.label} ${b.hours}`);
+  return next;
+}
 
 /** Which shift it is at the site right now, and what to say about it. */
-export function shiftNow(hour = localHour()) {
-  const on = SHIFTS.find((s) => hour >= s.from && hour < s.to);
-  if (on) return { shift: on.key, hour, label: `${on.label} · ${on.hours}`, until: twelve(on.to), next: on.key };
-  const next = SHIFTS.find((s) => s.from > hour) || SHIFTS[0];
-  // between shifts the board shows the one coming in next
-  return { shift: '', hour, label: `Between shifts · ${next.label} starts ${twelve(next.from)}`, until: '', next: next.key };
+export function shiftNow(minutes = localMinutes(), shifts = shiftTimes()) {
+  const hour = Math.floor(minutes / 60);
+  const on = shifts.find((s) => within(s, minutes));
+  if (on) return { shift: on.key, hour, minutes, label: `${on.label} · ${on.hours}`, until: twelve(on.toMin), next: on.key };
+  // between shifts the board shows the one coming in next: the one whose start is soonest
+  const next = [...shifts].sort((a, b) => ((a.fromMin - minutes + 1440) % 1440) - ((b.fromMin - minutes + 1440) % 1440))[0];
+  return { shift: '', hour, minutes, label: `Between shifts · ${next.label} starts ${twelve(next.fromMin)}`, until: '', next: next.key };
 }
 
 /* ------------------------------------------------------------ what the screen shows
@@ -39,7 +77,7 @@ export function shiftNow(hour = localHour()) {
  * and whether the list scrolls by itself for a screen nobody touches. */
 const SPEEDS = { slow: 18, normal: 36, fast: 70 };
 const SHOW_KEYS = ['members', 'openSeats', 'notes', 'where', 'lastScan', 'count'];
-const DEFAULT_CONFIG = { shift: 'auto', show: { members: true, openSeats: true, notes: true, where: true, lastScan: true, count: true }, scroll: { on: true, speed: 'normal', pause: 6 } };
+const DEFAULT_CONFIG = { shift: 'auto', show: { members: true, openSeats: true, notes: true, where: true, lastScan: true, count: true }, scroll: { on: true, speed: 'normal', pause: 6 }, shifts: DEFAULT_SHIFTS };
 export function crewBoardConfig() {
   const row = db.prepare("SELECT value FROM settings WHERE key = 'crewBoard'").get();
   let saved = {};
@@ -50,9 +88,16 @@ export function crewBoardConfig() {
   if (!(scroll.speed in SPEEDS) && !(Number(scroll.speed) >= 5 && Number(scroll.speed) <= 400)) scroll.speed = 'normal';
   scroll.on = scroll.on !== false;
   scroll.pause = Math.max(0, Math.min(60, Number(scroll.pause) || 0));
+  const shifts = {};
+  for (const k of ['1', '2']) {
+    const t = (saved.shifts || {})[k] || {};
+    // a saved time that does not read as HH:MM falls back to the usual hours rather than breaking the board
+    shifts[k] = { from: Number.isNaN(toMinutes(t.from)) ? DEFAULT_SHIFTS[k].from : t.from, to: Number.isNaN(toMinutes(t.to)) ? DEFAULT_SHIFTS[k].to : t.to };
+  }
   return {
     shift: ['auto', '1', '2'].includes(saved.shift) ? saved.shift : 'auto',
-    show, scroll,
+    show, scroll, shifts,
+    shiftHours: shiftTimes(shifts).map((s) => ({ key: s.key, label: s.label, hours: s.hours })),
     pxPerSecond: SPEEDS[scroll.speed] || Number(scroll.speed),
     isDefault: !row,
   };
@@ -60,7 +105,7 @@ export function crewBoardConfig() {
 export function saveCrewBoardConfig(body = {}) {
   const now = crewBoardConfig();
   const bad = (m) => Object.assign(new Error(m), { status: 400 });
-  const next = { shift: now.shift, show: { ...now.show }, scroll: { ...now.scroll } };
+  const next = { shift: now.shift, show: { ...now.show }, scroll: { ...now.scroll }, shifts: now.shifts };
   if (body.shift !== undefined) {
     if (!['auto', '1', '2'].includes(String(body.shift))) throw bad('the shift shown is auto, 1 or 2');
     next.shift = String(body.shift);
@@ -79,6 +124,7 @@ export function saveCrewBoardConfig(body = {}) {
       next.scroll.pause = n;
     }
   }
+  if (body.shifts && typeof body.shifts === 'object') next.shifts = checkShiftTimes(body.shifts, now.shifts);
   db.prepare("INSERT INTO settings (key, value) VALUES ('crewBoard', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(JSON.stringify(next));
   return crewBoardConfig();
 }
@@ -134,12 +180,13 @@ export function crewBoard(sessionId = '') {
       },
     };
   });
-  const now = { ...shiftNow(), time: localTime() };     // the site's clock, so the screen and "on now" agree
+  const { isDefault, shiftHours, ...config } = crewBoardConfig();
+  const SHIFTS = shiftTimes(config.shifts);
+  const now = { ...shiftNow(localMinutes(), SHIFTS), time: localTime() };     // the site's clock, so the screen and "on now" agree
   // the teams and who is on them, nothing else: people on no team are Teams & crew's business
   const group = (key) => ({
     teams: teams.filter((t) => t.shift === key).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })),
   });
-  const { isDefault, ...config } = crewBoardConfig();
   return {
     now,
     session: session ? { id: session.id, name: session.name } : null,

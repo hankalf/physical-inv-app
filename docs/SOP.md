@@ -1232,12 +1232,13 @@ the gear can have it without the rest of the page.
 
 ### Step 15 — The counter's procedure (on the handheld)
 
-> **The crew's day-one training.** `docs/training/` holds a slow, captioned film of everything
-> below on the real scanner — `scanner-training-en.mp4` and, on the scanner's Spanish screens,
-> `scanner-training-es.mp4`, about fifteen minutes each, with a beep on every scan — and the same
-> lesson as a slide deck in each language (`scanner-training-en.pptx`, `-es.pptx`) with the
-> narration in the speaker notes, the scanner at every step, and the buttons on one page to print.
-> Play the film, then go through the deck with scanners in hand and the test book.
+> **The crew's day-one training.** `docs/training/` holds a captioned film of everything below on
+> the real scanner, with the scanner offering the full count alone — `scanner-training-full-en.mp4`
+> and, on the scanner's Spanish screens, `scanner-training-full-es.mp4`, under ten minutes each,
+> with a beep on every scan — and the same lesson as a slide deck in each language
+> (`scanner-training-full-en.pptx`, `-es.pptx`) with the narration in the speaker notes, the
+> scanner at every step, and the buttons on one page to print. Play the film, then go through the
+> deck with scanners in hand and the test book. The cycle count has its own film (Part 6).
 >
 > **There is a film of this.** `docs/gun-demo.webm` (about four minutes) is a recording of the
 > real app on real data, working through everything below: signing on, counting a pallet, a bay
@@ -1757,8 +1758,9 @@ one team, or all of them, with a read receipt — use **Message the floor** unde
 *The office board, for the TV: percentage counted, aisles complete, every team, and every aisle colored by state.*
 
 **The crew board.** `/crew` is the same idea for the time clock: every team and the people on it,
-by shift — **1st shift 6am–2pm** and **2nd shift 2pm–10pm** side by side, the one on now marked
-by the warehouse's clock (*On now · until 2pm*; between shifts it says when the next starts).
+by shift — **1st shift 6am–2pm** and **2nd shift 2pm–10pm** unless the admin sets other hours — the
+one on now marked by the warehouse's clock (*On now · until 2pm*; between shifts it says when the
+next starts).
 Each team card has **where the team is** on the count — *Aisle F04 · levels A–C*, its last scan
 (*last scan 3 min ago · F04A012*) and the aisle queued next — and **what it is doing**: a green
 **Scanning**, a red **Stopped scanning · 14 min** once it has been quiet past the site's
@@ -1778,7 +1780,10 @@ clock-in numbers. `/crew?shift=1` or `?shift=2` pins a screen to one shift; the 
 
 **What the crew board shows is the admin's.** *Settings → Site & systems → Crew board*: the **shift
 shown** — the one on now by the warehouse clock (between shifts, the one coming in next), or the
-1st or the 2nd always; what each team's card carries — the **people** on it, **open seats** from the
+1st or the 2nd always; the **shift times** the clock is judged against — *1st shift from 06:00 to
+14:00, 2nd shift from 14:00 to 22:00* until they are changed; when the shifts move, change them here
+and the board corrects itself within half a minute. A shift may run past midnight (22:00 to 06:00);
+a start and end that are the same, or two shifts that overlap, are refused; what each team's card carries — the **people** on it, **open seats** from the
 team sheet, the team's **notes**, its **aisle and Scanning / Stopped scanning**, its **last scan and
 next aisle**, and **which count** in the header; and the **scrolling**. A screen in the warehouse is
 touched by nobody, so when the list is longer than the screen it **scrolls by itself**: down at the
@@ -2217,6 +2222,12 @@ narrow it by zone, aisle or level — to look at, **download**, or send to the s
 with **Count these — make a batch**. Which face a bin is on comes from the bin list's own
 description (*… Position # 001 – Front*), or, where the list does not say, from the site drawing
 (odd positions front, even back).
+
+> **The cycle counter's training film.** `docs/training/scanner-training-cycle-en.mp4` (Spanish:
+> `-cycle-es.mp4`), under ten minutes: signing on with a badge alone, the list of bins for the day,
+> counting a bin — the rack, the pallet, the quantity, Bin done — the wrong bin refused, several
+> pallets in one bin, an empty bin, a label that will not scan, a pallet not on the list, the
+> fixes and the SOS, and signing off. The scanner in it offers the cycle count alone.
 
 5. Counters pick **Cycle count** at sign-on. A cycle count is one person with a gun, so the
    gun asks for **their clock-in number only — no team**. Several people can be on the same

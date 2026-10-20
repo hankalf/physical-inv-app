@@ -27,6 +27,12 @@ export function localHour(date = new Date()) {
   return h === 24 ? 0 : h;   // some locales render midnight as 24
 }
 
+/** Minutes since midnight at the site, 0-1439: for a shift that starts at 6:30. */
+export function localMinutes(date = new Date()) {
+  const p = parts(date);
+  return (Number(p.hour) % 24) * 60 + Number(p.minute);
+}
+
 /** The time of day at the site, as a wall clock says it: "5:40 PM". */
 export function localTime(date = new Date()) {
   const p = parts(date);

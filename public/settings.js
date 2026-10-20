@@ -1523,6 +1523,9 @@
     $('fCbPause').value = c.scroll.pause;
     $('fCbMembers').checked = c.show.members; $('fCbOpen').checked = c.show.openSeats; $('fCbNotes').checked = c.show.notes;
     $('fCbWhere').checked = c.show.where; $('fCbLast').checked = c.show.lastScan; $('fCbCount').checked = c.show.count;
+    $('fCbS1From').value = c.shifts['1'].from; $('fCbS1To').value = c.shifts['1'].to;
+    $('fCbS2From').value = c.shifts['2'].from; $('fCbS2To').value = c.shifts['2'].to;
+    $('cbShiftHours').textContent = (c.shiftHours || []).map((s) => `${s.label} ${s.hours}`).join(' · ');
   }
   async function refreshCrewBoard() {
     if (!api.me || api.me.role !== 'admin') { $('crewBoardCard').hidden = true; return; }
@@ -1535,9 +1538,11 @@
         shift: $('fCbShift').value,
         scroll: { on: $('fCbScroll').checked, speed: $('fCbSpeed').value, pause: Number($('fCbPause').value) || 0 },
         show: { members: $('fCbMembers').checked, openSeats: $('fCbOpen').checked, notes: $('fCbNotes').checked, where: $('fCbWhere').checked, lastScan: $('fCbLast').checked, count: $('fCbCount').checked },
+        shifts: { 1: { from: $('fCbS1From').value, to: $('fCbS1To').value }, 2: { from: $('fCbS2From').value, to: $('fCbS2To').value } },
       });
       drawCrewBoard(c);
-      msg($('crewBoardMsg'), 'ok', 'Saved.', `The screen shows ${c.shift === 'auto' ? 'the shift on now' : c.shift === '1' ? 'the 1st shift' : 'the 2nd shift'}${c.scroll.on ? `, scrolling ${c.scroll.speed}` : ', without scrolling'}; it picks it up within half a minute.`);
+      const hours = (c.shiftHours || []).map((s) => `${s.label} ${s.hours}`).join(', ');
+      msg($('crewBoardMsg'), 'ok', 'Saved.', `The screen shows ${c.shift === 'auto' ? 'the shift on now by the clock' : c.shift === '1' ? 'the 1st shift' : 'the 2nd shift'}${c.scroll.on ? `, scrolling ${c.scroll.speed}` : ', without scrolling'}; the shifts are ${hours}. It picks a change up within half a minute.`);
     } catch (err) { msg($('crewBoardMsg'), 'err', err.message); }
   };
   $('btnSiteNameSave').onclick = async () => {

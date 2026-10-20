@@ -942,6 +942,13 @@
           <select id="fCbSpeed" class="sm"><option value="slow">Slow</option><option value="normal">Normal</option><option value="fast">Fast</option></select></div>
         <div class="auto"><label for="fCbPause">Pause at each end (seconds)</label><input id="fCbPause" type="number" min="0" max="60" step="1" style="width:90px"></div>
       </div>
+      <div class="inline" style="margin-top:8px" id="cbShiftTimes">
+        <div class="auto"><label for="fCbS1From">1st shift from</label><input id="fCbS1From" type="time" step="300" class="sm"></div>
+        <div class="auto"><label for="fCbS1To">to</label><input id="fCbS1To" type="time" step="300" class="sm"></div>
+        <div class="auto"><label for="fCbS2From">2nd shift from</label><input id="fCbS2From" type="time" step="300" class="sm"></div>
+        <div class="auto"><label for="fCbS2To">to</label><input id="fCbS2To" type="time" step="300" class="sm"></div>
+        <div class="auto"><span class="muted" id="cbShiftHours"></span></div>
+      </div>
       <div class="inline" style="margin-top:8px">
         <div class="auto"><label class="cb"><input type="checkbox" id="fCbMembers"> The people on each team</label></div>
         <div class="auto"><label class="cb"><input type="checkbox" id="fCbOpen"> Open seats from the team sheet</label></div>
@@ -954,7 +961,7 @@
         <div class="auto"><button class="primary fit" id="btnCrewBoardSave">Save</button></div>
       </div>
       <div class="feedback" id="crewBoardMsg"></div>
-      <div class="hint">The screen picks a change up within half a minute. Between shifts it shows the one coming in next. A team with no shift set is listed with the shift on screen, marked <i>shift not set</i>. On the screen itself, <b>?shift=1</b> or <b>?shift=2</b> on the address pins it to one shift whatever is set here, and <b>?scroll=0</b> stops the scrolling on that screen alone.</div>
+      <div class="hint">The screen picks a change up within half a minute. With <i>the shift on now</i>, it goes by the warehouse clock against the <b>shift times</b> set here — change them when the shifts move, and a shift may run past midnight (10:00 pm to 6:00 am). Between shifts it shows the one coming in next. A team with no shift set is listed with the shift on screen, marked <i>shift not set</i>. On the screen itself, <b>?shift=1</b> or <b>?shift=2</b> on the address pins it to one shift whatever is set here, and <b>?scroll=0</b> stops the scrolling on that screen alone.</div>
     </div>
 
     <div class="card" id="siteNameCard" data-fold>
