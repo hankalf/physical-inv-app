@@ -13,7 +13,7 @@ const HERE = new URL('.', import.meta.url).pathname;
 const BASE_PORT = Number(process.env.PORT || 3111);
 const SUITES = process.argv.slice(2).length
   ? process.argv.slice(2).map((n) => (n.endsWith('.mjs') ? n : `${n}.mjs`))
-  : ['full-count.mjs', 'cycle-count.mjs', 'roster.mjs', 'ops.mjs', 'scanner-auth.mjs', 'settings.mjs', 'board.mjs', 'search.mjs', 'barcodes.mjs', 'superadmin.mjs', 'setup-guide.mjs', 'recount-threshold.mjs', 'scanner-prompts.mjs', 'gun-guidance.mjs', 'gun-layout.mjs', 'gun-portrait.mjs', 'self-update.mjs', 'durability.mjs', 'delete-session.mjs', 'lot-expiry.mjs', 'multi-tag-bins.mjs', 'messages.mjs', 'sos.mjs', 'approvals.mjs', 'labels-notes.mjs', 'testing-tab.mjs', 'clocks-shifts.mjs', 'gun-floor.mjs', 'office-batch.mjs', 'auto-plan.mjs', 'moves.mjs', 'fix-list.mjs', 'missing.mjs', 'comment-timeout-upgrade.mjs', 'load-15-teams.mjs', 'access.mjs', 'sources.mjs', 'desk.mjs', 'practice-modes.mjs', 'site-report.mjs', 'guide.mjs', 'branding.mjs', 'scanner-jobs.mjs', 'archive.mjs', 'wrong-field.mjs', 'full-counts.mjs', 'login-limit.mjs', 'phone-app.mjs', 'onedrive.mjs', 'readiness.mjs', 'invites.mjs', 'features.mjs', 'practice-second.mjs', 'picker.mjs', 'erp-entries.mjs', 'tips-order.mjs', 'count-clock.mjs', 'practice-data.mjs', 'report-problem.mjs', 'team-sheet.mjs', 'gdrive.mjs', 'systems.mjs', 'count-rules.mjs','gear-sizes.mjs','fold-cards.mjs','employees.mjs','sign-in-flash.mjs','third-count.mjs','erp-aisles.mjs','howto-guides.mjs','recount-team.mjs','inventory-control.mjs','plan-release.mjs','crew-board.mjs','plan-file.mjs','multi-label.mjs','pallet-report.mjs','side-collapse.mjs','team-codes.mjs','teams-backup.mjs','crew-workbook.mjs', 'master-override.mjs'];
+  : ['full-count.mjs', 'cycle-count.mjs', 'roster.mjs', 'ops.mjs', 'scanner-auth.mjs', 'settings.mjs', 'board.mjs', 'search.mjs', 'barcodes.mjs', 'superadmin.mjs', 'setup-guide.mjs', 'recount-threshold.mjs', 'scanner-prompts.mjs', 'gun-guidance.mjs', 'gun-layout.mjs', 'gun-portrait.mjs', 'self-update.mjs', 'durability.mjs', 'delete-session.mjs', 'lot-expiry.mjs', 'multi-tag-bins.mjs', 'messages.mjs', 'sos.mjs', 'approvals.mjs', 'labels-notes.mjs', 'testing-tab.mjs', 'clocks-shifts.mjs', 'gun-floor.mjs', 'office-batch.mjs', 'auto-plan.mjs', 'moves.mjs', 'fix-list.mjs', 'missing.mjs', 'comment-timeout-upgrade.mjs', 'load-15-teams.mjs', 'access.mjs', 'sources.mjs', 'desk.mjs', 'practice-modes.mjs', 'site-report.mjs', 'guide.mjs', 'branding.mjs', 'scanner-jobs.mjs', 'archive.mjs', 'wrong-field.mjs', 'full-counts.mjs', 'login-limit.mjs', 'phone-app.mjs', 'onedrive.mjs', 'readiness.mjs', 'invites.mjs', 'features.mjs', 'practice-second.mjs', 'picker.mjs', 'erp-entries.mjs', 'tips-order.mjs', 'count-clock.mjs', 'practice-data.mjs', 'report-problem.mjs', 'team-sheet.mjs', 'gdrive.mjs', 'systems.mjs', 'count-rules.mjs','gear-sizes.mjs','fold-cards.mjs','employees.mjs','sign-in-flash.mjs','third-count.mjs','erp-aisles.mjs','howto-guides.mjs','recount-team.mjs','inventory-control.mjs','plan-release.mjs','crew-board.mjs','plan-file.mjs','multi-label.mjs','pallet-report.mjs','side-collapse.mjs','team-codes.mjs','teams-backup.mjs','crew-workbook.mjs', 'master-override.mjs', 'access-map.mjs'];
 
 mkdirSync(join(HERE, 'screenshots'), { recursive: true });
 
@@ -21,7 +21,12 @@ mkdirSync(join(HERE, 'screenshots'), { recursive: true });
    OneDrive suite points the app at a stand-in for Microsoft it runs itself. */
 const ONEDRIVE_MOCK = Number(process.env.ONEDRIVE_MOCK_PORT || 3989);
 const GDRIVE_MOCK = Number(process.env.GDRIVE_MOCK_PORT || 3988);
+const GEO_MOCK = Number(process.env.GEOIP_MOCK_PORT || 3987);
 const SUITE_ENV = {
+  'access-map.mjs': {
+    GEOIP_BASE: `http://127.0.0.1:${GEO_MOCK}`,      // the stand-in for the address lookup
+    GEOIP_MOCK_PORT: String(GEO_MOCK),
+  },
   'gdrive.mjs': {
     GDRIVE_ALLOW_URL_PREFIX: `http://127.0.0.1:${GDRIVE_MOCK}/macros/s/`,   // the stand-in for Google
     GDRIVE_MOCK_PORT: String(GDRIVE_MOCK),

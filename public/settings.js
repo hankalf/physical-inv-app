@@ -1524,6 +1524,72 @@
     renderLogo(b);
     if (document.activeElement !== $('fSiteName') && document.activeElement !== $('fSitePlace')) { $('fSiteName').value = b.name || ''; $('fSitePlace').value = b.place || ''; }
   }
+  /* ------------------------------------------------------------ where sign-ons come from (site admin) */
+  let amMap = null, amLayer = null, amLeaflet = null;
+  function loadLeaflet() {
+    if (amLeaflet) return amLeaflet;
+    amLeaflet = new Promise((resolve, reject) => {
+      const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = '/vendor/leaflet/leaflet.css'; document.head.appendChild(css);
+      const s = document.createElement('script'); s.src = '/vendor/leaflet/leaflet.js'; s.onload = () => resolve(window.L); s.onerror = () => reject(new Error('the map library did not load')); document.head.appendChild(s);
+    });
+    return amLeaflet;
+  }
+  function drawAccessMap(d) {
+    const s = d.summary;
+    $('amSummary').textContent = s.signons ? `${s.signons} sign-on${s.signons === 1 ? '' : 's'} (${s.scanners} scanner, ${s.logins} login) from ${s.addresses} address${s.addresses === 1 ? '' : 'es'}${s.countries ? ` in ${s.countries} countr${s.countries === 1 ? 'y' : 'ies'}` : ''}${s.private ? ` · ${s.private} on the building's network` : ''}${s.pending ? ` · ${s.pending} not looked up yet` : ''}${s.failed ? ` · ${s.failed} lookup${s.failed === 1 ? '' : 's'} failed` : ''}` : 'No sign-ons in this window yet.';
+    $('amSelf').textContent = d.self || '';
+    const when = (iso) => (iso ? new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—');
+    const tbl = $('amTable');
+    tbl.innerHTML = '<thead><tr><th>When</th><th>What</th><th>Who</th><th>Address</th><th>Place</th><th>Network</th><th>Device</th></tr></thead>';
+    const tb = document.createElement('tbody');
+    for (const r of d.rows.slice(0, 300)) {
+      const tr = document.createElement('tr');
+      tr.dataset.kind = r.kind;
+      const place = r.private ? 'the building\'s own network' : r.resolved ? r.place : r.pending ? 'not looked up yet' : `lookup failed${r.error ? ' · ' + r.error : ''}`;
+      for (const [t, cls] of [[when(r.at), ''], [r.kind === 'scanner' ? 'Scanner' : 'Login', ''], [`${r.who}${r.detail ? ' · ' + r.detail : ''}`, ''], [r.ip, 'mono'], [place, r.resolved ? '' : 'muted'], [r.isp || '—', ''], [r.device || '—', '']]) {
+        const td = document.createElement('td'); td.textContent = t; if (cls) td.className = cls; tr.appendChild(td);
+      }
+      tb.appendChild(tr);
+    }
+    if (!d.rows.length) { const tr = document.createElement('tr'); const td = document.createElement('td'); td.colSpan = 7; td.className = 'muted'; td.textContent = 'Nothing yet.'; tr.appendChild(td); tb.appendChild(tr); }
+    tbl.appendChild(tb);
+    /* the map: one circle per address with a place, sized by how many sign-ons came from it */
+    loadLeaflet().then((L) => {
+      if (!amMap) {
+        amMap = L.map('amMap', { worldCopyJump: true, zoomControl: true }).setView([30, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' }).addTo(amMap);
+        amLayer = L.layerGroup().addTo(amMap);
+      }
+      amLayer.clearLayers();
+      const pts = [];
+      for (const p of d.places) {
+        if (!p.resolved || p.lat == null || p.lon == null) continue;
+        const n = p.scanners + p.logins;
+        const color = p.scanners && p.logins ? '#b07cff' : p.scanners ? '#4c9dff' : '#e9b23c';
+        const m = L.circleMarker([p.lat, p.lon], { radius: Math.min(22, 7 + Math.sqrt(n) * 3), color, fillColor: color, fillOpacity: 0.45, weight: 2 }).addTo(amLayer);
+        m.bindPopup(`<b>${p.place}</b><br>${p.ip}${p.isp ? ' · ' + p.isp : ''}<br>${p.scanners} scanner sign-on${p.scanners === 1 ? '' : 's'}, ${p.logins} login${p.logins === 1 ? '' : 's'}<br>${p.who.slice(0, 6).join(', ')}${p.who.length > 6 ? '…' : ''}<br>last ${when(p.last)}`);
+        pts.push([p.lat, p.lon]);
+      }
+      if (pts.length) amMap.fitBounds(pts, { padding: [30, 30], maxZoom: 10 });
+      setTimeout(() => amMap.invalidateSize(), 50);
+    }).catch((err) => msg($('amMsg'), 'err', err.message));
+  }
+  async function refreshAccessMap() {
+    const card = $('accessMapCard');
+    if (!api.me || !api.me.siteAdmin) { card.hidden = true; return; }
+    card.hidden = false;
+    drawAccessMap(await api.json(`/api/admin/access-map?days=${$('fAmDays').value}&kind=${$('fAmKind').value}`));
+  }
+  $('fAmDays').onchange = () => refreshAccessMap().catch((err) => msg($('amMsg'), 'err', err.message));
+  $('fAmKind').onchange = () => refreshAccessMap().catch((err) => msg($('amMsg'), 'err', err.message));
+  $('btnAmLookup').onclick = async () => {
+    try {
+      $('btnAmLookup').disabled = true;
+      drawAccessMap(await api.post(`/api/admin/access-map/lookup?days=${$('fAmDays').value}&kind=${$('fAmKind').value}`, {}));
+      msg($('amMsg'), 'ok', 'Looked up.');
+    } catch (err) { msg($('amMsg'), 'err', err.message); } finally { $('btnAmLookup').disabled = false; }
+  };
+
   /* ------------------------------------------------------------ the crew board */
   function drawCrewBoard(c) {
     $('fCbShift').value = c.shift || 'auto';
@@ -2547,6 +2613,7 @@
     await refreshMe();
     await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshJobs().catch(() => {}), refreshReasons(), refreshSosSettings(), refreshIssueMenu().catch(() => {}), refreshLogo(), refreshPalletSystem().catch(() => {}), refreshOnedrive().catch(() => {}), refreshGdrive().catch(() => {}), refreshTeamsBackup().catch(() => {}), refreshCrewBoard().catch(() => {}), refreshSystems().catch(() => {})]);
     drawOverride();
+    refreshAccessMap().catch(() => {});
     await refreshFeatures().catch(() => {});
     await refreshGun().catch(() => {});
     await loadLayouts().catch(() => {});

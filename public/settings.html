@@ -789,6 +789,29 @@
 
       <div data-sub="logins" data-sub-label="Logins">
     <p class="pane-intro">Who can sign in, what each login may use — and on a site with a TEST system, which systems — and your own password.</p>
+    <div class="card" id="accessMapCard" hidden data-fold>
+      <h2>Where sign-ons come from <span class="muted">every scanner and every login, by network address — the site admin alone sees this</span></h2>
+      <div class="hint" style="margin-top:0">
+        A scanner opening its link or signing a team on, and anyone signing in to these pages, is written down with the
+        <b>network address</b> it came from. Each address is looked up once — country, region, city and the network it
+        belongs to — and put on the map. The warehouse shows as its internet provider's town; a scanner link opened
+        somewhere it should not be, or a login from a café, stands out. An address on a private network (the building's own
+        Wi-Fi reaching a server in the building) has no place in the world and is listed as such.
+      </div>
+      <div class="inline" style="margin-top:10px">
+        <div class="auto"><label for="fAmDays">Last</label>
+          <select id="fAmDays" class="sm"><option value="7">7 days</option><option value="30" selected>30 days</option><option value="90">90 days</option><option value="365">a year</option></select></div>
+        <div class="auto"><label for="fAmKind">Show</label>
+          <select id="fAmKind" class="sm"><option value="">Scanners and logins</option><option value="scanner">Scanners only</option><option value="login">Logins only</option></select></div>
+        <div class="auto"><button class="fit" id="btnAmLookup" title="Addresses not looked up yet, or whose lookup failed, are tried again">Look up new addresses</button></div>
+        <div class="auto"><span class="muted" id="amSummary"></span></div>
+      </div>
+      <div id="amMap" style="height:380px;margin-top:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)"></div>
+      <div class="muted" id="amLegend" style="margin-top:6px;font-size:12px"><span style="color:#4c9dff">●</span> scanners &nbsp; <span style="color:#e9b23c">●</span> logins &nbsp; <span style="color:#b07cff">●</span> both — the size says how many</div>
+      <div class="scroll" style="margin-top:10px"><table id="amTable"></table></div>
+      <div class="feedback" id="amMsg"></div>
+      <div class="hint">Your own address right now is <b id="amSelf"></b>. The lookup asks a public service (<code>ipwho.is</code>) for each new address once; nothing else about the sign-on leaves the server.</div>
+    </div>
     <div class="card" id="loginsCard">
       <h2>Supervisor logins
         <span class="muted">everyone who changes something is recorded by name in the log</span></h2>

@@ -266,6 +266,22 @@ PDF beside it): Admin, Supervisor, Inventory control, Count supervisor, Warehous
 counter, and one for the counters on the handhelds. Hand a new login the right one; this manual
 is the reference behind them.
 
+**Where the sign-ons come from (site admin only).** *Settings → Logins → Where sign-ons come
+from* — a card only the site admin sees (the login the site started with). Every scanner that
+opens its link or signs a team on, and every login to the office pages, is written down with the
+**network address** it came from; each address is looked up once — country, region, city and the
+network it belongs to — and put on a **map**, with a **list** underneath: when, scanner or login,
+who, the address, the place, the network, and the device read from its browser (*Android · Chrome
+118*, *Windows · Edge 120*). The warehouse shows as its internet provider's town; a scanner link
+opened somewhere it should not be, or a login from a café, stands out — and a scanner on the
+building's own Wi-Fi reaching a server in the building is listed as *the building's own network*,
+which has no place in the world to look up. *Last 7 / 30 / 90 days / a year* and *Scanners and
+logins / Scanners only / Logins only* narrow it; **Look up new addresses** retries any address not
+yet looked up, or whose lookup failed more than a day ago. The lookup asks a public service
+(`ipwho.is`, or whatever `GEOIP_BASE` names) for each new address once, after the sign-on has
+been answered — never in its way — and nothing else about the sign-on leaves the server. Any other
+admin asking for it is refused.
+
 ### Step 4a — Switch off what nobody needs yet
 
 **Settings → Site & systems → What is switched on.** Admins only.

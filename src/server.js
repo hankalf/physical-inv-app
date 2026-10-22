@@ -76,6 +76,7 @@ function systemsView(req) {
   return st;
 }
 import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, unlockPlace, PER_LOGIN, PER_PLACE } from './routes/login-limit.js';
+import { recordAccess, accessMap, lookupPending } from './routes/access-map.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards, barcodeBook, teamCodes } from './routes/printing.js';
 import {
@@ -404,6 +405,7 @@ async function handleHandheld(req, res, url, m) {
     touchDevice(d.uid);
     const enrolled = enrollDevice(d.uid);
     audit(d.name, 'scanner enrolled', `attempt ${(getDevice(d.uid).enrol_count)} for this link`);
+    recordAccess('scanner', { who: d.name, detail: 'opened its link', ip: clientIp(req), ua: req.headers['user-agent'] });
     return sendJson(req, res, 200, { uid: d.uid, name: d.name, token: enrolled.token, authRequired: SCANNER_AUTH });
   }
 
@@ -550,6 +552,7 @@ async function handleHandheld(req, res, url, m) {
       employees: Array.isArray(body.employees) ? body.employees.map((e) => norm(e)).filter(Boolean) : [],
     });
     touchDevice(device ? device.uid : body.deviceUid, { team: body.team, sessionId: m[1] });
+    recordAccess('scanner', { who: device ? device.name : body.deviceId, detail: `team ${norm(body.team)} signed on`, ip: clientIp(req), ua: req.headers['user-agent'], sessionId: m[1] });
 
     // Who actually signed on, and can they reach what this team was given?
     const status = teamStatus(m[1], body.team, { exceptDevice: device ? device.name : body.deviceId });
@@ -725,6 +728,7 @@ async function handleAdmin(req, res, url, m) {
     adminTokens.set(token, { name: user.name, username: user.username, role: user.role });
     saveAdminToken(token, { username: user.username, name: user.name });
     audit(user.name, 'signed in', `as ${user.username} (${user.role})`);
+    recordAccess('login', { who: user.username, detail: `${user.name} (${user.role})`, ip, ua: req.headers['user-agent'] });
     // a starter password gets them in, but only as far as choosing a real one
     return sendJson(req, res, 200, {
       token, name: user.name, username: user.username, role: user.role,
@@ -1181,6 +1185,15 @@ async function handleAdmin(req, res, url, m) {
   }
 
   // --- accounts
+  /* --- where the sign-ons come from: the site admin's alone, scanners and logins alike */
+  if (p === '/api/admin/access-map' || p === '/api/admin/access-map/lookup') {
+    if (!isSiteAdmin(whoNow)) throw httpError(403, 'only the site admin sees where sign-ons come from');
+    if (p === '/api/admin/access-map/lookup' && method === 'POST') {
+      const n = await lookupPending();
+      audit(actor, 'looked up sign-on addresses', `${n} address${n === 1 ? '' : 'es'}`);
+    }
+    return sendJson(req, res, 200, { ...accessMap({ days: url.searchParams.get('days') || 30, kind: url.searchParams.get('kind') || '' }), self: clientIp(req) });
+  }
   if (p === '/api/admin/me' && method === 'GET') {
     const who = currentUser(req, url);
     if (!who) throw httpError(401, 'unauthorized');

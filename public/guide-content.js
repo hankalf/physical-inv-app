@@ -94,6 +94,7 @@
           ask: [
             { q: 'What can a Read only login do?', a: 'Open the dashboard tabs and reports, nothing that changes a count.' },
             { q: 'How do I stop someone signing in?', a: 'Untick Active on their login. Their open sign-ins end at once.' },
+            { q: 'Where did a scanner or a login sign on from?', a: 'Settings → Logins → Where sign-ons come from — the site admin alone sees it. Every scanner opening its link or signing a team on, and every login, is written down with its network address; each address is looked up once (country, region, city, network) and shown on a map and in a list, with the device read from the browser. A scanner on the building’s own Wi-Fi reaching a server in the building is listed as the building’s own network. Look up new addresses retries any address not looked up yet.', goto: S('/settings', 'logins', 'Settings → Logins') },
           ],
         },
         {
