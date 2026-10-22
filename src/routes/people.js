@@ -355,6 +355,22 @@ const SIZE_COLUMNS = [
 /** "1" -> 1st shift, "2" -> 2nd shift, as the sheets and the page say it. */
 export const shiftWord = (s) => (s === '1' ? '1st shift' : s === '2' ? '2nd shift' : '');
 
+/* A person on an office screen is "Marcus O.", not E1043: the first name and
+   the last initial. A clock-in number nobody on the crew list has stays a
+   number, so a wrong badge is still visible for what it is. */
+export function shortName(name) {
+  const words = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return '';
+  if (words.length === 1) return words[0];
+  return `${words[0]} ${words[words.length - 1][0].toUpperCase()}.`;
+}
+export function shortNames(badges) {
+  const list = Array.isArray(badges) ? badges : [];
+  if (!list.length) return [];
+  const people = new Map(db.prepare('SELECT badge, name FROM employees').all().map((e) => [norm(e.badge), e.name]));
+  return list.map((b) => shortName(people.get(norm(b))) || String(b));
+}
+
 /** Import a roster CSV: badge, name, department, shift, equipment, and sizes when it has them. */
 export function importEmployees(text, { replace = false, nested = false } = {}) {
   const { parseRecords, pick } = importHelpers;

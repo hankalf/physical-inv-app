@@ -134,7 +134,8 @@
     zoneByAisle = new Map(p.byAisle.map((a) => [a.aisle, a.zone]));
     // Merge sign-ons (who is on which scanner) with counting activity.
     const byTeam = new Map();
-    for (const s of p.signedOn) byTeam.set(s.team, { team: s.team, devices: s.devices, employees: JSON.parse(s.employees || '[]').join(', '), lines: 0, bins: 0 });
+    // who is on the gun: first name and last initial, the clock-in numbers on hover
+    for (const s of p.signedOn) byTeam.set(s.team, { team: s.team, devices: s.devices, employees: (s.names || JSON.parse(s.employees || '[]')).join(', '), badges: JSON.parse(s.employees || '[]').join(', '), lines: 0, bins: 0 });
     for (const t of p.byTeam) byTeam.set(t.team, { ...(byTeam.get(t.team) || { team: t.team, employees: '' }), ...t, devices: t.devices });
     lastTeams = byTeam;
     renderTeamTable();
@@ -193,7 +194,7 @@
         else if (k && k.spells) down.title = `${k.spells} quiet spell${k.spells === 1 ? '' : 's'} over ${clockData.count.gapMinutes} min`;
         const pace = cell(k && k.linesPerHour != null ? String(k.linesPerHour) : '—', 'num');
         if (k && k.linesPerHour != null) pace.title = `${k.binsPerHour} bins an hour, over ${span(k.countingMs)} of counting`;
-        tr.append(cell(c && c.person ? `${t.team} · ${c.person}` : t.team), cell(c && c.shift ? SHIFT_NAME[c.shift] : '—'), cell(t.devices || '—'), cell(t.employees || '—', 'wrap'),
+        tr.append(cell(c && c.person ? `${t.team} · ${c.person}` : t.team), cell(c && c.shift ? SHIFT_NAME[c.shift] : '—'), cell(t.devices || '—'), Object.assign(cell(t.employees || '—', 'wrap'), { title: t.badges || '' }),
           (() => { const a = t.active_aisle || (c && c.aisle); return cell(a ? aisleLabel(a, zoneByAisle.get(a)) : '—'); })(),
           st, timer, down, quiet, cell(t.lines || 0, 'num'), cell(t.bins || 0, 'num'), pace);
         return tr;
@@ -1919,7 +1920,7 @@
     who.className = 'who';
     who.textContent = [
       [a.aisle && `aisle ${a.aisle}`, a.bin && `last bin ${a.bin}`].filter(Boolean).join(' · '),
-      a.device_id, (a.employees || []).join(', '),
+      a.device_id, (a.names || a.employees || []).join(', '),
       new Date(a.created_at).toLocaleTimeString(),
       a.status === 'seen' && a.seen_by ? `${a.seen_by} is on it` : '',
       a.sent_to === 'teams' ? 'sent to Teams' : a.sent_to && a.sent_to !== 'teams off' ? a.sent_to : '',

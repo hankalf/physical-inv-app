@@ -202,8 +202,8 @@ themselves.
 
 **Dashboard**, with the count in the picker. It refreshes itself every 30 seconds.
 
-- **Progress** — bins counted, lines and exceptions, then a row per team: what it is counting, its
-  clock, its last scan and its pace.
+- **Progress** — bins counted, lines and exceptions, then a row per team: who is on its scanner
+  (first name and last initial), what it is counting, its clock, its last scan and its pace.
 - **An amber bar** — a team has stopped scanning. **On break** or **Lunch** quiets it. **Seen — I am
   on it** quiets it until the team scans again.
 - **A red bar with a chime** — an SOS. Press **I am on it**, and the counter's scanner says help is

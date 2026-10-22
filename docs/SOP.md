@@ -1628,7 +1628,8 @@ light), so three dashboards left open on a big count do not keep rebuilding the 
 *The logo card: one upload, shown on every supervisor page and, if ticked, on the scanners.*
 
 - **Progress** — lines, bins counted, pallets, exceptions; and a row per team with its
-  **shift**, what it is counting right now, **when it started**, a **clock** of its time on the
+  **shift**, who is on its scanner (first name and last initial — *Marcus O., Priya R.* — with the
+  clock-in numbers on hover; a number nobody on the crew list has stays a number), what it is counting right now, **when it started**, a **clock** of its time on the
   count, its **downtime**, when it last scanned and its **lines an hour**. *All shifts / 1st shift /
   2nd shift* above the table narrows it. A team's clock stops when it signs off on the gun or
   finishes its last aisle. When the report

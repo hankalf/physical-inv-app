@@ -25,6 +25,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const tok = (await j(await fetch(`${BASE}/api/admin/login`, { method: 'POST', headers: hdr, body: JSON.stringify({ password: 'changeme', name: 'Dana Whitfield' }) }))).token;
 const A = { ...hdr, authorization: 'Bearer ' + tok };
 const csv = { authorization: 'Bearer ' + tok, 'content-type': 'text/csv' };
+/* one of the two on the gun is on the crew list: the office sees a name for them, a number for the other */
+await fetch(`${BASE}/api/admin/people/employees?new=1`, { method: 'POST', headers: A, body: JSON.stringify({ badge: 'E1001', name: 'Marcus Obi', dept: 'Warehouse', shift: '1' }) });
 
 /* ---------------- a channel to post into ---------------- */
 const posted = [];
@@ -80,6 +82,7 @@ check('...carrying where they are, which is half the point',
   first.alert.aisle === 'F01' && first.alert.bin === 'F01A002' && first.alert.team === '3',
   `${first.alert.team} · ${first.alert.aisle} · ${first.alert.bin}`);
 check('...and who is on the gun', first.alert.employees.join(',') === 'E1001,E1002', first.alert.employees.join(','));
+check('...by first name and last initial for the office, a number only for somebody not on the crew list', first.alert.names.join(',') === 'Marcus O.,E1002', first.alert.names.join(','));
 const again = await raise({ clientId: 'sos-a', reason: 'Blast freezer door will not close', team: '3', deviceId: 'SOS-01' });
 check('A scanner that re-sends after a dropped signal raises one alert, not two',
   again.already === true && again.alert.id === first.alert.id, JSON.stringify(again.already));
@@ -249,6 +252,9 @@ check('Dashboard: the Alerts tab carries a badge with the open count', !(await p
 check('Dashboard: SOS from the floor and Message the floor share the Alerts tab', await page.$eval('[data-sub="alerts"]', (el) => !!el.querySelector('#sosTable') && !!el.querySelector('#btnSendMsg')));
 const banner = clean(await page.textContent('#sosAlert'));
 check('Dashboard: reading team, what is wrong and where', /SOS · team/.test(banner) && /aisle|last bin|SOS-01/.test(banner), banner.slice(0, 140));
+{ const prog = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/progress`, { headers: A }));
+  const row = prog.signedOn.find((r) => String(r.team) === '4');
+  check('Progress: the team row names its people by first name and last initial, the number kept beside it', !!row && row.names.join(',') === 'Marcus O.' && JSON.parse(row.employees).join(',') === 'E1001', JSON.stringify(row)); }
 await page.click('#sosAlert button:has-text("I am on it")');
 await page.waitForTimeout(1200);
 check('Dashboard: "I am on it" marks it and says who', /is on it/.test(clean(await page.textContent('#sosAlert'))), clean(await page.textContent('#sosAlert')).slice(0, 160));

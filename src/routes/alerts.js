@@ -1,4 +1,5 @@
 import { db, norm, getSession } from '../db.js';
+import { shortNames } from './people.js';
 import { alertCard, postToTeams, teamsConfig } from '../util/teams.js';
 
 /*
@@ -57,7 +58,7 @@ export function saveSosReasons(list) {
 }
 
 const byId = (id) => db.prepare('SELECT * FROM alerts WHERE id = ?').get(Number(id));
-const shape = (a) => (a ? { ...a, employees: String(a.employees || '').split(';').map((x) => x.trim()).filter(Boolean) } : a);
+const shape = (a) => { if (!a) return a; const employees = String(a.employees || '').split(';').map((x) => x.trim()).filter(Boolean); return { ...a, employees, names: shortNames(employees) }; };
 
 /**
  * Raise one, from a handheld.

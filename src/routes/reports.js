@@ -1,5 +1,6 @@
 import { db, LIVE } from '../db.js';
 import { aisleOverview } from './assignments.js';
+import { shortNames } from './people.js';
 
 export function progress(sessionId) {
   const id = Number(sessionId);
@@ -57,7 +58,9 @@ export function progress(sessionId) {
                 ORDER BY x.id DESC LIMIT 1) AS employees
          FROM signons s WHERE session_id = ? GROUP BY team`
     )
-    .all(id);
+    .all(id)
+    // who is on the gun, as names for the screen; the numbers stay for the files
+    .map((r) => { let b = []; try { b = JSON.parse(r.employees || '[]'); } catch { b = []; } return { ...r, names: shortNames(b) }; });
 
   const recounts = db.prepare(`SELECT
       SUM(CASE WHEN status != 'done' THEN 1 ELSE 0 END) AS open, SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) AS done

@@ -548,8 +548,8 @@ always reads English.
 
 **Dashboard**, with the count in the picker. It refreshes itself every 30 seconds.
 
-- **Progress** — bins counted, lines, pallets and exceptions, then a row per team: what it is
-  counting, its clock, its last scan and its lines an hour. *1st shift* and *2nd shift* narrow it.
+- **Progress** — bins counted, lines, pallets and exceptions, then a row per team: who is on its
+  scanner (first name and last initial), what it is counting, its clock, its last scan and its lines an hour. *1st shift* and *2nd shift* narrow it.
 - **An amber bar** above every tab — a team has stopped scanning. **On break** or **Lunch** quiets
   it for that long. **Seen — I am on it** quiets it until the team scans again.
 - **A red bar with a chime** — an SOS. Press **I am on it** so the counter's scanner says help is
