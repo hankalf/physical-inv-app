@@ -728,7 +728,7 @@ async function handleAdmin(req, res, url, m) {
     adminTokens.set(token, { name: user.name, username: user.username, role: user.role });
     saveAdminToken(token, { username: user.username, name: user.name });
     audit(user.name, 'signed in', `as ${user.username} (${user.role})`);
-    recordAccess('login', { who: user.username, detail: `${user.name} (${user.role})`, ip, ua: req.headers['user-agent'] });
+    recordAccess('login', { who: user.username, detail: user.name && user.name !== user.username ? `${user.name} (${user.role})` : user.role, ip, ua: req.headers['user-agent'] });
     // a starter password gets them in, but only as far as choosing a real one
     return sendJson(req, res, 200, {
       token, name: user.name, username: user.username, role: user.role,

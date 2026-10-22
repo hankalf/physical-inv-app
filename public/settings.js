@@ -1547,7 +1547,7 @@
       tr.dataset.kind = r.kind;
       const place = r.private ? 'the building\'s own network' : r.resolved ? r.place : r.pending ? 'not looked up yet' : `lookup failed${r.error ? ' · ' + r.error : ''}`;
       for (const [t, cls] of [[when(r.at), ''], [r.kind === 'scanner' ? 'Scanner' : 'Login', ''], [`${r.who}${r.detail ? ' · ' + r.detail : ''}`, ''], [r.ip, 'mono'], [place, r.resolved ? '' : 'muted'], [r.isp || '—', ''], [r.device || '—', '']]) {
-        const td = document.createElement('td'); td.textContent = t; if (cls) td.className = cls; tr.appendChild(td);
+        const td = document.createElement('td'); td.textContent = t; if (cls) td.className = cls; td.style.whiteSpace = 'nowrap'; tr.appendChild(td);
       }
       tb.appendChild(tr);
     }
