@@ -50,15 +50,49 @@
   #map.blueprint .aisle-label { fill: #f4f8fd; font-size: 11px; }
   #map.blueprint .bay-label { display: none; }
 
-  .team-list { display: flex; flex-direction: column; gap: 10px; }
-  .team { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
-  .team .head { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 700; }
-  .team .seq { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
-  .seq .a { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 8px; padding: 5px 9px; font-size: 13px; background: var(--surface); }
-  .seq .a.active { border-color: var(--accent); background: #1b3c68; }
-  .seq .a.done { opacity: .5; text-decoration: line-through; }
-  .seq .a.blocked { border-color: var(--warn); }
-  .seq .a button { padding: 1px 7px; font-size: 11px; border-radius: 5px; }
+  /* the planning board: the aisles not yet planned beside a column per team */
+  .plan-board { display: grid; grid-template-columns: 250px 1fr; gap: 12px; margin-top: 10px; align-items: start; }
+  @media (max-width: 900px) { .plan-board { grid-template-columns: 1fr; } }
+  .pool { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px; position: sticky; top: 8px; max-height: calc(100vh - 40px); display: flex; flex-direction: column; gap: 8px; }
+  .pool.over { border-color: var(--err); background: var(--err-ink); }
+  .pool-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .pool-list { overflow: auto; display: flex; flex-direction: column; gap: 5px; min-height: 60px; }
+  .pool-aisle { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 8px; align-items: center; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; background: var(--surface); cursor: grab; font-size: 13px; }
+  .pool-aisle:hover { border-color: var(--accent); }
+  .pool-aisle b { font-size: 14px; }
+  .pool-aisle .z { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pool-aisle .n { color: var(--text-dim); font-size: 12px; white-space: nowrap; }
+  .pool-foot { font-size: 11.5px; line-height: 1.4; }
+  .team-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 10px; }
+  .team { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; min-height: 120px; }
+  .team.over { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .team.empty { opacity: .85; }
+  .team .head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-weight: 700; flex-wrap: wrap; }
+  .team .head .muted { font-weight: 500; font-size: 12.5px; text-align: right; }
+  .team .tmeta { font-size: 12px; color: var(--muted); margin-top: -4px; }
+  .team .seq { display: flex; flex-direction: column; gap: 6px; }
+  .seq .a { display: block; border: 1px solid var(--line); border-radius: 9px; padding: 7px 9px 8px; font-size: 13px; background: var(--surface); position: relative; }
+  .seq .a[draggable="true"] { cursor: grab; }
+  .seq .a.active { border-color: var(--ok-line); background: var(--ok-ink); }
+  .seq .a.done { opacity: .55; }
+  .seq .a.done .aisle { text-decoration: line-through; }
+  .seq .a.blocked { border-color: var(--warn-line); background: var(--warn-ink); }
+  .seq .a.before { box-shadow: 0 -3px 0 0 var(--accent); }
+  .seq .a .arow { display: flex; align-items: baseline; gap: 6px 8px; flex-wrap: wrap; }
+  .seq .a .aisle { font-size: 15px; }
+  .seq .a .z { color: var(--muted); font-size: 12px; }
+  .seq .a .lv { color: var(--text-dim); font-size: 12.5px; }
+  .seq .a .st { margin-left: auto; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+  .seq .a.active .st { color: var(--ok-text); }
+  .seq .a.blocked .st { color: var(--warn-text); }
+  .seq .a.queued:not(.blocked) .st { color: var(--muted); }
+  .seq .a .bar { margin-top: 6px; }
+  .seq .a.active .bar i { background: var(--ok); }
+  .seq .a .pm { font-size: 11.5px; color: var(--text-dim); margin-top: 3px; }
+  .seq .a .acts { display: flex; gap: 5px; margin-top: 7px; }
+  .seq .a button { padding: 2px 8px; font-size: 11px; border-radius: 5px; }
+  .team .drop { border: 1px dashed var(--line); border-radius: 8px; padding: 8px; text-align: center; color: var(--muted); font-size: 12px; }
+  .team.over .drop { border-color: var(--accent); color: var(--accent); }
 </style>
 </head>
 <body class="app">
@@ -253,33 +287,44 @@
     </div>
 
     <div class="card" id="teamPlanCard">
-      <h2>Team assignments</h2>
-      <div class="hint">Queue aisles per team in counting order, with the <b>levels</b> that team's equipment covers (A–C on foot, D–F with the lift, A–F for all). Levels are required. Two teams can share an aisle on different levels — or on the same levels from <b>opposite ends</b>: queue one from the 001 end and the other from the far end, and they meet in the middle. A team's next aisle waits while another team holds those levels in its racking block — that is what staggers them. Which aisles share racking is set under <a href="/settings" style="color:var(--accent)">Settings</a>.</div>
-      <!-- the plan as a file: out to edit, back in, and a sample to start from -->
-      <div class="inline" style="margin-top:8px" id="planFileRow">
-        <div class="auto"><button class="fit" id="btnPlanExport" title="Every team's aisles in counting order: Team, Aisle, Levels, Start, Status - the same columns the upload reads">⬇ Export the plan (CSV)</button></div>
-        <div><label for="fPlanFile">Upload a plan</label><input type="file" id="fPlanFile" accept=".csv,.xlsx,.xls,text/csv"></div>
-        <div class="auto"><label class="cb" title="Drop every aisle still queued or being counted first; finished aisles are left alone"><input type="checkbox" id="fPlanFileReplace"> Replace what is queued</label></div>
-        <div class="auto"><button class="primary fit" id="btnPlanUpload">Upload</button></div>
-        <div class="auto"><a id="lnkPlanSample" href="/templates/plan-template.csv" download="plan-template.csv" style="color:var(--accent);font-weight:700;text-decoration:none">⬇ Sample plan</a></div>
-      </div>
-      <div class="hint" style="margin-top:4px">Columns: <b>Team</b>, <b>Aisle</b>, <b>Levels</b> (A-C, D-F, A-F), and <b>Start</b> (<i>001 end</i> or <i>far end</i>, optional). An exported plan comes back as it is — its <b>Status</b> column is for reading and is ignored. Every team on <a href="/teams" style="color:var(--accent)">Teams &amp; crew</a> has a row below, queued or not.</div>
-      <div class="feedback" id="planFileMsg"></div>
-      <datalist id="planTeamNames"></datalist>
-      <div class="inline" style="margin-top:8px">
+      <h2>Team assignments <span class="muted" id="planSummary"></span></h2>
+      <!-- queue by hand, or drag an aisle from the list onto a team -->
+      <div class="inline" style="margin-top:4px" id="assignRow">
         <div class="auto"><label for="fAssignTeam">Team</label><input id="fAssignTeam" class="sm" style="width:70px" placeholder="3" list="planTeamNames" autocomplete="off"></div>
-        <div><label for="fAssignAisles">Aisles, in order</label><input id="fAssignAisles" placeholder="F01, F03, F05"></div>
-        <div class="auto"><label for="fAssignLevels">Levels (required)</label><input id="fAssignLevels" class="sm" placeholder="A-C" required title="Which levels this team counts, by equipment: A-C on foot, D-F with the lift, A-F for every level."></div>
+        <div><label for="fAssignAisles">Aisles, in order</label><input id="fAssignAisles" placeholder="F01, F03, F05 — or drag aisles from the list onto a team"></div>
+        <div class="auto"><label for="fAssignLevels">Levels</label><input id="fAssignLevels" class="sm" placeholder="A-C" required title="Which levels this team counts, by equipment: A-C on foot, D-F with the lift, A-F for every level."></div>
         <div class="auto"><label for="fAssignFrom">Start from</label>
           <select id="fAssignFrom" class="sm" title="From the far end, a second team can count the same aisle and levels as one starting at the 001 end: they meet in the middle.">
             <option value="up">The 001 end</option><option value="down">The far end</option></select></div>
         <div class="auto"><button class="primary fit" id="btnAssign">Queue</button></div>
+        <div class="auto"><button class="fit" id="btnPlanFileTools" title="The plan as a file: export it, upload one, or start from the sample">⇅ Plan file</button></div>
+        <div class="auto"><button class="fit ghost" id="btnPlanHelp" title="How the plan works" aria-label="How the plan works">?</button></div>
       </div>
+      <datalist id="planTeamNames"></datalist>
       <div class="feedback" id="assignMsg"></div>
-      <div class="team-list" id="teamList" style="margin-top:10px"></div>
-    </div>
-
+      <div class="hint" id="planHelp" hidden>Queue aisles per team in counting order, with the <b>levels</b> that team's equipment covers (A–C on foot, D–F with the lift, A–F for all). Drag an aisle from <b>Aisles not planned</b> onto a team and it is queued with the levels the team reaches; drag a queued aisle up or down to reorder it, onto another team to move it, or back onto the list to take it off the plan. Two teams can share an aisle on different levels — or on the same levels from <b>opposite ends</b>: queue one from the 001 end and the other from the far end, and they meet in the middle. A team's next aisle waits while another team holds those levels in its racking block — that is what staggers them. Which aisles share racking is set under <a href="/settings" style="color:var(--accent)">Settings</a>. <b>done</b> on the aisle being counted finishes it (the scanner has no button for that), <b>release</b> sends it to the back of the queue, <b>✕</b> takes it off the plan.</div>
+      <!-- the plan as a file: out to edit, back in, and a sample to start from -->
+      <div id="planFileRow" hidden>
+        <div class="inline" style="margin-top:4px">
+          <div class="auto"><button class="fit" id="btnPlanExport" title="Every team's aisles in counting order: Team, Aisle, Levels, Start, Status - the same columns the upload reads">⬇ Export the plan (CSV)</button></div>
+          <div><label for="fPlanFile">Upload a plan</label><input type="file" id="fPlanFile" accept=".csv,.xlsx,.xls,text/csv"></div>
+          <div class="auto"><label class="cb" title="Drop every aisle still queued or being counted first; finished aisles are left alone"><input type="checkbox" id="fPlanFileReplace"> Replace what is queued</label></div>
+          <div class="auto"><button class="primary fit" id="btnPlanUpload">Upload</button></div>
+          <div class="auto"><a id="lnkPlanSample" href="/templates/plan-template.csv" download="plan-template.csv" style="color:var(--accent);font-weight:700;text-decoration:none">⬇ Sample plan</a></div>
+        </div>
+        <div class="hint" style="margin-top:4px">Columns: <b>Team</b>, <b>Aisle</b>, <b>Levels</b> (A-C, D-F, A-F), and <b>Start</b> (<i>001 end</i> or <i>far end</i>, optional). An exported plan comes back as it is — its <b>Status</b> column is for reading and is ignored. Every team on <a href="/teams" style="color:var(--accent)">Teams &amp; crew</a> has a column below, queued or not.</div>
+        <div class="feedback" id="planFileMsg"></div>
       </div>
+      <div class="plan-board" id="planBoard">
+        <aside class="pool" id="aislePool">
+          <div class="pool-head"><b>Aisles not planned</b><span class="muted" id="poolCount"></span></div>
+          <input id="poolFilter" class="sm" placeholder="Find an aisle" autocomplete="off">
+          <div class="pool-list" id="poolList"></div>
+          <div class="pool-foot muted">Drag an aisle onto a team. Drop a queued aisle here to take it off the plan.</div>
+        </aside>
+        <div class="team-list" id="teamList"></div>
+      </div>
+    </div>
 
       <div data-sub="alerts" data-sub-label="Alerts">
     <div class="card" id="sosCard">

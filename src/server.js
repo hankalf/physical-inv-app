@@ -40,7 +40,7 @@ import { inventoryOverview } from './routes/inventory-control.js';
 import { withEntries, markEntered, markFromFile, worksheetRows, WORKSHEET_COLUMNS, withErpMarks } from './routes/erp-entries.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
-  setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks, partnerOf, planRows, planTeams, PLAN_COLUMNS } from './routes/assignments.js';
+  setAssignmentStatus, deleteAssignment, reorderAssignments, teamStatus, applyLayoutBlocks, partnerOf, planRows, planTeams, PLAN_COLUMNS } from './routes/assignments.js';
 import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot, labelsToReplace, fixLabel } from './routes/reports.js';
 import {
   listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
@@ -1147,6 +1147,14 @@ async function handleAdmin(req, res, url, m) {
     audit(actor, body.force ? 'assigned aisles OVERRIDING the equipment check' : 'assigned aisles',
       `team ${body.team}: ${queued.added.join(', ') || 'nothing'} (levels ${body.levels})`, m[1]);
     return sendJson(req, res, 200, queued);
+  }
+  // the planning board's drag: a team's queued aisles in a new order, or an aisle brought over from another team
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments\/order$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const out = reorderAssignments(m[1], body.team, body.ids);
+    const over = out.moved.filter((x) => x.from !== norm(body.team));
+    audit(actor, over.length ? 'moved an aisle to another team' : 'reordered a team\'s aisles', over.length ? over.map((x) => `${x.aisle}: team ${x.from} → team ${norm(body.team)}`).join(', ') : `team ${norm(body.team)}: ${out.moved.map((x) => x.aisle).join(', ')}`, m[1]);
+    return sendJson(req, res, 200, out);
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments\/(\d+)$/)) && method === 'POST') {
     const body = await readJson(req);

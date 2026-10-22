@@ -260,6 +260,41 @@ export function setAssignmentStatus(sessionId, assignmentId, status) {
   return { assignment: after, activated, note: back ? `Team ${row.team} had nothing else queued, so ${row.aisle} started again - ✕ takes it off the plan` : '' };
 }
 
+/**
+ * The planning board's drag: a team's queued aisles in a new order, and an
+ * aisle dragged in from another team's queue. Only queued aisles move - the
+ * one being counted and the finished ones keep their place - and a moved
+ * aisle keeps its levels and direction. The team's next aisle then starts if
+ * it has none.
+ */
+export function reorderAssignments(sessionId, team, ids = []) {
+  const id = Number(sessionId);
+  const t = norm(team);
+  if (!t) throw Object.assign(new Error('team required'), { status: 400 });
+  const want = [...new Set((Array.isArray(ids) ? ids : []).map(Number).filter((n) => Number.isInteger(n) && n > 0))];
+  const rows = want.map((n) => db.prepare('SELECT * FROM assignments WHERE id = ? AND session_id = ?').get(n, id));
+  if (rows.some((r) => !r)) throw Object.assign(new Error('an aisle on the list is not on this count'), { status: 404 });
+  if (rows.some((r) => r.status !== 'queued')) throw Object.assign(new Error('only an aisle still queued can be moved - the one being counted stays where it is'), { status: 409 });
+  db.exec('BEGIN');
+  try {
+    for (const r of rows) {
+      // the same aisle and levels twice on one team is the one thing the plan refuses
+      if (r.team !== t) {
+        const dup = db.prepare('SELECT 1 FROM assignments WHERE session_id = ? AND team = ? AND aisle = ? AND levels = ? AND id != ?').get(id, t, r.aisle, r.levels, r.id);
+        if (dup) throw Object.assign(new Error(`${r.aisle} (${r.levels || 'every level'}) is already on team ${t}'s plan`), { status: 409 });
+      }
+    }
+    // the queued ones go after whatever is not queued, in the order given; the team's other queued aisles after those
+    const base = db.prepare("SELECT COALESCE(MAX(position), 0) AS p FROM assignments WHERE session_id = ? AND team = ? AND status != 'queued'").get(id, t).p;
+    let pos = base;
+    for (const r of rows) db.prepare('UPDATE assignments SET team = ?, position = ? WHERE id = ?').run(t, ++pos, r.id);
+    const rest = db.prepare("SELECT id FROM assignments WHERE session_id = ? AND team = ? AND status = 'queued' ORDER BY position, id").all(id, t).filter((r) => !want.includes(r.id));
+    for (const r of rest) db.prepare('UPDATE assignments SET position = ? WHERE id = ?').run(++pos, r.id);
+    db.exec('COMMIT');
+  } catch (err) { db.exec('ROLLBACK'); throw err; }
+  return { moved: rows.map((r) => ({ id: r.id, aisle: r.aisle, from: r.team })), activated: autoActivate(id) };
+}
+
 /** Off the plan, whatever its state: the team's next aisle starts in its place. The aisle's counts stay. */
 export function deleteAssignment(sessionId, assignmentId) {
   const row = db.prepare('SELECT * FROM assignments WHERE id = ? AND session_id = ?').get(Number(assignmentId), Number(sessionId));

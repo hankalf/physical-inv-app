@@ -1030,13 +1030,24 @@ comes back as "already counted", and a trial line a gun sends late is dropped.
 
 **Dashboard → Team plan.**
 
-**Every team on Teams & crew has a row here** from the start — *nothing queued · reaches levels
-A–F* — with **Queue aisles for this team**, which puts the team and the levels it reaches into the
-form below and the cursor in *Aisles*. The **Team** box offers the teams by name.
+**The planning board.** On the left, **Aisles not planned** — every aisle no team has yet, with its
+zone and bins, and a box to find one. On the right, **a column per team** from Teams & crew, with
+the team's shift, what it reaches and how many are on it, and its aisles as cards in counting
+order: the one being counted in green with **Counting now**, a progress bar and *36 / 72 bins have
+a count · since 1:48 PM*; the next one marked **Next**, the rest **Queued**; one held while another
+team has the racking in amber, **Held · team 2**, saying which aisle it waits for; finished ones
+greyed out with **Done**. The title line sums it up: *3 teams · 2 counting · 4 queued · 1 done · 4
+aisles not planned*.
 
-Fill the plan any of three ways: queue aisles by hand here, let **Auto-assign the aisles** plan it
-(below), or **upload a counting plan** — one row per aisle, in the order each team counts it, with
-the levels their equipment reaches. The plan file is on this tab:
+**Drag.** Drag an aisle from the list onto a team and it is queued last with the levels the team
+reaches (a team that cannot reach them is refused, with the choice to insist). Drag a queued aisle
+up or down a team's queue to reorder it, onto another team to move it, or back onto the list to take
+it off the plan. The aisle being counted does not move.
+
+**By hand.** The row above the board: **Team** (offered by name), **Aisles, in order**, **Levels**,
+**Start from**, **Queue**. Clicking an aisle in the list puts it in the *Aisles* box. A team with
+nothing queued has **Queue aisles for this team**, which fills the team and the levels it reaches.
+**?** opens how the plan works; **⇅ Plan file** opens the file tools:
 
 - **⬇ Export the plan (CSV)** — every team's aisles in counting order: **Team**, **Aisle**,
   **Levels** (*A-C*), **Start** (*001 end* / *far end*) and **Status** (*counting*, *queued*,
@@ -1066,7 +1077,7 @@ dashboard. Uploading needs *Queue aisles*; the export needs *Downloads*.
   pairs the teams (1 with 2, 3 with 4 …) and plans it for every aisle; an odd team out works alone.
   A counting-plan file takes the same thing in an optional **Start** column: *far end* or *001 end*.
 
-**The buttons on an aisle.** Each aisle in a team's row has what fits its state: **start** on one
+**The buttons on an aisle.** Each card has what fits its state: **start** on one
 waiting (if its racking block is free); **done** on the one being counted — the gun has no button for this: finishing an
 aisle is the floor supervisor's call, made here, and it raises the MISSING second counts for the
 pallets nobody saw and files the aisle; the team's next aisle then shows on its scanner by itself;
@@ -1076,7 +1087,7 @@ the next one starts — with nothing else queued it simply starts again, and the
 state — the aisle's counts stay, and if the team was counting it, their next aisle starts. On an
 aisle being counted or finished, ✕ asks first.
 
-**Auto-assign the aisles.** The card above the queue does the whole plan at once, staggered:
+**Auto-assign the aisles.** The card above the board does the whole plan at once, staggered:
 
 1. Pick the **teams** (blank is every team on Teams & crew, or one **shift**), the **levels**
    (blank is all), and which way to **walk the aisles**.

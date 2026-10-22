@@ -73,6 +73,9 @@ check('Team plan: a team from Teams & crew with nothing queued has its own row',
 await box.locator('button[data-queue-for="34"]').click();
 check('…Queue aisles for this team fills the form with it, and puts the cursor on the aisles', (await page.inputValue('#fAssignTeam')) === '34' && await page.evaluate(() => document.activeElement && document.activeElement.id === 'fAssignAisles'));
 check('…and the Team box offers every team by name', (await page.$$eval('#planTeamNames option', (o) => o.map((x) => x.value))).join() === '31,32,33,34');
+check('The plan-file tools are folded away until ⇅ Plan file is pressed', await page.$eval('#planFileRow', (el) => el.hidden));
+await page.click('#btnPlanFileTools');
+check('…and then show export, upload and the sample', !(await page.$eval('#planFileRow', (el) => el.hidden)) && await page.isVisible('#btnPlanExport'));
 const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#btnPlanExport')]);
 check('⬇ Export the plan downloads it, named for the count', /^plan-Plan-file-count\.csv$/.test(dl.suggestedFilename()), dl.suggestedFilename());
 await page.setInputFiles('#fPlanFile', { name: 'plan.csv', mimeType: 'text/csv', buffer: Buffer.from('Team,Aisle,Levels,Start\n34,P12,A-C,far end\n') });

@@ -398,7 +398,7 @@ try {
   await wait(1200);
   await saveCard(desk, '#mapSub', 'dashboard-map-aisle');
   await sub('teams');
-  await saveCard(desk, '#teamList', 'dashboard-team-plan');
+  await saveCard(desk, '#teamPlanCard', 'dashboard-team-plan');
   await sub('alerts');
   await saveCard(desk, '#msgTable', 'dashboard-message-floor', 6);
   await sub('second'); await saveCard(desk, '#recountTable', 'dashboard-second-counts', 10);

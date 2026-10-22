@@ -409,8 +409,10 @@ pallets.
 
 ## 15 — Give the teams their aisles
 
-**Dashboard → Team plan**, with the count in the picker. Every team on Teams & crew already has a
-row here. Each team gets a queue of aisles, worked in order.
+**Dashboard → Team plan**, with the count in the picker. The board has **Aisles not planned** on the
+left and a column for every team on Teams & crew on the right. Each team gets a queue of aisles,
+worked in order, as cards: **Counting now** with a progress bar, **Next**, **Queued**, **Held** while
+another team has that racking, **Done**.
 
 **The easy way: Auto-assign the aisles.**
 
@@ -423,13 +425,18 @@ row here. Each team gets a queue of aisles, worked in order.
    first.
 4. Press **Queue this plan**.
 
-**Or by hand:** press **Queue aisles for this team** on a team's row, type the aisles and levels, and
-queue them.
+**Or by dragging:** drag an aisle from the list onto a team. It is queued last with the levels the
+team reaches. Drag a queued aisle up or down to reorder it, onto another team to move it, or back
+onto the list to take it off the plan.
 
-**Or from a file:** **⬇ Sample plan** gives you the layout (Team, Aisle, Levels, Start). Fill it in
-and use **Upload a plan**. **⬇ Export the plan (CSV)** downloads the current plan to rework in Excel.
+**Or by hand:** press **Queue aisles for this team** on an empty team, or fill the row above the
+board (team, aisles in order, levels, start from), and press **Queue**.
 
-**How you know it worked:** each team's row lists its aisles in order, the first one *counting* and
+**Or from a file:** press **⇅ Plan file**. **⬇ Sample plan** gives you the layout (Team, Aisle, Levels,
+Start). Fill it in and use **Upload a plan**. **⬇ Export the plan (CSV)** downloads the current plan
+to rework in Excel.
+
+**How you know it worked:** each team's column lists its aisles in order, the first one *Counting now* and
 the rest *queued*.
 
 ![](../images/dashboard-team-plan.png)

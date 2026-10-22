@@ -441,17 +441,47 @@
     $(id).addEventListener('change', () => { $('btnPlanApply').disabled = true; });    // a changed form needs a fresh preview
   }
 
-  /* ------------------------------------------------------------ assignments */
+  /* ------------------------------------------------------------ assignments
+     The planning board: the aisles nobody has planned on the left, a column
+     per team on the right with each aisle as a card - counting now with how
+     far it is, next, held while another team has the racking, or done.
+     Aisles are dragged from the list onto a team, up and down a team's queue,
+     across to another team, or back to the list to come off the plan. */
+  const drag = { kind: '', aisle: '', id: 0, team: '' };
+  const dragKind = (e) => { try { const d = JSON.parse(e.dataTransfer.getData('text/plain') || '{}'); return d.kind ? d : drag; } catch { return drag; } };
+  /* "ABCDEF" -> "A-F", for the Levels box */
+  const levelsBox = (l) => (!l ? '' : [...l].every((c, i) => i === 0 || c.charCodeAt(0) === l.charCodeAt(i - 1) + 1) ? (l.length === 1 ? l : `${l[0]}-${l[l.length - 1]}`) : [...l].join(','));
+  const planAct = async (fn, okMsg) => {
+    try { const out = await fn(); clearMsg($('assignMsg')); if (okMsg) okMsg(out); await refreshAll(); }
+    catch (err) { msg($('assignMsg'), 'err', err.message); }
+  };
+  /* an aisle dropped on a team: queued with the levels the team reaches; a team that cannot reach them may still be told to */
+  async function queueDropped(team, aisle, reach) {
+    const levels = reach ? levelsBox(reach) : 'A-F';
+    const go = (force) => postJson(`/api/admin/sessions/${sessionId}/assignments`, { team, aisles: aisle, levels, direction: 'up', force });
+    await planAct(async () => {
+      let r;
+      try { r = await go(false); }
+      catch (err) { if (!/cannot reach level/.test(err.message) || !confirm(`${err.message}\n\nAssign it anyway?`)) throw err; r = await go(true); }
+      return r;
+    }, (r) => {
+      const started = (r.activated || []).find((a) => a.team === team);
+      if (r.skipped.length) msg($('assignMsg'), 'warn', r.skipped.map((s) => `${s.aisle}: ${s.reason}`).join(' · '));
+      else msg($('assignMsg'), 'ok', `${aisle} queued for team ${team}, ${reach ? levelsLabel(reach) : 'every level'}.`, started ? 'It started now.' : '');
+    });
+  }
   async function refreshAssignments() {
     if (!planShown) postJson(`/api/admin/sessions/${sessionId}/assignments/auto`, { preview: true, teams: 'x' }).then((p) => renderRules(p.rules)).catch(() => {});
     const [rows, aisles, crew] = await Promise.all([
       apiJson(`/api/admin/sessions/${sessionId}/assignments`),
       apiJson(`/api/admin/sessions/${sessionId}/aisles`),
-      // the teams on Teams & crew: each gets a row on the plan before anything is queued for it
+      // the teams on Teams & crew: each gets a column on the plan before anything is queued for it
       apiJson(`/api/admin/sessions/${sessionId}/plan`).catch(() => ({ teams: [] })),
     ]);
+    const can = api.can('assign');
     const crewTeams = new Map((crew.teams || []).map((t) => [String(t.name), t]));
     $('planTeamNames').replaceChildren(...[...crewTeams.keys()].map((n) => Object.assign(document.createElement('option'), { value: n })));
+    const byAisle = new Map(aisles.map((a) => [a.aisle, a]));
     const blockOf = new Map(aisles.map((a) => [a.aisle, a.block]));
     const activeInBlock = new Map(); // block -> [{team, levels}]
     const overlap = (a, b) => !a || !b || [...a].some((c) => b.includes(c));
@@ -460,26 +490,130 @@
     const teams = new Map();
     for (const name of crewTeams.keys()) teams.set(name, []);
     for (const r of rows) { if (!teams.has(r.team)) teams.set(r.team, []); teams.get(r.team).push(r); }
-    const list = $('teamList');
+
+    /* ---- the aisles nobody has planned ---- */
+    const planned = new Set(rows.map((r) => r.aisle));
+    const pool = aisles.filter((a) => !planned.has(a.aisle)).sort((a, b) => String(a.zone || '').localeCompare(String(b.zone || '')) || a.aisle.localeCompare(b.aisle, undefined, { numeric: true }));
+    const q = ($('poolFilter').value || '').trim().toUpperCase();
+    const list = $('poolList');
     list.innerHTML = '';
-    if (!teams.size) { list.innerHTML = '<div class="muted">No teams yet. Add them on Teams &amp; crew, queue aisles above, or upload a counting plan.</div>'; return; }
-    /* "ABCDEF" -> "A-F", for the Levels box */
-    const levelsBox = (l) => (!l ? '' : [...l].every((c, i) => i === 0 || c.charCodeAt(0) === l.charCodeAt(i - 1) + 1) ? (l.length === 1 ? l : `${l[0]}-${l[l.length - 1]}`) : [...l].join(','));
+    $('poolCount').textContent = pool.length ? `${pool.length} of ${aisles.length}` : aisles.length ? 'every aisle is planned' : '';
+    for (const a of pool) {
+      if (q && !`${a.aisle} ${a.zone || ''}`.toUpperCase().includes(q)) continue;
+      const el = document.createElement('div');
+      el.className = 'pool-aisle';
+      el.dataset.aisle = a.aisle;
+      el.draggable = can;
+      el.title = can ? `Drag ${a.aisle} onto a team, or click to put it in the Aisles box` : `${a.bins} bins`;
+      el.append(Object.assign(document.createElement('b'), { textContent: a.aisle }),
+        Object.assign(document.createElement('span'), { className: 'z', textContent: a.zone ? titleCase(a.zone) : '' }),
+        Object.assign(document.createElement('span'), { className: 'n', textContent: a.bins_counted ? `${a.bins_counted}/${a.bins} bins` : `${a.bins} bins` }));
+      el.addEventListener('dragstart', (e) => { Object.assign(drag, { kind: 'aisle', aisle: a.aisle, id: 0, team: '' }); e.dataTransfer.setData('text/plain', JSON.stringify({ kind: 'aisle', aisle: a.aisle })); e.dataTransfer.effectAllowed = 'move'; });
+      el.addEventListener('click', () => { const f = $('fAssignAisles'); const have = f.value.split(/[,\s]+/).filter(Boolean); if (!have.includes(a.aisle)) f.value = [...have, a.aisle].join(', '); f.focus(); });
+      list.appendChild(el);
+    }
+    if (!pool.length) list.appendChild(Object.assign(document.createElement('div'), { className: 'muted', textContent: aisles.length ? 'Every aisle is on a team\'s plan.' : 'No aisles yet — upload the bin list under Settings.' }));
+    else if (!list.childNodes.length) list.appendChild(Object.assign(document.createElement('div'), { className: 'muted', textContent: 'No aisle matches.' }));
+
+    /* ---- a column per team ---- */
+    const board = $('teamList');
+    board.innerHTML = '';
+    const counting = rows.filter((r) => r.status === 'active').length, queued = rows.filter((r) => r.status === 'queued').length, done = rows.filter((r) => r.status === 'done').length;
+    $('planSummary').textContent = teams.size ? `${teams.size} team${teams.size === 1 ? '' : 's'} · ${counting} counting · ${queued} queued · ${done} done · ${pool.length} aisle${pool.length === 1 ? '' : 's'} not planned` : '';
+    if (!teams.size) { board.innerHTML = '<div class="muted">No teams yet. Add them on Teams &amp; crew, queue aisles above, or upload a counting plan.</div>'; return; }
 
     for (const [team, items] of [...teams.entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0]), undefined, { numeric: true }))) {
       const box = document.createElement('div');
       box.className = 'team';
+      box.dataset.team = team;
+      const ct = crewTeams.get(String(team));
+      const active = items.find((i) => i.status === 'active');
       const head = document.createElement('div');
       head.className = 'head';
-      const active = items.find((i) => i.status === 'active');
       head.innerHTML = `<span>Team <b></b></span><span class="muted"></span>`;
       head.querySelector('b').textContent = team;
-      const ct = crewTeams.get(String(team));
-      head.querySelector('.muted').textContent = !items.length ? `nothing queued${ct && ct.reach ? ` · reaches ${ct.reachLabel}` : ''}${ct && !ct.people ? ' · nobody on it yet' : ''}`
+      head.querySelector('.muted').textContent = !items.length ? 'nothing queued'
         : active ? `in ${aisleLabel(active.aisle, zoneByAisle.get(active.aisle))}, ${levelsLabel(active.levels)}` : (items.every((i) => i.status === 'done') ? 'finished' : 'waiting');
-      box.dataset.team = team;
-      if (!items.length) box.classList.add('empty');
       box.appendChild(head);
+      const meta = [ct && ct.shift ? (ct.shift === '1' ? '1st shift' : '2nd shift') : '', ct && ct.reach ? `reaches ${ct.reachLabel}` : '', ct ? (ct.people ? `${ct.people} ${ct.people === 1 ? 'person' : 'people'}` : 'nobody on it yet') : 'not on Teams & crew'].filter(Boolean).join(' · ');
+      if (meta) box.appendChild(Object.assign(document.createElement('div'), { className: 'tmeta', textContent: meta }));
+      if (!items.length) box.classList.add('empty');
+
+      const seq = document.createElement('div');
+      seq.className = 'seq';
+      const sorted = items.sort((a, b) => (a.status === 'done' ? 0 : 1) - (b.status === 'done' ? 0 : 1) || a.position - b.position || a.id - b.id);
+      let nextSeen = false;
+      for (const it of sorted) {
+        const ov = byAisle.get(it.aisle) || {};
+        const a = document.createElement('div');
+        a.className = 'a ' + it.status;
+        a.dataset.id = it.id;
+        // a team coming the other way down the same aisle is a partner, not a hold
+        const holder = (activeInBlock.get(blockOf.get(it.aisle) || it.aisle) || []).find((h) => h.team !== team && overlap(h.levels, it.levels)
+          && !(h.aisle === it.aisle && (h.direction || 'up') !== (it.direction || 'up')));
+        const blocked = it.status === 'queued' && !!holder;
+        if (blocked) a.classList.add('blocked');
+        a.title = blocked ? `Held: team ${holder.team} is active in this block on ${levelsLabel(holder.levels)}` : it.status === 'queued' ? 'Drag to reorder, onto another team to move it, or onto the list to take it off the plan' : it.status;
+        const row = document.createElement('div');
+        row.className = 'arow';
+        row.append(Object.assign(document.createElement('b'), { className: 'aisle', textContent: it.aisle }));
+        if (ov.zone) row.append(Object.assign(document.createElement('span'), { className: 'z', textContent: titleCase(ov.zone) }));
+        row.append(Object.assign(document.createElement('span'), { className: 'lv', textContent: `${levelsLabel(it.levels)}${it.direction === 'down' ? ' · from the far end ↩' : ''}${blocked ? ' ⏳' : ''}` }));
+        const state = it.status === 'active' ? 'Counting now' : it.status === 'done' ? 'Done' : blocked ? `Held · team ${holder.team}` : nextSeen ? 'Queued' : 'Next';
+        if (it.status === 'queued') nextSeen = true;
+        row.append(Object.assign(document.createElement('span'), { className: 'st', textContent: state }));
+        a.appendChild(row);
+        /* how far the aisle is: bins with a count, over the aisle's bins */
+        if (it.status === 'active' && ov.bins) {
+          const pct = Math.min(100, Math.round(100 * (ov.bins_counted || 0) / ov.bins));
+          const bar = document.createElement('div'); bar.className = 'bar'; bar.innerHTML = '<i></i>'; bar.querySelector('i').style.width = pct + '%';
+          a.appendChild(bar);
+          a.appendChild(Object.assign(document.createElement('div'), { className: 'pm', textContent: `${(ov.bins_counted || 0).toLocaleString()} / ${ov.bins.toLocaleString()} bins have a count · ${pct}%${it.started_at ? ` · since ${new Date(it.started_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}` }));
+        } else if (it.status === 'done') {
+          a.appendChild(Object.assign(document.createElement('div'), { className: 'pm', textContent: `${(ov.bins_counted || 0).toLocaleString()} of ${(ov.bins || 0).toLocaleString()} bins counted${it.completed_at ? ` · done ${new Date(it.completed_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}` }));
+        } else if (blocked) {
+          a.appendChild(Object.assign(document.createElement('div'), { className: 'pm', textContent: `waits for team ${holder.team} in ${holder.aisle === it.aisle ? 'this aisle' : `${holder.aisle}, which shares the racking`}` }));
+        } else if (ov.bins) {
+          a.appendChild(Object.assign(document.createElement('div'), { className: 'pm', textContent: `${ov.bins.toLocaleString()} bins${ov.bins_counted ? ` · ${ov.bins_counted.toLocaleString()} already counted` : ''}` }));
+        }
+        const acts = document.createElement('div');
+        acts.className = 'acts';
+        const act = (label, status) => {
+          const b = document.createElement('button');
+          b.className = 'sm ghost';
+          b.textContent = label;
+          b.disabled = !can;
+          if (status === 'delete') b.title = it.status === 'queued' ? 'Take it off the plan' : `Take it off the plan - the aisle's counts stay${it.status === 'active' ? ', and the team\'s next aisle starts' : ''}`;
+          if (status === 'queued' && it.status === 'active') b.title = 'Release it: back of the queue, and the next aisle starts';
+          if (status === 'done') b.title = 'The aisle is finished: pallets nobody saw become second counts, the aisle is filed, and the team\'s next aisle starts';
+          if (status === 'active' && blocked) b.title = 'Start it anyway - refused while the other team holds those levels';
+          b.onclick = async () => {
+            // an aisle being counted, or finished: a second look before it goes
+            if (status === 'delete' && it.status !== 'queued' && !confirm(`Take ${it.aisle} off team ${team}'s plan? Its counts stay.`)) return;
+            await planAct(() => (status === 'delete' ? apiJson(`/api/admin/sessions/${sessionId}/assignments/${it.id}`, { method: 'DELETE' })
+              : postJson(`/api/admin/sessions/${sessionId}/assignments/${it.id}`, { status })), (out) => {
+              const next = (out.activated || []).find((x) => x.team === team);
+              if (out.note) msg($('assignMsg'), 'warn', out.note);
+              else if (status === 'delete') msg($('assignMsg'), 'ok', `${it.aisle} is off team ${team}'s plan.`, next ? `${next.aisle} started in its place.` : '');
+              else if (status === 'queued' && it.status === 'active') msg($('assignMsg'), 'ok', `${it.aisle} released to the back of team ${team}'s queue.`, next ? `${next.aisle} started.` : '');
+              else if (status === 'done') msg($('assignMsg'), 'ok', `${it.aisle} is done for team ${team}.`, next ? `${next.aisle} started.` : '');
+            });
+          };
+          return b;
+        };
+        if (it.status === 'queued') { acts.appendChild(act('start', 'active')); acts.appendChild(act('✕', 'delete')); }
+        if (it.status === 'active') { acts.appendChild(act('done', 'done')); acts.appendChild(act('release', 'queued')); acts.appendChild(act('✕', 'delete')); }
+        if (it.status === 'done') { acts.appendChild(act('reopen', 'queued')); acts.appendChild(act('✕', 'delete')); }
+        a.appendChild(acts);
+        /* a queued aisle can be dragged: up or down this queue, to another team, or back to the list */
+        if (it.status === 'queued' && can) {
+          a.draggable = true;
+          a.addEventListener('dragstart', (e) => { Object.assign(drag, { kind: 'assignment', id: it.id, team, aisle: it.aisle }); e.dataTransfer.setData('text/plain', JSON.stringify({ kind: 'assignment', id: it.id, team })); e.dataTransfer.effectAllowed = 'move'; e.stopPropagation(); });
+          a.addEventListener('dragend', () => { for (const el of document.querySelectorAll('.a.before, .team.over, .pool.over')) el.classList.remove('before', 'over'); });
+        }
+        seq.appendChild(a);
+      }
+      box.appendChild(seq);
       if (!items.length) {
         /* a team with nothing queued: one tap fills the form for it, levels from what it reaches */
         const go = button('Queue aisles for this team', 'sm', () => {
@@ -488,55 +622,61 @@
           $('fAssignAisles').focus();
         });
         go.dataset.queueFor = team;
-        go.disabled = !api.can('assign');
+        go.disabled = !can;
         box.appendChild(go);
-        list.appendChild(box);
-        continue;
       }
+      if (can) box.appendChild(Object.assign(document.createElement('div'), { className: 'drop', textContent: items.length ? 'Drop an aisle here to queue it last' : 'Drop an aisle here' }));
 
-      const seq = document.createElement('div');
-      seq.className = 'seq';
-      for (const it of items.sort((a, b) => a.position - b.position || a.id - b.id)) {
-        const a = document.createElement('span');
-        a.className = 'a ' + it.status;
-        // a team coming the other way down the same aisle is a partner, not a hold
-        const holder = (activeInBlock.get(blockOf.get(it.aisle) || it.aisle) || []).find((h) => h.team !== team && overlap(h.levels, it.levels)
-          && !(h.aisle === it.aisle && (h.direction || 'up') !== (it.direction || 'up')));
-        const blocked = it.status === 'queued' && !!holder;
-        if (blocked) a.classList.add('blocked');
-        a.title = blocked ? `Held: team ${holder.team} is active in this block on ${levelsLabel(holder.levels)}` : it.status;
-        a.append(`${aisleLabel(it.aisle, zoneByAisle.get(it.aisle))} · ${levelsLabel(it.levels)}${it.direction === 'down' ? ' · from the far end ↩' : ''}`);
-        if (blocked) a.append(' ⏳');
-        const act = (label, status) => {
-          const b = document.createElement('button');
-          b.className = 'sm ghost';
-          b.textContent = label;
-          if (status === 'delete') b.title = it.status === 'queued' ? 'Take it off the plan' : `Take it off the plan - the aisle's counts stay${it.status === 'active' ? ', and the team\'s next aisle starts' : ''}`;
-          if (status === 'queued' && it.status === 'active') b.title = 'Release it: back of the queue, and the next aisle starts';
-          b.onclick = async () => {
-            // an aisle being counted, or finished: a second look before it goes
-            if (status === 'delete' && it.status !== 'queued' && !confirm(`Take ${it.aisle} off team ${team}'s plan? Its counts stay.`)) return;
-            try {
-              const out = status === 'delete' ? await apiJson(`/api/admin/sessions/${sessionId}/assignments/${it.id}`, { method: 'DELETE' })
-                : await postJson(`/api/admin/sessions/${sessionId}/assignments/${it.id}`, { status });
-              clearMsg($('assignMsg'));
-              const next = (out.activated || []).find((x) => x.team === team);
-              if (out.note) msg($('assignMsg'), 'warn', out.note);
-              else if (status === 'delete') msg($('assignMsg'), 'ok', `${it.aisle} is off team ${team}'s plan.`, next ? `${next.aisle} started in its place.` : '');
-              else if (status === 'queued' && it.status === 'active') msg($('assignMsg'), 'ok', `${it.aisle} released to the back of team ${team}'s queue.`, next ? `${next.aisle} started.` : '');
-              await refreshAll();
-            } catch (err) { msg($('assignMsg'), 'err', err.message); }
-          };
-          return b;
-        };
-        if (it.status === 'queued') { a.appendChild(act('start', 'active')); a.appendChild(act('✕', 'delete')); }
-        if (it.status === 'active') { a.appendChild(act('done', 'done')); a.appendChild(act('release', 'queued')); a.appendChild(act('✕', 'delete')); }
-        if (it.status === 'done') { a.appendChild(act('reopen', 'queued')); a.appendChild(act('✕', 'delete')); }
-        seq.appendChild(a);
+      /* ---- dropping onto the column ---- */
+      if (can) {
+        box.addEventListener('dragover', (e) => {
+          if (!drag.kind) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          box.classList.add('over');
+          for (const el of box.querySelectorAll('.a.before')) el.classList.remove('before');
+          const over = e.target.closest('.a.queued');
+          if (over && drag.kind === 'assignment') over.classList.add('before');
+        });
+        box.addEventListener('dragleave', (e) => { if (!box.contains(e.relatedTarget)) { box.classList.remove('over'); for (const el of box.querySelectorAll('.a.before')) el.classList.remove('before'); } });
+        box.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          box.classList.remove('over');
+          const d = dragKind(e);
+          const before = e.target.closest('.a.queued');
+          for (const el of box.querySelectorAll('.a.before')) el.classList.remove('before');
+          if (d.kind === 'aisle') { await queueDropped(team, d.aisle, ct && ct.reach); return; }
+          if (d.kind !== 'assignment') return;
+          // the team's queued aisles in their new order: the dragged one in front of the card it was dropped on, else last
+          const ids = [...box.querySelectorAll('.a.queued')].map((el) => Number(el.dataset.id)).filter((n) => n !== Number(d.id));
+          const at = before && Number(before.dataset.id) !== Number(d.id) ? ids.indexOf(Number(before.dataset.id)) : -1;
+          if (at >= 0) ids.splice(at, 0, Number(d.id)); else ids.push(Number(d.id));
+          await planAct(() => postJson(`/api/admin/sessions/${sessionId}/assignments/order`, { team, ids }), (out) => {
+            const moved = out.moved.find((x) => x.id === Number(d.id));
+            const started = (out.activated || []).find((x) => x.team === team);
+            msg($('assignMsg'), 'ok', moved && moved.from !== team ? `${moved.aisle} moved from team ${moved.from} to team ${team}.` : `Team ${team}'s queue reordered.`, started ? `${started.aisle} started.` : '');
+          });
+        });
       }
-      box.appendChild(seq);
-      list.appendChild(box);
+      board.appendChild(box);
     }
+  }
+  /* the list takes a queued aisle back: off the plan */
+  {
+    const pool = $('aislePool');
+    pool.addEventListener('dragover', (e) => { if (drag.kind === 'assignment') { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; pool.classList.add('over'); } });
+    pool.addEventListener('dragleave', (e) => { if (!pool.contains(e.relatedTarget)) pool.classList.remove('over'); });
+    pool.addEventListener('drop', async (e) => {
+      e.preventDefault(); pool.classList.remove('over');
+      const d = dragKind(e);
+      if (d.kind !== 'assignment') return;
+      await planAct(() => apiJson(`/api/admin/sessions/${sessionId}/assignments/${d.id}`, { method: 'DELETE' }), (out) => {
+        msg($('assignMsg'), 'ok', `${out.removed.aisle} is off team ${out.removed.team}'s plan.`, (out.activated || []).some((x) => x.team === out.removed.team) ? 'The team\'s next aisle started.' : '');
+      });
+    });
+    $('poolFilter').addEventListener('input', () => refreshAssignments().catch(() => {}));
+    $('btnPlanFileTools').onclick = () => { const r = $('planFileRow'); r.hidden = !r.hidden; $('btnPlanFileTools').classList.toggle('selected', !r.hidden); };
+    $('btnPlanHelp').onclick = () => { const h = $('planHelp'); h.hidden = !h.hidden; };
   }
 
   /** The count being looked at, as the session list has it. */

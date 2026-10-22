@@ -115,15 +115,23 @@ box beside it first. Give each team its card: at sign-on they scan it instead of
 
 ## 6 — Give the teams their aisles
 
-**Dashboard → Team plan.** Every team has a row, with a queue of aisles worked in order.
+**Dashboard → Team plan.** A board: the aisles nobody has planned on the left, a column per team on
+the right with its aisles in counting order — **Counting now** with a progress bar, **Next**,
+**Queued**, **Held** while another team has that racking, **Done**.
 
 **The easy way:** under **Auto-assign the aisles**, pick the teams (blank is every team), press
 **Preview**, read the warnings, and press **Queue this plan**. Each team gets its own stretch of the
 building and only the levels it can reach.
 
-**By hand:** **Queue aisles for this team** on a team's row, then type the aisles and levels.
+**By dragging:** drag an aisle from the list onto a team; it is queued with the levels the team
+reaches. Drag a queued aisle up or down to reorder it, onto another team to move it, or back onto
+the list to take it off the plan.
 
-**From a file:** **⬇ Sample plan** gives the layout. Fill it in and press **Upload a plan**.
+**By hand:** **Queue aisles for this team** on an empty team, or the row above the board: team,
+aisles in order, levels, then **Queue**.
+
+**From a file:** **⇅ Plan file**, then **⬇ Sample plan** for the layout. Fill it in and press
+**Upload a plan**.
 
 On each aisle, **done** finishes it, **release** sends it to the back of the queue, and **✕** takes
 it off the plan. A team's next aisle starts by itself when its block is free.
