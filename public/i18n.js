@@ -72,7 +72,6 @@
     // assignment
     'Got it': 'Entendido',
     'Start counting': 'Empezar a contar',
-    'Aisle complete — next aisle': 'Pasillo terminado — siguiente pasillo',
     'Second counts available': 'Segundos conteos disponibles',
     'bins to go back to — the first count didn\'t agree with the inventory report, or a supervisor asked.':
       'ubicaciones para volver a contar — el primer conteo no coincidió con el reporte, o un supervisor lo pidió.',
@@ -97,9 +96,7 @@
     'No aisles assigned to this team yet. Check with a supervisor.':
       'Todavía no hay pasillos asignados a este equipo. Pregunta a un supervisor.',
     'Waiting for a supervisor to release this aisle.': 'Esperando a que un supervisor libere este pasillo.',
-    'Need Wi-Fi to complete an aisle': 'Se necesita Wi-Fi para terminar un pasillo',
     'The next aisle is released by the server.': 'El servidor es el que libera el siguiente pasillo.',
-    'Could not complete aisle': 'No se pudo terminar el pasillo',
     'Could not refresh': 'No se pudo actualizar',
     'That bin was taken by another team': 'Otro equipo tomó esa ubicación',
     'All second counts done': 'Todos los segundos conteos terminados',
@@ -373,8 +370,6 @@
     [/^Finished: (.+)\. Check with a supervisor for more\.$/, (m) => `Terminado: ${T(m[1])}. Pregunta a un supervisor si hay más.`],
     [/^Waiting: team (\S+) is still in (.+?)(, which shares racking with (\S+))?\. Refresh when they finish\.$/,
       (m) => `Esperando: el equipo ${m[1]} sigue en ${T(m[2])}${m[3] ? `, que comparte rack con ${m[4]}` : ''}. Actualiza cuando terminen.`],
-    [/^(\d+) bin\(s\) in (\S+) have no count\. Empty bins are fine — complete the aisle anyway\?$/,
-      (m) => `${m[1]} ubicación(es) en ${m[2]} no tienen conteo. Las vacías están bien — ¿terminar el pasillo de todos modos?`],
     [/^(\d+) line\(s\) have not reached the server yet\. Sign off anyway\?$/,
       (m) => `${m[1]} línea(s) todavía no llegan al servidor. ¿Salir de todos modos?`],
     [/^Signed on: (.+)$/, (m) => `Entraron: ${m[1]}`],
@@ -397,7 +392,7 @@
     [/^(.+) Overrides are off for this session\.$/, (m) => `${T(m[1])} Las excepciones están desactivadas en esta sesión.`],
     [/^(.+) Anything already counted is still saved on this scanner and will send once it is authorized again\.$/,
       (m) => `${m[1]} Lo que ya se contó sigue guardado en este escáner y se enviará cuando vuelva a estar autorizado.`],
-    [/^Every bin in (\S+) has a count — tap "Aisle complete" when you are happy\.$/, (m) => `Todas las ubicaciones de ${m[1]} tienen conteo — toca "Pasillo terminado" cuando estés seguro.`],
+    [/^Every bin in (\S+) has a count — tell your supervisor\. Your next aisle shows here once they mark this one done\.$/, (m) => `Todas las ubicaciones de ${m[1]} tienen conteo — avisa a tu supervisor. Tu siguiente pasillo aparece aquí cuando lo marque terminado.`],
     [/^App build (\S+) on the server — this scanner is (up to date|behind it; an update is waiting)\.$/,
       (m) => `Versión ${m[1]} en el servidor — este escáner ${m[2] === 'up to date' ? 'está al día' : 'está atrasado; hay una actualización esperando'}.`],
     [/^(.+) · (\S+)\. Carry on counting — a supervisor will see it\.$/, (m) => `${T(m[1])} · ${m[2]}. Sigue contando — un supervisor lo verá.`],

@@ -128,6 +128,10 @@ building and only the levels it can reach.
 On each aisle, **done** finishes it, **release** sends it to the back of the queue, and **✕** takes
 it off the plan. A team's next aisle starts by itself when its block is free.
 
+**Finishing an aisle is yours, not the scanner's.** The scanner has no "aisle complete" button.
+When a team says its aisle is done, press **done** on that aisle here: that raises the second
+counts for pallets nobody saw, files the aisle, and the team's next aisle shows on its scanner.
+
 ![](../../images/dashboard-team-plan.png)
 
 ## 7 — Practice before the day
@@ -183,7 +187,6 @@ says which bin is next.
 | **History** | The last 50 lines. **Void** removes a wrong one |
 | **Report a problem** | Damage, or a bin blocked by a truck |
 | **SOS — I need help** | An emergency. The office sees the team, the aisle and the last bin |
-| **Aisle complete — next aisle** | Only when the aisle is finished |
 | **Start second counts** | When the scanner says bins are waiting to be counted again |
 
 **When the scanner asks a question.** A pallet not on the ERP's list asks **Count it anyway?** Say
@@ -241,7 +244,8 @@ Work the list down to none open before the count is closed.
 - **Pallet report** — a row per pallet: expected, the 1st and 2nd counts, what stands, where it was
   found, the team and the status (`MATCH`, `QTY VARIANCE`, `WRONG BIN`, `MISSING`, `NOT IN MASTER`,
   `COUNTED TWICE`). **Hide matching pallets** leaves the list to work down.
-- **Fix list** — labels to replace, damage and blocked bins.
+- **Fix list** — labels to replace, damage and blocked bins. Once a label is printed and on the
+  pallet, press **Label printed & on the pallet** on its row and it leaves the list.
 - **Export everything (Excel)** — every table for the count in one workbook.
 
 ![](../../images/dashboard-pallet-report.png)

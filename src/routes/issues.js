@@ -174,7 +174,10 @@ export function fixList(sessionId, { status = '' } = {}) {
   const labels = labelsToReplace(id).map((l) => ({
     id: null, kind: 'label', target: l.what === 'BIN' ? 'rack' : 'pallet',
     pallet_id: l.pallet_id, bin: l.location_code, aisle: l.aisle || '', reason: l.issue, note: l.comments || '',
-    team: l.team, device_id: l.device_id, status: 'open', created_at: l.scanned_at,
+    team: l.team, device_id: l.device_id, created_at: l.scanned_at,
+    // ticked off in the office once the label is printed and on: the same columns as a reported problem
+    label: { what: l.what, code: l.what === 'BIN' ? l.location_code : l.pallet_id },
+    status: l.status, fixed_by: l.fixed_by || null, fixed_at: l.fixed_at || null, outcome: l.outcome || null,
   }));
   const rows = [...issues, ...labels].filter((r) => !status || r.status === status);
   const open = (k) => rows.filter((r) => r.status === 'open' && r.kind === k).length;

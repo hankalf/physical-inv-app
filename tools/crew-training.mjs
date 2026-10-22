@@ -662,9 +662,15 @@ try {
   await beat(1600);
   if (!(await gun().isVisible('#scrAssign.active').catch(() => false))) await tap('#btnToAssign', { hold: 1400 }).catch(() => {});
   await gun().waitForSelector('#scrAssign.active', { timeout: 20000 }).catch(() => {});
-  await say(L('Finished the aisle?', '¿Terminaste el pasillo?'), L('Only when every spot on your levels is counted: open <b>My aisle</b> and tap <b>Aisle complete — next aisle</b>. The scanner gives you the next one.', 'Solo cuando cada lugar de tus niveles está contado: abre <b>Mi pasillo</b> y toca <b>Pasillo terminado — siguiente pasillo</b>. El escáner te da el siguiente.'), '', { hold: false });
+  await say(L('Finished the aisle?', '¿Terminaste el pasillo?'), L('When every spot on your levels is counted, <b>tell your supervisor</b>. They mark the aisle done in the office — there is no button for it on the scanner — and your next aisle appears on <b>My aisle</b> by itself. Tap <b>Refresh</b> if you are in a hurry.', 'Cuando cada lugar de tus niveles está contado, <b>avisa a tu supervisor</b>. Él marca el pasillo terminado en la oficina — no hay botón para eso en el escáner — y tu siguiente pasillo aparece solo en <b>Mi pasillo</b>. Toca <b>Actualizar</b> si tienes prisa.'), '', { hold: false });
   await beat(5600);
-  await tap('#btnAisleDone', { hold: 2600, shot: 'aisle-complete' });
+  await shotPhone('aisle-complete');
+  /* the floor supervisor marks it done on the Team plan */
+  { const list = await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}/assignments`, { headers: A }));
+    const a = list.find((x) => x.aisle === 'F01' && x.status === 'active');
+    if (a) await post(`/api/admin/sessions/${sess.id}/assignments/${a.id}`, { status: 'done' }); }
+  await beat(1200);
+  await tap('#btnAssignRefresh', { hold: 2600 });
   await beat(2600);
   await shotPhone('next-aisle');
   await say(L('End of your shift', 'Fin de tu turno'), L('Going on break or home? Tap <b>Sign off this scanner</b> on <b>My aisle</b> and put the scanner on its charger. The next crew signs on with their own card and badges.', '¿Te vas al descanso o a casa? Toca <b>Salir de este escáner</b> en <b>Mi pasillo</b> y pon el escáner en su cargador. El siguiente equipo entra con su tarjeta y gafetes.'));

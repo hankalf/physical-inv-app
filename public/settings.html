@@ -220,6 +220,7 @@
         <div><label for="fFile-bins">CSV or Excel file</label><input type="file" id="fFile-bins" accept=".csv,.tsv,.txt,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
         <div class="auto"><label class="cb"><input type="checkbox" id="fReplace-bins"> Replace what is there</label></div>
         <div class="auto"><button class="primary fit" id="btnUpload-bins">Upload</button></div>
+        <div class="auto"><button class="fit" id="btnDownload-bins" title="The bin list as it is loaded on this count, as a CSV file">⬇ Download the loaded list</button></div>
       </div>
       <div class="colguide" id="colGuide-bins"></div>
       <div class="feedback" id="uploadMsg-bins"></div>
@@ -232,9 +233,12 @@
       <div class="inline" style="margin-top:12px">
         <div><label for="fFile-pallets">CSV or Excel file</label><input type="file" id="fFile-pallets" accept=".csv,.tsv,.txt,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
         <div class="auto"><label for="fSource-pallets">System</label><input id="fSource-pallets" list="sourceList" placeholder="e.g. NAV" maxlength="40" style="width:150px" autocomplete="off"><datalist id="sourceList"></datalist></div>
-        <div class="auto"><label class="cb"><input type="checkbox" id="fReplace-pallets"> Replace what is there</label></div>
+        <div class="auto" id="overrideBox"><label class="cb"><input type="checkbox" id="fReplace-pallets"> <b>Override</b> the report already loaded (site admin only)</label></div>
         <div class="auto"><button class="primary fit" id="btnUpload-pallets">Upload</button></div>
+        <div class="auto"><button class="fit" id="btnDownload-pallets" title="The inventory report as it is loaded on this count, every column, as a CSV file">⬇ Download the loaded report</button></div>
       </div>
+      <div class="hint" id="overrideHint">An upload <b>adds to</b> the report that is loaded: a pallet already on it is updated, a new one is added, and nothing is removed.
+        <b>Override</b> throws the loaded report away first and is the <b>site admin's</b> alone — the login the site started with. Other admins do not see the box. The counts already taken stay; they are compared against the new report.</div>
       <div class="colguide" id="colGuide-pallets"></div>
       <div class="feedback" id="uploadMsg-pallets"></div>
     </div>

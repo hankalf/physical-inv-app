@@ -272,7 +272,7 @@
             { see: 'The upload summary says some rows were merged', means: 'The same container appeared twice in one bin.', fix: 'Their quantities were added together. Nothing to do unless the total looks wrong.' },
             { see: 'The summary says duplicates were skipped', means: 'The same container appeared in two different bins.', fix: 'The first row stands. Check that pallet in the ERP, it cannot be in two places.' },
             { see: 'The summary counts open bins', means: 'Rows with a bin and no container.', fix: 'Those are empty bins on the report. They are expected and recorded as such.' },
-            { see: 'Numbers look wrong after an ERP import', means: 'The report moved on since the upload.', fix: 'Re-upload with Replace what is there, then re-read the pallet report.' },
+            { see: 'Numbers look wrong after an ERP import', means: 'The report moved on since the upload.', fix: 'Upload the new export (an upload adds to and updates what is loaded), then re-read the pallet report. Override — throwing the loaded report away first — is the site admin’s alone.' },
           ],
           ask: [
             { q: 'Does the column order matter?', a: 'No, the headers do. The site’s names and the common ERP names are both recognized.' },
@@ -373,7 +373,7 @@
         },
         {
           title: 'Keep an eye on the Fix list',
-          do: 'Pallets counted with no readable label, damage reports and blocked bins from the gun land on the Fix list and on Reports → Labels to replace. Send somebody while the team is still nearby.',
+          do: 'Pallets counted with no readable label, damage reports and blocked bins from the gun land on the Fix list and on Reports → Labels to replace. Send somebody while the team is still nearby; once the label is printed and on, press Label printed & on the pallet (or on the rack) on its row and it leaves the list.',
           where: S('/admin', 'alerts', 'Dashboard → Alerts'),
           watch: [
             { see: 'A pallet named NO-LABEL-F01A001-1 on the report', means: 'Its label would not scan and nothing on it was readable.', fix: 'It was counted under the bin’s name. Relabel it from the list.' },
@@ -792,7 +792,7 @@
     { see: 'Second-count list is enormous', means: 'Thresholds at 0.', fix: 'Set Recount over, or over %, and a cap.', goto: S('/settings', 'start', 'Count session') },
     { see: 'The map is a schematic, not your drawing', means: 'No rack drawing on this count.', fix: 'Count session → Map drawing.', goto: S('/settings', 'start', 'Count session') },
     { see: 'Can nobody sign in?', means: 'The admin logins were lost.', fix: 'Set SUPERADMIN_USER to a new username in the server variables and restart.' },
-    { see: 'Numbers look wrong after an ERP import', means: 'The report moved on.', fix: 'Re-upload with Replace what is there, then re-read the pallet report.', goto: S('/settings', 'lists', 'Lists & racking') },
+    { see: 'Numbers look wrong after an ERP import', means: 'The report moved on.', fix: 'Upload the new export (it adds to and updates what is loaded), then re-read the pallet report. Override is the site admin’s alone.', goto: S('/settings', 'lists', 'Lists & racking') },
     { see: 'A scanner’s scan times are hours out', means: 'The handheld’s clock is wrong.', fix: 'Nothing: the server corrects each line by the gun’s own send time. Set the clock when you can.' },
     { see: 'Everyone was signed out of the dashboards', means: 'The server lost its database volume.', fix: 'Sign-ins survive a normal restart. If it happens, check the volume on the host.' },
     { see: 'The gun is still starting — give it a second', means: 'The Testing Suite’s scanner frame is loading.', fix: 'Wait a moment and click again.' },

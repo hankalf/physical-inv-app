@@ -430,8 +430,16 @@ check('Admin: force-starting F03 refused with racking conflict', /Team 2 is coun
 await admin.$eval('#teamPlanCard', (el) => el.scrollIntoView());
 await (await admin.$('#teamPlanCard')).screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-conflict.png` });
 
+/* the gun no longer hands an aisle back: the floor supervisor marks it done on the Team plan */
 await t1.p.click('#btnToAssign'); await t1.p.waitForSelector('#scrAssign.active'); await t1.p.waitForTimeout(300);
-await t1.p.click('#btnAisleDone'); await t1.p.waitForTimeout(800);
+check('Handheld: there is no "Aisle complete" button on the scanner', (await t1.p.$('#btnAisleDone')) === null);
+const markDone = async (team, aisle) => {
+  const list = await (await fetch(`${BASE}/api/admin/sessions/1/assignments`, { headers: adm })).json();
+  const a = list.find((x) => String(x.team) === String(team) && x.aisle === aisle && x.status === 'active');
+  return fetch(`${BASE}/api/admin/sessions/1/assignments/${a.id}`, { method: 'POST', headers: adm, body: JSON.stringify({ status: 'done' }) });
+};
+check('Admin: the supervisor marks F01 done on the Team plan', (await markDone('1', 'F01')).ok);
+await t1.p.click('#btnAssignRefresh'); await t1.p.waitForTimeout(800);
 ac = await t1.T('#assignCard');
 { const rr = await (await fetch(`${BASE}/api/admin/sessions/1/recounts`, { headers: adm })).json();
   const missing = rr.filter((r) => r.reason === 'MISSING' && r.source === 'auto');
@@ -440,7 +448,8 @@ check('Handheld T1: aisle complete → waits for team 2 (F03 shares racking with
 await shot(t1.p, 'hh-waiting-on-team2');
 
 await t2.p.click('#btnToAssign'); await t2.p.waitForSelector('#scrAssign.active'); await t2.p.waitForTimeout(300);
-await t2.p.click('#btnAisleDone'); await t2.p.waitForTimeout(800);
+check('Admin: the supervisor marks F02 done', (await markDone('2', 'F02')).ok);
+await t2.p.click('#btnAssignRefresh'); await t2.p.waitForTimeout(800);
 ac = await t2.T('#assignCard');
 check('Handheld T2: aisle complete → F04 released to team 2', /your aisleF04/.test(ac), ac.slice(0, 60));
 await t1.p.click('#btnAssignRefresh'); await t1.p.waitForTimeout(600);

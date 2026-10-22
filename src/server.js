@@ -41,7 +41,7 @@ import { withEntries, markEntered, markFromFile, worksheetRows, WORKSHEET_COLUMN
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, teamStatus, applyLayoutBlocks, partnerOf, planRows, planTeams, PLAN_COLUMNS } from './routes/assignments.js';
-import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot, labelsToReplace } from './routes/reports.js';
+import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot, labelsToReplace, fixLabel } from './routes/reports.js';
 import {
   listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
   tasksForTeam, takeRecount, finishRecount, updateRecount, deleteRecount, raiseThirdCount, thirdCountsForBins,
@@ -101,6 +101,9 @@ const HOST = process.env.HOST || '0.0.0.0';
    still read as the superadmin's password, for deployments set up before. */
 const SUPERADMIN_PASSWORD = process.env.SUPERADMIN_PASSWORD || process.env.ADMIN_PASSWORD || '';
 const SUPERADMIN_USER = process.env.SUPERADMIN_USER || (SUPERADMIN_PASSWORD ? 'ADMIN' : '');
+/* The site admin: the login the site started with. Some things are its alone -
+   its own account, and overriding a count's inventory report. */
+const isSiteAdmin = (who) => !!(who && who.role === 'admin' && SUPERADMIN_USER && norm(who.username || '') === norm(SUPERADMIN_USER));
 const SUPERADMIN_NAME = process.env.SUPERADMIN_NAME || '';
 const PUBLIC_DIR = resolve(fileURLToPath(new URL('../public', import.meta.url)));
 const MAX_BODY = Number(process.env.MAX_UPLOAD_MB || 64) * 1024 * 1024;
@@ -1051,9 +1054,32 @@ async function handleAdmin(req, res, url, m) {
     const kind = url.searchParams.get('kind') || 'bins';
     const text = await readBody(req);
     const source = String(url.searchParams.get('source') || '').trim().slice(0, 40);
-    const stats = importMaster(m[1], kind, text, { replace: url.searchParams.get('replace') === '1', source });
-    audit(actor, `uploaded ${kind}`, `${stats.rows} rows, ${stats.skipped} skipped${source ? `, system ${source}` : ''}${url.searchParams.get('replace') === '1' ? ', replacing what was there' : ''}`, m[1]);
+    const replace = url.searchParams.get('replace') === '1';
+    /* Throwing away the inventory report a count is already being checked
+       against is the site admin's call alone: another admin adds to it or
+       updates it, but cannot override it. */
+    const loaded = kind === 'pallets' && replace ? db.prepare('SELECT COUNT(*) AS n FROM pallets WHERE session_id = ?').get(Number(m[1])).n : 0;
+    if (loaded && !isSiteAdmin(whoNow)) throw httpError(403, `only the site admin can override the inventory report already loaded on this count (${loaded.toLocaleString()} pallets) - upload without Replace to add to it`);
+    const stats = importMaster(m[1], kind, text, { replace, source });
+    audit(actor, loaded ? 'overrode the inventory report' : `uploaded ${kind}`, `${stats.rows} rows, ${stats.skipped} skipped${source ? `, system ${source}` : ''}${replace ? `, replacing what was there${loaded ? ` (${loaded.toLocaleString()} pallets)` : ''}` : ''}`, m[1]);
     return sendJson(req, res, 200, stats);
+  }
+  // the lists as loaded, back out as files: the bins, and the inventory report with every column it came with
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/(bins|master)\.csv$/))) {
+    const sess = getSession(m[1]);
+    if (!sess) throw httpError(404, 'session not found');
+    const name = String(sess.name || 'count').replace(/[^A-Za-z0-9 _-]+/g, '').trim().replace(/\s+/g, '-') || 'count';
+    if (m[2] === 'bins') {
+      const rows = db.prepare('SELECT code, zone, aisle, level, description, last_counted FROM locations WHERE session_id = ? ORDER BY code').all(Number(m[1]))
+        .map((r) => ({ 'Bin Location': r.code, Zone: r.zone || '', Aisle: r.aisle || '', Level: r.level || '', Description: r.description || '', 'Last Counted': r.last_counted || '' }));
+      audit(actor, 'downloaded the bin list', `${rows.length} bins`, m[1]);
+      return sendCsv(req, res, `bins-${name}.csv`, toCsv(rows, ['Bin Location', 'Zone', 'Aisle', 'Level', 'Description', 'Last Counted']));
+    }
+    const rows = db.prepare('SELECT * FROM pallets WHERE session_id = ? ORDER BY expected_location, pallet_id').all(Number(m[1]))
+      .map((r) => ({ System: r.source || '', 'Pallet ID': r.pallet_id, SKU: r.sku || '', Description: r.description || '', Variant: r.variant || '', UOM: r.uom || '', 'Entry No': r.entry_no || '',
+        Qty: r.expected_qty == null ? '' : r.expected_qty, Location: r.expected_location || '', Lot: r.lot || '', Expiry: r.expiry || '', ABC: r.abc || '' }));
+    audit(actor, 'downloaded the inventory report', `${rows.length} pallets`, m[1]);
+    return sendCsv(req, res, `inventory-report-${name}.csv`, toCsv(rows, ['System', 'Pallet ID', 'SKU', 'Description', 'Variant', 'UOM', 'Entry No', 'Qty', 'Location', 'Lot', 'Expiry', 'ABC']));
   }
 
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/status$/)) && method === 'POST') {
@@ -1124,10 +1150,17 @@ async function handleAdmin(req, res, url, m) {
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments\/(\d+)$/)) && method === 'POST') {
     const body = await readJson(req);
+    /* An aisle is finished from here, by the floor supervisor - the gun has no
+       button for it. Two teams from opposite ends: it is finished when the
+       second one is marked done, and only then are the pallets nobody saw
+       raised as MISSING second counts and the aisle filed. */
+    const before = db.prepare('SELECT * FROM assignments WHERE id = ? AND session_id = ?').get(Number(m[2]), Number(m[1]));
+    const partner = before && body.status === 'done' && before.status !== 'done' ? partnerOf(m[1], before) : null;
     const out = setAssignmentStatus(m[1], m[2], body.status);
     const a = out.assignment;
-    audit(actor, body.status === 'queued' ? 'released an aisle' : `assignment ${body.status}`, `team ${a.team}: ${a.aisle}${a.levels ? ` (${a.levels})` : ''}${out.note ? ' - started again, nothing else queued' : ''}`, m[1]);
-    if (body.status === 'done') {
+    audit(actor, body.status === 'queued' ? 'released an aisle' : body.status === 'done' ? 'marked an aisle done' : `assignment ${body.status}`, `team ${a.team}: ${a.aisle}${a.levels ? ` (${a.levels})` : ''}${out.note ? ' - started again, nothing else queued' : ''}${partner ? ` - team ${partner.team} is still counting from the other end` : ''}`, m[1]);
+    if (body.status === 'done' && !partner) {
+      if (before && before.status !== 'done') autoAfterAisle(m[1], a.aisle, a.levels, a.team);
       const filed = archiveAisle(m[1], out.assignment.aisle, { team: out.assignment.team, by: actor });
       if (filed) audit(actor, 'aisle filed', `${filed.aisle}: ${filed.lines} lines → ${filed.name}`, m[1]);
     }
@@ -1145,7 +1178,7 @@ async function handleAdmin(req, res, url, m) {
     if (!who) throw httpError(401, 'unauthorized');
     const account = who.username ? getUser(who.username) : null;
     return sendJson(req, res, 200, {
-      ...who, role: whoNow.role, access: whoNow.access, accessKeys: ACCESS, tabs: TABS, profiles: PROFILES.map(([key, label, list]) => ({ key, label, access: list === undefined ? null : list })), mustChange: !!(account && account.must_change),
+      ...who, role: whoNow.role, siteAdmin: isSiteAdmin(whoNow), access: whoNow.access, accessKeys: ACCESS, tabs: TABS, profiles: PROFILES.map(([key, label, list]) => ({ key, label, access: list === undefined ? null : list })), mustChange: !!(account && account.must_change),
       accounts: countUsers(), admins: countAdmins(), features: features(),
       system: publicSystems().self, systems: systemsFor(whoNow).map((s) => ({ name: s.name, url: s.url, color: s.color, home: !!s.home })),
     });
@@ -2166,9 +2199,16 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/labels$/)) && method === 'GET') {
     return sendJson(req, res, 200, { labels: labelsToReplace(m[1]) });
   }
+  // the label was printed and put on the pallet (or the rack): ticked off in the office
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/labels\/fix$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const l = fixLabel(m[1], { what: body.what, code: body.code, by: actor, outcome: body.outcome, reopen: !!body.reopen });
+    audit(actor, body.reopen ? 'put a label back on the relabel list' : 'marked a label printed and put on', `${l.what === 'BIN' ? 'bin ' + l.location_code : 'pallet ' + l.pallet_id}${l.what === 'PALLET' && l.location_code ? ' in ' + l.location_code : ''}`, m[1]);
+    return sendJson(req, res, 200, l);
+  }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/labels\.csv$/))) {
     return sendCsv(req, res, `labels-to-replace-session-${m[1]}.csv`, toCsv(labelsToReplace(m[1]), [
-      'what', 'location_code', 'aisle', 'pallet_id', 'issue', 'sku', 'description', 'qty', 'team', 'device_id', 'comments', 'scanned_at',
+      'what', 'location_code', 'aisle', 'pallet_id', 'issue', 'sku', 'description', 'qty', 'team', 'device_id', 'comments', 'scanned_at', 'status', 'fixed_by', 'fixed_at', 'outcome',
     ]));
   }
 

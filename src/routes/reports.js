@@ -285,7 +285,22 @@ const BIN_ISSUE = {
   none: 'NO READABLE LABEL',
 };
 
+/* A label somebody printed and put on: ticked off in the office against the
+   pallet (its name on the count) or the bin, so the relabel list goes down as
+   the labels go out. The count line itself is never touched. */
+db.exec(`
+CREATE TABLE IF NOT EXISTS label_fixes (
+  session_id INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  what       TEXT NOT NULL,          -- BIN | PALLET
+  code       TEXT NOT NULL,          -- the bin, or the pallet's name on the count
+  fixed_by   TEXT,
+  fixed_at   TEXT,
+  outcome    TEXT,
+  PRIMARY KEY (session_id, what, code)
+);
+`);
 export function labelsToReplace(sessionId) {
+  const id = Number(sessionId);
   const rows = db
     .prepare(
       `SELECT c.pallet_id, c.location_code, c.aisle, c.qty, c.label_issue, c.bin_label_issue, c.sku,
@@ -296,22 +311,44 @@ export function labelsToReplace(sessionId) {
         WHERE c.session_id = ? AND c.voided = 0 AND (c.label_issue != '' OR c.bin_label_issue != '')
         ORDER BY c.location_code, c.scanned_at`
     )
-    .all(Number(sessionId));
+    .all(id);
+  const fixed = new Map(db.prepare('SELECT what, code, fixed_by, fixed_at, outcome FROM label_fixes WHERE session_id = ?').all(id).map((f) => [`${f.what}:${f.code}`, f]));
+  const state = (what, code) => {
+    const f = fixed.get(`${what}:${code}`);
+    return f ? { status: 'fixed', fixed_by: f.fixed_by, fixed_at: f.fixed_at, outcome: f.outcome || '' } : { status: 'open', fixed_by: '', fixed_at: '', outcome: '' };
+  };
 
   /* One row per label to print, not per line - a pallet with no label sitting in
      a bin with no label is two labels, and whoever walks out there needs both on
      the list. The rack ones come first: every counter after this one walks up to
-     that bin too. */
+     that bin too. A bin or pallet counted twice is one label, listed once. */
   const out = [];
+  const seen = new Set();
   for (const r of rows) {
-    if (r.bin_label_issue) {
-      out.push({ ...r, what: 'BIN', issue: BIN_ISSUE[r.bin_label_issue] || 'LABEL PROBLEM' });
+    if (r.bin_label_issue && !seen.has(`BIN:${r.location_code}`)) {
+      seen.add(`BIN:${r.location_code}`);
+      out.push({ ...r, what: 'BIN', issue: BIN_ISSUE[r.bin_label_issue] || 'LABEL PROBLEM', ...state('BIN', r.location_code) });
     }
-    if (r.label_issue) {
-      out.push({ ...r, what: 'PALLET', issue: PALLET_ISSUE[r.label_issue] || 'LABEL PROBLEM' });
+    if (r.label_issue && !seen.has(`PALLET:${r.pallet_id}`)) {
+      seen.add(`PALLET:${r.pallet_id}`);
+      out.push({ ...r, what: 'PALLET', issue: PALLET_ISSUE[r.label_issue] || 'LABEL PROBLEM', ...state('PALLET', r.pallet_id) });
     }
   }
   return out.sort((a, b) => (a.what === b.what ? 0 : a.what === 'BIN' ? -1 : 1));
+}
+
+/** Tick a label off (or back on): the label was printed and put on the pallet or the rack. */
+export function fixLabel(sessionId, { what, code, by = '', outcome = '', reopen = false } = {}) {
+  const id = Number(sessionId);
+  const w = String(what || '').toUpperCase();
+  const c = String(code || '').trim().toUpperCase();
+  if (!['BIN', 'PALLET'].includes(w) || !c) throw Object.assign(new Error('say which label: BIN or PALLET, and its code'), { status: 400 });
+  const row = labelsToReplace(id).find((l) => l.what === w && (w === 'BIN' ? l.location_code : l.pallet_id) === c);
+  if (!row) throw Object.assign(new Error(`${c} is not on the relabel list`), { status: 404 });
+  if (reopen) db.prepare('DELETE FROM label_fixes WHERE session_id = ? AND what = ? AND code = ?').run(id, w, c);
+  else db.prepare('INSERT INTO label_fixes (session_id, what, code, fixed_by, fixed_at, outcome) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(session_id, what, code) DO UPDATE SET fixed_by = excluded.fixed_by, fixed_at = excluded.fixed_at, outcome = excluded.outcome')
+    .run(id, w, c, by || 'a supervisor', new Date().toISOString(), String(outcome || '').slice(0, 300) || null);
+  return labelsToReplace(id).find((l) => l.what === w && (w === 'BIN' ? l.location_code : l.pallet_id) === c);
 }
 
 /** Everything the warehouse map needs: each bin's count state, and each aisle's block and team. */

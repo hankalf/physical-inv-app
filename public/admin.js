@@ -1767,7 +1767,9 @@
         const act = document.createElement('td');
         if (r.id && r.status === 'open') act.appendChild(button('Fixed', 'sm primary', () => fixItem(r.id, false)));
         else if (r.id) act.appendChild(button('Reopen', 'sm', () => fixItem(r.id, true)));
-        else act.appendChild(Object.assign(document.createElement('span'), { className: 'muted', textContent: 'print the label' }));
+        /* a label to replace: ticked off once it is printed and on the pallet or the rack */
+        else if (r.label && r.status === 'open') act.appendChild(button(r.target === 'rack' ? 'Label printed & on the rack' : 'Label printed & on the pallet', 'sm primary', () => fixLabelRow(r.label, false)));
+        else if (r.label) act.appendChild(button('Reopen', 'sm', () => fixLabelRow(r.label, true)));
         /* what the counter scanned to say which one it is - typed when the label would not scan */
         const conf = (what) => {
           const td = cell((what === 'bin' ? r.bin : r.pallet_id) || '—');
@@ -1787,6 +1789,10 @@
     let outcome = '';
     if (!reopen) { outcome = prompt('Mark it fixed — what was done? (optional)') ?? null; if (outcome === null) return; }
     try { await postJson(`/api/admin/sessions/${sessionId}/issues/${id}/fix`, { outcome, reopen }); await refreshLabels(); }
+    catch (err) { msg($('fixMsg'), 'err', err.message); }
+  }
+  async function fixLabelRow(label, reopen) {
+    try { await postJson(`/api/admin/sessions/${sessionId}/labels/fix`, { what: label.what, code: label.code, reopen }); await refreshLabels(); }
     catch (err) { msg($('fixMsg'), 'err', err.message); }
   }
   for (const b of document.querySelectorAll('#fixFilter button')) b.onclick = () => { fixStatus = b.dataset.status; refreshLabels().catch(() => {}); };

@@ -393,7 +393,7 @@ content({
 content({
   title: L('Finishing the aisle, and signing off', 'Terminar el pasillo, y salir'),
   lines: [
-    [L('Only when every spot on your levels is counted: open ', 'Solo cuando cada lugar de tus niveles está contado: abre '), { text: L('My aisle', 'Mi pasillo'), bold: true }, L(' and tap ', ' y toca '), { text: L('Aisle complete — next aisle', 'Pasillo terminado — siguiente pasillo'), bold: true }, L('. The scanner gives you the next one.', '. El escáner te da el siguiente.')],
+    [L('When every spot on your levels is counted, ', 'Cuando cada lugar de tus niveles está contado, '), { text: L('tell your supervisor', 'avisa a tu supervisor'), bold: true }, L('. They mark the aisle done in the office — no button on the scanner — and your next aisle appears on ', '. Él marca el pasillo terminado en la oficina — sin botón en el escáner — y tu siguiente pasillo aparece en '), { text: L('My aisle', 'Mi pasillo'), bold: true }, L(' by itself.', ' solo.')],
     [L('Break or home? Tap ', '¿Descanso o a casa? Toca '), { text: L('Sign off this scanner', 'Salir de este escáner'), bold: true }, L(' and put the scanner on its charger.', ' y pon el escáner en su cargador.')],
   ],
   shots: ['aisle-complete', 'next-aisle'],
@@ -429,7 +429,7 @@ content({
     [L('History → Void this line', 'Historial → Anular esta línea'), L('Take a wrong line out', 'Quitar una línea mal hecha')],
     [L('Report a problem', 'Reportar un problema'), L('Damage or a blocked spot. Not an emergency', 'Daño o un lugar bloqueado. No es emergencia')],
     [L('SOS — I need help', 'SOS — necesito ayuda'), L('An emergency. The office comes', 'Una emergencia. La oficina viene')],
-    [L('Aisle complete — next aisle', 'Pasillo terminado — siguiente pasillo'), L('Only when the whole aisle is counted', 'Solo cuando todo el pasillo está contado')],
+    [L('Refresh, on My aisle', 'Actualizar, en Mi pasillo'), L('Your next aisle, once the supervisor marks this one done', 'Tu siguiente pasillo, cuando el supervisor marque este terminado')],
     [L('Start second counts', 'Empezar segundos conteos'), L('Spots to count again, on My aisle', 'Lugares para volver a contar, en Mi pasillo')],
     [L('Sign off this scanner', 'Salir de este escáner'), L('Break or end of shift. Charger', 'Descanso o fin de turno. Cargador')],
   ];

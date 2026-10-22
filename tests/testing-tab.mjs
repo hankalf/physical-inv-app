@@ -313,8 +313,12 @@ check('A pallet missing from its bin — found by recording the bin empty', awai
 await wait(800);
 await gun.click('#btnToAssign');
 await waitScreen('scrAssign');
-await gun.click('#btnAisleDone');
-check('Finishing aisle F01 moves the team to F02', await waitCheck('nextAisle', 12000), await gunText());
+check('The practice gun has no "Aisle complete" button either: an aisle is marked done on the Team plan', (await gun.$('#btnAisleDone')) === null);
+{ const list = await get(`/api/admin/sessions/${pid}/assignments`);
+  const a = list.find((x) => x.aisle === 'F01' && x.status === 'active');
+  await post(`/api/admin/sessions/${pid}/assignments/${a.id}`, { status: 'done' }); }
+await gun.click('#btnAssignRefresh');
+check('Marking F01 done on the Team plan moves the team to F02', await waitCheck('nextAisle', 12000), await gunText());
 
 /* the SOS button, from the practice gun */
 await waitScreen('scrAssign');

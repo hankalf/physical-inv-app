@@ -1157,6 +1157,15 @@
     } catch (err) { msg(out, 'err', 'Upload failed', err.message); }
   }
 
+  /* the lists back out as files; the override box only for the site admin */
+  $('btnDownload-bins').onclick = () => { if (needSession($('uploadMsg-bins'))) api.download(`/api/admin/sessions/${sessionId}/export/bins.csv`, `bins-${sessionId}.csv`); };
+  $('btnDownload-pallets').onclick = () => { if (needSession($('uploadMsg-pallets'))) api.download(`/api/admin/sessions/${sessionId}/export/master.csv`, `inventory-report-${sessionId}.csv`); };
+  function drawOverride() {
+    const site = !!(api.me && api.me.siteAdmin);
+    $('overrideBox').hidden = !site;
+    if (!site) $('fReplace-pallets').checked = false;
+  }
+
   for (const kind of Object.keys(FILE_GUIDE)) {
     if (!$('btnUpload-' + kind)) continue;
     renderGuide(kind);
@@ -2537,6 +2546,7 @@
   async function load() {
     await refreshMe();
     await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshJobs().catch(() => {}), refreshReasons(), refreshSosSettings(), refreshIssueMenu().catch(() => {}), refreshLogo(), refreshPalletSystem().catch(() => {}), refreshOnedrive().catch(() => {}), refreshGdrive().catch(() => {}), refreshTeamsBackup().catch(() => {}), refreshCrewBoard().catch(() => {}), refreshSystems().catch(() => {})]);
+    drawOverride();
     await refreshFeatures().catch(() => {});
     await refreshGun().catch(() => {});
     await loadLayouts().catch(() => {});

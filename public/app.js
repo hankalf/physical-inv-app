@@ -185,8 +185,15 @@
     // which job the gun is on, readable from outside (the Testing Suite's tips follow it)
     document.documentElement.dataset.job = name === 'scrSignon' ? '' : (state.mode || 'full');
     if (name === 'scrScan') focusScan();
-    // a badge is scanned, not typed: put the cursor where the scan should land
-    if (name === 'scrSignon') setTimeout(() => { try { $('fEmployee').focus({ preventScroll: true }); } catch { /* ignore */ } }, 60);
+    /* the team card is scanned first, then the badges: the cursor starts in
+       Team number (its old value selected, so a fresh scan replaces it) and
+       Enter moves it to the badge box. A solo job with no team box starts on
+       the badges. */
+    if (name === 'scrSignon') setTimeout(() => {
+      const team = $('fTeam');
+      const f = team.offsetParent !== null && !$('teamBlock').hidden ? team : $('fEmployee');
+      try { f.focus({ preventScroll: true }); if (f === team) team.select(); } catch { /* ignore */ }
+    }, 60);
   }
 
   /* ------------------------------------------------------------ feedback */
@@ -943,7 +950,6 @@
     const cycleMode = state.session && state.session.mode === 'cycle';
     if (cycleMode) {
       card.innerHTML = '';
-      $('btnAisleDone').hidden = true;
       $('btnCount').hidden = true;
       const tasks = (state.recounts || []).filter((t) => !(state.recountsDoneLocal || []).includes(t.id));
       $('recountCard').hidden = false;
@@ -959,7 +965,6 @@
     }
     $('btnCount').hidden = false;
     clearFeedback($('assignMsg'));
-    $('btnAisleDone').hidden = !(a && a.active);
     const tasks = (state.recounts || []).filter((t) => !(state.recountsDoneLocal || []).includes(t.id));
     const cycle = tasks.filter((t) => t.kind === 'cycle').length;
     const cycleOnly = cycle === tasks.length;
@@ -1029,26 +1034,8 @@
     $('btnCount').textContent = 'Count without an assignment';
   }
 
-  async function completeAisle() {
-    const a = state.assignment;
-    if (!a || !a.active) return;
-    await syncQueue();
-    const counted = new Set([...(a.progress?.countedBins || []), ...(await localCountedBins(a.active.aisle))]);
-    const left = a.bins.filter((b) => !counted.has(b)).length;
-    const partnerNote = a.active.partner ? ` Team ${a.active.partner.team} is still counting from the other end.` : '';
-    if (left > 0 && !confirm(tr(`${left} bin(s) in ${a.active.aisle} have no count.${partnerNote} Empty bins are fine — complete the aisle anyway?`))) return;
-    if (!online()) { feedback($('assignMsg'), 'err', 'Need Wi-Fi to complete an aisle', 'The next aisle is released by the server.'); return; }
-    try {
-      state.assignment = await api(`/api/sessions/${state.session.id}/assignments/${a.active.id}/complete`, {
-        method: 'POST', body: JSON.stringify({ team: state.team }),
-      });
-      await metaSet('assignment', state.assignment);
-      beep('ok');
-      renderAssignment();
-    } catch (err) {
-      feedback($('assignMsg'), 'err', 'Could not complete aisle', err.message);
-    }
-  }
+  /* Finishing an aisle is the floor supervisor's call, made on the Team plan
+     in the office; the gun never hands an aisle back itself. */
 
   /* ------------------------------------------------------------ second counts */
   function nextRecountTask() {
@@ -1572,7 +1559,7 @@
     el.innerHTML = '';
     if (!open && !next) {
       el.className = 'nextbin done';
-      el.append(`Every bin in ${a.active.aisle} has a count — tap "Aisle complete" when you are happy.`);
+      el.append(`Every bin in ${a.active.aisle} has a count — tell your supervisor. Your next aisle shows here once they mark this one done.`);
       return;
     }
 
@@ -3084,7 +3071,6 @@
     state.recount = null;
     renderAssignment(); showScreen('scrAssign');
   };
-  $('btnAisleDone').onclick = completeAisle;
   $('btnAssignRefresh').onclick = () => refreshAssignment(false);
   $('btnAssignHistory').onclick = () => { renderHistory(); state.historyReturn = 'scrAssign'; showScreen('scrHistory'); };
   $('btnSignoff').onclick = async () => {
@@ -3458,6 +3444,8 @@
   window.addEventListener('online', () => { updateChips(); flushPending(); flushSos(); flushMoves(); flushIssues(); syncQueue(); checkForUpdate({ force: true }); });
   window.addEventListener('offline', updateChips);
   setInterval(() => { updateChips(); flushPending(); flushSos(); flushMoves(); flushIssues(); syncQueue(); checkForUpdate(); }, 20000);
+  // on My aisle, the supervisor's "done" and the next aisle arrive without a tap
+  setInterval(() => { if ($('scrAssign').classList.contains('active') && !state.recount) refreshAssignment(true); }, 15000);
   /* An SOS is not a count: a counter waiting to hear that somebody has seen it
      should not wait out the twenty-second tick, so this looks more often. */
   setInterval(() => { refreshSos(); }, 6000);

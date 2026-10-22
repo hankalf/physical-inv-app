@@ -89,7 +89,7 @@ const BINS = [
     try: 'The report says F12321-111 is here. It is not — record the bin empty. It shows as missing.', check: 'missing' },
 
   { bin: 'F02A001', shelf: [P('F23411-111', 40, 'straw', 'F23411', 130)],
-    try: 'A new aisle: finish F01 first with “Aisle complete — next aisle”.', check: 'nextAisle' },
+    try: 'A new aisle: first ask a supervisor to mark F01 done on the Dashboard’s Team plan (or do it yourself there).', check: 'nextAisle' },
   { bin: 'F02A002', shelf: [P('F23412-111', 30, 'peach', 'F23412', 240)] },
   { bin: 'F02A003', shelf: [P('F23413-111', 32, 'blue', 'F23413', 200)],
     try: 'Once counted, scan F23413-111 again — the gun warns it is already counted.' },
@@ -118,7 +118,7 @@ const CHECKS = [
   ['label', 'Count a pallet whose label will not scan'],
   ['binLabel', 'Count at a bin whose rack label will not scan'],
   ['missing', 'Find a pallet missing from its bin'],
-  ['nextAisle', 'Finish aisle F01 and move to the next'],
+  ['nextAisle', 'Have aisle F01 marked done on the Team plan, and move to the next'],
   ['sos', 'Send an SOS (and see it on the dashboard)'],
 ];
 
@@ -545,7 +545,7 @@ function uploadedSheet(s, lines, byPallet, emptyBins, countedBins) {
     ['first', 'Count a pallet: pallet, quantity, bin', lines.some((l) => !l.empty_bin)],
     ['every', `Count every pallet in your file (${countedPallets} of ${allPallets})`, allPallets > 0 && countedPallets === allPallets],
     ...(hasEmpty ? [['empty', 'Record the empty bins', bins.filter((b) => !b.shelf.length).every((b) => b.recordedEmpty)]] : []),
-    ['nextAisle', 'Finish an aisle with “Aisle complete”', !!db.prepare("SELECT 1 FROM assignments WHERE session_id = ? AND status = 'done'").get(id)],
+    ['nextAisle', 'Have an aisle marked done on the Team plan', !!db.prepare("SELECT 1 FROM assignments WHERE session_id = ? AND status = 'done'").get(id)],
     ['sos', 'Send an SOS (and see it on the dashboard)', !!db.prepare('SELECT 1 FROM alerts WHERE session_id = ?').get(id)],
   ];
   return {

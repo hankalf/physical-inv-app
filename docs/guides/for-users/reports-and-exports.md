@@ -33,7 +33,7 @@ count first.
 | Adjustments | **Download the ERP worksheet (CSV)** | Every adjustment, with an *In ERP* column to fill in | Keying the whole count into the ERP, then marking it |
 | Adjustments | **⬇ Excel** on an aisle's row | Every pallet in that aisle, with an *Uploaded to ERP* column | Keying the ERP an aisle at a time |
 | Adjustments | **Adjustments CSV** | The approval record: who approved or rejected each line, and why | The audit trail for approvals |
-| Reports | **Fix list CSV** / **Labels only (CSV)** | Labels to replace, damage, blocked bins / just the labels | The walk-round with a label printer |
+| Reports | **Fix list CSV** / **Labels only (CSV)** | Labels to replace, damage, blocked bins / just the labels, each with its state and who ticked it off | The walk-round with a label printer |
 | Reports | **Final report** and the filed files | Each aisle's numbers as it was finished; every sheet at the end | The record that survives on its own |
 | Reports | **Export everything (Excel)** | One workbook, every table, in plain words | The auditor, the manager, the shared drive |
 | Reports | **Pallet report CSV** | One row per pallet: report, counts, bins, lot, status, ERP mark | Working the differences in Excel |

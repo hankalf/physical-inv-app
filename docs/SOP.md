@@ -424,8 +424,21 @@ else.**
   bin location.
 - **Replace what is there** wipes the existing list first. Leave it unticked to add to
   it.
+- **⬇ Download the loaded list** gives the bin list back as a CSV file, as it is loaded on
+  this count.
 
 The card reports what it read: how many bins, how many aisles, and anything it skipped.
+
+**The inventory report** has the same card below it, with two differences. An upload
+**adds to** the report that is loaded — a pallet already on it is updated, a new one is
+added, nothing is removed — so the ERP moving on is handled by uploading again. **Override**
+throws the loaded report away first, and is the **site admin's alone**: the login the site
+started with sees the box, other admins do not, and the server refuses the override from
+anyone else. The counts already taken stay and are compared against the new report; the log
+says who overrode it and how many pallets went. **⬇ Download the loaded report** gives the
+report back with every column it came with (system, pallet, SKU, description, variant, UOM,
+entry number, quantity, location, lot, expiry), so what the count is being checked against can
+be looked at or sent on.
 
 ![](images/settings-bin-list.png)
 
@@ -645,7 +658,7 @@ directly.
 | F01B006 | A pallet on the report that has gone — record the bin empty |
 | F02B001 | A quantity big enough that the gun asks for it twice |
 
-Then **Aisle complete — next aisle**, press **SOS** once, and **Open the dashboard on this count**
+Then press **SOS** once, and **Open the dashboard on this count**
 to see it all from the supervisor's side: progress, the pallet report, the SOS bar, adjustments.
 
 **It is walled off from the real thing.**
@@ -1054,8 +1067,10 @@ dashboard. Uploading needs *Queue aisles*; the export needs *Downloads*.
   A counting-plan file takes the same thing in an optional **Start** column: *far end* or *001 end*.
 
 **The buttons on an aisle.** Each aisle in a team's row has what fits its state: **start** on one
-waiting (if its racking block is free); **done** on the one being counted (the same as the gun's
-*Aisle complete*); **release** sends the one being counted to the **back** of the team's queue and
+waiting (if its racking block is free); **done** on the one being counted — the gun has no button for this: finishing an
+aisle is the floor supervisor's call, made here, and it raises the MISSING second counts for the
+pallets nobody saw and files the aisle; the team's next aisle then shows on its scanner by itself;
+**release** sends the one being counted to the **back** of the team's queue and
 the next one starts — with nothing else queued it simply starts again, and the card says so;
 **reopen** on a finished one queues it again; **✕** takes the aisle off the plan whatever its
 state — the aisle's counts stay, and if the team was counting it, their next aisle starts. On an
@@ -1444,6 +1459,8 @@ is exactly what it is until somebody puts a label on it.
 > **Print the rack labels first.** A pallet's bad label costs one counter one minute. A
 > bin's costs every counter who walks up to that bay for the rest of the count — and the
 > put-away driver afterwards. The relabel list marks them **RACK** and puts them at the top.
+> Once a label is printed and on, tick it off on the Fix list — **Label printed & on the pallet**
+> (or *on the rack*) — and it leaves the list to print.
 
 **A message from the office**
 
@@ -1467,7 +1484,6 @@ still live underneath it.*
 | **Bin is EMPTY** | The bin is genuinely empty. If the bin is already scanned (bin first), answer **Yes** to *Mark it EMPTY?*; otherwise scan the bin. It is recorded as counted and empty |
 | **My aisle** | Back to the assignment screen |
 | **History** | The last 50 lines from this scanner. **Void** removes a wrong line from the totals |
-| **Aisle complete — next aisle** | Only when the aisle is finished. It frees the racking block and releases the team's next aisle |
 <img src="images/gun-history.png" width="300">
 
 *History: the last 50 lines this scanner counted. **Void** takes a wrong one out of the totals.*
@@ -1893,6 +1909,8 @@ from the gun's *Report a problem* button (a pallet, the racking, the product, ea
 a note), and **bins blocked** by a trailer or a forklift that a team said it would come back to. Each
 shows the bin, the pallet (marked **✓ scanned**, or **✓ typed on the gun**, when that is what the
 counter confirmed it with), who saw it and when. **Fixed** ticks it off with a word on what was done;
+a label row is ticked off with **Label printed & on the pallet** (or *on the rack*) once the new label
+is on — it records who and when, drops out of *Labels to replace*, and **Reopen** puts it back;
 *Still open* is the walk-round list. It downloads as a CSV and has its own sheet in the export.
 
 **Filed as the count goes.** The moment a team hands an aisle back, the app writes that aisle to
@@ -2295,7 +2313,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | The map is a schematic, not your drawing | No rack drawing on this count | Settings → Count setup → Count session → **Map drawing** |
 | A reason code edit "did not reach" a gun | It takes up to about half a minute, and only lands between pallets; a gun on an old build does not take it at all | Wait for the counter to finish the pallet they are on; check the build line on the sign-on screen matches the server |
 | Can nobody sign in? | All logins lost | The superadmin is made from the Railway variables the first time the app starts; if it was deleted or demoted later, set `SUPERADMIN_USER` to a new username and restart, which makes a fresh admin login |
-| Numbers look wrong after an ERP import | The inventory report moved on | Re-upload it with **Replace what is there**, then re-read the pallet report |
+| Numbers look wrong after an ERP import | The inventory report moved on | Re-upload it (an upload adds to and updates what is loaded), then re-read the pallet report. Throwing the loaded report away first — **Override** — is the site admin's alone |
 | A scanner's scan times are hours out | The handheld's clock is wrong | Nothing to do: every line carries the gun's own send time, and the server corrects the scan time by the clock's error. Set the clock when you can, all the same |
 | Everyone was signed out of the dashboards | The server restarted (a deploy, a Railway restart) | Sign-ins now survive a restart; if it still happens, the server lost its database volume — check Railway |
 

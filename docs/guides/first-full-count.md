@@ -330,7 +330,7 @@ against, and it is what makes the aisles.
 1. Under **Bin list**, choose the CSV or Excel file — the ERP's bin export, as it comes. The only
    column it must have is the bin location (*location*, *bin*, *slot* and similar are all read).
 2. Tick **Replace what is there** if you are uploading it again.
-3. Press **Upload**.
+3. Press **Upload**. (**⬇ Download the loaded list** gives it back as a file at any time.)
 
 **How you know it worked:** the card says how many bins and aisles it read, and lists anything it
 skipped.
@@ -358,6 +358,12 @@ adjustments.
 
 **How you know it worked:** the card says how many pallets it read, how many empty positions, and
 any pallet listed twice.
+
+**Uploading it again.** An upload *adds to* the report that is loaded: a pallet already on it is
+updated, a new one is added, nothing is removed. So when the ERP moves on, upload the new export
+and carry on. **Override** — throwing the loaded report away first — is the site admin's alone (the
+login the site started with); other admins do not see the box. **⬇ Download the loaded report**
+gives the report back as a file, every column it came with.
 
 ## 13 — Pair the aisles into racking blocks
 
@@ -528,7 +534,6 @@ is signal. The top of the screen shows **online** or **OFFLINE** and how many li
 | **History** | The last 50 lines. **Void** removes a wrong one |
 | **Report a problem** | Damage, or a bin blocked by a truck. Not an emergency |
 | **SOS — I need help** | An emergency. It tells the office the team, the aisle and the last bin |
-| **Aisle complete — next aisle** | Only when the aisle is finished. The team's next aisle starts |
 | **Start second counts** | When the scanner says bins are waiting to be counted again (step 21) |
 
 **When the scanner stops and asks.** A pallet not on the report asks **Count it anyway?** Press
