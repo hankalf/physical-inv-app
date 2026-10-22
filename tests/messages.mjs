@@ -93,8 +93,8 @@ await gun.waitForSelector('#scrSignon.active'); await gun.waitForTimeout(900);
 check('Gun: the clock-in box does not ask for a keyboard — badges are scanned',
   (await gun.$eval('#fEmployee', (f) => f.inputMode || f.getAttribute('inputmode'))) === 'none');
 check('Gun: nor does the team box', (await gun.$eval('#fTeam', (f) => f.inputMode || f.getAttribute('inputmode'))) === 'none');
-check('Gun: and the cursor is already in the clock-in box, so a badge scan lands without a tap',
-  await gun.evaluate(() => document.activeElement && document.activeElement.id === 'fEmployee'),
+check('Gun: and the cursor is already in the team box, so the team card scans without a tap (Enter moves it to the badges)',
+  await gun.evaluate(() => document.activeElement && document.activeElement.id === 'fTeam'),
   await gun.evaluate(() => (document.activeElement || {}).id || 'nothing'));
 await gun.click('#btnSignonKeyboard'); await gun.waitForTimeout(300);
 check('Gun: whoever has to type says so first, and then gets one',
