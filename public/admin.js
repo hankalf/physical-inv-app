@@ -661,8 +661,8 @@
       board.appendChild(box);
     }
   }
-  /* the list takes a queued aisle back: off the plan */
-  {
+  /* the list takes a queued aisle back: off the plan (the Inventory Control page shares this script and has no board) */
+  if ($('aislePool')) {
     const pool = $('aislePool');
     pool.addEventListener('dragover', (e) => { if (drag.kind === 'assignment') { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; pool.classList.add('over'); } });
     pool.addEventListener('dragleave', (e) => { if (!pool.contains(e.relatedTarget)) pool.classList.remove('over'); });
