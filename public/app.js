@@ -3512,6 +3512,10 @@
        the panel's pages too, for no gain */
     if ('serviceWorker' in navigator && !PRACTICE) navigator.serviceWorker.register('/sw.js').catch(() => { /* http-only hosts */ });
     if (PRACTICE) { document.body.classList.add('practice'); $('chipPractice').hidden = false; }
+    /* The lines live in the browser's storage until the server has them. Ask
+       Chrome to treat that storage as persistent, so a scanner low on space
+       never has it evicted; nothing else, a closed app included, touches it. */
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { /* best effort */ });
     /* Anything counted before this scanner was last switched off goes up now,
        without waiting for somebody to sign on to the same count again. */
     flushPending().catch(() => { /* the tick will try again */ });
