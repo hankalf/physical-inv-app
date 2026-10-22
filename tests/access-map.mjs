@@ -92,14 +92,16 @@ await site.route('https://*.tile.openstreetmap.org/**', (r) => r.fulfill({ statu
 await site.goto(`${BASE}/settings#logins`);
 await signIn(site);
 await site.waitForSelector('#accessMapCard:not([hidden])', { timeout: 8000 });
-await site.waitForSelector('#amMap .leaflet-container, #amMap.leaflet-container', { timeout: 8000 }).catch(() => {});
-await site.waitForTimeout(1000);
+/* the map is built once the card is on screen: the library loads, then the circles */
+await site.$eval('#amMap', (el) => el.scrollIntoView({ block: 'center' }));
+await site.waitForSelector('#amMap path.leaflet-interactive', { timeout: 15000 }).catch(() => {});
+await site.waitForTimeout(400);
 check('The site admin sees the card, with the sums', /sign-ons/.test(clean(await site.textContent('#amSummary'))) && /2 countries/.test(clean(await site.textContent('#amSummary'))), clean(await site.textContent('#amSummary')));
 check('…the map, with a circle per address that has a place', (await site.$$('#amMap path.leaflet-interactive')).length === 2, String((await site.$$('#amMap path.leaflet-interactive')).length));
 const rows = await site.$$eval('#amTable tbody tr', (trs) => trs.map((tr) => [...tr.children].map((td) => td.textContent).join(' ').replace(/\s+/g, ' ').trim()));
 check('…and the list: the login from Guadalajara with its network and device, the scanner on the building\'s network', rows.some((r) => /Login AM-ADMIN · Ana Mapa \(admin\) 198\.51\.100\.7 Guadalajara, Jalisco, Mexico Telmex Windows · Edge 120/.test(r)) && rows.some((r) => /Scanner MAP-01 · team 7 signed on 192\.168\.4\.20 the building's own network/.test(r)), rows.slice(0, 3).join(' | '));
 await site.selectOption('#fAmKind', 'login'); await site.waitForTimeout(700);
-check('Logins only narrows the list', (await site.$$eval('#amTable tbody tr', (trs) => trs.map((tr) => tr.dataset.kind))).every((k) => k === 'login'));
+check('Logins only narrows the list', (await site.$$eval('#amTable tbody tr', (trs) => trs.map((tr) => tr.dataset.signon))).every((k) => k === 'login'));
 check('The page says the admin\'s own address', clean(await site.textContent('#amSelf')) !== '');
 check('No page errors', !errors.length, errors.join(' | '));
 await browser.close();

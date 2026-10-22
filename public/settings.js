@@ -1544,7 +1544,7 @@
     const tb = document.createElement('tbody');
     for (const r of d.rows.slice(0, 300)) {
       const tr = document.createElement('tr');
-      tr.dataset.kind = r.kind;
+      tr.dataset.signon = r.kind;      // not data-kind: that marks the upload cards
       const place = r.private ? 'the building\'s own network' : r.resolved ? r.place : r.pending ? 'not looked up yet' : `lookup failed${r.error ? ' · ' + r.error : ''}`;
       for (const [t, cls] of [[when(r.at), ''], [r.kind === 'scanner' ? 'Scanner' : 'Login', ''], [`${r.who}${r.detail ? ' · ' + r.detail : ''}`, ''], [r.ip, 'mono'], [place, r.resolved ? '' : 'muted'], [r.isp || '—', ''], [r.device || '—', '']]) {
         const td = document.createElement('td'); td.textContent = t; if (cls) td.className = cls; td.style.whiteSpace = 'nowrap'; tr.appendChild(td);
@@ -1553,7 +1553,19 @@
     }
     if (!d.rows.length) { const tr = document.createElement('tr'); const td = document.createElement('td'); td.colSpan = 7; td.className = 'muted'; td.textContent = 'Nothing yet.'; tr.appendChild(td); tb.appendChild(tr); }
     tbl.appendChild(tb);
-    /* the map: one circle per address with a place, sized by how many sign-ons came from it */
+    /* the map: one circle per address with a place, sized by how many sign-ons came from it.
+       It is built the first time the card is actually on screen, so a Settings
+       page opened on another tab fetches no map tiles. */
+    amPlaces = d.places;
+    if (amShown) paintMap(); else if (!amWatch && 'IntersectionObserver' in window) {
+      amWatch = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { amShown = true; amWatch.disconnect(); paintMap(); } }, { threshold: 0.05 });
+      amWatch.observe($('amMap'));
+    }
+  }
+  let amPlaces = [], amShown = false, amWatch = null;
+  function paintMap() {
+    const d = { places: amPlaces };
+    const when = (iso) => (iso ? new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—');
     loadLeaflet().then((L) => {
       if (!amMap) {
         amMap = L.map('amMap', { worldCopyJump: true, zoomControl: true }).setView([30, 0], 2);
