@@ -1,4 +1,4 @@
-import { db, LIVE } from '../db.js';
+import { db, LIVE, getSession } from '../db.js';
 import { aisleOverview } from './assignments.js';
 import { shortNames } from './people.js';
 
@@ -143,6 +143,8 @@ export function palletReport(sessionId, { only = null } = {}) {
     `SELECT pallet_id, sku, description, uom, COALESCE(source, '') AS source, COALESCE(variant, '') AS variant, COALESCE(entry_no, '') AS entry_no,
             expected_qty, expected_location, lot AS expected_lot, expiry AS expected_expiry, cost, amount, cost_source
        FROM pallets WHERE session_id = ?${inList}`).all(...args);
+  // a lot the counter never scanned is only worth a word when the count asked for lots
+  const asksLot = !!(getSession(id) || {}).ask_lot;
   const seen = new Set(master.map((p) => p.pallet_id));
   const keys = master.map((p) => p.pallet_id);
   for (const k of counted.keys()) if (!seen.has(k)) keys.push(k);
@@ -174,7 +176,7 @@ export function palletReport(sessionId, { only = null } = {}) {
     let lotStatus = '';
     if (foundLot && expectedLot) lotStatus = foundLot === expectedLot ? 'LOT MATCH' : 'WRONG LOT';
     else if (foundLot && !expectedLot) lotStatus = 'LOT NOT ON REPORT';
-    else if (!foundLot && expectedLot && isCounted) lotStatus = 'NO LOT SCANNED';
+    else if (!foundLot && expectedLot && isCounted && asksLot) lotStatus = 'NO LOT SCANNED';
 
     const expiry = (c && c.counted_expiry) || (p && p.expected_expiry) || '';
     const expiryStatus = !expiry ? '' : expiry < today ? 'EXPIRED' : expiry <= soon ? 'EXPIRES SOON' : 'IN DATE';
