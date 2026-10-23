@@ -876,9 +876,9 @@
     // the report's cost, and the difference in money, only when the report carries costs
     const priced = data.rows.some((r) => r.cost !== '' && r.cost != null);
     table($('palletTable'),
-      [{ label: 'Pallet ID' }, { label: 'System' }, { label: 'SKU' }, { label: 'Description' }, { label: 'Expected', num: true }, { label: '1st count', num: true }, { label: '2nd count', num: true }, { label: 'Counted', num: true },
-       ...(priced ? [{ label: 'Cost', num: true }, { label: 'Report $', num: true }, { label: 'Difference $', num: true }] : []),
-       { label: 'Expected bin' }, { label: 'Found in' }, { label: 'Lot' }, { label: 'Expiry' }, { label: 'Team' }, { label: 'Comments' }, { label: 'Status' }, { label: 'ERP upload' }],
+      [{ label: 'Pallet ID' }, { label: 'System' }, { label: 'SKU' }, { label: 'Description' }, { label: 'Exp.', num: true, title: 'Expected: what the report says is on the pallet' }, { label: '1st', num: true, title: 'First count, where the pallet was counted again' }, { label: '2nd', num: true, title: 'Second count' }, { label: 'Counted', num: true, title: 'The count that stands' },
+       ...(priced ? [{ label: 'Cost', num: true, title: 'Unit cost, from the report' }, { label: 'Rpt $', num: true, title: 'Report value: expected quantity at the report\'s cost' }, { label: 'Diff $', num: true, title: 'Difference in money: counted less expected, at the report\'s cost' }] : []),
+       { label: 'Exp. bin', title: 'Expected bin: where the report says the pallet is' }, { label: 'Found in', title: 'Where it was found, when not the expected bin' }, { label: 'Lot' }, { label: 'Expiry' }, { label: 'Team' }, { label: 'Comments' }, { label: 'Status' }, { label: 'ERP', title: 'ERP upload: keyed into the ERP, by whom and when' }],
       data.rows,
       (r) => {
         const tr = document.createElement('tr');

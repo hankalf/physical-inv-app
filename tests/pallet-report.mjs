@@ -74,7 +74,8 @@ const open = async (width, height) => {
 };
 const page = await open(1440, 900);
 const heads = await page.$$eval('#palletTable thead th', (ths) => ths.map((t) => t.textContent.trim()));
-check('The columns, in the order asked for', heads.join('|') === 'Pallet ID|System|SKU|Description|Expected|1st count|2nd count|Counted|Expected bin|Found in|Lot|Expiry|Team|Comments|Status|ERP upload', heads.join('|'));
+check('The columns, in the order asked for, short enough never to wrap', heads.join('|') === 'Pallet ID|System|SKU|Description|Exp.|1st|2nd|Counted|Exp. bin|Found in|Lot|Expiry|Team|Comments|Status|ERP', heads.join('|'));
+check('…an abbreviated heading says its full name on hover, and no heading wraps', (await page.$eval('#palletTable thead th:nth-child(5)', (th) => th.title)) === 'Expected: what the report says is on the pallet' && await page.$$eval('#palletTable thead th', (ths) => ths.every((th) => getComputedStyle(th).whiteSpace === 'nowrap' && th.getBoundingClientRect().height < 2.2 * parseFloat(getComputedStyle(th).fontSize) * 1.2 + 10)));
 const cellsOf = async (id) => page.$$eval(`#palletTable tr[data-pallet="${id}"] td`, (tds) => tds.map((t) => t.textContent.replace(/\s+/g, ' ').trim()));
 const c1 = await cellsOf('PR-1');
 check('PR-1: expected 40, 1st count 36, 2nd count 38, counted 38', c1[4] === '40' && c1[5] === '36' && c1[6] === '38' && c1[7] === '38', c1.slice(4, 8).join(' / '));

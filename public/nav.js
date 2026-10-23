@@ -249,6 +249,7 @@
       for (const c of columns) {
         const th = document.createElement('th');
         th.textContent = c.label;
+        if (c.title) th.title = c.title;          // an abbreviated heading says its full name on hover
         if (c.num) th.className = 'num';
         hr.appendChild(th);
       }

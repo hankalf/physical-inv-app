@@ -137,7 +137,7 @@ await page.evaluate(() => window.appApi.showSub('reports'));
 await page.uncheck('#fOnlyExceptions').catch(() => {});
 await page.waitForSelector('#palletTable tr[data-pallet="FR10248469"]', { timeout: 8000 });
 const heads = await page.$$eval('#palletTable thead th', (ths) => ths.map((t) => t.textContent.trim()));
-check('Pallet report: Cost, Report $ and Difference $ columns, after the counts', heads.slice(4, 11).join('|') === 'Expected|1st count|2nd count|Counted|Cost|Report $|Difference $', heads.join('|'));
+check('Pallet report: Cost, Rpt $ and Diff $ columns, after the counts', heads.slice(4, 11).join('|') === 'Exp.|1st|2nd|Counted|Cost|Rpt $|Diff $', heads.join('|'));
 const row = clean(await page.$eval('#palletTable tr[data-pallet="FR10248469"]', (tr) => [...tr.children].map((td) => td.textContent).join(' ')));
 check('…a row shows the cost and the difference in money', /0\.21708 \$520\.99 -\$217\.08/.test(row), row.slice(0, 160));
 check('…a cost taken from the item is dimmed and wears an "item" pill', await page.$eval('#palletTable tr[data-pallet="FR10247670"] td.muted', (td) => /item/.test(td.title) && /0\.16589/.test(td.textContent) && /item/.test(td.querySelector('.tag')?.textContent || '')));
