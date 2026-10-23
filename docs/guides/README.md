@@ -9,6 +9,7 @@ The full manual is [docs/SOP.md](../SOP.md); the procedure for each job is under
 |---|---|---|
 | [Your first full count, start to finish](first-full-count.md) | Whoever sets the site up and runs its first wall-to-wall | [PDF](first-full-count.pdf) |
 | [Second and third counts](second-and-third-counts.md) | Supervisors, inventory control | [PDF](second-and-third-counts.pdf) |
+| [Set up second and third counts](set-up-second-and-third-counts.md) | Admins and inventory control: the report's costs, the thresholds in cases, percent and money, third counts, a dry run | [PDF](set-up-second-and-third-counts.pdf) |
 | [The ERP upload, an aisle at a time](erp-upload-by-aisle.md) | Inventory control | [PDF](erp-upload-by-aisle.pdf) |
 | [Employees, teams and gear sizes](employees-teams-and-gear.md) | Count supervisors, whoever keeps the crew list | [PDF](employees-teams-and-gear.pdf) |
 | [LIVE and TEST: switching, logins and scanners](live-and-test.md) | Admins, anyone using TEST | [PDF](live-and-test.pdf) |

@@ -19,7 +19,7 @@ const S = { ...hdr, authorization: 'Bearer ' + await login({ username: 'GUIDE-SU
 const adminList = (await j(await fetch(`${BASE}/api/admin/guides`, { headers: A }))).guides;
 const supList = (await j(await fetch(`${BASE}/api/admin/guides`, { headers: S }))).guides;
 check('Every login gets the six guides for users, the first full count first', supList.map((g) => `${g.edition}/${g.name}`).join() === 'user/first-full-count,user/second-and-third-counts,user/erp-upload-by-aisle,user/reports-and-exports,user/employees-teams-and-gear,user/live-and-test', supList.map((g) => g.name).join());
-check('…an admin gets the admin editions too', adminList.length === 12 && adminList.filter((g) => g.edition === 'admin').length === 6);
+check('…an admin gets the admin editions too, the set-up guide for second and third counts among them', adminList.length === 13 && adminList.filter((g) => g.edition === 'admin').length === 7 && adminList.some((g) => g.edition === 'admin' && g.name === 'set-up-second-and-third-counts' && g.sections.length >= 9));
 const exRes = await fetch(`${BASE}/api/admin/guides/user/reports-and-exports`, { headers: S });
 const ex = await j(exRes);
 check('The exports guide is there for every login, a section for each export button', exRes.status === 200 && ['Download this list (CSV)', 'ERP worksheet', 'Adjustments CSV', 'Fix list CSV', 'Final report', 'Export everything', 'Pallet report CSV', 'Raw counts CSV', 'Exceptions CSV', 'Uncounted bins CSV', 'Count sheets'].every((t) => ex.html.includes(t)), exRes.status);
@@ -86,7 +86,7 @@ const ap = await ctx.newPage();
 await ap.goto(`${BASE}/guide`);
 await ap.fill('#fPassword', 'changeme'); await ap.click('#btnLogin');
 await ap.waitForSelector('#howtosAdminList .howto');
-check('An admin sees the admin editions under For admins', (await ap.locator('#howtosAdminList .howto').count()) === 6 && /Admin edition/.test(await ap.textContent('#howtosAdminList')));
+check('An admin sees the admin editions under For admins', (await ap.locator('#howtosAdminList .howto').count()) === 7 && /Admin edition/.test(await ap.textContent('#howtosAdminList')));
 await browser.close();
 
 const passed = results.filter(Boolean).length;

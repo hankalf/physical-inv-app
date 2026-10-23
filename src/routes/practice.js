@@ -146,15 +146,19 @@ function binCsv(codes = BINS.map((b) => b.bin)) {
 /* The report in the site's own layout - the columns its systems export - with
    an OPEN row for each empty position, as the real file has. */
 const SYSTEM_OF = (lot) => (['JustFood', 'SGI', 'NTFF'][Number(lot.slice(-1)) % 3]);
+/* a unit cost per item, so the practice count has differences in money too and the money thresholds can be tried */
+const COST = { straw: 42.5, blue: 48.2, mango: 31.25, peach: 29.9, rasp: 55.75, pine: 24.4, cherry: 61.3, black: 58.4, mixed: 36.8, banana: 19.85 };
+const costOf = (item) => COST[item] ?? 30;
+const money = (n) => Math.round(n * 10000) / 10000;
 function reportCsv() {
-  let csv = 'Bin Code,Container No.,Item No.,Description,Variant Code,Quantity,Unit of Measure Code,Entry No.,Lot No.,System,Best Before\n';
+  let csv = 'Bin Code,Container No.,Item No.,Description,Variant Code,Quantity,Unit of Measure Code,Entry No.,Lot No.,System,Best Before,Cost,Amount\n';
   let entry = 2517386;
   for (const b of BINS) {
     const rows = b.report || b.shelf;
-    if (!rows.length) { csv += `${b.bin},,,,,,,,,OPEN,\n`; continue; }
+    if (!rows.length) { csv += `${b.bin},,,,,,,,,OPEN,,,\n`; continue; }
     for (const p of rows) {
       const [sku, desc, uom] = ITEMS[p.item];
-      csv += `${b.bin},${p.id},${sku},"${desc}",,${p.qty},${uom},${entry++},${p.lot},${SYSTEM_OF(p.lot)},${usDate(day(p.days))}\n`;
+      csv += `${b.bin},${p.id},${sku},"${desc}",,${p.qty},${uom},${entry++},${p.lot},${SYSTEM_OF(p.lot)},${usDate(day(p.days))},${costOf(p.item)},${money(p.qty * costOf(p.item))}\n`;
     }
   }
   return csv;
@@ -743,14 +747,14 @@ const SECOND_PALLETS = new Set(SECOND_BINS.flatMap((b) => [...b.shelf, ...(b.rep
 const secondSetUp = (s) => !!s && !!db.prepare('SELECT 1 FROM counts WHERE session_id = ? AND team = ? AND voided = 0').get(s.id, PRACTICE_OTHER_TEAM);
 /* the other crew's aisle: its bins and report rows, added to the practice count */
 function secondReportCsv() {
-  let csv = 'Bin Code,Container No.,Item No.,Description,Variant Code,Quantity,Unit of Measure Code,Entry No.,Lot No.,System,Best Before\n';
+  let csv = 'Bin Code,Container No.,Item No.,Description,Variant Code,Quantity,Unit of Measure Code,Entry No.,Lot No.,System,Best Before,Cost,Amount\n';
   let entry = 2517900;
   for (const b of SECOND_BINS) {
     const rows = b.report || b.shelf;
-    if (!rows.length) { csv += `${b.bin},,,,,,,,,OPEN,\n`; continue; }
+    if (!rows.length) { csv += `${b.bin},,,,,,,,,OPEN,,,\n`; continue; }
     for (const p of rows) {
       const [sku, desc, uom] = ITEMS[p.item];
-      csv += `${b.bin},${p.id},${sku},"${desc}",,${p.qty},${uom},${entry++},${p.lot},${SYSTEM_OF(p.lot)},${usDate(day(p.days))}\n`;
+      csv += `${b.bin},${p.id},${sku},"${desc}",,${p.qty},${uom},${entry++},${p.lot},${SYSTEM_OF(p.lot)},${usDate(day(p.days))},${costOf(p.item)},${money(p.qty * costOf(p.item))}\n`;
     }
   }
   return csv;

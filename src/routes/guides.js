@@ -17,7 +17,7 @@ const DOCS = join(new URL('.', import.meta.url).pathname, '..', '..', 'docs');
 const FOLDERS = { user: join(DOCS, 'guides', 'for-users'), admin: join(DOCS, 'guides') };
 const NAME = /^[a-z0-9-]+$/;
 // the order they are listed in: the first full count from scratch, then the count's own work
-const ORDER = ['first-full-count', 'second-and-third-counts', 'erp-upload-by-aisle', 'reports-and-exports', 'employees-teams-and-gear', 'live-and-test'];
+const ORDER = ['first-full-count', 'second-and-third-counts', 'set-up-second-and-third-counts', 'erp-upload-by-aisle', 'reports-and-exports', 'employees-teams-and-gear', 'live-and-test'];
 
 const cache = new Map();                      // path -> { mtime, guide }
 
