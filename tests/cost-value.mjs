@@ -41,7 +41,7 @@ let n = 0;
 const line = (pallet, qty, bin, extra = {}) => ({ clientId: `cv${++n}`, palletId: pallet, qty, location: bin, team: '3', deviceId: 'COST-01', scannedAt: new Date().toISOString(), ...extra });
 
 /* ---------------- the report carries the money ---------------- */
-const a = await count('Cost count');
+const a = await count('Priced count');
 check('The upload reads the site\'s columns: five pallets, four of them with a cost', a.up.pallets === 5 && a.up.withCost === 4, JSON.stringify({ pallets: a.up.pallets, withCost: a.up.withCost }));
 let dl = await (await fetch(`${BASE}/api/admin/sessions/${a.S}/export/master.csv`, { headers: A })).text();
 let lines = dl.trim().split(/\r?\n/);
@@ -60,6 +60,11 @@ let rows = (await get(`/api/admin/sessions/${a.S}/pallets?limit=100`)).rows;
 const R = (id) => rows.find((x) => x.pallet_id === id);
 check('The pallet report prices each difference at the report\'s cost', R('FR10247661').cost === 0.16589 && R('FR10247661').expected_amount === 398.14 && R('FR10247661').counted_amount === 414.73 && R('FR10247661').variance_amount === 16.59, JSON.stringify([R('FR10247661').cost, R('FR10247661').expected_amount, R('FR10247661').counted_amount, R('FR10247661').variance_amount]));
 check('…a short pallet is a negative value; a pallet with no cost has none', R('FR10248469').variance_amount === -217.08 && R('FR10275707').cost === '' && R('FR10275707').variance_amount === '' && R('FR10275707').variance_qty === -100, JSON.stringify([R('FR10248469').variance_amount, R('FR10275707').cost, R('FR10275707').variance_amount]));
+/* the scanner never sees money: not on its pallet list, not on its sign-on, not on its second-count tasks */
+const gunList = await get(`/api/sessions/${a.S}/master`, G);
+const gunJson = JSON.stringify(gunList);
+check('The scanner\'s pallet list carries no cost or amount - not the words, not the figures - and nothing about the money thresholds', gunList.pallets.length === 5 && !/cost|amount|minValue|min_value/i.test(gunJson) && !/0\.16589|398\.1|2923\.0|0\.21708|520\.99/.test(gunJson), JSON.stringify([gunList.pallets.length, (gunJson.match(/.{0,30}(cost|amount|minValue|min_value).{0,30}/i) || [])[0], (gunJson.match(/0\.16589|398\.1|2923\.0|0\.21708|520\.99/) || [])[0]]));
+check('…nor does what the scanner fetches for second counts', !/cost|amount|\$/.test(JSON.stringify(await get(`/api/sessions/${a.S}/recounts`, G))) && !/cost|amount|\$/.test(JSON.stringify(await get(`/api/sessions/${a.S}/team-status?team=3&employees=`, G))));
 const p = await get(`/api/admin/sessions/${a.S}/progress`);
 check('Progress carries the count in money: the report\'s value, counted so far, the difference, over and under', p.value && p.value.expected === 4985.01 && p.value.variance === -288.55 && p.value.over === 16.59 && p.value.under === -305.14, JSON.stringify(p.value));
 const av = await get(`/api/admin/sessions/${a.S}/adjustments/view`);
