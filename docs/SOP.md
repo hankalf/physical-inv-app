@@ -2420,7 +2420,7 @@ upload card shows exactly which columns it recognized.
 | **Entry No.** | the ERP's item ledger entry number, carried through to the pallet report and the ERP file so adjustments post against the right entry | |
 | **Lot No.** | the lot (F61409, 50479-1, PO123456) | |
 | **System** | which system the pallet belongs to (JustFood, SGI, NTFF); `OPEN` with no container is an empty position | |
-| **Cost** | the unit cost; a difference is read in money as well as cases, on the pallet report, the adjustments and the overview, and the money thresholds use it | |
+| **Cost** | the unit cost; a difference is read in money as well as cases, on the pallet report, the adjustments and the overview, and the money thresholds use it. A row with no cost takes its **item's** cost from the report's other rows of that item (the figure most of them carry), marked *item* in the download's **Cost Source** column and dimmed on the pallet report; an item with no cost anywhere is judged by cases alone, and the upload summary lists those items | |
 | **Amount** | quantity × cost as the report has it (398.136 for 2,400 at 0.16589). Either Cost or Amount gives the other | |
 
 Other names for these columns are understood too (pallet id, LPN, item, SKU, qty, location, bin,

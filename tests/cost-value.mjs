@@ -26,6 +26,7 @@ V01A002,FR10006042,OOOB326110,BAG: OO Org Blackberries 10oz,,"34,025.",BAG,10819
 V01A003,FR10249946,SKCB432716,BAG: SKC Conv Strawberry and Banana 16oz,,"10,600.",BAG,2262578,PO104515,JustFood,,1142.786
 V01A004,FR10275707,OOOB465110,BAG: Pineapple Chunks 10 oz,,"1,000.",BAG,2625259,127527,JustFood,,
 V01A005,FR10248469,OOOB135932,BAG: Strawberries&Bananas Family Pack 32oz,DIST,"2,400.",BAG,2541491,INABVA260409J-1,JustFood,0.21708,520.992
+V01A006,FR10247670,OOOB229832,BAG: OO Org Mango 32oz,,"1,000.",BAG,2207970,INABVA260409J-1,JustFood,,
 `;
 const BINS = 'Bin Location,Zone,Aisle\n' + ['V01A001', 'V01A002', 'V01A003', 'V01A004', 'V01A005', 'V01A006'].map((b) => `${b},Dry,V01`).join('\n') + '\n';
 async function count(name, settings = {}) {
@@ -42,11 +43,13 @@ const line = (pallet, qty, bin, extra = {}) => ({ clientId: `cv${++n}`, palletId
 
 /* ---------------- the report carries the money ---------------- */
 const a = await count('Priced count');
-check('The upload reads the site\'s columns: five pallets, four of them with a cost', a.up.pallets === 5 && a.up.withCost === 4, JSON.stringify({ pallets: a.up.pallets, withCost: a.up.withCost }));
+check('The upload reads the site\'s columns: six pallets, four of them priced on the report', a.up.pallets === 6 && a.up.withCost === 4, JSON.stringify({ pallets: a.up.pallets, withCost: a.up.withCost }));
+check('…a row with no cost takes its item\'s cost from the item\'s other rows; an item priced nowhere is named', a.up.costFilled === 1 && a.up.unpriced === 1 && a.up.unpricedItems.join() === 'OOOB465110 ×1', JSON.stringify([a.up.costFilled, a.up.unpriced, a.up.unpricedItems]));
 let dl = await (await fetch(`${BASE}/api/admin/sessions/${a.S}/export/master.csv`, { headers: A })).text();
 let lines = dl.trim().split(/\r?\n/);
-check('The loaded report downloads with Cost and Amount', /,Cost,Amount$/.test(lines[0]) && lines.some((l) => /^JUSTFOOD,FR10247661,.*,0\.16589,398\.136$/.test(l)), lines.find((l) => /FR10247661/.test(l)));
-check('…Amount alone gives the cost (1142.786 over 10,600 = 0.10781); a row with neither has neither', lines.some((l) => /^JUSTFOOD,FR10249946,.*,0\.10781,1142\.786$/.test(l)) && lines.some((l) => /^JUSTFOOD,FR10275707,.*,,,,$/.test(l)), lines.filter((l) => /FR10249946|FR10275707/.test(l)).join(' | '));
+check('The loaded report downloads with Cost, Amount and where the cost came from', /,Cost,Amount,Cost Source$/.test(lines[0]) && lines.some((l) => /^JUSTFOOD,FR10247661,.*,0\.16589,398\.136,report$/.test(l)), lines.find((l) => /FR10247661/.test(l)));
+check('…Amount alone gives the cost (1142.786 over 10,600 = 0.10781); a row with neither has neither', lines.some((l) => /^JUSTFOOD,FR10249946,.*,0\.10781,1142\.786,report$/.test(l)) && lines.some((l) => /^JUSTFOOD,FR10275707,.*,,,,,$/.test(l)), lines.filter((l) => /FR10249946|FR10275707/.test(l)).join(' | '));
+check('…and the filled row carries the item\'s cost, its amount worked out, marked item', lines.some((l) => /^JUSTFOOD,FR10247670,.*,1000,V01A006,.*,0\.16589,165\.89,item$/.test(l)), lines.find((l) => /FR10247670/.test(l)));
 
 /* counts: one over, one under, one short of a pricey pallet, one matches, one has no cost */
 await post(`/api/sessions/${a.S}/counts`, [
@@ -63,16 +66,16 @@ check('…a short pallet is a negative value; a pallet with no cost has none', R
 /* the scanner never sees money: not on its pallet list, not on its sign-on, not on its second-count tasks */
 const gunList = await get(`/api/sessions/${a.S}/master`, G);
 const gunJson = JSON.stringify(gunList);
-check('The scanner\'s pallet list carries no cost or amount - not the words, not the figures - and nothing about the money thresholds', gunList.pallets.length === 5 && !/cost|amount|minValue|min_value/i.test(gunJson) && !/0\.16589|398\.1|2923\.0|0\.21708|520\.99/.test(gunJson), JSON.stringify([gunList.pallets.length, (gunJson.match(/.{0,30}(cost|amount|minValue|min_value).{0,30}/i) || [])[0], (gunJson.match(/0\.16589|398\.1|2923\.0|0\.21708|520\.99/) || [])[0]]));
+check('The scanner\'s pallet list carries no cost or amount - not the words, not the figures - and nothing about the money thresholds', gunList.pallets.length === 6 && !/cost|amount|minValue|min_value/i.test(gunJson) && !/0\.16589|398\.1|2923\.0|0\.21708|520\.99/.test(gunJson), JSON.stringify([gunList.pallets.length, (gunJson.match(/.{0,30}(cost|amount|minValue|min_value).{0,30}/i) || [])[0], (gunJson.match(/0\.16589|398\.1|2923\.0|0\.21708|520\.99/) || [])[0]]));
 check('…nor does what the scanner fetches for second counts', !/cost|amount|\$/.test(JSON.stringify(await get(`/api/sessions/${a.S}/recounts`, G))) && !/cost|amount|\$/.test(JSON.stringify(await get(`/api/sessions/${a.S}/team-status?team=3&employees=`, G))));
 const p = await get(`/api/admin/sessions/${a.S}/progress`);
-check('Progress carries the count in money: the report\'s value, counted so far, the difference, over and under', p.value && p.value.expected === 4985.01 && p.value.variance === -288.55 && p.value.over === 16.59 && p.value.under === -305.14, JSON.stringify(p.value));
+check('Progress carries the count in money: the report\'s value, counted so far, the difference, over and under', p.value && p.value.expected === 5150.9 && p.value.variance === -288.55 && p.value.over === 16.59 && p.value.under === -305.14, JSON.stringify(p.value));
 const av = await get(`/api/admin/sessions/${a.S}/adjustments/view`);
 check('Adjustments: positive and negative in money too, and the unpriced line counted', av.positive.value === 16.59 && av.negative.value === -305.14 && av.negative.unpriced === 1 && av.netValue === -288.55, JSON.stringify([av.positive.value, av.negative.value, av.negative.unpriced, av.netValue]));
 const ic = await get(`/api/admin/sessions/${a.S}/inventory-control`);
 check('…and the Inventory Control overview says the same', ic.adjustments.netValue === -288.55 && ic.adjustments.negative.value === -305.14, JSON.stringify(ic.adjustments));
 const pc = await (await fetch(`${BASE}/api/admin/sessions/${a.S}/export/pallets.csv`, { headers: A })).text();
-check('The pallet report CSV has the cost and value columns', /variance_qty,cost,expected_amount,counted_amount,variance_amount,/.test(pc.split(/\r?\n/)[0]) && pc.split(/\r?\n/).some((l) => /^FR10248469,/.test(l) && /,0\.21708,520\.99,303\.91,-217\.08,/.test(l)), pc.split(/\r?\n/).find((l) => /^FR10248469/.test(l)));
+check('The pallet report CSV has the cost and value columns', /variance_qty,cost,cost_source,expected_amount,counted_amount,variance_amount,/.test(pc.split(/\r?\n/)[0]) && pc.split(/\r?\n/).some((l) => /^FR10248469,/.test(l) && /,0\.21708,report,520\.99,303\.91,-217\.08,/.test(l)), pc.split(/\r?\n/).find((l) => /^FR10248469/.test(l)));
 const ev = await get(`/api/admin/sessions/${a.S}/export/everything`);
 const sheet = (name) => ev.sheets.find((s) => s.name === name);
 check('Export everything: the Pallets sheet has Unit cost and the values, Adjustments its value', sheet('Pallets').columns.includes('Unit cost') && sheet('Pallets').columns.includes('Difference value') && sheet('Pallets').rows.find((r) => r.Pallet === 'FR10248469')['Difference value'] === -217.08 && sheet('Adjustments').columns.includes('Adjustment value'), JSON.stringify(sheet('Pallets').rows.find((r) => r.Pallet === 'FR10248469')));
@@ -137,10 +140,17 @@ const heads = await page.$$eval('#palletTable thead th', (ths) => ths.map((t) =>
 check('Pallet report: Cost, Report $ and Difference $ columns, after the counts', heads.slice(4, 11).join('|') === 'Expected|1st count|2nd count|Counted|Cost|Report $|Difference $', heads.join('|'));
 const row = clean(await page.$eval('#palletTable tr[data-pallet="FR10248469"]', (tr) => [...tr.children].map((td) => td.textContent).join(' ')));
 check('…a row shows the cost and the difference in money', /0\.21708 \$520\.99 -\$217\.08/.test(row), row.slice(0, 160));
+check('…a cost taken from the item is dimmed and wears an "item" pill', await page.$eval('#palletTable tr[data-pallet="FR10247670"] td.muted', (td) => /item/.test(td.title) && /0\.16589/.test(td.textContent) && /item/.test(td.querySelector('.tag')?.textContent || '')));
+check('…a pallet with no cost anywhere wears a "no cost" pill', await page.$eval('#palletTable tr[data-pallet="FR10275707"] td.nocost .tag', (t) => t.textContent === 'no cost'));
+await page.evaluate(() => window.appApi.showSub('adjust'));
+await page.waitForTimeout(600);
+await page.click('#pnSide button[data-side="negative"]');
+await page.waitForTimeout(400);
+check('…and so does its line on the adjustments', await page.$eval('#pnTable tr[data-pallet="FR10275707"]', (tr) => /no cost/.test(tr.textContent) && !!tr.querySelector('.tag')), await page.$eval('#pnTable tr[data-pallet="FR10275707"]', (tr) => tr.textContent.replace(/\s+/g, ' ').trim()).catch(() => 'no row'));
 await page.evaluate(() => window.appApi.showSub('progress'));
 await page.waitForTimeout(400);
 const stats = clean(await page.textContent('#stats'));
-check('Progress: the report\'s value and the difference so far, in money', /\$4,985\.01Report value/.test(stats) && /-\$288\.55Difference so far · \+\$16\.59 \/ -\$305\.14/.test(stats), stats.slice(-160));
+check('Progress: the report\'s value and the difference so far, in money', /\$5,150\.90Report value/.test(stats) && /-\$288\.55Difference so far · \+\$16\.59 \/ -\$305\.14/.test(stats), stats.slice(-160));
 await page.evaluate(() => window.appApi.showSub('adjust'));
 await page.waitForTimeout(600);
 check('Positive and negative: the tiles carry the money', /\+\$16\.59/.test(clean(await page.textContent('#pnPlusSub'))) && /-\$305\.14/.test(clean(await page.textContent('#pnMinusSub'))) && /-\$288\.55/.test(clean(await page.textContent('#pnNetSub'))), clean(await page.textContent('#pnTiles')));

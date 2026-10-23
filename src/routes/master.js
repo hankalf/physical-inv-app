@@ -69,8 +69,8 @@ const upAisle = db.prepare(
    ON CONFLICT(session_id, aisle) DO NOTHING`
 );
 const upPallet = db.prepare(
-  `INSERT INTO pallets (session_id, pallet_id, sku, description, uom, expected_qty, expected_location, lot, expiry, abc, source, variant, entry_no, cost, amount)
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `INSERT INTO pallets (session_id, pallet_id, sku, description, uom, expected_qty, expected_location, lot, expiry, abc, source, variant, entry_no, cost, amount, cost_source)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
    ON CONFLICT(session_id, pallet_id) DO UPDATE SET
      sku = COALESCE(NULLIF(excluded.sku, ''), pallets.sku),
      description = COALESCE(NULLIF(excluded.description, ''), pallets.description),
@@ -84,6 +84,7 @@ const upPallet = db.prepare(
      variant = COALESCE(excluded.variant, pallets.variant),
      cost = COALESCE(excluded.cost, pallets.cost),
      amount = COALESCE(excluded.amount, pallets.amount),
+     cost_source = CASE WHEN excluded.cost IS NOT NULL THEN 'report' ELSE pallets.cost_source END,
      entry_no = COALESCE(excluded.entry_no, pallets.entry_no)`
 );
 
@@ -202,7 +203,7 @@ export function importMaster(sessionId, kind, text, { replace = false, source = 
           norm(pick(rec, SOURCE_ALIASES)) || norm(source),
           norm(pick(rec, VARIANT_ALIASES)) || null,
           String(pick(rec, ENTRY_ALIASES) || '').trim() || null,
-          cost, amount
+          cost, amount, cost != null ? 'report' : null
         );
         { const src = norm(pick(rec, SOURCE_ALIASES)) || norm(source); if (src) { stats.bySource = stats.bySource || {}; stats.bySource[src] = (stats.bySource[src] || 0) + 1; } }
         if (norm(pick(rec, LOT_ALIASES))) stats.withLots = (stats.withLots || 0) + 1;
@@ -234,6 +235,24 @@ export function importMaster(sessionId, kind, text, { replace = false, source = 
       }
 
       throw Object.assign(new Error(`unknown file type "${kind}"`), { status: 400 });
+    }
+    /* An ERP export prices some of an item's ledger entries and not others
+       (a cost not yet adjusted). A pallet with no cost takes its item's cost
+       from the rows that have one - the cost most rows of the item carry -
+       and says so, so the money columns are not full of holes. The report's
+       own figure always wins when it is there. */
+    if (kind === 'pallets') {
+      const itemCosts = new Map();
+      for (const r of db.prepare(`SELECT sku, cost, COUNT(*) AS n FROM pallets
+          WHERE session_id = ? AND cost IS NOT NULL AND cost_source = 'report' AND COALESCE(sku, '') != ''
+          GROUP BY sku, cost ORDER BY sku, n DESC, cost DESC`).all(id)) if (!itemCosts.has(r.sku)) itemCosts.set(r.sku, r.cost);
+      const fill = db.prepare(`UPDATE pallets SET cost = ?, amount = ROUND(COALESCE(expected_qty, 0) * ?, 4), cost_source = 'item'
+          WHERE session_id = ? AND sku = ? AND cost IS NULL`);
+      stats.costFilled = 0;
+      for (const [sku, c] of itemCosts) stats.costFilled += fill.run(c, c, id, sku).changes;
+      const left = db.prepare(`SELECT COALESCE(sku, '') AS sku, COUNT(*) AS n FROM pallets WHERE session_id = ? AND cost IS NULL AND (SELECT 1 FROM pallets q WHERE q.session_id = ? AND (q.cost IS NOT NULL OR q.amount IS NOT NULL) LIMIT 1) IS NOT NULL GROUP BY sku ORDER BY n DESC`).all(id, id);
+      stats.unpriced = left.reduce((n, r) => n + r.n, 0);
+      stats.unpricedItems = left.slice(0, 12).map((r) => `${r.sku || '(no item)'} ×${r.n}`);
     }
     db.exec('COMMIT');
   } catch (err) {

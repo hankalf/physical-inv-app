@@ -904,7 +904,11 @@
           cell(r.recounted ? r.first_count_qty : '', 'num'), cell(r.recounted ? r.second_pass_qty : '', 'num'), cell(r.counted_qty, 'num strong'));
         if (priced) {
           const dv = cell(money(r.variance_amount, { sign: true }), 'num' + (r.variance_amount !== '' && r.variance_amount != null && Number(r.variance_amount) !== 0 ? ' diff' : ''));
-          tr.append(cell(r.cost === '' ? '' : Number(r.cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 }), 'num'), cell(money(r.expected_amount), 'num'), dv);
+          /* a pallet with no cost anywhere wears a pill, so nobody reads a blank as zero; one priced from its item's other rows says so */
+          const tdCost = cell(r.cost === '' ? '' : Number(r.cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 }), 'num' + (r.cost_source === 'item' ? ' muted' : ''));
+          if (r.cost === '' || r.cost == null) { const t = tag('queued'); t.textContent = 'no cost'; t.title = 'No cost for this item anywhere on the report: judged by cases alone, no money columns'; tdCost.appendChild(t); tdCost.classList.add('nocost'); }
+          else if (r.cost_source === 'item') { const t = tag('MATCH'); t.textContent = 'item'; t.title = 'No cost on this row of the report: the item\'s cost from its other rows'; tdCost.title = t.title; tdCost.append(document.createElement('br'), t); }
+          tr.append(tdCost, cell(money(r.expected_amount), 'num'), dv);
         }
         tr.append(cell(r.expected_location), cell(found, found ? 'diff' : ''));
         // lot and expiry are blank unless the site tracks them, so they cost nothing when it does not
@@ -1628,7 +1632,11 @@
       const adj = cell(signed(r.variance_qty), 'num ' + (r.variance_qty > 0 ? 'pos' : 'neg'));
       tr.append(tdBox, cell(r.pallet_id), cell(r.source || '—'), cell(r.sku || '—'), cell(r.location || '—'), cell(r.why, 'wrap'),
         cell(r.expected_qty == null ? '—' : r.expected_qty, 'num'), cell(r.counted_qty, 'num'), adj);
-      if (pricedAdj) tr.appendChild(cell(r.variance_amount == null ? '—' : money(r.variance_amount, { sign: true }), 'num ' + (r.variance_amount > 0 ? 'pos' : r.variance_amount < 0 ? 'neg' : '')));
+      if (pricedAdj) {
+        const tdv = cell(r.variance_amount == null ? '' : money(r.variance_amount, { sign: true }), 'num ' + (r.variance_amount > 0 ? 'pos' : r.variance_amount < 0 ? 'neg' : ''));
+        if (r.variance_amount == null) { const t = tag('queued'); t.textContent = 'no cost'; t.title = 'No cost for this item on the report'; tdv.appendChild(t); }
+        tr.appendChild(tdv);
+      }
       if (d.approvals) tr.appendChild(cell(r.status ? r.status + (r.decided_by ? ` · ${r.decided_by}` : '') : '—'));
       const te = document.createElement('td');
       if (r.erp) {

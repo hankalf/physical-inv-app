@@ -1152,7 +1152,9 @@
         (stats.merged ? ` · ${stats.merged} container${stats.merged === 1 ? '' : 's'} listed twice in the same bin — the quantities were added up` : '') +
         (stats.duplicates ? ` · ${stats.duplicates} container${stats.duplicates === 1 ? '' : 's'} listed in two different bins — the first row stands: ${stats.duplicateList.slice(0, 5).join('; ')}${stats.duplicates > 5 ? ' …' : ''}` : '') +
         (stats.nonPositive ? ` · ${stats.nonPositive} row${stats.nonPositive === 1 ? '' : 's'} with a zero or negative quantity, kept as the report says` : '') +
-        (stats.bySource ? ` · systems: ${Object.entries(stats.bySource).map(([k, v]) => `${k} ${v.toLocaleString()}`).join(', ')}` : ''));
+        (stats.bySource ? ` · systems: ${Object.entries(stats.bySource).map(([k, v]) => `${k} ${v.toLocaleString()}`).join(', ')}` : '') +
+        (stats.costFilled ? ` · ${stats.costFilled.toLocaleString()} row${stats.costFilled === 1 ? '' : 's'} had no cost on the report and took the item's cost from its other rows` : '') +
+        (stats.unpriced ? ` · ${stats.unpriced.toLocaleString()} row${stats.unpriced === 1 ? '' : 's'} have no cost anywhere on the report (${stats.unpricedItems.join(', ')}${stats.unpricedItems.length < 12 ? '' : ' …'}) - judged by cases alone` : ''));
       await refreshAisles();
       await refreshSetup().catch(() => {});
     } catch (err) { msg(out, 'err', 'Upload failed', err.message); }

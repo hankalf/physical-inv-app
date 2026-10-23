@@ -51,8 +51,12 @@ loaded report** gives the file back with the Cost and Amount columns filled. On 
 Reports → Pallet report** the **Cost** and **Report $** columns are there (they only appear when
 the report carries costs), and **Progress** shows the report's total value.
 
-A pallet with **no cost** on the report is not forgotten: it is judged by the case and percent
-thresholds alone, and on the reports its money columns are blank.
+**Rows with no cost.** An ERP export often prices some of an item's entries and not others (a
+cost not adjusted yet). A row with no cost takes its **item's** cost from the report's other rows of
+that item — the upload summary says how many — and the download marks them *item* in **Cost
+Source**; on the pallet report that cost is dimmed. An item with **no cost anywhere** is judged by
+the case and percent thresholds alone, its money columns stay blank, and the upload summary names
+it, so inventory control can price it in the ERP and upload again.
 
 > The counters never see a cost. Nothing about money goes to the scanners.
 

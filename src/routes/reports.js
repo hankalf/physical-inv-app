@@ -141,7 +141,7 @@ export function palletReport(sessionId, { only = null } = {}) {
     `SELECT pallet_id, COUNT(*) AS n FROM recounts WHERE session_id = ? AND status != 'done' AND pallet_id IS NOT NULL GROUP BY pallet_id`).all(id).map((r) => [r.pallet_id, r.n]));
   const master = db.prepare(
     `SELECT pallet_id, sku, description, uom, COALESCE(source, '') AS source, COALESCE(variant, '') AS variant, COALESCE(entry_no, '') AS entry_no,
-            expected_qty, expected_location, lot AS expected_lot, expiry AS expected_expiry, cost, amount
+            expected_qty, expected_location, lot AS expected_lot, expiry AS expected_expiry, cost, amount, cost_source
        FROM pallets WHERE session_id = ?${inList}`).all(...args);
   const seen = new Set(master.map((p) => p.pallet_id));
   const keys = master.map((p) => p.pallet_id);
@@ -213,6 +213,7 @@ export function palletReport(sessionId, { only = null } = {}) {
       counted_qty: isCounted ? c.counted_qty : '',
       variance_qty: aliasOnly ? '' : (variance ?? ''),
       cost: cost ?? '',
+      cost_source: (p && p.cost_source) || '',
       expected_amount: expectedAmount ?? '',
       counted_amount: countedAmount ?? '',
       variance_amount: varianceAmount ?? '',

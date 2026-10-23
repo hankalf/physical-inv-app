@@ -1087,9 +1087,9 @@ async function handleAdmin(req, res, url, m) {
     const rows = db.prepare('SELECT * FROM pallets WHERE session_id = ? ORDER BY expected_location, pallet_id').all(Number(m[1]))
       .map((r) => ({ System: r.source || '', 'Pallet ID': r.pallet_id, SKU: r.sku || '', Description: r.description || '', Variant: r.variant || '', UOM: r.uom || '', 'Entry No': r.entry_no || '',
         Qty: r.expected_qty == null ? '' : r.expected_qty, Location: r.expected_location || '', Lot: r.lot || '', Expiry: r.expiry || '', ABC: r.abc || '',
-        Cost: r.cost == null ? '' : r.cost, Amount: r.amount == null ? '' : r.amount }));
+        Cost: r.cost == null ? '' : r.cost, Amount: r.amount == null ? '' : r.amount, 'Cost Source': r.cost_source || '' }));
     audit(actor, 'downloaded the inventory report', `${rows.length} pallets`, m[1]);
-    return sendCsv(req, res, `inventory-report-${name}.csv`, toCsv(rows, ['System', 'Pallet ID', 'SKU', 'Description', 'Variant', 'UOM', 'Entry No', 'Qty', 'Location', 'Lot', 'Expiry', 'ABC', 'Cost', 'Amount']));
+    return sendCsv(req, res, `inventory-report-${name}.csv`, toCsv(rows, ['System', 'Pallet ID', 'SKU', 'Description', 'Variant', 'UOM', 'Entry No', 'Qty', 'Location', 'Lot', 'Expiry', 'ABC', 'Cost', 'Amount', 'Cost Source']));
   }
 
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/status$/)) && method === 'POST') {
@@ -2294,7 +2294,7 @@ async function handleAdmin(req, res, url, m) {
   ];
   const PALLET_COLS = [
     'pallet_id', 'source', 'sku', 'description', 'variant', 'uom', 'entry_no', 'expected_qty', 'counted_qty', 'variance_qty',
-    'cost', 'expected_amount', 'counted_amount', 'variance_amount',
+    'cost', 'cost_source', 'expected_amount', 'counted_amount', 'variance_amount',
     'expected_location', 'found_location', 'times_counted', 'teams', 'comments', 'last_scan', 'status',
     'recounted', 'first_count_qty', 'second_pass_qty', 'open_recounts',
     'expected_lot', 'found_lot', 'lot_status', 'expiry', 'expiry_status', 'alias_of', 'also_tagged',
