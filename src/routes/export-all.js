@@ -115,20 +115,23 @@ export function exportEverything(sessionId, { by = '' } = {}) {
   })));
 
   const report = sheet('Pallets', [
-    'Pallet', 'System', 'Item', 'Description', 'Variant', 'Entry No.', 'Result', 'Report quantity', 'Counted quantity', 'Difference', 'Report bin',
+    'Pallet', 'System', 'Item', 'Description', 'Variant', 'Entry No.', 'Result', 'Report quantity', 'Counted quantity', 'Difference',
+    'Unit cost', 'Report value', 'Counted value', 'Difference value', 'Report bin',
     'Found in', 'Times counted', 'Teams', 'Report lot', 'Counted lot', 'Best before', 'Second label', 'Last scanned', 'Comments',
   ], pallets.map((r) => ({
     'Pallet': r.pallet_id, 'System': r.source || '', 'Item': r.sku || '', 'Description': r.description || '', 'Variant': r.variant || '', 'Entry No.': r.entry_no || '', 'Result': STATUS[r.status] || r.status,
     'Report quantity': r.expected_qty, 'Counted quantity': r.counted_qty, 'Difference': r.variance_qty,
+    'Unit cost': r.cost, 'Report value': r.expected_amount, 'Counted value': r.counted_amount, 'Difference value': r.variance_amount,
     'Report bin': r.expected_location || '', 'Found in': r.found_location || '', 'Times counted': r.times_counted || 0,
     'Teams': r.teams || '', 'Report lot': r.expected_lot || '', 'Counted lot': r.found_lot || '', 'Best before': r.expiry || '',
     'Second label': r.also_tagged || r.alias_of || '', 'Last scanned': when(r.last_scan), 'Comments': r.comments || '',
   })));
 
-  const adjCols = ['Side', 'Pallet', 'System', 'Item', 'Bin', 'Why', 'Report quantity', 'Counted quantity', 'Adjustment', 'Approval', 'Approval reason', 'Approved by', 'In ERP', 'Entered by', 'Entered at'];
+  const adjCols = ['Side', 'Pallet', 'System', 'Item', 'Bin', 'Why', 'Report quantity', 'Counted quantity', 'Adjustment', 'Unit cost', 'Adjustment value', 'Approval', 'Approval reason', 'Approved by', 'In ERP', 'Entered by', 'Entered at'];
   const adjRow = (side) => (r) => ({
     'Side': side, 'Pallet': r.pallet_id, 'System': r.source || '', 'Item': r.sku || '', 'Bin': r.location || '', 'Why': r.why,
     'Report quantity': r.expected_qty ?? '', 'Counted quantity': r.counted_qty, 'Adjustment': r.variance_qty,
+    'Unit cost': r.cost ?? '', 'Adjustment value': r.variance_amount ?? '',
     'Approval': adj.approvals ? (r.status || 'waiting') : 'not required', 'Approval reason': r.reason || '', 'Approved by': r.decided_by || '',
     'In ERP': r.erp ? 'yes' : '', 'Entered by': r.erp ? r.erp.by : '', 'Entered at': r.erp ? r.erp.at : '',
   });

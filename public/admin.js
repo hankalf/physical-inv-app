@@ -45,6 +45,8 @@
   // "Freezer – Aisle F01": the zone comes from the bins in the aisle
   const titleCase = (z) => String(z || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
   const aisleLabel = (aisle, zone) => (zone ? `${titleCase(zone)} – Aisle ${aisle}` : `Aisle ${aisle}`);
+  /* money, as the report's cost column has it: $1,234.50, and a sign on a difference */
+  const money = (v, { sign = false } = {}) => (v === '' || v == null || Number.isNaN(Number(v)) ? '' : `${sign && Number(v) > 0 ? '+' : ''}${Number(v) < 0 ? '-' : ''}$${Math.abs(Number(v)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
   const levelsLabel = (l) => {
     if (!l) return 'all levels';
     if (l.length === 1) return `level ${l}`;
@@ -122,6 +124,8 @@
       [p.devices, 'Scanners'],
       [p.exceptions, 'Flagged lines'],
       [`${p.recounts_open} open / ${p.recounts_done} done`, 'Second counts'],
+      // the count in money, when the report carries costs
+      ...(p.value ? [[money(p.value.expected), 'Report value'], [money(p.value.variance, { sign: true }), `Difference so far · ${money(p.value.over, { sign: true })} / ${money(p.value.under, { sign: true })}`]] : []),
     ]) {
       const d = document.createElement('div');
       d.className = 'stat';
@@ -869,8 +873,11 @@
     // long text: two lines in the cell, all of it on hover - the clamp is on a box inside, a cell stays a cell
     const clampCell = (text) => { const td = document.createElement('td'); td.className = 'wrap'; const d = document.createElement('div'); d.className = 'clamp'; d.textContent = text || ''; td.title = text || ''; td.appendChild(d); return td; };
     const when = (iso) => { if (!iso) return ''; const d = new Date(iso); return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); };
+    // the report's cost, and the difference in money, only when the report carries costs
+    const priced = data.rows.some((r) => r.cost !== '' && r.cost != null);
     table($('palletTable'),
       [{ label: 'Pallet ID' }, { label: 'System' }, { label: 'SKU' }, { label: 'Description' }, { label: 'Expected', num: true }, { label: '1st count', num: true }, { label: '2nd count', num: true }, { label: 'Counted', num: true },
+       ...(priced ? [{ label: 'Cost', num: true }, { label: 'Report $', num: true }, { label: 'Difference $', num: true }] : []),
        { label: 'Expected bin' }, { label: 'Found in' }, { label: 'Lot' }, { label: 'Expiry' }, { label: 'Team' }, { label: 'Comments' }, { label: 'Status' }, { label: 'ERP upload' }],
       data.rows,
       (r) => {
@@ -894,8 +901,12 @@
         const found = r.found_location && r.found_location !== r.expected_location ? r.found_location : '';
         const tdDesc = clampCell(r.description);
         tr.append(tdPallet, cell(r.source || '—'), cell(r.sku), tdDesc, cell(r.expected_qty, 'num'),
-          cell(r.recounted ? r.first_count_qty : '', 'num'), cell(r.recounted ? r.second_pass_qty : '', 'num'), cell(r.counted_qty, 'num strong'),
-          cell(r.expected_location), cell(found, found ? 'diff' : ''));
+          cell(r.recounted ? r.first_count_qty : '', 'num'), cell(r.recounted ? r.second_pass_qty : '', 'num'), cell(r.counted_qty, 'num strong'));
+        if (priced) {
+          const dv = cell(money(r.variance_amount, { sign: true }), 'num' + (r.variance_amount !== '' && r.variance_amount != null && Number(r.variance_amount) !== 0 ? ' diff' : ''));
+          tr.append(cell(r.cost === '' ? '' : Number(r.cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 }), 'num'), cell(money(r.expected_amount), 'num'), dv);
+        }
+        tr.append(cell(r.expected_location), cell(found, found ? 'diff' : ''));
         // lot and expiry are blank unless the site tracks them, so they cost nothing when it does not
         const tdLot = document.createElement('td');
         if (r.found_lot || r.expected_lot) {
@@ -1504,6 +1515,7 @@
       [sign(o.adjustments.positive.units), `positive · ${n(o.adjustments.positive.pallets)} pallet${o.adjustments.positive.pallets === 1 ? '' : 's'}`, 'adjust'],
       [sign(o.adjustments.negative.units), `negative · ${n(o.adjustments.negative.pallets)} pallet${o.adjustments.negative.pallets === 1 ? '' : 's'}`, 'adjust'],
       [sign(o.adjustments.net), 'net units', 'adjust'],
+      ...(o.adjustments.netValue != null ? [[money(o.adjustments.netValue, { sign: true }), `net value · ${money(o.adjustments.positive.value || 0, { sign: true })} / ${money(o.adjustments.negative.value || 0, { sign: true })}`, 'adjust']] : []),
     ];
     if (o.adjustments.approvals) stats.push([n(o.adjustments.pending), `adjustments to approve · ${n(o.adjustments.approved)} approved`, 'adjust']);
     stats.push([`${n(o.erp.entered)} / ${n(o.erp.lines)}`, `lines in the ERP · ${n(o.erp.aislesAll)} of ${n(o.erp.aisles)} aisles done`, 'adjust']);
@@ -1586,16 +1598,19 @@
     return hide ? rows.filter((r) => !r.erp) : rows;
   }
 
+  const shownHasCost = (d) => [...d.positive.rows, ...d.negative.rows].some((r) => r.variance_amount != null);
   function renderPositiveNegative() {
     const d = pnData;
     $('pnPlusUnits').textContent = signed(d.positive.units);
-    $('pnPlusSub').textContent = `${d.positive.pallets.toLocaleString()} pallet${d.positive.pallets === 1 ? '' : 's'}`;
+    $('pnPlusSub').textContent = `${d.positive.pallets.toLocaleString()} pallet${d.positive.pallets === 1 ? '' : 's'}${d.positive.value != null ? ` · ${money(d.positive.value, { sign: true })}` : ''}`;
     $('pnMinusUnits').textContent = signed(d.negative.units);
-    $('pnMinusSub').textContent = `${d.negative.pallets.toLocaleString()} pallet${d.negative.pallets === 1 ? '' : 's'}`;
+    $('pnMinusSub').textContent = `${d.negative.pallets.toLocaleString()} pallet${d.negative.pallets === 1 ? '' : 's'}${d.negative.value != null ? ` · ${money(d.negative.value, { sign: true })}` : ''}`;
     $('pnNet').textContent = signed(d.net);
+    $('pnNetSub').textContent = d.netValue != null ? `units · ${money(d.netValue, { sign: true })} at the report's cost` : 'units, positive less negative';
     for (const b of document.querySelectorAll('#pnSide button, #pnTiles button')) b.classList.toggle('selected', b.dataset.side === pnSide);
+    const pricedAdj = shownHasCost(d);
     const cols = [{ label: '' }, { label: 'Pallet' }, { label: 'System' }, { label: 'Item' }, { label: 'Bin' }, { label: 'Why' },
-      { label: 'Report qty', num: true }, { label: 'Counted', num: true }, { label: 'Adjustment', num: true }];
+      { label: 'Report qty', num: true }, { label: 'Counted', num: true }, { label: 'Adjustment', num: true }, ...(pricedAdj ? [{ label: 'Adjustment $', num: true }] : [])];
     if (d.approvals) cols.push({ label: 'Approval' });
     cols.push({ label: 'In ERP' });
     const shown = pnRows();
@@ -1613,6 +1628,7 @@
       const adj = cell(signed(r.variance_qty), 'num ' + (r.variance_qty > 0 ? 'pos' : 'neg'));
       tr.append(tdBox, cell(r.pallet_id), cell(r.source || '—'), cell(r.sku || '—'), cell(r.location || '—'), cell(r.why, 'wrap'),
         cell(r.expected_qty == null ? '—' : r.expected_qty, 'num'), cell(r.counted_qty, 'num'), adj);
+      if (pricedAdj) tr.appendChild(cell(r.variance_amount == null ? '—' : money(r.variance_amount, { sign: true }), 'num ' + (r.variance_amount > 0 ? 'pos' : r.variance_amount < 0 ? 'neg' : '')));
       if (d.approvals) tr.appendChild(cell(r.status ? r.status + (r.decided_by ? ` · ${r.decided_by}` : '') : '—'));
       const te = document.createElement('td');
       if (r.erp) {

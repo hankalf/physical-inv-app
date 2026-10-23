@@ -24,6 +24,10 @@ const EXPIRY_ALIASES = ['expiry', 'expirydate', 'expiration', 'expirationdate', 
 const ABC_ALIASES = ['abc', 'abcclass', 'abccode', 'class', 'itemclass', 'velocity', 'velocitycode', 'movement', 'movementclass', 'category'];
 // a class column on a report is still read into its column, though nothing reports on it any more
 const normClass = (v) => { const c = String(v == null ? '' : v).trim().toUpperCase(); return ['A', 'B', 'C'].includes(c[0]) ? c[0] : ''; };
+/* the report's unit cost, and its amount (quantity × cost) */
+const COST_ALIASES = ['cost', 'unitcost', 'costperunit', 'costeach', 'unitprice', 'price', 'costamount', 'standardcost', 'avgcost', 'averagecost'];
+const AMOUNT_ALIASES = ['amount', 'totalcost', 'value', 'totalvalue', 'inventoryvalue', 'extendedcost', 'extcost', 'totalamount', 'costtotal', 'costvalue'];
+const money = (raw) => { const t = String(raw == null ? '' : raw).replace(/[$,\s]/g, ''); if (t === '' || t === '-') return null; const n = Number(t); return Number.isFinite(n) ? n : null; };
 const LASTCOUNT_ALIASES = ['lastphysinvtdate', 'lastphysicalinventorydate', 'lastcounted', 'lastcountdate', 'lastinventorydate', 'lastcount'];
 
 /**
@@ -65,8 +69,8 @@ const upAisle = db.prepare(
    ON CONFLICT(session_id, aisle) DO NOTHING`
 );
 const upPallet = db.prepare(
-  `INSERT INTO pallets (session_id, pallet_id, sku, description, uom, expected_qty, expected_location, lot, expiry, abc, source, variant, entry_no)
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `INSERT INTO pallets (session_id, pallet_id, sku, description, uom, expected_qty, expected_location, lot, expiry, abc, source, variant, entry_no, cost, amount)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
    ON CONFLICT(session_id, pallet_id) DO UPDATE SET
      sku = COALESCE(NULLIF(excluded.sku, ''), pallets.sku),
      description = COALESCE(NULLIF(excluded.description, ''), pallets.description),
@@ -78,6 +82,8 @@ const upPallet = db.prepare(
      abc = COALESCE(NULLIF(excluded.abc, ''), pallets.abc),
      source = COALESCE(NULLIF(excluded.source, ''), pallets.source),
      variant = COALESCE(excluded.variant, pallets.variant),
+     cost = COALESCE(excluded.cost, pallets.cost),
+     amount = COALESCE(excluded.amount, pallets.amount),
      entry_no = COALESCE(excluded.entry_no, pallets.entry_no)`
 );
 
@@ -164,6 +170,8 @@ export function importMaster(sessionId, kind, text, { replace = false, source = 
              and the rest are reported, rather than quietly overwriting it. */
           if (binOfRow && seenPallets.get(pallet) === binOfRow) {
             if (qtyRaw !== '' && Number.isFinite(qty)) db.prepare('UPDATE pallets SET expected_qty = COALESCE(expected_qty, 0) + ? WHERE session_id = ? AND pallet_id = ?').run(qty, id, pallet);
+            { const amt = money(pick(rec, AMOUNT_ALIASES)) ?? (money(pick(rec, COST_ALIASES)) != null && Number.isFinite(qty) ? qty * money(pick(rec, COST_ALIASES)) : null);
+              if (amt != null) db.prepare('UPDATE pallets SET amount = COALESCE(amount, 0) + ? WHERE session_id = ? AND pallet_id = ?').run(amt, id, pallet); }
             stats.merged = (stats.merged || 0) + 1;
             if (stats.mergedList.length < 25) stats.mergedList.push(`${pallet} in ${binOfRow}`);
           } else {
@@ -174,6 +182,13 @@ export function importMaster(sessionId, kind, text, { replace = false, source = 
         }
         seenPallets.set(pallet, binOfRow || 'no bin');
         if (qtyRaw !== '' && Number.isFinite(qty) && qty <= 0) stats.nonPositive = (stats.nonPositive || 0) + 1;
+        /* cost and amount: either one with the quantity gives the other */
+        let cost = money(pick(rec, COST_ALIASES));
+        let amount = money(pick(rec, AMOUNT_ALIASES));
+        const haveQty = qtyRaw !== '' && Number.isFinite(qty);
+        if (amount == null && cost != null && haveQty) amount = Math.round(qty * cost * 10000) / 10000;
+        if (cost == null && amount != null && haveQty && qty) cost = Math.round((amount / qty) * 100000) / 100000;
+        if (cost != null || amount != null) stats.withCost = (stats.withCost || 0) + 1;
         upPallet.run(
           id, pallet,
           norm(pick(rec, SKU_ALIASES)),
@@ -186,7 +201,8 @@ export function importMaster(sessionId, kind, text, { replace = false, source = 
           normClass(pick(rec, ABC_ALIASES)),
           norm(pick(rec, SOURCE_ALIASES)) || norm(source),
           norm(pick(rec, VARIANT_ALIASES)) || null,
-          String(pick(rec, ENTRY_ALIASES) || '').trim() || null
+          String(pick(rec, ENTRY_ALIASES) || '').trim() || null,
+          cost, amount
         );
         { const src = norm(pick(rec, SOURCE_ALIASES)) || norm(source); if (src) { stats.bySource = stats.bySource || {}; stats.bySource[src] = (stats.bySource[src] || 0) + 1; } }
         if (norm(pick(rec, LOT_ALIASES))) stats.withLots = (stats.withLots || 0) + 1;

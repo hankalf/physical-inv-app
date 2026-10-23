@@ -1020,17 +1020,21 @@ async function handleAdmin(req, res, url, m) {
     const num = (v, fallback, max) => (v == null || v === '' ? fallback : Math.max(0, Math.min(max, Number(v) || 0)));
     const minQty = num(body.recountMinQty, s.recount_min_qty, 1e6);
     const minPct = num(body.recountMinPct, s.recount_min_pct, 100);
+    const minValue = num(body.recountMinValue, s.recount_min_value, 1e9);         // ...or worth this much, at the report's cost
+    const thirdValue = num(body.thirdMinValue, s.third_min_value, 1e9);           // a third count by itself only when the bin's disagreement is worth this much
     const cap = num(body.recountCap, s.recount_cap, 1e6);
     // how big an adjustment has to be before somebody has to sign for it
     const apprQty = num(body.approvalMinQty, s.approval_min_qty, 1e6);
     const apprPct = num(body.approvalMinPct, s.approval_min_pct, 100);
-    audit(actor, 'changed session settings', JSON.stringify({ palletMode: mode, guided: body.guided, askComments: body.askComments, layout, autoRecount: body.autoRecount, recount: { minQty, minPct, cap, third: body.thirdCount, team: body.recountTeamOn ? body.recountTeam : (body.recountTeamOn === false ? 'off' : undefined) },
-      approvals: { on: body.requireApproval, minQty: apprQty, minPct: apprPct }, showOnGuns: body.showOnGuns }), m[1]);
+    const apprValue = num(body.approvalMinValue, s.approval_min_value, 1e9);
+    audit(actor, 'changed session settings', JSON.stringify({ palletMode: mode, guided: body.guided, askComments: body.askComments, layout, autoRecount: body.autoRecount, recount: { minQty, minPct, minValue, thirdValue, cap, third: body.thirdCount, team: body.recountTeamOn ? body.recountTeam : (body.recountTeamOn === false ? 'off' : undefined) },
+      approvals: { on: body.requireApproval, minQty: apprQty, minPct: apprPct, minValue: apprValue }, showOnGuns: body.showOnGuns }), m[1]);
     if (body.showOnGuns != null) db.prepare('UPDATE sessions SET show_on_guns = ? WHERE id = ?').run(body.showOnGuns ? 1 : 0, s.id);
     db.prepare(`UPDATE sessions SET pallet_mode = ?, guided = ?, ask_comments = ?, layout = ?, auto_recount = ?,
                   recount_min_qty = ?, recount_min_pct = ?, recount_cap = ?, third_count = ?, recount_team = ?, recount_team_on = ?,
                   ask_lot = ?, ask_expiry = ?,
                   require_approval = ?, approval_min_qty = ?, approval_min_pct = ?, track_abc = ?,
+                  recount_min_value = ?, third_min_value = ?, approval_min_value = ?,
                   master_version = master_version + 1 WHERE id = ?`)
       .run(mode, body.guided == null ? s.guided : (body.guided ? 1 : 0),
            body.askComments == null ? s.ask_comments : (body.askComments ? 1 : 0), layout,
@@ -1043,7 +1047,8 @@ async function handleAdmin(req, res, url, m) {
            body.askExpiry == null ? s.ask_expiry : (body.askExpiry ? 1 : 0),
            body.requireApproval == null ? s.require_approval : (body.requireApproval ? 1 : 0),
            apprQty, apprPct,
-           body.trackAbc == null ? s.track_abc : (body.trackAbc ? 1 : 0), s.id);
+           body.trackAbc == null ? s.track_abc : (body.trackAbc ? 1 : 0),
+           minValue, thirdValue, apprValue, s.id);
     // switched on (or pointed at another team): the open ones nobody has yet go to it now
     const after = getSession(m[1]);
     let handed = null;
@@ -1081,9 +1086,10 @@ async function handleAdmin(req, res, url, m) {
     }
     const rows = db.prepare('SELECT * FROM pallets WHERE session_id = ? ORDER BY expected_location, pallet_id').all(Number(m[1]))
       .map((r) => ({ System: r.source || '', 'Pallet ID': r.pallet_id, SKU: r.sku || '', Description: r.description || '', Variant: r.variant || '', UOM: r.uom || '', 'Entry No': r.entry_no || '',
-        Qty: r.expected_qty == null ? '' : r.expected_qty, Location: r.expected_location || '', Lot: r.lot || '', Expiry: r.expiry || '', ABC: r.abc || '' }));
+        Qty: r.expected_qty == null ? '' : r.expected_qty, Location: r.expected_location || '', Lot: r.lot || '', Expiry: r.expiry || '', ABC: r.abc || '',
+        Cost: r.cost == null ? '' : r.cost, Amount: r.amount == null ? '' : r.amount }));
     audit(actor, 'downloaded the inventory report', `${rows.length} pallets`, m[1]);
-    return sendCsv(req, res, `inventory-report-${name}.csv`, toCsv(rows, ['System', 'Pallet ID', 'SKU', 'Description', 'Variant', 'UOM', 'Entry No', 'Qty', 'Location', 'Lot', 'Expiry', 'ABC']));
+    return sendCsv(req, res, `inventory-report-${name}.csv`, toCsv(rows, ['System', 'Pallet ID', 'SKU', 'Description', 'Variant', 'UOM', 'Entry No', 'Qty', 'Location', 'Lot', 'Expiry', 'ABC', 'Cost', 'Amount']));
   }
 
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/status$/)) && method === 'POST') {
@@ -2288,6 +2294,7 @@ async function handleAdmin(req, res, url, m) {
   ];
   const PALLET_COLS = [
     'pallet_id', 'source', 'sku', 'description', 'variant', 'uom', 'entry_no', 'expected_qty', 'counted_qty', 'variance_qty',
+    'cost', 'expected_amount', 'counted_amount', 'variance_amount',
     'expected_location', 'found_location', 'times_counted', 'teams', 'comments', 'last_scan', 'status',
     'recounted', 'first_count_qty', 'second_pass_qty', 'open_recounts',
     'expected_lot', 'found_lot', 'lot_status', 'expiry', 'expiry_status', 'alias_of', 'also_tagged',

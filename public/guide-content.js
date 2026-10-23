@@ -282,7 +282,7 @@
         },
         {
           title: 'Set the count’s options',
-          do: 'Count session card: pallet check (off, warn, strict), guided bins, comments, the map drawing, and the second-count thresholds: Recount over N units, or over N %, and a cap. Adjustments need approval if the office signs off variances.',
+          do: 'Count session card: pallet check (off, warn, strict), guided bins, comments, the map drawing, and the second-count thresholds: Recount over N units, or over N %, or worth over $N (at the report’s cost), a cap, and a money threshold for a third count raised by itself. Adjustments need approval if the office signs off variances, with the same three kinds of threshold.',
           where: S('/settings', 'start', 'Settings → Count setup'),
           watch: [
             { see: 'The second-count list is enormous', means: 'The thresholds are at 0, so every difference raises one.', fix: 'Set Recount over to 2 to 5 units, a percent, and a cap.' },
@@ -415,7 +415,7 @@
           where: S('/settings', 'start', 'Settings → Count setup → Count session'),
           watch: [
             { see: 'No second counts at all', means: 'No inventory report was uploaded, or Raise them automatically is off.', fix: 'Without a report there is nothing to compare: upload it under Count setup. Tick Raise them automatically, or press Raise from all variances now.' },
-            { see: 'The list is enormous', means: 'The thresholds are at 0, so every difference of one case comes back.', fix: 'Set Over N units or over %, and Cap open, under Count session.' },
+            { see: 'The list is enormous', means: 'The thresholds are at 0, so every difference of one case comes back.', fix: 'Set Over N units, or over %, or worth over $N, and Cap open, under Count session.' },
             { see: '… pallet(s) in aisles nobody has counted yet — not missing, just not reached', means: 'Raise from all variances skipped them on purpose.', fix: 'Nothing. They are raised when their aisle is counted or handed back.' },
             { see: 'stopped at the cap of N open', means: 'The cap was reached.', fix: 'Work the open ones down and raise again, or lift the cap under Count session.' },
           ],

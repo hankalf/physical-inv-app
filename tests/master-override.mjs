@@ -47,7 +47,7 @@ check('Replace on a count with no report loaded yet is nothing to guard: it goes
 await upload(S, 'pallets', 'System,Pallet ID,SKU,Description,Variant,UOM,Entry No,Qty,Location,Lot,Expiry\nNAV,MO-1,S1,Chicken,DIST,CS,1001,40,M02A001,L1,2027-01-31\nTEST,MO-2,S2,Peas,,CS,1002,30,M02A001,,\n', '&replace=1');
 let csv = await (await fetch(`${BASE}/api/admin/sessions/${S}/export/master.csv`, { headers: OTHER })).text();
 let lines = csv.trim().split(/\r?\n/);
-check('The inventory report downloads as it is loaded, every column it came with', lines[0] === 'System,Pallet ID,SKU,Description,Variant,UOM,Entry No,Qty,Location,Lot,Expiry,ABC' && lines.length === 3 && /^NAV,MO-1,S1,Chicken,DIST,CS,1001,40,M02A001,L1,2027-01-31,$/.test(lines[1]) && /^TEST,MO-2,S2,Peas,,CS,1002,30,M02A001,,,$/.test(lines[2]), lines.join(' | '));
+check('The inventory report downloads as it is loaded, every column it came with', lines[0] === 'System,Pallet ID,SKU,Description,Variant,UOM,Entry No,Qty,Location,Lot,Expiry,ABC,Cost,Amount' && lines.length === 3 && /^NAV,MO-1,S1,Chicken,DIST,CS,1001,40,M02A001,L1,2027-01-31,,,$/.test(lines[1]) && /^TEST,MO-2,S2,Peas,,CS,1002,30,M02A001,,,,,$/.test(lines[2]), lines.join(' | '));
 csv = await (await fetch(`${BASE}/api/admin/sessions/${S}/export/bins.csv`, { headers: OTHER })).text();
 lines = csv.trim().split(/\r?\n/);
 check('…and so does the bin list', lines[0] === 'Bin Location,Zone,Aisle,Level,Description,Last Counted' && lines.length === 2 && /^M02A001,DRY,M02,A,/.test(lines[1]), lines.join(' | '));

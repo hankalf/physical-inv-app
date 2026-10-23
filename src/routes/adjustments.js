@@ -87,6 +87,9 @@ function adjustmentRows(sessionId, session) {
         expected_qty: expected,
         counted_qty: counted,
         variance_qty: variance,
+        // in money, when the report carries a cost
+        cost: r.cost === '' ? null : Number(r.cost),
+        variance_amount: r.cost === '' ? null : Math.round(variance * Number(r.cost) * 100) / 100,
         kind: r.status,
       };
     })
@@ -97,14 +100,16 @@ function adjustmentRows(sessionId, session) {
 function needsApproval(row, session) {
   const minQty = Number(session.approval_min_qty) || 0;
   const minPct = Number(session.approval_min_pct) || 0;
-  if (!minQty && !minPct) return true;                 // no thresholds: everything is approved by hand
+  const minValue = Number(session.approval_min_value) || 0;
+  if (!minQty && !minPct && !minValue) return true;    // no thresholds: everything is approved by hand
   const size = Math.abs(Number(row.variance_qty) || 0);
   const base = Math.abs(Number(row.expected_qty) || 0);
   const pct = base ? (size / base) * 100 : 100;        // nothing expected: the whole line is the variance
-  /* Either test can send it for approval. A site that sets both is saying "big
-     in cases, or big for the pallet it is on". */
+  /* Any test can send it for approval. A site that sets more than one is saying
+     "big in cases, or big for the pallet it is on, or worth a lot". */
   if (minQty && size >= minQty) return true;
   if (minPct && pct >= minPct) return true;
+  if (minValue && row.variance_amount != null && Math.abs(row.variance_amount) >= minValue) return true;
   return false;
 }
 
@@ -231,6 +236,9 @@ export function adjustmentView(sessionId) {
     rows: list,
     pallets: list.length,
     units: Math.round(list.reduce((n, r) => n + Number(r.variance_qty || 0), 0) * 100) / 100,
+    // in money, over the lines that have a cost; null when none does
+    value: list.some((r) => r.variance_amount != null) ? Math.round(list.reduce((n, r) => n + Number(r.variance_amount || 0), 0) * 100) / 100 : null,
+    unpriced: list.filter((r) => r.variance_amount == null).length,
   });
   const positive = side(rows.filter((r) => r.variance_qty > 0).sort((a, b) => b.variance_qty - a.variance_qty));
   const negative = side(rows.filter((r) => r.variance_qty < 0).sort((a, b) => a.variance_qty - b.variance_qty));
@@ -240,6 +248,7 @@ export function adjustmentView(sessionId) {
     positive,
     negative,
     net: Math.round((positive.units + negative.units) * 100) / 100,
+    netValue: positive.value == null && negative.value == null ? null : Math.round(((positive.value || 0) + (negative.value || 0)) * 100) / 100,
   };
 }
 

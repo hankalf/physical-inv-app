@@ -150,14 +150,17 @@ export function reassignRecounts(sessionId, { from = '', to = '', limit = 0, ais
  * at one percent, and sixty percent off matters on a small one even at six
  * units. Both default to zero, which raises everything, as it always did.
  */
-function materialQty(session, expected, counted) {
+function materialQty(session, expected, counted, cost = null) {
   const minQty = Number(session.recount_min_qty || 0);
   const minPct = Number(session.recount_min_pct || 0);
-  if (!minQty && !minPct) return true;
+  const minValue = Number(session.recount_min_value || 0);
+  if (!minQty && !minPct && !minValue) return true;
   const diff = Math.abs(Number(counted || 0) - Number(expected || 0));
   if (!diff) return false;
   const pct = expected ? (diff / Math.abs(Number(expected))) * 100 : 100;
-  return (minQty > 0 && diff >= minQty) || (minPct > 0 && pct >= minPct);
+  // in money, when the report carries a cost: a pallet with no cost is judged by cases alone
+  const value = cost != null && cost !== '' ? diff * Number(cost) : null;
+  return (minQty > 0 && diff >= minQty) || (minPct > 0 && pct >= minPct) || (minValue > 0 && value != null && value >= minValue);
 }
 
 const openRecounts = (id) =>
@@ -216,7 +219,7 @@ export function generateFromVariances(sessionId, { onlyPallets = null, includeMi
       if (createRecount(id, { bin: r.expected_location, palletId: r.pallet_id, reason: 'MISSING', detail: `expected ${r.expected_qty ?? '?'} in ${r.expected_location}, never counted`, source: 'auto' }).created) created++;
       continue;
     }
-    if (r.status === 'QTY VARIANCE' && !materialQty(session, r.expected_qty, r.counted_qty)) { skippedSmall++; continue; }
+    if (r.status === 'QTY VARIANCE' && !materialQty(session, r.expected_qty, r.counted_qty, r.cost)) { skippedSmall++; continue; }
     const firstTeam = db.prepare(
       `SELECT team FROM counts WHERE session_id = ? AND pallet_id = ? AND voided = 0 AND pass = 1 ORDER BY id DESC LIMIT 1`).get(id, r.pallet_id)?.team || null;
     const bins = String(r.found_location || '').split(',').filter(Boolean);
@@ -381,6 +384,18 @@ function binByPass(id, bin, pass) {
 }
 const binExpected = (id, bin) => new Map(db.prepare('SELECT pallet_id, expected_qty FROM pallets WHERE session_id = ? AND expected_location = ?').all(id, bin)
   .map((p) => [p.pallet_id, Number(p.expected_qty || 0)]));
+/** What a bin's disagreement is worth: each pallet's gap between the second count and the report, at the report's cost. */
+export function disagreementValue(id, bin, second, report) {
+  const costs = new Map(db.prepare('SELECT pallet_id, cost FROM pallets WHERE session_id = ? AND cost IS NOT NULL').all(id).map((p) => [p.pallet_id, Number(p.cost)]));
+  let value = 0, priced = false;
+  for (const k of new Set([...second.keys(), ...report.keys()])) {
+    const c = costs.get(k);
+    if (c == null) continue;
+    priced = true;
+    value += Math.abs(Number(second.get(k) || 0) - Number(report.get(k) || 0)) * c;
+  }
+  return priced ? Math.round(value * 100) / 100 : null;
+}
 const same = (a, b) => a.size === b.size && [...a].every(([k, v]) => b.has(k) && Number(b.get(k)) === Number(v));
 const words = (m) => (m.size ? [...m].map(([k, v]) => `${k} ×${v}`).join(', ') : 'nothing');
 
@@ -422,6 +437,14 @@ function autoThirdCount(sessionId, task) {
   const v = secondCountVerdict(sessionId, task.bin);
   // its lines not in yet (a gun sends them when it has signal): judged when they arrive
   if (v.settled || v.why === 'not second-counted yet') return null;
+  /* worth a third walk? With a money threshold set, a bin whose disagreement is
+     priced under it is left to the office; a bin with no costs on it is sent. */
+  const s = getSession(sessionId);
+  const minValue = Number((s && s.third_min_value) || 0);
+  if (minValue > 0) {
+    const worth = disagreementValue(Number(sessionId), task.bin, v.second, v.report);
+    if (worth != null && worth < minValue) return null;
+  }
   const out = raiseThirdCount(sessionId, task.id, { source: 'auto' });
   return out.created ? out : null;
 }

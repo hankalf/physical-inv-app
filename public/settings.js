@@ -1101,11 +1101,12 @@
     },
     pallets: {
       file: 'pallets-template.csv',
-      required: [['Pallet ID', 'the code on the pallet / container label; also accepts Container, LPN, License Plate']],
-      optional: [['SKU', 'shown to the counter after the pallet scan'], ['Description', 'shown to the counter'],
-                 ['UOM', ''], ['Qty', 'what the system says is on it - drives QTY VARIANCE'],
-                 ['Location', 'where the system says it is - drives WRONG BIN']],
-      note: 'One row per pallet. Validation list for question 1. Re-uploading the same pallet updates it rather than duplicating it.',
+      required: [['Bin Code', 'where the system says the pallet is - drives WRONG BIN; also accepts Location, Bin'], ['Container No.', 'the code on the pallet label; also accepts Pallet ID, LPN, License Plate']],
+      optional: [['Item No.', 'the item; also accepts SKU'], ['Description', 'shown to the counter'], ['Variant Code', 'DIST, REWORK, DONATE …'],
+                 ['Quantity', 'what the system says is on it - drives QTY VARIANCE'], ['Unit of Measure Code', 'CS, BAG, BOX …'],
+                 ['Entry No.', 'the ERP ledger entry, carried to the ERP file'], ['Lot No.', 'the lot, if you count lots'], ['System', 'which system the pallet belongs to'],
+                 ['Cost', 'the unit cost - a difference is also read in money, and the money thresholds use it'], ['Amount', 'quantity × cost as the report has it; either Cost or Amount gives the other']],
+      note: 'One row per pallet, as the site\'s systems export it. Re-uploading the same pallet updates it rather than duplicating it.',
     },
   };
 
@@ -2371,6 +2372,9 @@
     $('fRecMinQty').value = s.recount_min_qty || 0;
     $('fRecMinPct').value = s.recount_min_pct || 0;
     $('fRecCap').value = s.recount_cap || 0;
+    $('fRecMinValue').value = s.recount_min_value || 0;
+    $('fThirdMinValue').value = s.third_min_value || 0;
+    $('fApprMinValue').value = s.approval_min_value || 0;
     $('fAskLot').checked = !!s.ask_lot;
     $('fAskExpiry').checked = !!s.ask_expiry;
     $('fRequireApproval').checked = !!s.require_approval;
@@ -2491,6 +2495,7 @@
         autoRecount: $('fAutoRecount').checked, thirdCount: $('fThirdCount').checked, layout: $('fLayout').value,
         recountTeamOn: $('fRecountTeamOn').checked, recountTeam: $('fRecountTeam').value,
         recountMinQty: $('fRecMinQty').value, recountMinPct: $('fRecMinPct').value, recountCap: $('fRecCap').value,
+        recountMinValue: $('fRecMinValue').value, thirdMinValue: $('fThirdMinValue').value, approvalMinValue: $('fApprMinValue').value,
         askLot: $('fAskLot').checked, askExpiry: $('fAskExpiry').checked,
         requireApproval: $('fRequireApproval').checked,
         approvalMinQty: $('fApprMinQty').value, approvalMinPct: $('fApprMinPct').value,

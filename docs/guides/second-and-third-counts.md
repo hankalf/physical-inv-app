@@ -46,7 +46,8 @@ counts side by side.
 |---|---|---|
 | **Raise them automatically** | A second count is raised the moment a first count disagrees with the report, and when an aisle is handed back with a pallet nobody saw | On |
 | **Third count when the second settles nothing** | A bin whose second count agrees with neither the first count nor the report is counted a third time, by a team that did neither | On for a wall-to-wall |
-| **Over N units / or over N %** | A quantity difference smaller than both raises no second count. Either one is enough to raise it | 2–5 units, 5–10 % |
+| **Over N units / or over N % / or worth over $N** | A difference smaller than all of them raises no second count. Any one is enough to raise it; the money one uses the report's Cost column, and a pallet with no cost is judged by cases | 2–5 units, 5–10 %, $200–500 |
+| **Third count by itself only when worth over $N** | With third counts on, a bin the second count settles nothing on is counted a third time by itself only when its disagreement is worth this much | $500, or 0 for every such bin |
 | **Cap open** | Stop raising automatic second counts once this many are open | 0 (no cap), or 50–100 on a big count |
 | **Send them all to team** … | Every new second count is given to that team — inventory control's, say. A bin the team counted first stays open for any other team | On, with the team number, when one team does the second counts |
 

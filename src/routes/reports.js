@@ -21,6 +21,18 @@ export function progress(sessionId) {
 
   const bySource = sourcesOf(id);
   const binsTotal = db.prepare('SELECT COUNT(*) n FROM locations WHERE session_id = ?').get(id).n;
+  /* the count in money, when the report carries costs: what the report is worth,
+     what has been counted so far, and the difference between them so far */
+  const value = db.prepare('SELECT 1 FROM pallets WHERE session_id = ? AND (cost IS NOT NULL OR amount IS NOT NULL) LIMIT 1').get(id) ? (() => {
+    let expected = 0, counted = 0, variance = 0, over = 0, under = 0;
+    for (const r of palletReport(id)) {
+      if (r.expected_amount !== '') expected += Number(r.expected_amount);
+      if (r.counted_amount !== '') counted += Number(r.counted_amount);
+      if (r.variance_amount !== '') { variance += Number(r.variance_amount); if (r.variance_amount > 0) over += Number(r.variance_amount); else under += Number(r.variance_amount); }
+    }
+    const cents = (n) => Math.round(n * 100) / 100;
+    return { expected: cents(expected), counted: cents(counted), variance: cents(variance), over: cents(over), under: cents(under) };
+  })() : null;
   const palletsTotal = db.prepare('SELECT COUNT(*) n FROM pallets WHERE session_id = ?').get(id).n;
   const exceptions = db
     .prepare(
@@ -72,6 +84,7 @@ export function progress(sessionId) {
     recounts_done: recounts.done || 0,
     bins_total: binsTotal,
     pallets_total: palletsTotal,
+    value,
     exceptions,
     byTeam,
     signedOn,
@@ -128,7 +141,7 @@ export function palletReport(sessionId, { only = null } = {}) {
     `SELECT pallet_id, COUNT(*) AS n FROM recounts WHERE session_id = ? AND status != 'done' AND pallet_id IS NOT NULL GROUP BY pallet_id`).all(id).map((r) => [r.pallet_id, r.n]));
   const master = db.prepare(
     `SELECT pallet_id, sku, description, uom, COALESCE(source, '') AS source, COALESCE(variant, '') AS variant, COALESCE(entry_no, '') AS entry_no,
-            expected_qty, expected_location, lot AS expected_lot, expiry AS expected_expiry
+            expected_qty, expected_location, lot AS expected_lot, expiry AS expected_expiry, cost, amount
        FROM pallets WHERE session_id = ?${inList}`).all(...args);
   const seen = new Set(master.map((p) => p.pallet_id));
   const keys = master.map((p) => p.pallet_id);
@@ -181,6 +194,13 @@ export function palletReport(sessionId, { only = null } = {}) {
     else status = 'MATCH';
 
     const maxPass = c ? c.max_pass : null;
+    /* the same difference in money: the report's unit cost, what it said the
+       pallet was worth, what was counted, and the difference */
+    const cost = p && p.cost != null ? Number(p.cost) : null;
+    const cents = (n) => Math.round(n * 100) / 100;
+    const expectedAmount = p && p.amount != null ? cents(Number(p.amount)) : cost != null && expectedQty != null ? cents(expectedQty * cost) : null;
+    const countedAmount = isCounted && cost != null && !aliasOnly ? cents(c.counted_qty * cost) : null;
+    const varianceAmount = variance != null && cost != null && !aliasOnly ? cents(variance * cost) : null;
     return {
       pallet_id: k,
       source: (p && p.source) || '',
@@ -192,6 +212,10 @@ export function palletReport(sessionId, { only = null } = {}) {
       expected_qty: expectedQty ?? '',
       counted_qty: isCounted ? c.counted_qty : '',
       variance_qty: aliasOnly ? '' : (variance ?? ''),
+      cost: cost ?? '',
+      expected_amount: expectedAmount ?? '',
+      counted_amount: countedAmount ?? '',
+      variance_amount: varianceAmount ?? '',
       expected_location: expectedLocation || '',
       found_location: foundLocations || '',
       times_counted: timesCounted || 0,

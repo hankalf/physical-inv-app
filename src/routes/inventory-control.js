@@ -47,9 +47,10 @@ export function inventoryOverview(sessionId, { cycleOn = true, missingOn = true 
     recounts: { ...rec, stillOpen: recountsOpen },
     adjustments: {
       approvals: !!session.require_approval,
-      positive: { pallets: view.positive.pallets, units: round2(view.positive.units) },
-      negative: { pallets: view.negative.pallets, units: round2(view.negative.units) },
+      positive: { pallets: view.positive.pallets, units: round2(view.positive.units), value: view.positive.value },
+      negative: { pallets: view.negative.pallets, units: round2(view.negative.units), value: view.negative.value },
       net: round2(view.net),
+      netValue: view.netValue,
       pending: signed ? signed.pending : 0, approved: signed ? signed.approved + signed.auto : 0, rejected: signed ? signed.rejected : 0,
     },
     erp: {

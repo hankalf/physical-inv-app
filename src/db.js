@@ -524,6 +524,14 @@ CREATE INDEX IF NOT EXISTS idx_idle_team ON idle_alerts(session_id, team, id);
 // the Testing tab's own count: never offered to a gun on the floor, never on the board
 if (!hasCol('sessions', 'practice')) db.exec('ALTER TABLE sessions ADD COLUMN practice INTEGER NOT NULL DEFAULT 0');
 if (!hasCol('pallets', 'abc')) db.exec('ALTER TABLE pallets ADD COLUMN abc TEXT');
+/* The report's unit cost and amount (quantity × cost): a difference is read in
+   money as well as cases, and the thresholds below can be set in money. */
+if (!hasCol('pallets', 'cost')) { db.exec('ALTER TABLE pallets ADD COLUMN cost REAL'); db.exec('ALTER TABLE pallets ADD COLUMN amount REAL'); }
+if (!hasCol('sessions', 'recount_min_value')) {
+  db.exec('ALTER TABLE sessions ADD COLUMN recount_min_value REAL NOT NULL DEFAULT 0');   // a second count when the difference is worth this much
+  db.exec('ALTER TABLE sessions ADD COLUMN third_min_value REAL NOT NULL DEFAULT 0');     // a third count by itself only when the bin's disagreement is worth this much
+  db.exec('ALTER TABLE sessions ADD COLUMN approval_min_value REAL NOT NULL DEFAULT 0');  // an adjustment needs a signature when it is worth this much
+}
 
 // a login can be handed out with a starter password the person must replace
 if (!hasCol('users', 'must_change')) db.exec('ALTER TABLE users ADD COLUMN must_change INTEGER NOT NULL DEFAULT 0');

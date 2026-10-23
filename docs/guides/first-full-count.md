@@ -355,6 +355,7 @@ adjustments.
 | **Unit of Measure Code** | CS, BAG, BOX … | |
 | **Lot No.**, **Expiry** | Only if you count lots or dates | |
 | **Entry No.** | The ERP's ledger entry, carried through to the ERP file | |
+| **Cost**, **Amount** | The unit cost and quantity × cost. With them, differences show in money too, and second counts and approvals can be raised by value | |
 
 **How you know it worked:** the card says how many pallets it read, how many empty positions, and
 any pallet listed twice.
@@ -699,7 +700,7 @@ After setting one up, press its test or send button and check the file arrived.
 | Scanner says **OFFLINE** | No signal | Keep counting. Lines wait on the scanner and send by themselves |
 | A team is not sent to an aisle | Its equipment does not reach those levels, or the block is in use | Check Equipment rules (step 7) and the plan (step 15) |
 | Two teams in back-to-back racking | The aisles are not paired | Pair them into blocks (step 13) |
-| The second-count list is huge | The thresholds are 0 | Set **Over N units** and **or over N %** under Second counts (step 14) |
+| The second-count list is huge | The thresholds are 0 | Set **Over N units**, **or over N %** or **or worth over $N** under Second counts (step 14) |
 | No adjustments or second counts at all | No inventory report on the count | Upload it (step 12) |
 | **Final report** is grayed out | Bins not counted yet, or second counts open | The card says which. Finish them |
 

@@ -69,7 +69,7 @@ check('An ERP format can carry the entry number and the variant back', (fmt.fiel
 
 /* the practice count and the shipped template speak the same layout */
 const tpl = readFileSync(`${S}../public/templates/pallets-template.csv`, 'utf8').split('\n')[0];
-check('The pallet template has the site\'s columns', tpl === 'Bin Code,Container No.,Item No.,Description,Variant Code,Quantity,Unit of Measure Code,Entry No.,Lot No.,System', tpl);
+check('The pallet template has the site\'s columns', tpl === 'Bin Code,Container No.,Item No.,Description,Variant Code,Quantity,Unit of Measure Code,Entry No.,Lot No.,System,Cost,Amount', tpl);
 const prac = await j(await fetch(`${BASE}/api/admin/practice`, { method: 'POST', headers: A, body: '{}' }));
 check('The practice count is built from a report in that layout, with 25 pallets', prac.totals.pallets === 25 && prac.bins.some((b) => !b.shelf.length));
 

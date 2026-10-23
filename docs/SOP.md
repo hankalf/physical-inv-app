@@ -1010,10 +1010,13 @@ questions it asks change between pallets, never mid-line.
 | **Ask for the expiry date** | Adds an EXPIRY question and flags anything already out of date. | On for frozen food |
 | **Recount over N units** | A difference smaller than this raises no second count. | 2–5 units |
 | **or over N %** | ...or at least this share of the expected quantity. Either threshold is enough. | 5–10 % |
+| **or worth over $N** | ...or a difference worth at least this much at the report's unit cost (its **Cost** column, or **Amount** ÷ quantity). Any one threshold is enough; a pallet with no cost is judged by cases alone. | $200–500 |
+| **Third count by itself only when worth over $N** | With third counts on, a bin whose second count settles nothing is counted a third time by itself only when its disagreement with the report is worth this much; smaller ones are left to the office. A bin with no costs is always sent. | $500 |
 | **Cap open** | Stop raising automatic second counts once this many are open, so the list stays walkable. | 50–100 |
 | **Adjustments need approval** | Every difference from the report has to be approved, with a reason code, before it reaches the ERP file. Off by default. | On for a wall-to-wall that is audited |
 | **Approve over N units** | A difference smaller than this goes through without a signature. | 5–10 units |
 | **or over N %** | ...or at least this share of what the report expected. Either threshold is enough. | 5–10 % |
+| **or worth over $N** | ...or an adjustment worth at least this much at the report's cost. Any one threshold is enough. | $250 |
 | **Map drawing** | Which rack drawing the map uses. *Schematic* builds one from the bin codes. | Your drawing |
 
 > **Why the thresholds matter.** With both at 0 the app sends somebody back for a
@@ -2417,6 +2420,8 @@ upload card shows exactly which columns it recognized.
 | **Entry No.** | the ERP's item ledger entry number, carried through to the pallet report and the ERP file so adjustments post against the right entry | |
 | **Lot No.** | the lot (F61409, 50479-1, PO123456) | |
 | **System** | which system the pallet belongs to (JustFood, SGI, NTFF); `OPEN` with no container is an empty position | |
+| **Cost** | the unit cost; a difference is read in money as well as cases, on the pallet report, the adjustments and the overview, and the money thresholds use it | |
+| **Amount** | quantity × cost as the report has it (398.136 for 2,400 at 0.16589). Either Cost or Amount gives the other | |
 
 Other names for these columns are understood too (pallet id, LPN, item, SKU, qty, location, bin,
 lot code, unit, source …), as is a **Best Before** or **Expiry** column when the file has one.
