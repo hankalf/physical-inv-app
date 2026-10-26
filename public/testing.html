@@ -343,6 +343,13 @@
               <div class="auto"><button class="fit" id="btnTrainCardEn">🖨 Pocket cards · English</button></div>
               <div class="auto"><button class="fit" id="btnTrainCardEs">🖨 Tarjetas · Español</button></div>
             </div>
+            <div class="inline" style="margin-top:6px">
+              <div class="auto"><span class="muted">In Word, to edit:</span></div>
+              <div class="auto"><button class="fit ghost" id="btnTrainWallDocx" title="Every label and the trainer's key, one label a page, barcodes as pictures">⬇ The wall (.docx)</button></div>
+              <div class="auto"><button class="fit ghost" id="btnTrainCardDocxEn">⬇ Pocket cards EN (.docx)</button></div>
+              <div class="auto"><button class="fit ghost" id="btnTrainCardDocxEs">⬇ Tarjetas ES (.docx)</button></div>
+              <div class="auto"><span class="hint" style="margin:0">PDF: 🖨 and choose Save as PDF in the print box. The Word files follow the team numbers below for the backs.</span></div>
+            </div>
             <div class="inline" style="margin-top:8px; align-items:flex-start">
               <div style="flex:1 1 320px; max-width:520px">
                 <label for="fTrainTeams">Team numbers on the back of the pocket cards — one line per person, one card each (leave empty for fronts only)</label>
@@ -368,6 +375,7 @@
                 <div class="auto"><label class="cb"><input type="checkbox" id="fRosterOpen"> Not yet trained only</label></div>
                 <div class="auto"><button class="fit" id="btnRosterPrint" title="A clipboard sheet with a box to tick, by shift">🖨 Print the roster</button></div>
                 <div class="auto"><button class="fit" id="btnRosterCsv">⬇ roster.csv</button></div>
+                <div class="auto"><button class="fit ghost" id="btnRosterDocx">⬇ roster (.docx)</button></div>
               </div>
               <div class="hint" style="margin-top:4px">The employees uploaded on Teams &amp; crew. Tick each person as they finish the wall; it keeps who ticked them and when. <b>On the wall</b> shows when their badge signed on to the training count.</div>
               <div class="table-wrap" style="margin-top:8px; max-height: 420px; overflow:auto"><table class="data" id="rosterTable"><thead><tr><th>Trained</th><th>Clock-in</th><th>Name</th><th>Shift</th><th>Team</th><th>Dept</th><th>On the wall</th><th>Ticked</th></tr></thead><tbody></tbody></table></div>

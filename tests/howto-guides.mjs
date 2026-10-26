@@ -20,6 +20,10 @@ const adminList = (await j(await fetch(`${BASE}/api/admin/guides`, { headers: A 
 const supList = (await j(await fetch(`${BASE}/api/admin/guides`, { headers: S }))).guides;
 check('Every login gets the six guides for users, the first full count first', supList.map((g) => `${g.edition}/${g.name}`).join() === 'user/first-full-count,user/second-and-third-counts,user/erp-upload-by-aisle,user/reports-and-exports,user/employees-teams-and-gear,user/live-and-test', supList.map((g) => g.name).join());
 check('…an admin gets the admin editions too, the set-up guide for second and third counts among them', adminList.length === 14 && adminList.filter((g) => g.edition === 'admin').length === 8 && adminList.some((g) => g.edition === 'admin' && g.name === 'set-up-second-and-third-counts' && g.sections.length >= 9));
+const wordRes = await fetch(`${BASE}/api/admin/guides/admin/first-full-count.docx`, { headers: A });
+const wordBuf = Buffer.from(await wordRes.arrayBuffer());
+check('A guide downloads as a Word document, its pictures inside', wordRes.status === 200 && wordBuf.subarray(0, 2).toString() === 'PK' && /wordprocessingml/.test(wordRes.headers.get('content-type') || '') && /first-full-count-admin\.docx/.test(wordRes.headers.get('content-disposition') || '') && wordBuf.length > 200000, `${wordRes.status} ${wordBuf.length}b`);
+check('…a supervisor is refused the admin edition in Word too', (await fetch(`${BASE}/api/admin/guides/admin/run-the-training-day.docx`, { headers: S })).status === 403);
 const exRes = await fetch(`${BASE}/api/admin/guides/user/reports-and-exports`, { headers: S });
 const ex = await j(exRes);
 check('The exports guide is there for every login, a section for each export button', exRes.status === 200 && ['Download this list (CSV)', 'ERP worksheet', 'Adjustments CSV', 'Fix list CSV', 'Final report', 'Export everything', 'Pallet report CSV', 'Raw counts CSV', 'Exceptions CSV', 'Uncounted bins CSV', 'Count sheets'].every((t) => ex.html.includes(t)), exRes.status);

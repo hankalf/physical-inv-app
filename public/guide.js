@@ -202,6 +202,11 @@
         pdf.onclick = () => downloadGuide(g, pdf);
         acts.appendChild(pdf);
       }
+      const docx = el('button', 'sm', '⬇ Word');
+      docx.type = 'button';
+      docx.title = 'The guide as a Word document, to edit in your own words';
+      docx.onclick = () => downloadGuide(g, docx, 'docx');
+      acts.appendChild(docx);
       t.appendChild(acts);
       return t;
     };
@@ -212,10 +217,10 @@
     $('howtosAdmin').hidden = !admins.length;
     $('howtosAdminList').replaceChildren(...admins.map(tile));
   }
-  async function downloadGuide(g, btn) {
+  async function downloadGuide(g, btn, kind = 'pdf') {
     const was = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = '…'; }
-    try { await api.download(`/api/admin/guides/${g.edition}/${g.name}.pdf`, `${g.name}${g.edition === 'admin' ? '-admin' : ''}.pdf`); }
+    try { await api.download(`/api/admin/guides/${g.edition}/${g.name}.${kind}`, `${g.name}${g.edition === 'admin' ? '-admin' : ''}.${kind}`); }
     catch (err) { alert(err.message); }
     finally { if (btn) { btn.disabled = false; btn.textContent = was; } }
   }

@@ -27,6 +27,8 @@ import { queueAssignments } from './assignments.js';
 import { setTrial, endTrial } from './trial.js';
 import { barcodeSvg } from '../util/barcode.js';
 import { localDate } from '../util/localtime.js';
+import { Docx, barcodePng, EMU_PER_INCH } from '../util/docx.js';
+import { widths as barWidths } from '../util/barcode.js';
 
 export const TRAINING_NAME = 'Training count — not real stock';
 const ZONE = 'Training';
@@ -522,4 +524,126 @@ export function crewTeamList() {
     for (let i = 0; i < n; i++) out.push(String(t.name));
   }
   return out;
+}
+
+
+/* ------------------------------------------------------------- in Word
+ * The same cards, labels, key and roster as Word documents, for a site that
+ * wants them in its own words. Barcodes are pictures (Code 128, the kind the
+ * rack labels use); the team cards' QR is left to the printed version.
+ */
+const BAR = (code, { inches = 2.2, tall = 0.5 } = {}) => [barcodePng(barWidths(code), { scale: 4, height: 60, quiet: 10 }), Math.round(inches * EMU_PER_INCH), Math.round(tall * EMU_PER_INCH)];
+
+export function pocketCardDocx({ lang = 'en', teams = [] } = {}) {
+  const es = lang === 'es';
+  const c = CARD[es ? 'es' : 'en'];
+  const d = new Docx({ margin: 540 });
+  const W = Math.floor((12240 - 2 * 540 - 240) / 2);
+  const front = () => [
+    d.paragraphXml([{ text: c.title, bold: true, size: 26 }], { after: 60 }),
+    ...c.steps.map((t, i) => d.paragraphXml([{ text: `${i + 1}. ${t}`, bold: true, size: 22 }], { after: 30 })),
+    d.paragraphXml([{ text: c.signon, size: 18 }], { before: 80, after: 60 }),
+    d.paragraphXml([{ text: c.offline, size: 18 }], { shade: 'FFF3C4', after: 100 }),
+    d.paragraphXml([{ text: es ? 'LAS CINCO REGLAS' : 'THE FIVE RULES', bold: true, size: 16, color: '444444' }], { after: 30 }),
+    ...c.rules.map((t) => d.paragraphXml([{ text: t, size: 18 }], { bullet: true, after: 20 })),
+    d.paragraphXml([{ text: es ? 'LOS BOTONES' : 'THE BUTTONS', bold: true, size: 16, color: '444444' }], { before: 100, after: 30 }),
+    ...c.buttons.map(([b, w]) => d.paragraphXml([{ text: b, bold: true, size: 17 }, { text: ` — ${w}`, size: 17 }], { after: 20 })),
+  ];
+  const known = new Map(listTeams().map((t) => [String(t.name).toUpperCase(), t]));
+  const shiftWord = (name) => {
+    const t = known.get(name);
+    const sh = t && t.shift ? t.shift : /^S1/i.test(name) ? '1' : /^S2/i.test(name) ? '2' : '';
+    return sh === '1' ? (es ? '1ER TURNO' : '1ST SHIFT') : sh === '2' ? (es ? '2DO TURNO' : '2ND SHIFT') : '';
+  };
+  const back = (name) => {
+    if (!name) return [d.paragraphXml('', { after: 0 })];
+    const [png, w, h] = BAR(name, { inches: 2.6, tall: 0.7 });
+    return [
+      d.paragraphXml([{ text: `${es ? 'TARJETA DEL EQUIPO' : 'TEAM CARD'}${shiftWord(name) ? ` · ${shiftWord(name)}` : ''}`, bold: true, size: 17, color: '444444' }], { align: 'center', before: 600, after: 200 }),
+      d.paragraphXml([{ text: name, bold: true, size: 60, font: 'Consolas' }], { align: 'center', after: 120 }),
+      d.pictureXml(png, { width: w, height: h, name: `team ${name}` }),
+      d.paragraphXml([{ text: es ? 'Escanea el código al entrar, en Número de equipo' : 'Scan the code at sign-on, in Team number', size: 17, color: '555555' }], { align: 'center', before: 120, after: 300 }),
+      d.paragraphXml([{ text: `${es ? 'Nombre' : 'Name'}: ______________________`, size: 20 }], { align: 'center', after: 400 }),
+    ];
+  };
+  const list = teams.map((t) => String(t || '').trim().toUpperCase()).filter(Boolean);
+  const fronts = () => d.tableXml([[front(), front()], [front(), front()]], { widths: [W, W], rowHeight: 6940 });
+  if (!list.length) d.body.push(fronts());
+  else {
+    d.paragraph([{ text: es ? `${list.length} tarjetas · imprime a doble cara, volteando por el lado largo: el equipo de cada persona queda atrás de su tarjeta.` : `${list.length} cards · print double-sided, flipped on the long edge: each person’s team card lands on the back of their pocket card.`, size: 18, color: '555555' }], { after: 120 });
+    for (let i = 0; i < list.length; i += 4) {
+      const four = [list[i], list[i + 1], list[i + 2], list[i + 3]];
+      const mirrored = [four[1], four[0], four[3], four[2]];
+      if (i) d.pageBreak();
+      d.body.push(fronts());
+      d.pageBreak();
+      d.body.push(d.tableXml([[back(mirrored[0]), back(mirrored[1])], [back(mirrored[2]), back(mirrored[3])]], { widths: [W, W], rowHeight: 6940 }));
+    }
+  }
+  return d.build({ title: c.title });
+}
+
+export function wallDocx({ part = 'all' } = {}) {
+  const d = new Docx({ margin: 720 });
+  const W = 12240 - 2 * 720;
+  const pallets = new Map(palletsOnReport().map((p) => [p.id, p]));
+  const label = (kicker, code, lines, how, { tall = true } = {}) => {
+    const [png, w, h] = BAR(code, { inches: 5.2, tall: 1.1 });
+    return [
+      d.paragraphXml([{ text: kicker, bold: true, size: 24, color: '444444' }], { align: 'center', before: tall ? 1200 : 300, after: 200 }),
+      d.pictureXml(png, { width: w, height: h, name: code }),
+      d.paragraphXml([{ text: code, bold: true, size: 96, font: 'Consolas' }], { align: 'center', before: 200, after: 120 }),
+      ...lines.map((t) => d.paragraphXml([{ text: t, size: 28 }], { align: 'center', after: 60 })),
+      d.paragraphXml([{ text: how, size: 20, color: '555555' }], { align: 'center', before: 240, after: tall ? 1200 : 300 }),
+    ];
+  };
+  const cards = [];
+  if (part === 'all' || part === 'racks') for (const b of WALL) cards.push(label('RACK LABEL · TRAINING WALL', b.bin, [describeTrainingBin(b.bin)], 'Scan first, at every spot'));
+  if (part === 'all' || part === 'pallets') for (const b of WALL) for (const id of b.wall) {
+    const p = pallets.get(id);
+    const [, desc, uom] = p ? itemOf(p.item) : ['', 'Mystery pallet — not on the report', ''];
+    cards.push(label('PALLET LABEL', id, [`${desc}${uom ? ` · ${uom}` : ''}`, p ? `Lot ${p.lot}` : 'No lot', b.noScan ? 'PRINTED TORN ON THE WALL: this one will not scan' : ''].filter(Boolean), `Hang under rack ${b.bin}${b.oneSkid ? ' · ONE OF TWO ON THIS SKID' : ''}`));
+  }
+  if (part === 'all' || part === 'teams') {
+    for (const t of TEAMS) cards.push(label(`TEAM CARD · ${t.shift === '1' ? '1ST SHIFT' : '2ND SHIFT'}`, t.name, [t.notes], 'Scan at sign-on, in Team number'));
+    for (const [badge, name, team] of TRAINEES) cards.push(label(`CLOCK-IN BADGE · TEAM ${team}`, badge, [name], 'Scan at sign-on, in Clock In Numbers'));
+  }
+  cards.forEach((xml, i) => { if (i) d.pageBreak(); d.body.push(d.tableXml([[xml]], { widths: [W], border: 'dashed' })); });
+  if (part === 'all' || part === 'key') {
+    if (cards.length) d.pageBreak();
+    d.paragraph([{ text: "The trainer's key", bold: true, size: 36 }], { after: 80 });
+    d.paragraph([{ text: 'Every spot on the wall: what the report says is there, what to hang under the rack label, and the lesson. Hang level B above level A.', size: 20 }], { after: 200 });
+    const rows = [['Spot', 'On the report', 'Hang under it', 'The lesson']].concat(WALL.map((b) => [
+      b.bin,
+      b.report.map(([id, , qty]) => `${id} · ${qty}`).join(', ') || 'nothing',
+      b.wall.join(', ') + (b.oneSkid ? ' (one skid)' : '') + (b.noScan ? ' (printed torn)' : '') || 'nothing',
+      b.lesson,
+    ]));
+    d.table(rows.map((r, i) => r.map((t) => [d.paragraphXml([{ text: t, size: i ? 18 : 18, bold: !i }], { after: 0 })])), { widths: [1300, 2600, 2400, W - 6300], border: 'single', borderColor: 'BBBBBB', cellMargin: 80, headerShade: 'E8EEF6' });
+  }
+  return d.build({ title: 'Training wall' });
+}
+
+/** The spot in words, for the rack label. */
+function describeTrainingBin(code) {
+  const m = /^T(\d\d)([A-Z])(\d\d\d)$/.exec(code);
+  return m ? `Aisle T${m[1]} · Level ${m[2]} · Position ${m[3]}` : code;
+}
+
+export function rosterDocx() {
+  const { rows, totals } = trainingRoster();
+  const d = new Docx({ margin: 900 });
+  const W = 12240 - 2 * 900;
+  const word = (s) => (s === '1' ? '1st shift' : s === '2' ? '2nd shift' : s ? `Shift ${s}` : 'No shift');
+  d.paragraph([{ text: 'Training roster — classroom training', bold: true, size: 34 }], { after: 60 });
+  d.paragraph([{ text: `${totals.people} people on Teams & crew · ${totals.trained} trained so far · ${localDate()} · tick the box as each person finishes the wall, and sign`, size: 19, color: '555555' }], { after: 200 });
+  for (const sh of [...new Set(rows.map((r) => r.shift || ''))]) {
+    const list = rows.filter((r) => (r.shift || '') === sh);
+    d.paragraph([{ text: `${word(sh)} · ${list.length} people`, bold: true, size: 26 }], { before: 200, after: 80, keepNext: true });
+    const head = ['Trained', 'Clock-in', 'Name', 'Team', 'Dept', 'On the wall', 'Sign'];
+    const body = list.map((r) => [r.trained ? '☑' : '☐', r.badge, r.name, r.team, r.dept, r.signedOn ? r.signedOn.slice(11, 16) : '', '']);
+    d.table([head].concat(body).map((r, i) => r.map((t, c) => [d.paragraphXml([{ text: t, size: c === 0 && i ? 28 : 19, bold: !i, font: c === 1 && i ? 'Consolas' : undefined }], { after: 0, align: c === 0 ? 'center' : 'left' })])), { widths: [900, 1300, 2800, 1300, 1600, 1200, W - 9100], border: 'single', borderColor: '999999', cellMargin: 70, headerShade: 'EEEEEE' });
+  }
+  if (!rows.length) d.paragraph('No employees on Teams & crew yet — upload the crew list first.');
+  return d.build({ title: 'Training roster' });
 }

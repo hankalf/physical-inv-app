@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { markdownToHtml, slug } from '../util/markdown.js';
+import { markdownToDocx } from '../util/docx-md.js';
 
 /*
  * The how-to guides, inside the app.
@@ -88,6 +89,14 @@ export function guidePdf(edition, name, opts) {
   const file = join(FOLDERS[edition], `${name}.pdf`);
   if (!existsSync(file)) throw Object.assign(new Error('this guide has no PDF yet'), { status: 404 });
   return { body: readFileSync(file), filename: `${name}${edition === 'admin' ? '-admin' : ''}.pdf`, title: g.title };
+}
+
+/** The guide as a Word document, pictures included, for a site that wants it in its own words. */
+export function guideDocx(edition, name, opts) {
+  const g = getGuide(edition, name, opts);
+  const md = readFileSync(join(FOLDERS[edition], `${name}.md`), 'utf8').replace(/^\*\*Role:\*\*.*$/m, '');
+  const body = markdownToDocx(md, { images: join(DOCS, 'images') }).build({ title: g.title });
+  return { body, filename: `${name}${edition === 'admin' ? '-admin' : ''}.docx`, title: g.title };
 }
 
 /** A picture a guide shows: from docs/images, by its plain name only. */

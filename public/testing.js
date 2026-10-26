@@ -709,6 +709,7 @@
   for (const id of ['fRosterShift', 'fRosterFind', 'fRosterOpen']) $(id).addEventListener('input', drawRoster);
   $('btnRosterPrint').onclick = () => trainPrint('/api/admin/training/print/roster');
   $('btnRosterCsv').onclick = () => trainPrint('/api/admin/training/roster.csv');
+  $('btnRosterDocx').onclick = () => api.download('/api/admin/training/roster.docx', 'training-roster.docx').catch((err) => msg($('trainMsg'), 'err', err.message));
   const trainAct = async (path, confirmText, done) => {
     if (confirmText && !confirm(confirmText)) return;
     try { const t = await api.post(path, {}); drawTraining(t.session === undefined ? await api.json('/api/admin/training') : t); msg($('trainMsg'), 'ok', done(t)); }
@@ -736,6 +737,12 @@
   };
   $('btnTrainCardEn').onclick = () => trainPrint(cardUrl('en'));
   $('btnTrainCardEs').onclick = () => trainPrint(cardUrl('es'));
+  /* the same pieces in Word, to edit */
+  const docxUrl = (lang) => `/api/admin/training/print/pocket-card.docx?lang=${lang}${trainTeams().length ? `&teams=${encodeURIComponent(trainTeams().join(','))}` : ''}`;
+  const trainFile = (path, name) => api.download(path, name).catch((err) => msg($('trainMsg'), 'err', err.message));
+  $('btnTrainCardDocxEn').onclick = () => trainFile(docxUrl('en'), `scanner-pocket-card-en${trainTeams().length ? '-two-sided' : ''}.docx`);
+  $('btnTrainCardDocxEs').onclick = () => trainFile(docxUrl('es'), `scanner-pocket-card-es${trainTeams().length ? '-two-sided' : ''}.docx`);
+  $('btnTrainWallDocx').onclick = () => trainFile('/api/admin/training/print/wall.docx', 'training-wall.docx');
 
   async function refresh() {
     refreshTraining().catch(() => {});

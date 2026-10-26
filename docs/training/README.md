@@ -29,6 +29,12 @@ they finish the wall, who ticked them and when, by shift; it prints for a clipbo
 a CSV. *Reset for the next class* clears what a class counted; *Remove* takes it all away before
 count day. The run sheet above walks the whole session.
 
+**In Word, PowerPoint and PDF.** Every printed piece — the wall, the key, the pocket cards, the
+roster, the trainer's guide — comes out of the app as a PDF (the 🖨 buttons, then *Save as PDF*) and
+as a Word document to edit first (the ⬇ .docx buttons on the Classroom training card, and ⬇ Word on
+every guide under User guide). Barcodes in the Word files are pictures. The decks are PowerPoint, and
+the zip carries them as PDF as well. The films stay films.
+
 **The bundle.** `node tools/training-prints.mjs` renders the wall and the pocket cards to PDFs
 (`TEAMS=S1-DS01,S1-DS01,...` or `TEAMS=path/to/list.txt` adds the two-sided pocket cards with those
 team numbers on the back); `node tools/training-zip.mjs` puts all of it — the four films, the two decks, the

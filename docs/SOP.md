@@ -758,8 +758,10 @@ trainer's key at the back. **🖨 Pocket cards** print the steps and the five ru
 in English and Spanish, with each person's team card on the back when the team numbers are pasted
 in. The **Training roster** under the buttons lists every employee from Teams & crew with a box to
 tick as they finish, who ticked them and when, by shift; it prints as a clipboard sheet and downloads
-as a CSV. **Reset for the next class** clears what a class counted; **Remove** takes it all away
-before count day. The run sheet is the guide *Run the training day*.
+as a CSV. Each of these prints is also a **Word document** (the ⬇ .docx buttons), to edit before
+printing, and every guide on the User guide page has **⬇ Word** beside its PDF. **Reset for the next
+class** clears what a class counted; **Remove** takes it all away before count day. The run sheet is
+the guide *Run the training day*.
 
 ### Step 8c-1 — Practice data: every login's practice, for an admin
 

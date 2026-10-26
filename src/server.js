@@ -26,7 +26,7 @@ import { autoPlan, applyPlan } from './routes/auto-plan.js';
 import { endTrial, setTrial } from './routes/trial.js';
 import { exportEverything } from './routes/export-all.js';
 import { recountSideBySide } from './routes/recount-sheet.js';
-import { listGuides, getGuide, guidePdf, guideImage } from './routes/guides.js';
+import { listGuides, getGuide, guidePdf, guideDocx, guideImage } from './routes/guides.js';
 import { erpAisles, erpAisleSheet } from './routes/erp-aisles.js';
 import { archiveAisle, finalReadiness, finalReport, listArchives, archivePath } from './routes/archive.js';
 import { idleConfig, saveIdleConfig, teamClocks, checkIdle, answerIdle, openIdleAlerts, recentIdleAlerts, tellTeamsIdle, idleTick, recordSignoff } from './routes/idle.js';
@@ -77,7 +77,7 @@ function systemsView(req) {
 }
 import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, unlockPlace, PER_LOGIN, PER_PLACE } from './routes/login-limit.js';
 import { recordAccess, accessMap, lookupPending } from './routes/access-map.js';
-import { ensureTraining, resetTraining, removeTraining, trainingStatus, wallLabels, pocketCard, crewTeamList, trainingRoster, markTrained, rosterCsv, rosterSheet } from './routes/training.js';
+import { ensureTraining, resetTraining, removeTraining, trainingStatus, wallLabels, pocketCard, crewTeamList, trainingRoster, markTrained, rosterCsv, rosterSheet, pocketCardDocx, wallDocx, rosterDocx } from './routes/training.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards, barcodeBook, teamCodes } from './routes/printing.js';
 import {
@@ -1221,6 +1221,18 @@ async function handleAdmin(req, res, url, m) {
     }
     if (p === '/api/admin/training/roster.csv') { audit(actor, 'downloaded the training roster'); return sendCsv(req, res, 'training-roster.csv', rosterCsv()); }
     if (p === '/api/admin/training/print/roster') { audit(actor, 'printed the training roster'); return send(req, res, 200, rosterSheet(), { 'content-type': 'text/html; charset=utf-8' }); }
+    /* the same pieces as Word documents, to edit */
+    const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    const asDocx = (name, body) => send(req, res, 200, body, { 'content-type': DOCX, 'content-disposition': `attachment; filename="${name}"`, 'cache-control': 'no-cache' });
+    if (p === '/api/admin/training/print/pocket-card.docx') {
+      const raw = url.searchParams.get('teams') || '';
+      const teams = raw === 'crew' ? crewTeamList() : raw.split(/[\s,;]+/).filter(Boolean);
+      const lang = url.searchParams.get('lang') === 'es' ? 'es' : 'en';
+      audit(actor, 'downloaded the pocket cards as Word', `${lang}${teams.length ? `, ${teams.length} team cards on the back` : ''}`);
+      return asDocx(`scanner-pocket-card-${lang}${teams.length ? '-two-sided' : ''}.docx`, pocketCardDocx({ lang, teams }));
+    }
+    if (p === '/api/admin/training/print/wall.docx') { audit(actor, 'downloaded the training wall as Word', url.searchParams.get('part') || 'all'); return asDocx(`training-wall-${url.searchParams.get('part') || 'all'}.docx`, wallDocx({ part: url.searchParams.get('part') || 'all' })); }
+    if (p === '/api/admin/training/roster.docx') { audit(actor, 'downloaded the training roster as Word'); return asDocx('training-roster.docx', rosterDocx()); }
     if (p === '/api/admin/training/print/wall') {
       audit(actor, 'printed the training wall', `${url.searchParams.get('size') || 'big'} ${url.searchParams.get('part') || 'all'}`);
       return send(req, res, 200, wallLabels({ size: url.searchParams.get('size') || 'big', part: url.searchParams.get('part') || 'all' }), { 'content-type': 'text/html; charset=utf-8' });
@@ -2024,6 +2036,11 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/guides\/(user|admin)\/([a-z0-9-]+)\.pdf$/)) && method === 'GET') {
     const pdf = guidePdf(m[1], m[2], { admin: whoNow && whoNow.role === 'admin' });
     return send(req, res, 200, pdf.body, { 'content-type': 'application/pdf', 'content-disposition': `attachment; filename="${pdf.filename}"`, 'cache-control': 'no-cache' });
+  }
+  if ((m = p.match(/^\/api\/admin\/guides\/(user|admin)\/([a-z0-9-]+)\.docx$/)) && method === 'GET') {
+    const doc = guideDocx(m[1], m[2], { admin: whoNow && whoNow.role === 'admin' });
+    audit(actor, 'downloaded a guide as Word', `${m[1]}/${m[2]}`);
+    return send(req, res, 200, doc.body, { 'content-type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'content-disposition': `attachment; filename="${doc.filename}"`, 'cache-control': 'no-cache' });
   }
   if ((m = p.match(/^\/api\/admin\/guides\/(user|admin)\/([a-z0-9-]+)$/)) && method === 'GET') {
     return sendJson(req, res, 200, getGuide(m[1], m[2], { admin: whoNow && whoNow.role === 'admin' }));

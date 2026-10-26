@@ -33,8 +33,10 @@ only difference from count day is the name on it: **Training count — not real 
 | A screen | the break-room TV or a projector, for the film, the deck and then the Dashboard |
 | Tape | the labels go on a wall, a whiteboard or two tables pushed together |
 
-The deck's second-to-last slide, *The buttons, on one page*, prints for the wall of the break
-room. The cycle-count films (`scanner-training-cycle-en.mp4`, `-es.mp4`) are for the people who
+Everything printed here is also a Word document, to edit in the site's own words before printing:
+the **⬇ .docx** buttons on the Classroom training card for the wall, the cards and the roster, and
+**⬇ Word** beside this guide on the User guide page. The deck's second-to-last slide, *The buttons,
+on one page*, prints for the wall of the break room. The cycle-count films (`scanner-training-cycle-en.mp4`, `-es.mp4`) are for the people who
 will do cycle counts, not for count day.
 
 ## 2 — The day before

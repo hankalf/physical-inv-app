@@ -10,7 +10,7 @@
  */
 import { chromium } from 'playwright-core';
 import { spawn } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -45,11 +45,26 @@ try {
   await pdf('/api/admin/training/print/wall?part=key', 'training-wall-trainers-key.pdf');
   await pdf('/api/admin/training/print/pocket-card?lang=en', 'scanner-pocket-card-en.pdf');
   await pdf('/api/admin/training/print/pocket-card?lang=es', 'scanner-pocket-card-es.pdf');
+  await pdf('/api/admin/training/print/roster?x=1', 'training-roster.pdf');
+  /* the same pieces as Word documents, to edit */
+  const file = async (path, name) => {
+    const r = await fetch(`${BASE}${path}`, { headers: { authorization: 'Bearer ' + tok } });
+    if (!r.ok) throw new Error(`${path}: ${r.status}`);
+    writeFileSync(join(OUT, name), Buffer.from(await r.arrayBuffer()));
+    console.log(`${join(OUT, name)} written`);
+  };
+  await file('/api/admin/training/print/pocket-card.docx?lang=en', 'scanner-pocket-card-en.docx');
+  await file('/api/admin/training/print/pocket-card.docx?lang=es', 'scanner-pocket-card-es.docx');
+  await file('/api/admin/training/print/wall.docx', 'training-wall.docx');
+  await file('/api/admin/training/roster.docx', 'training-roster.docx');
+  await file('/api/admin/guides/admin/run-the-training-day.docx', 'run-the-training-day.docx');
   const raw = process.env.TEAMS || '';
   const teams = (raw && existsSync(raw) ? readFileSync(raw, 'utf8') : raw).split(/[\s,;]+/).filter(Boolean);
   if (teams.length) {
     await pdf(`/api/admin/training/print/pocket-card?lang=en&teams=${encodeURIComponent(teams.join(','))}`, 'scanner-pocket-cards-two-sided-en.pdf');
     await pdf(`/api/admin/training/print/pocket-card?lang=es&teams=${encodeURIComponent(teams.join(','))}`, 'scanner-pocket-cards-two-sided-es.pdf');
+    await file(`/api/admin/training/print/pocket-card.docx?lang=en&teams=${encodeURIComponent(teams.join(','))}`, 'scanner-pocket-cards-two-sided-en.docx');
+    await file(`/api/admin/training/print/pocket-card.docx?lang=es&teams=${encodeURIComponent(teams.join(','))}`, 'scanner-pocket-cards-two-sided-es.docx');
     console.log(`${teams.length} two-sided cards`);
   }
 } finally {
