@@ -112,6 +112,7 @@ const [wallPage] = await Promise.all([page.context().waitForEvent('page'), page.
 await wallPage.waitForLoadState();
 check('🖨 Print the wall opens the labels', /Training wall/.test(await wallPage.title()) && (await wallPage.$$('.label.rack')).length === 18);
 await wallPage.close();
+await page.$eval('#rosterPanel', (el) => { el.open = true; }); await page.waitForTimeout(200);
 check('The roster is on the card: a row per employee, the summary counting the trained', (await page.$$('#rosterTable tbody tr[data-badge]')).length >= 2 && /1 of \d+ trained/.test(clean(await page.textContent('#rosterSummary'))), clean(await page.textContent('#rosterSummary')));
 await page.check('#rosterTable tr[data-badge="E9001"] input'); await page.waitForTimeout(600);
 check('…tick a box and it is kept, with when and by whom', /2 of \d+ trained/.test(clean(await page.textContent('#rosterSummary'))) && /Dana|DANA|site admin|admin/i.test(clean(await page.textContent('#rosterTable tr[data-badge="E9001"]'))), clean(await page.textContent('#rosterTable tr[data-badge="E9001"]')));

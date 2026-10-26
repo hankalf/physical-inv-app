@@ -1219,6 +1219,7 @@
      over the page. The same step has to be up for a moment before it shows. */
   let proposed = { key: '', since: 0 };
   const SETTLE_MS = 350;
+  let lastTargetY = 0;            // where the lit target sat on the page, to notice the page moving under it
   function placeCoach(t) {
     const box = $('coach');
     // switching off, or nothing to point at: at once - the wait is only between two live tips
@@ -1240,12 +1241,22 @@
       $('coachText').innerHTML = t.text;
       // bring it into the middle of the screen when it is off the screen, or under the sticky header
       const r = t.target.getBoundingClientRect();
+      lastTargetY = r.top + window.scrollY;
       if (r.top < HEAD() + 8 || r.bottom > window.innerHeight - 40) { t.target.scrollIntoView({ block: 'center', behavior: 'smooth' }); settleUntil = Date.now() + 700; }
     } else if (t.target !== lastTarget) {
       // the sheet was redrawn under the same step: light the new element, not the one that went
       if (lastTarget) lastTarget.classList.remove('spot');
       t.target.classList.add('spot');
       lastTarget = t.target;
+    } else {
+      /* the page grew above the target (a card filled in late) and pushed it off the screen:
+         follow it once - the person's own scrolling moves the screen, not the target */
+      const r = t.target.getBoundingClientRect();
+      const y = r.top + window.scrollY;
+      if (Math.abs(y - lastTargetY) > 24) {
+        lastTargetY = y;
+        if (r.top < HEAD() + 8 || r.bottom > window.innerHeight - 40) { t.target.scrollIntoView({ block: 'center', behavior: 'smooth' }); settleUntil = Date.now() + 700; }
+      }
     }
     box.hidden = false;
     const r = t.target.getBoundingClientRect();
