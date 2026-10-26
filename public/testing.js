@@ -684,8 +684,22 @@
   const trainPrint = (path) => window.open(`${path}${path.includes('?') ? '&' : '?'}t=${encodeURIComponent(api.token)}`, '_blank');
   $('btnTrainWall').onclick = () => trainPrint('/api/admin/training/print/wall?size=big');
   $('btnTrainWallSmall').onclick = () => trainPrint('/api/admin/training/print/wall?size=small');
-  $('btnTrainCardEn').onclick = () => trainPrint('/api/admin/training/print/pocket-card?lang=en');
-  $('btnTrainCardEs').onclick = () => trainPrint('/api/admin/training/print/pocket-card?lang=es');
+  /* the pocket cards: a team number per line puts each person's team card on the back */
+  const trainTeams = () => $('fTrainTeams').value.split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean);
+  const cardUrl = (lang) => `/api/admin/training/print/pocket-card?lang=${lang}${trainTeams().length ? `&teams=${encodeURIComponent(trainTeams().join(','))}` : ''}`;
+  const countTeams = () => { const n = trainTeams().length; $('trainTeamsCount').textContent = n ? `${n} card${n === 1 ? '' : 's'}, ${Math.ceil(n / 4) * 2} pages` : ''; };
+  $('fTrainTeams').addEventListener('input', countTeams);
+  $('btnTrainTeamsCrew').onclick = async () => {
+    try {
+      const people = await api.json('/api/admin/people');
+      const lines = [];
+      for (const t of (people.teams || []).sort((a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true }))) for (let i = 0; i < Math.max(1, (t.members || []).length); i++) lines.push(t.name);
+      $('fTrainTeams').value = lines.join('\n');
+      countTeams();
+    } catch (err) { msg($('trainMsg'), 'err', err.message); }
+  };
+  $('btnTrainCardEn').onclick = () => trainPrint(cardUrl('en'));
+  $('btnTrainCardEs').onclick = () => trainPrint(cardUrl('es'));
 
   async function refresh() {
     refreshTraining().catch(() => {});

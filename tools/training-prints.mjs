@@ -5,10 +5,12 @@
  * throwaway copy of the app so nothing touches a real database.
  *
  *   node tools/training-prints.mjs      -> docs/training/print/*.pdf
+ *   TEAMS=S1-DS01,S1-DS01,S2-RT05 (or TEAMS=a-file.txt, one per line) also renders the pocket
+ *   cards two-sided, each person's team card on the back.
  */
 import { chromium } from 'playwright-core';
 import { spawn } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -43,6 +45,13 @@ try {
   await pdf('/api/admin/training/print/wall?part=key', 'training-wall-trainers-key.pdf');
   await pdf('/api/admin/training/print/pocket-card?lang=en', 'scanner-pocket-card-en.pdf');
   await pdf('/api/admin/training/print/pocket-card?lang=es', 'scanner-pocket-card-es.pdf');
+  const raw = process.env.TEAMS || '';
+  const teams = (raw && existsSync(raw) ? readFileSync(raw, 'utf8') : raw).split(/[\s,;]+/).filter(Boolean);
+  if (teams.length) {
+    await pdf(`/api/admin/training/print/pocket-card?lang=en&teams=${encodeURIComponent(teams.join(','))}`, 'scanner-pocket-cards-two-sided-en.pdf');
+    await pdf(`/api/admin/training/print/pocket-card?lang=es&teams=${encodeURIComponent(teams.join(','))}`, 'scanner-pocket-cards-two-sided-es.pdf');
+    console.log(`${teams.length} two-sided cards`);
+  }
 } finally {
   if (browser) await browser.close();
   srv.kill();

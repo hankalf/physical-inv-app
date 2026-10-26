@@ -46,6 +46,10 @@ const svgs = (wall.match(/<svg/g) || []).length;
 check('The wall prints every rack label, pallet label, team card and badge as a barcode', svgs === 18 + 18 + 3 + 8 && /T01A001/.test(wall) && /TRN-9999/.test(wall) && /S1-DS01/.test(wall) && /TRN-01/.test(wall) && /Marcus Obi/.test(wall), `${svgs} barcodes`);
 check('…with the torn label, the two-label skid and the trainer\'s key', /TORN|class="torn"/.test(wall) && /ONE OF TWO ON THIS SKID/.test(wall) && /trainer's key/.test(wall) && /Hang under rack <b>T01A006<\/b>/.test(wall));
 check('Small labels for a desk, and one part at a time', /class="small"/.test(await text('/api/admin/training/print/wall?size=small')) && !/Rack labels/.test(await text('/api/admin/training/print/wall?part=teams')));
+const two = await text('/api/admin/training/print/pocket-card?lang=en&teams=S1-DS01,S1-DS01,S1-DS02,INV,S2-RT05');
+const backs = [...two.matchAll(/class="pc back" data-team="([^"]+)"/g)].map((m) => m[1]);
+check('With a team number per person, every sheet of fronts is followed by its backs, mirrored for a duplex print', two.split('class="sheet page fronts"').length === 3 && backs.join() === 'S1-DS01,S1-DS01,INV,S1-DS02,S2-RT05' && /class="pc back blank"/.test(two) && /data-code="S2-RT05"/.test(two) && /1ST SHIFT/.test(two) && /2ND SHIFT/.test(two), backs.join());
+check('…teams=crew takes one card per person from Teams & crew', [...(await text('/api/admin/training/print/pocket-card?lang=es&teams=crew')).matchAll(/class="pc back" data-team="([^"]+)"/g)].map((m) => m[1]).sort().join() === 'S1-DS01,S1-DS01,S1-DS01,S1-DS02,S1-DS02,S1-DS02,S2-DS01,S2-DS01');
 check('The pocket card prints in English and Spanish, four to a page', (await text('/api/admin/training/print/pocket-card?lang=en')).split('class="pc"').length === 5 && /Escanea la etiqueta del RACK/.test(await text('/api/admin/training/print/pocket-card?lang=es')));
 
 /* ---------------- a real scanner walks the wall ---------------- */

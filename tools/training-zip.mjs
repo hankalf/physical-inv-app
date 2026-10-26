@@ -28,6 +28,8 @@ const FILES = [
   ['3 The wall/training-wall-trainers-key.pdf', join(T, 'print', 'training-wall-trainers-key.pdf')],
   ['4 Pocket cards/scanner-pocket-card-en.pdf', join(T, 'print', 'scanner-pocket-card-en.pdf')],
   ['4 Pocket cards/scanner-pocket-card-es.pdf', join(T, 'print', 'scanner-pocket-card-es.pdf')],
+  // the two-sided cards, team numbers on the back, when training-prints.mjs was given the crew's teams
+  ...['en', 'es'].map((l) => [`4 Pocket cards/scanner-pocket-cards-two-sided-${l}.pdf`, join(T, 'print', `scanner-pocket-cards-two-sided-${l}.pdf`)]).filter(([, src]) => existsSync(src)),
   ['5 Trainer/run-the-training-day.pdf', join(ROOT, 'docs', 'guides', 'run-the-training-day.pdf')],
   ['5 Trainer/run-the-training-day.md', join(ROOT, 'docs', 'guides', 'run-the-training-day.md')],
   ['5 Trainer/set-up-second-and-third-counts.pdf', join(ROOT, 'docs', 'guides', 'set-up-second-and-third-counts.pdf')],
@@ -46,7 +48,7 @@ writeFileSync(join(top, 'START HERE.txt'), [
   '1 Films         The scanner lesson as a film, 1080p, about ten minutes. Play the full-count film in the room\'s language first.',
   '2 Slides        The same lesson as slides, English and Spanish, narration in the speaker notes. Slide "The buttons, on one page" prints for the break room.',
   '3 The wall      Print "training-wall-labels-big.pdf" one label per page and hang it in the order the trainer\'s key gives. Real scanners read these.',
-  '4 Pocket cards  Four to a page, one per person, English and Spanish. Cut along the lines.',
+  '4 Pocket cards  Four to a page, one per person, English and Spanish. Cut along the lines. The "two-sided" files carry each person\'s team card on the back: print double-sided, flipped on the long edge.',
   '5 Trainer       The run sheet: the day before, the session minute by minute, every spot on the wall. Plus the second-count guides.',
   '',
   'The wall counts into the app\'s training count: Testing Suite -> Classroom training -> Set up the training count (an admin, the day before).',

@@ -77,7 +77,7 @@ function systemsView(req) {
 }
 import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, unlockPlace, PER_LOGIN, PER_PLACE } from './routes/login-limit.js';
 import { recordAccess, accessMap, lookupPending } from './routes/access-map.js';
-import { ensureTraining, resetTraining, removeTraining, trainingStatus, wallLabels, pocketCard } from './routes/training.js';
+import { ensureTraining, resetTraining, removeTraining, trainingStatus, wallLabels, pocketCard, crewTeamList } from './routes/training.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards, barcodeBook, teamCodes } from './routes/printing.js';
 import {
@@ -1216,7 +1216,10 @@ async function handleAdmin(req, res, url, m) {
       return send(req, res, 200, wallLabels({ size: url.searchParams.get('size') || 'big', part: url.searchParams.get('part') || 'all' }), { 'content-type': 'text/html; charset=utf-8' });
     }
     if (p === '/api/admin/training/print/pocket-card') {
-      return send(req, res, 200, pocketCard({ lang: url.searchParams.get('lang') || 'en' }), { 'content-type': 'text/html; charset=utf-8' });
+      /* ?teams=S1-DS01,S1-DS01,... puts each person's team card on the back; ?teams=crew takes them from Teams & crew */
+      const raw = url.searchParams.get('teams') || '';
+      const teams = raw === 'crew' ? crewTeamList() : raw.split(/[\s,;]+/).filter(Boolean);
+      return send(req, res, 200, pocketCard({ lang: url.searchParams.get('lang') || 'en', teams }), { 'content-type': 'text/html; charset=utf-8' });
     }
     throw httpError(404, 'unknown training endpoint');
   }

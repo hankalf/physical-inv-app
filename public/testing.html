@@ -343,6 +343,13 @@
               <div class="auto"><button class="fit" id="btnTrainCardEn">🖨 Pocket cards · English</button></div>
               <div class="auto"><button class="fit" id="btnTrainCardEs">🖨 Tarjetas · Español</button></div>
             </div>
+            <div class="inline" style="margin-top:8px; align-items:flex-start">
+              <div style="flex:1 1 320px; max-width:520px">
+                <label for="fTrainTeams">Team numbers on the back of the pocket cards — one line per person, one card each (leave empty for fronts only)</label>
+                <textarea id="fTrainTeams" rows="3" placeholder="S1-DS01&#10;S1-DS01&#10;S1-DS02&#10;INV" style="width:100%; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px"></textarea>
+                <div class="hint" style="margin-top:4px">Each sheet of four fronts is followed by its backs, mirrored: print double-sided, flipped on the long edge. <button class="sm" id="btnTrainTeamsCrew" type="button">Fill from Teams &amp; crew</button> <span id="trainTeamsCount" class="muted"></span></div>
+              </div>
+            </div>
             <div class="inline" style="margin-top:8px">
               <div class="auto"><button class="fit" id="btnTrainReset">Reset for the next class</button></div>
               <div class="auto"><button class="fit danger" id="btnTrainRemove">Remove the training count</button></div>

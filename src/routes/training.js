@@ -330,23 +330,72 @@ const CARD = {
     offline: '¿SIN CONEXIÓN arriba? Sigue contando. Las líneas se envían solas cuando vuelve la señal.',
   },
 };
-export function pocketCard({ lang = 'en' } = {}) {
-  const c = CARD[lang === 'es' ? 'es' : 'en'];
-  const card = `
+/**
+ * The pocket card: the steps, the sign-on, the offline rule, the five rules and
+ * the buttons, four to a Letter page. With `teams` - one team number per card,
+ * one card per person - every sheet of fronts is followed by a sheet of backs:
+ * that person's team card (the number as a QR and as a Code 128 barcode, the
+ * kind the rack labels use), mirrored so a duplex print on the long edge puts
+ * each back behind its front.
+ */
+export function pocketCard({ lang = 'en', teams = [] } = {}) {
+  const es = lang === 'es';
+  const c = CARD[es ? 'es' : 'en'];
+  const front = `
     <div class="pc">
       <div class="pch">${esc(c.title)}</div>
       <ol class="steps">${c.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
       <div class="pcs">${esc(c.signon)}</div>
       <div class="pcs off">${esc(c.offline)}</div>
-      <div class="pct">${lang === 'es' ? 'Las cinco reglas' : 'The five rules'}</div>
+      <div class="pct">${es ? 'Las cinco reglas' : 'The five rules'}</div>
       <ul class="rules">${c.rules.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>
-      <div class="pct">${lang === 'es' ? 'Los botones' : 'The buttons'}</div>
+      <div class="pct">${es ? 'Los botones' : 'The buttons'}</div>
       <table class="btns">${c.buttons.map(([b, w]) => `<tr><td><b>${esc(b)}</b></td><td>${esc(w)}</td></tr>`).join('')}</table>
     </div>`;
-  return `<!doctype html><html lang="${lang === 'es' ? 'es' : 'en'}"><head><meta charset="utf-8"><title>${esc(c.title)}</title><style>
+  const known = new Map(listTeams().map((t) => [String(t.name).toUpperCase(), t]));
+  const shiftWord = (name) => {
+    const t = known.get(name);
+    const sh = t && t.shift ? t.shift : /^S1/i.test(name) ? '1' : /^S2/i.test(name) ? '2' : '';
+    return sh === '1' ? (es ? '1er turno' : '1st shift') : sh === '2' ? (es ? '2do turno' : '2nd shift') : '';
+  };
+  const back = (name) => !name ? '<div class="pc back blank"></div>' : `
+    <div class="pc back" data-team="${esc(name)}">
+      <div class="kicker">${es ? 'TARJETA DEL EQUIPO' : 'TEAM CARD'}${shiftWord(name) ? ` · ${esc(shiftWord(name)).toUpperCase()}` : ''}</div>
+      <div class="qr" data-code="${esc(name)}"></div>
+      <div class="tname">${esc(name)}</div>
+      <div class="bars">${barcodeSvg(name, { module: 0.36, height: 9, quiet: 3, showText: false })}</div>
+      <div class="how">${es ? 'Escanea cualquiera de los dos códigos al entrar, en <b>Número de equipo</b>' : 'Scan either code at sign-on, in <b>Team number</b>'}</div>
+      <div class="who">${es ? 'Nombre' : 'Name'}: ______________________</div>
+    </div>`;
+  const list = teams.map((t) => String(t || '').trim().toUpperCase()).filter(Boolean);
+  let sheets;
+  if (!list.length) sheets = `<div class="sheet">${front}${front}${front}${front}</div>`;
+  else {
+    const pages = [];
+    for (let i = 0; i < list.length; i += 4) {
+      const four = [list[i], list[i + 1], list[i + 2], list[i + 3]];
+      /* the backs mirrored left-right: flipped on the long edge, B lands behind A */
+      const mirrored = [four[1], four[0], four[3], four[2]];
+      pages.push(`<div class="sheet page fronts">${front}${front}${front}${front}</div>`);
+      pages.push(`<div class="sheet page backs">${mirrored.map(back).join('')}</div>`);
+    }
+    sheets = pages.join('');
+  }
+  return `<!doctype html><html lang="${es ? 'es' : 'en'}"><head><meta charset="utf-8"><title>${esc(c.title)}</title><style>
   @page { size: letter portrait; margin: 8mm; }
   body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #000; background: #fff; margin: 0; padding: 8px; }
   .sheet { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+  /* a sheet that is a page: two rows of fixed-height cards, so the backs line up behind the fronts (and the rows never stretch to the page) */
+  .page { page-break-after: always; break-after: page; grid-auto-rows: 123mm; align-content: start; gap: 5mm 6mm; }
+  .page .pc { height: 123mm; box-sizing: border-box; overflow: hidden; font-size: 8.4pt; line-height: 1.22; padding: 4mm 5mm 3mm; }
+  .page .pch { font-size: 12.5pt; margin-bottom: 2px; }
+  .page .steps { font-size: 10.5pt; margin: 2px 0 4px; }
+  .page .steps li { margin: 1px 0; }
+  .page .pcs { font-size: 8pt; margin: 2px 0; }
+  .page .pct { margin: 5px 0 1px; font-size: 7.5pt; }
+  .page table.btns { font-size: 7.6pt; }
+  .page table.btns td { padding: 1px 3px; }
+  .page:last-child { page-break-after: auto; break-after: auto; }
   .pc { border: 1.5px dashed #777; border-radius: 8px; padding: 6mm 6mm 5mm; break-inside: avoid; page-break-inside: avoid; font-size: 9.5pt; line-height: 1.3; }
   .pch { font-size: 14pt; font-weight: 900; margin-bottom: 4px; }
   .steps { margin: 4px 0 6px; padding-left: 20px; font-size: 12pt; font-weight: 800; }
@@ -358,10 +407,38 @@ export function pocketCard({ lang = 'en' } = {}) {
   .rules li { margin: 1px 0; }
   table.btns { border-collapse: collapse; width: 100%; font-size: 8.8pt; }
   table.btns td { padding: 2px 4px; border-bottom: 1px solid #ddd; vertical-align: top; }
+  /* the back: the team card, centred, the same height as the front */
+  .backs .pc { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .backs .pc.blank { border-color: transparent; }
+  .kicker { font-size: 9pt; font-weight: 800; letter-spacing: .14em; color: #444; margin-bottom: 8px; }
+  .qr { display: flex; justify-content: center; align-items: center; min-height: 170px; }
+  .tname { font-size: 30pt; font-weight: 900; letter-spacing: .02em; margin-top: 8px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .bars { margin: 6px auto 0; width: 58mm; }
+  .bars svg { display: block; width: 100%; height: auto; }
+  .how { font-size: 8.5pt; color: #555; margin-top: 6px; }
+  .who { font-size: 10pt; margin-top: 12px; color: #222; }
   .noprint { margin-bottom: 8px; padding: 6px 12px; }
-  @media print { .noprint { display: none; } }
+  @media print { .noprint { display: none; } body { padding: 0; } }
 </style></head><body>
 <button class="noprint" onclick="window.print()">Print</button>
-<div class="sheet">${card}${card}${card}${card}</div>
+${list.length ? `<div class="noprint" style="font-size:12px;color:#444;margin-bottom:8px">${list.length} ${es ? 'tarjetas · imprime a doble cara, volteando por el lado largo: el equipo de cada persona queda atrás de su tarjeta' : 'cards · print double-sided, flipped on the long edge: each person’s team card lands on the back of their pocket card'}</div>` : ''}
+${sheets}
+<script src="/vendor/qrcode.min.js"></script>
+<script>
+  for (const box of document.querySelectorAll('.qr')) {
+    try { new QRCode(box, { text: box.dataset.code, width: 170, height: 170, correctLevel: QRCode.CorrectLevel.M }); }
+    catch (e) { box.textContent = 'QR unavailable'; }
+  }
+</script>
 </body></html>`;
+}
+
+/** One team number per person on Teams & crew - every member of every team, and at least one card a team. */
+export function crewTeamList() {
+  const out = [];
+  for (const t of listTeams().sort((a, b) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true }))) {
+    const n = Math.max(1, (t.members || []).length);
+    for (let i = 0; i < n; i++) out.push(String(t.name));
+  }
+  return out;
 }

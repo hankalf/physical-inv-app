@@ -26,7 +26,7 @@ only difference from count day is the name on it: **Training count — not real 
 | The slide deck, English and Spanish | `docs/training/scanner-training-full-en.pptx` and `-es.pptx`, narration in the speaker notes |
 | The wall: 18 rack labels, 18 pallet labels, 3 team cards, 8 badges | **Testing Suite → Classroom training → 🖨 Print the wall** |
 | The trainer's key | the last pages of the same print: every spot, what the report says, what hangs there, the lesson |
-| Pocket cards, four to a page | **🖨 Pocket cards · English** and **🖨 Tarjetas · Español** — one per person, laminated if you can |
+| Pocket cards, four to a page | **🖨 Pocket cards · English** and **🖨 Tarjetas · Español** — one per person, laminated if you can. Paste the team numbers into the box above the buttons, one line per person, and each card gets that person's **team card** (QR and barcode) on the back |
 | Scanners | three or four, charged, on the site's Wi-Fi, the app open at the sign-on screen |
 | A screen | the break-room TV or a projector, for the film, the deck and then the Dashboard |
 | Tape | the labels go on a wall, a whiteboard or two tables pushed together |
@@ -46,7 +46,11 @@ will do cycle counts, not for count day.
 2. **🖨 Print the wall (big labels)**. One label per page: rack labels first, then pallet labels,
    then the team cards and badges, then the trainer's key. **🖨 Small labels** puts two to a page
    for a table-top version.
-3. **🖨 Pocket cards**, English and Spanish, one card per person. Cut along the lines.
+3. **🖨 Pocket cards**, English and Spanish, one card per person. For the real teams, paste the
+   team numbers into the box on the card first — one line per person, so a team of three is three
+   lines — or press **Fill from Teams & crew**. Every sheet of four fronts is then followed by its
+   backs, mirrored: print double-sided, flipped on the long edge, and each person's team card lands
+   on the back of their pocket card. Cut along the lines.
 4. Open the Dashboard with the training count picked at the top and check **Team plan** shows
    S1-DS01 counting T01 and S1-DS02 counting T02. Nothing else to set.
 5. Sign one scanner on yourself — team card S1-DS01, badge TRN-01 — and scan the first two spots

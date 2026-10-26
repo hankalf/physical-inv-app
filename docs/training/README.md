@@ -23,10 +23,13 @@ label, pallet label, team card and badge as a barcode a real MC9300 reads, with 
 among them — two pallets in one spot, an empty spot, a short count, a pallet in the wrong spot, a
 pallet on no report, one skid wearing two labels, a torn label — and the trainer's key at the back.
 *🖨 Pocket cards* print the steps, the sign-on, the offline rule and the five rules four to a page,
-in English and Spanish. *Reset for the next class* clears what a class counted; *Remove* takes it all
+in English and Spanish — and with a team number per person pasted into the box, each person's team
+card (QR and barcode) on the back, mirrored for a double-sided print. *Reset for the next class* clears what a class counted; *Remove* takes it all
 away before count day. The run sheet above walks the whole session.
 
-**The bundle.** `node tools/training-zip.mjs` puts all of it — the four films, the two decks, the
+**The bundle.** `node tools/training-prints.mjs` renders the wall and the pocket cards to PDFs
+(`TEAMS=S1-DS01,S1-DS01,...` or `TEAMS=path/to/list.txt` adds the two-sided pocket cards with those
+team numbers on the back); `node tools/training-zip.mjs` puts all of it — the four films, the two decks, the
 wall and pocket-card PDFs, the run sheet and this page — in one `training-material.zip` to hand to
 whoever runs the training.
 
