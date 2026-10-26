@@ -73,6 +73,20 @@ check('Team plan: a team from Teams & crew with nothing queued has its own row',
 await box.locator('button[data-queue-for="34"]').click();
 check('…Queue aisles for this team fills the form with it, and puts the cursor on the aisles', (await page.inputValue('#fAssignTeam')) === '34' && await page.evaluate(() => document.activeElement && document.activeElement.id === 'fAssignAisles'));
 check('…and the Team box offers every team by name', (await page.$$eval('#planTeamNames option', (o) => o.map((x) => x.value))).join() === '31,32,33,34');
+/* quick assign: the team chip is picked too, every level ticked (nobody on team 34 yet), and the aisles are clicked in order */
+check('Quick assign: Queue aisles for this team picks the team chip, with every level ticked', await page.$eval('#qaTeams .qa-team[data-team="34"]', (b) => b.classList.contains('selected')) && (await page.$$eval('#qaLevels .lv.selected', (b) => b.map((x) => x.dataset.level))).join('') === 'ABCDEF' && /Pick the aisles for team 34/.test(await page.textContent('#btnQuickQueue')), clean(await page.textContent('#btnQuickQueue')));
+check('…the aisle grid says who has each aisle', /team 31 counting/.test(clean(await page.textContent('#qaAisles .qa-aisle[data-aisle="P11"]'))) && /queued · team 31/.test(clean(await page.textContent('#qaAisles .qa-aisle[data-aisle="P15"]'))) && /2 bins/.test(clean(await page.textContent('#qaAisles .qa-aisle[data-aisle="P12"]'))), clean(await page.textContent('#qaAisles')));
+await page.click('#qaLevels .lv[data-level="D"]'); await page.click('#qaLevels .lv[data-level="E"]'); await page.click('#qaLevels .lv[data-level="F"]');
+await page.click('#qaAisles .qa-aisle[data-aisle="P13"]'); await page.click('#qaAisles .qa-aisle[data-aisle="P12"]');
+check('…the aisles are numbered in the order they were clicked, and the button says what it will do', (await page.textContent('#qaAisles .qa-aisle[data-aisle="P13"] .ord')) === '1' && (await page.textContent('#qaAisles .qa-aisle[data-aisle="P12"] .ord')) === '2' && /Queue P13 → P12 for team 34 · levels A.C/.test(clean(await page.textContent('#btnQuickQueue'))), clean(await page.textContent('#btnQuickQueue')));
+await page.click('#qaAisles .qa-aisle[data-aisle="P13"]');
+check('…click an aisle again to take it off', !(await page.$('#qaAisles .qa-aisle[data-aisle="P13"] .ord')) && (await page.textContent('#qaAisles .qa-aisle[data-aisle="P12"] .ord')) === '1');
+await page.click('#qaFrom button[data-dir="down"]');
+await page.click('#btnQuickQueue'); await page.waitForTimeout(1200);
+const q34 = (await get(`/api/admin/sessions/${S}/assignments`)).filter((a) => a.team === '34');
+check('Queue: team 34 has P12 on A-C from the far end, and the message says so', q34.length === 1 && q34[0].aisle === 'P12' && q34[0].levels === 'ABC' && q34[0].direction === 'down' && /queued P12 \(ABC\) from the far end for team 34/.test(clean(await page.textContent('#assignMsg'))) && /P12/.test(await page.textContent('#teamList .team[data-team="34"]')), JSON.stringify(q34) + ' ' + clean(await page.textContent('#assignMsg')));
+check('…and the panel is ready for the next team, nothing picked', !(await page.$('#qaAisles .picked')) && /Pick the aisles for team 34/.test(await page.textContent('#btnQuickQueue')));
+await fetch(`${BASE}/api/admin/sessions/${S}/assignments/${q34[0].id}`, { method: "DELETE", headers: A });
 check('The plan-file tools are folded away until ⇅ Plan file is pressed', await page.$eval('#planFileRow', (el) => el.hidden));
 await page.click('#btnPlanFileTools');
 check('…and then show export, upload and the sample', !(await page.$eval('#planFileRow', (el) => el.hidden)) && await page.isVisible('#btnPlanExport'));

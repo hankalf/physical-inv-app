@@ -748,6 +748,16 @@ never reach the real Not in Location page or a scanner on the floor. **Start ove
 
 *Second counts picked: the other crew's aisle, what they keyed beside what is on the shelf, and the state of each bin.*
 
+**Classroom training.** Under the practice gun, admins have a **Classroom training** card: **Set
+up the training count** makes a real count on a warehouse that fits on a wall — 18 bins in two
+short aisles, 17 pallets on its report, three training teams and eight trainee badges — named
+*Training count — not real stock* and kept off the ERP file. **🖨 Print the wall** prints every
+rack label, pallet label, team card and badge as a barcode a real scanner reads, with a torn label,
+a two-label skid, a pallet in the wrong spot and one on no report planted among them, and the
+trainer's key at the back. **🖨 Pocket cards** print the steps and the five rules four to a page,
+in English and Spanish. **Reset for the next class** clears what a class counted; **Remove** takes
+it all away before count day. The run sheet is the guide *Run the training day*.
+
 ### Step 8c-1 — Practice data: every login's practice, for an admin
 
 **Learn → Practice data** (`/practice`) is in the sidebar for admins only. It lists every
@@ -1001,7 +1011,7 @@ questions it asks change between pallets, never mid-line.
 | Option | What it does | Suggested |
 |---|---|---|
 | **Pallet ID check** | *Validate — allow override*: a pallet not on the report asks the counter **Count it anyway? YES / NO**; YES counts it and it shows as a positive adjustment. *Validate — no overrides*: it cannot be counted. *Accept any ID*: no checking, though duplicates are still blocked. | Validate with override |
-| **Guided by aisle plan** | Teams are sent to their assigned aisle and warned when they scan a bin outside it. Off means anyone can count anything. | On for a wall-to-wall |
+| **Guided by the plan, bin by bin** | Teams are sent to their assigned aisle and warned when they scan a bin outside it. Off means anyone can count anything. | On for a wall-to-wall |
 | **Ask for comments** | Adds the optional comments step at the end of each pallet. | On |
 | **Auto second counts** | Raises a "go back and look again" task automatically when a line disagrees with the report. | On |
 | **Show on the scanners** | Untick to keep this count off the scanners' list — while it is being set up, or once the floor is done with it. The dashboards still have it, marked *not on scanners*. | On, once the lists are uploaded |

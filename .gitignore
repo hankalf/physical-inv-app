@@ -6,3 +6,4 @@ data/
 .env
 .DS_Store
 tests/screenshots/
+docs/training/training-material.zip

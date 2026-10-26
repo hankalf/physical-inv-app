@@ -82,9 +82,9 @@ export const WALL = [
   { bin: 'T02A003', report: [], wall: [],
     lesson: 'Empty.' },
   { bin: 'T02A004', report: [['TRN-2004', 'mango', 36, 'L2504'], ['TRN-2005', 'peach', 30, 'L2504']], wall: ['TRN-2004', 'TRN-2005'],
-    lesson: 'Two pallets. Have the class scan the rack of T02A005 by mistake for the second one: the scanner says it is outside the plan order and asks why.' },
+    lesson: 'Two pallets. After the first, have the class scan the rack of T02A005 by mistake and count TRN-2006 there: the scanner takes it, then Next bin points back at T02A004 (1 of 2 tags) and sends them back for TRN-2005.' },
   { bin: 'T02A005', report: [['TRN-2006', 'pine', 44, 'L2506']], wall: ['TRN-2006'],
-    lesson: 'Plain — and the place to press SOS once, so the class sees the office answer on the scanner.' },
+    lesson: 'Already counted by the mistake at T02A004 — and the place to press SOS once, so the class sees the office answer on the scanner.' },
   { bin: 'T02A006', report: [['TRN-2007', 'cherry', 36, 'L2507']], wall: ['TRN-2007'],
     lesson: 'The last spot. Then Sign off this scanner, and the next trainee signs on with their own badge.' },
 ];

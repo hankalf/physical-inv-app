@@ -50,6 +50,33 @@
   #map.blueprint .aisle-label { fill: #f4f8fd; font-size: 11px; }
   #map.blueprint .bay-label { display: none; }
 
+  /* quick assign: three numbered steps and one button */
+  .qa { border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); padding: 10px 12px 12px; margin-top: 6px; display: grid; gap: 10px; }
+  .qa-h { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+  .qa-h .muted { font-size: 12px; }
+  .qa-n { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; font-weight: 800; }
+  .qa-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip-btn { border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 999px; padding: 5px 11px; font-size: 12.5px; cursor: pointer; }
+  .chip-btn:hover { border-color: var(--accent); }
+  .chip-btn.selected { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip-btn .sub { opacity: .75; font-size: 11px; margin-left: 4px; }
+  .chip-btn.lv { width: 36px; padding: 5px 0; text-align: center; font-weight: 800; }
+  .chip-btn.lv.reach { border-color: var(--ok-line); }
+  .qa-aisles { display: flex; flex-direction: column; gap: 6px; }
+  .qa-zone { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .qa-zone .zname { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); min-width: 90px; }
+  .qa-aisle { position: relative; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 5px 9px 4px; min-width: 64px; text-align: left; cursor: pointer; color: var(--text); }
+  .qa-aisle:hover { border-color: var(--accent); }
+  .qa-aisle b { font-size: 13.5px; display: block; }
+  .qa-aisle .st { font-size: 10.5px; color: var(--muted); display: block; white-space: nowrap; }
+  .qa-aisle.busy .st { color: var(--warn-text); }
+  .qa-aisle.done { opacity: .5; }
+  .qa-aisle.picked { border-color: var(--accent); background: var(--accent-dim); }
+  .qa-aisle .ord { position: absolute; top: -7px; right: -7px; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .qa-go { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .qa-go .spacer { flex: 1 1 auto; }
+  .qa-typed { margin-top: 8px; opacity: .85; }
+  .qa-typed input, .qa-typed select { font-size: 12.5px; }
   /* the planning board: the aisles not yet planned beside a column per team */
   .plan-board { display: grid; grid-template-columns: 250px 1fr; gap: 12px; margin-top: 10px; align-items: start; }
   @media (max-width: 900px) { .plan-board { grid-template-columns: 1fr; } }
@@ -288,17 +315,40 @@
 
     <div class="card" id="teamPlanCard">
       <h2>Team assignments <span class="muted" id="planSummary"></span></h2>
-      <!-- queue by hand, or drag an aisle from the list onto a team -->
-      <div class="inline" style="margin-top:4px" id="assignRow">
+      <!-- quick assign: pick a team, tick the levels, click the aisles in counting order, Queue -->
+      <div class="qa" id="quickAssign">
+        <div class="qa-step">
+          <div class="qa-h"><span class="qa-n">1</span><b>Team</b><span class="muted" id="qaTeamNote">pick one</span></div>
+          <div class="qa-chips" id="qaTeams"></div>
+        </div>
+        <div class="qa-step">
+          <div class="qa-h"><span class="qa-n">2</span><b>Levels</b><span class="muted" id="qaReach">what the team reaches is ticked for you</span></div>
+          <div class="qa-chips" id="qaLevels"></div>
+        </div>
+        <div class="qa-step">
+          <div class="qa-h"><span class="qa-n">3</span><b>Aisles, in counting order</b><span class="muted">click them in the order the team counts them; click again to take one off</span></div>
+          <div class="qa-aisles" id="qaAisles"></div>
+        </div>
+        <div class="qa-go">
+          <div class="qa-chips" id="qaFrom" title="From the far end, a second team can count the same aisle and levels as one starting at the 001 end: they meet in the middle">
+            <button type="button" class="chip-btn selected" data-dir="up">From the 001 end</button><button type="button" class="chip-btn" data-dir="down">From the far end</button>
+          </div>
+          <button type="button" class="primary" id="btnQuickQueue" disabled>Pick a team and an aisle</button>
+          <button type="button" class="ghost" id="btnQaClear">Clear</button>
+          <span class="spacer"></span>
+          <button type="button" class="fit" id="btnPlanFileTools" title="The plan as a file: export it, upload one, or start from the sample">⇅ Plan file</button>
+          <button type="button" class="fit ghost" id="btnPlanHelp" title="How the plan works" aria-label="How the plan works">?</button>
+        </div>
+      </div>
+      <!-- or type it: the same thing as text, for a long list or a plan read off a sheet -->
+      <div class="inline qa-typed" id="assignRow">
+        <div class="auto"><span class="muted">Or type it:</span></div>
         <div class="auto"><label for="fAssignTeam">Team</label><input id="fAssignTeam" class="sm" style="width:70px" placeholder="3" list="planTeamNames" autocomplete="off"></div>
-        <div><label for="fAssignAisles">Aisles, in order</label><input id="fAssignAisles" placeholder="F01, F03, F05 — or drag aisles from the list onto a team"></div>
+        <div><label for="fAssignAisles">Aisles, in order</label><input id="fAssignAisles" placeholder="F01, F03, F05"></div>
         <div class="auto"><label for="fAssignLevels">Levels</label><input id="fAssignLevels" class="sm" placeholder="A-C" required title="Which levels this team counts, by equipment: A-C on foot, D-F with the lift, A-F for every level."></div>
         <div class="auto"><label for="fAssignFrom">Start from</label>
-          <select id="fAssignFrom" class="sm" title="From the far end, a second team can count the same aisle and levels as one starting at the 001 end: they meet in the middle.">
-            <option value="up">The 001 end</option><option value="down">The far end</option></select></div>
-        <div class="auto"><button class="primary fit" id="btnAssign">Queue</button></div>
-        <div class="auto"><button class="fit" id="btnPlanFileTools" title="The plan as a file: export it, upload one, or start from the sample">⇅ Plan file</button></div>
-        <div class="auto"><button class="fit ghost" id="btnPlanHelp" title="How the plan works" aria-label="How the plan works">?</button></div>
+          <select id="fAssignFrom" class="sm"><option value="up">The 001 end</option><option value="down">The far end</option></select></div>
+        <div class="auto"><button class="fit" id="btnAssign">Queue</button></div>
       </div>
       <datalist id="planTeamNames"></datalist>
       <div class="feedback" id="assignMsg"></div>

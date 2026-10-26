@@ -13,6 +13,7 @@ The full manual is [docs/SOP.md](../SOP.md); the procedure for each job is under
 | [The ERP upload, an aisle at a time](erp-upload-by-aisle.md) | Inventory control | [PDF](erp-upload-by-aisle.pdf) |
 | [Employees, teams and gear sizes](employees-teams-and-gear.md) | Count supervisors, whoever keeps the crew list | [PDF](employees-teams-and-gear.pdf) |
 | [LIVE and TEST: switching, logins and scanners](live-and-test.md) | Admins, anyone using TEST | [PDF](live-and-test.pdf) |
+| [Run the training day](run-the-training-day.md) | Trainers and count supervisors: the printed wall, the session minute by minute, every spot's lesson, reset between classes | [PDF](run-the-training-day.pdf) |
 
 ## For users
 

@@ -18,7 +18,7 @@
  *
  *   node tools/crew-training.mjs           -> docs/training/scanner-training-en.mp4
  *   LANG_FILM=es node tools/crew-training.mjs   -> docs/training/scanner-training-es.mp4
- *   PACE=1.4 slows it further; SHOTS_ONLY=1 skips the video encode.
+ *   PACE=1.4 slows it further; SHOTS_ONLY=1 skips the video encode; HD=0 records 720p instead of 1080p.
  */
 import { chromium } from 'playwright-core';
 import { spawn, spawnSync } from 'node:child_process';
@@ -205,8 +205,13 @@ try {
   </body></html>`;
 
   browser = await chromium.launch({ executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+  /* the stage is laid out at 1280x720. The pictures for the deck are taken at 1.5x, so they stay
+     sharp on a slide; the film is recorded at the stage's size and encoded at 1080p for the
+     break-room screen (HD=0 leaves it at 720p). */
+  const HD = process.env.HD !== '0';
   const ctx = await browser.newContext({
     viewport: { width: 1280, height: 720 },
+    deviceScaleFactor: HD ? 1.5 : 1,
     recordVideo: process.env.SHOTS_ONLY ? undefined : { dir: videoDir, size: { width: 1280, height: 720 } },
   });
   await ctx.route('**/stage', (route) => route.fulfill({ contentType: 'text/html; charset=utf-8', body: STAGE }));
@@ -915,7 +920,8 @@ try {
     writeFileSync(wavPath, wav);
     const out = join(OUT, `scanner-training-${JOB}-${LANG}.mp4`);
     const ff = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', raw, '-i', wavPath, '-map', '0:v', '-map', '1:a',
-      '-c:v', 'libx264', '-preset', 'slow', '-crf', '23', '-pix_fmt', 'yuv420p', '-r', '25', '-movflags', '+faststart',
+      ...(HD ? ['-vf', 'scale=1920:1080:flags=lanczos'] : []),
+      '-c:v', 'libx264', '-preset', 'slow', '-crf', '21', '-pix_fmt', 'yuv420p', '-r', '25', '-movflags', '+faststart',
       '-c:a', 'aac', '-b:a', '96k', '-shortest', out], { stdio: 'inherit' });
     if (ff.status !== 0) throw new Error('ffmpeg failed');
     console.log(`\n${out} written - ${(statSync(out).size / 1048576).toFixed(1)} MB, ${Math.round(secs / 60 * 10) / 10} min, ${beeps.length} scans`);

@@ -146,6 +146,37 @@ pres.addSection({ title: section });
   s.addNotes(L('Welcome. Today you learn the scanner. The job is three steps, over and over: scan the rack label, scan the pallet label, type how many cases are really there. Everything else is the scanner helping you when something is unusual. The film shows the same steps slowly; these slides are the same lesson to keep.', 'Bienvenidos. Hoy aprenden el escáner. El trabajo son tres pasos, una y otra vez: escanear la etiqueta del rack, escanear la etiqueta de la tarima, escribir cuántas cajas hay de verdad. Todo lo demás es el escáner ayudándote cuando algo es diferente. El video muestra los mismos pasos despacio; estas láminas son la misma lección para conservar.'));
 }
 
+{
+  /* the agenda: seven parts, then the wall */
+  const s = pres.addSlide({ masterName: 'content', sectionTitle: section });
+  s.addText(L('Today', 'Hoy'), { placeholder: 'kicker' });
+  s.addText(L('How today goes', 'Cómo va el día de hoy'), { placeholder: 'title' });
+  const parts = [
+    [L('1 · Before you start', '1 · Antes de empezar'), L('the scanner, your language', 'el escáner, tu idioma')],
+    [L('2 · Signing on', '2 · Iniciar sesión'), L('team card, badges, your aisle', 'tarjeta del equipo, gafetes, tu pasillo')],
+    [L('3 · Counting a pallet', '3 · Contar una tarima'), L('rack · pallet · quantity', 'rack · tarima · cantidad')],
+    [L('4 · When a bin is different', '4 · Cuando la ubicación es diferente'), L('several pallets, an empty spot', 'varias tarimas, un lugar vacío')],
+    [L('5 · Labels', '5 · Etiquetas'), L('two labels, one that will not scan, a pallet nobody expected', 'dos etiquetas, una que no escanea, una tarima que nadie esperaba')],
+    [L('6 · Help and fixes', '6 · Ayuda y correcciones'), L('mistakes, messages, no Wi-Fi, SOS', 'errores, mensajes, sin Wi-Fi, SOS')],
+    [L('7 · Second counts, and finishing', '7 · Segundos conteos, y terminar'), L('counting again, handing the aisle back', 'volver a contar, entregar el pasillo')],
+  ];
+  parts.forEach(([a, b], i) => {
+    const y = 1.85 + i * 0.62;
+    s.addShape(pres.ShapeType.ellipse, { x: 0.6, y: y + 0.06, w: 0.42, h: 0.42, fill: { color: THEME.colors.accent1 }, line: { color: THEME.colors.accent1, width: 0 }, objectName: `step ${i + 1}` });
+    s.addText(String(i + 1), { x: 0.6, y: y + 0.06, w: 0.42, h: 0.42, fontSize: 14, bold: true, color: C.text1, align: 'center', valign: 'middle', margin: 0, isTextBox: true, objectName: `step ${i + 1} number` });
+    s.addText([{ text: a.replace(/^\d · /, ''), options: { bold: true, color: C.background1 } }, { text: '  ' + b, options: { color: C.accent5 } }], { x: 1.2, y, w: 7.2, h: 0.54, fontSize: 18, valign: 'middle', margin: 0, isTextBox: true, objectName: `part ${i + 1}` });
+  });
+  s.addShape(pres.ShapeType.roundRect, { x: 8.8, y: 1.85, w: 3.95, h: 4.3, fill: { color: THEME.colors.dk2 }, line: { color: THEME.colors.accent1, width: 1 }, rectRadius: 0.15, objectName: 'then box' });
+  s.addText([
+    { text: L('Then, with scanners in hand', 'Después, con el escáner en la mano'), options: { bold: true, color: C.accent1, breakLine: true, paraSpaceAfter: 8 } },
+    { text: L('The film first, ten minutes.', 'Primero el video, diez minutos.'), options: { breakLine: true, bullet: { indent: 14 } } },
+    { text: L('These slides, stopping at every yellow tip.', 'Estas láminas, parando en cada consejo amarillo.'), options: { breakLine: true, bullet: { indent: 14 } } },
+    { text: L('The wall: a real count on printed labels, team by team.', 'La pared: un conteo real en etiquetas impresas, equipo por equipo.'), options: { breakLine: true, bullet: { indent: 14 } } },
+    { text: L('Your pocket card to keep.', 'Tu tarjeta de bolsillo para conservar.'), options: { bullet: { indent: 14 } } },
+  ], { x: 9.0, y: 2.0, w: 3.6, h: 4.0, fontSize: 15, color: C.background2, valign: 'top', margin: 0, isTextBox: true, objectName: 'then' });
+  s.addNotes(L('Seven short parts, then everybody counts the wall with a real scanner. Questions at any time.', 'Siete partes cortas, y luego todos cuentan la pared con un escáner real. Preguntas en cualquier momento.'));
+}
+
 part(1, L('Before you start', 'Antes de empezar'), L('The scanner, its buttons, and your language.', 'El escáner, sus botones y tu idioma.'));
 content({
   title: L('This is your scanner', 'Este es tu escáner'),
@@ -402,6 +433,46 @@ content({
 
 section = L('The rules', 'Las reglas');
 pres.addSection({ title: section });
+{
+  /* do and don't, side by side */
+  const s = pres.addSlide({ masterName: 'content', sectionTitle: section });
+  s.addText(section, { placeholder: 'kicker' });
+  s.addText(L('Do · Don’t', 'Sí · No'), { placeholder: 'title' });
+  const col = (x, head, color, items, name) => {
+    s.addShape(pres.ShapeType.roundRect, { x, y: 1.85, w: 5.9, h: 4.75, fill: { color: THEME.colors.dk2 }, line: { color, width: 1.5 }, rectRadius: 0.15, objectName: `${name} box` });
+    s.addText(head, { x: x + 0.3, y: 2.0, w: 5.3, h: 0.5, fontSize: 22, bold: true, color, margin: 0, isTextBox: true, objectName: `${name} head` });
+    s.addText(items.map((t, i) => ({ text: t, options: { bullet: { indent: 16 }, paraSpaceAfter: 9, breakLine: i < items.length - 1 } })), { x: x + 0.3, y: 2.6, w: 5.3, h: 3.9, fontSize: 16, color: C.background2, valign: 'top', margin: 0, isTextBox: true, objectName: `${name} list` });
+  };
+  col(0.6, L('✓ Do', '✓ Sí'), THEME.colors.accent2, [
+    L('Read the top line of the screen before you scan', 'Lee la línea de arriba antes de escanear'),
+    L('Scan the rack label of the spot you are in, every time', 'Escanea la etiqueta del rack del lugar donde estás, cada vez'),
+    L('Count the cases; type that number', 'Cuenta las cajas; escribe ese número'),
+    L('Record empty spots: Bin is EMPTY', 'Registra los lugares vacíos: Ubicación VACÍA'),
+    L('Finish every pallet in a spot before moving on', 'Termina cada tarima del lugar antes de seguir'),
+    L('Tell your supervisor when the aisle is done', 'Avisa a tu supervisor cuando el pasillo esté terminado'),
+  ], 'do');
+  col(6.85, L('✗ Don’t', '✗ No'), THEME.colors.accent3, [
+    L('Type what the label says the pallet should hold', 'Escribas lo que la etiqueta dice que debería haber'),
+    L('Skip a pallet because the label is torn or iced', 'Te saltes una tarima porque la etiqueta está rota o con hielo'),
+    L('Scan the rack label next door because it is closer', 'Escanees la etiqueta del rack de al lado porque está más cerca'),
+    L('Jump around the aisle — follow Next bin', 'Brinques por el pasillo — sigue Siguiente ubicación'),
+    L('Stop counting when the Wi-Fi drops', 'Dejes de contar cuando se cae el Wi-Fi'),
+    L('Guess. Ask your lead, or press SOS', 'Adivines. Pregunta a tu líder, o toca SOS'),
+  ], 'dont');
+  s.addNotes(L('Go down both columns. Every line on the right is a mistake we have seen on a count day.', 'Recorre las dos columnas. Cada línea de la derecha es un error que hemos visto en un día de conteo.'));
+}
+content({
+  title: L('Now you: the wall', 'Ahora tú: la pared'),
+  lines: [
+    L('Eighteen spots on paper, two short aisles — a real count in the app, on stock that is not real.', 'Dieciocho lugares en papel, dos pasillos cortos — un conteo real en la app, con mercancía que no es real.'),
+    [L('Sign on with the ', 'Entra con la '), { text: L('team card', 'tarjeta del equipo'), bold: true }, L(' and each ', ' y cada '), { text: L('badge', 'gafete'), bold: true }, L(' from the table. Count your aisle, spot by spot.', ' de la mesa. Cuenta tu pasillo, lugar por lugar.')],
+    L('Everything from these slides is on the wall somewhere. The office screen is on the TV.', 'Todo lo de estas láminas está en la pared en algún lugar. La pantalla de la oficina está en la TV.'),
+  ],
+  tip: L('Read the top line out loud before you scan', 'Lee la línea de arriba en voz alta antes de escanear'),
+  labels: ['label-rack', 'label-pallet'],
+  shots: ['next-bin'],
+  notes: L('The wall is the training count from the Testing Suite. One person scans at each spot; the rest watch the Dashboard. The run sheet is the guide Run the training day.', 'La pared es el conteo de entrenamiento del Testing Suite. Una persona escanea en cada lugar; los demás miran el Dashboard. La hoja de ruta es la guía Run the training day.'),
+});
 content({
   title: L('The five rules', 'Las cinco reglas'),
   plain: true,

@@ -387,7 +387,7 @@ block, so two teams are never working the same racking from both sides.
 | Option | What it does | Suggested for a first count |
 |---|---|---|
 | **Pallet ID check** | *Validate — allow override with reason*: a pallet not on the report asks **Count it anyway?** | Validate — allow override with reason |
-| **Guided by aisle plan** | Sends each team to its aisle, and warns when it scans outside it | On |
+| **Guided by the plan, bin by bin** | Sends each team to its aisle, shows the next bin on the gun, and warns when it scans outside it | On |
 | **Ask for comments** | The comments step after each pallet | On |
 | **Second counts → Raise them automatically** | Sends a team back when a line disagrees with the report | On |
 | **Over N units** | A smaller difference raises no second count | 2 to 5 |

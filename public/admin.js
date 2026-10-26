@@ -451,6 +451,91 @@
      far it is, next, held while another team has the racking, or done.
      Aisles are dragged from the list onto a team, up and down a team's queue,
      across to another team, or back to the list to come off the plan. */
+  /* ---- quick assign: a team, its levels, the aisles in order, one button ---- */
+  const qa = { team: '', levels: new Set(), dir: 'up', aisles: [], teams: new Map(), overview: [], rows: [] };
+  const qaLevelsText = () => { const l = [...'ABCDEF'].filter((c) => qa.levels.has(c)).join(''); return levelsBox(l); };
+  function qaRender() {
+    const can = api.can('assign');
+    const teamsBox = $('qaTeams');
+    teamsBox.innerHTML = '';
+    const names = [...new Set([...qa.teams.keys(), ...qa.rows.map((r) => String(r.team))])].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    for (const name of names) {
+      const ct = qa.teams.get(name);
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip-btn qa-team' + (qa.team === name ? ' selected' : ''); b.dataset.team = name; b.disabled = !can;
+      b.append(`Team ${name}`);
+      const sub = document.createElement('span'); sub.className = 'sub';
+      sub.textContent = ct ? [ct.reach ? `reaches ${ct.reachLabel}` : 'reach unknown', ct.people ? `${ct.people} ${ct.people === 1 ? 'person' : 'people'}` : 'nobody on it'].join(' · ') : 'not on Teams & crew';
+      b.appendChild(sub);
+      b.onclick = () => { qa.team = qa.team === name ? '' : name; qa.levels = new Set(ct && ct.reach ? [...ct.reach] : [...'ABCDEF']); qaRender(); };
+      teamsBox.appendChild(b);
+    }
+    if (!names.length) teamsBox.appendChild(Object.assign(document.createElement('span'), { className: 'muted', textContent: 'No teams yet — add them on Teams & crew.' }));
+    $('qaTeamNote').textContent = qa.team ? `team ${qa.team}` : 'pick one';
+    const ct = qa.teams.get(qa.team);
+    const lv = $('qaLevels');
+    lv.innerHTML = '';
+    for (const c of 'ABCDEF') {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip-btn lv' + (qa.levels.has(c) ? ' selected' : '') + (ct && ct.reach && ct.reach.includes(c) ? ' reach' : ''); b.dataset.level = c; b.textContent = c; b.disabled = !can;
+      b.title = ct && ct.reach ? (ct.reach.includes(c) ? `Team ${qa.team} reaches level ${c}` : `Team ${qa.team} does not reach level ${c} — a supervisor can still send it`) : `Level ${c}`;
+      b.onclick = () => { if (qa.levels.has(c)) qa.levels.delete(c); else qa.levels.add(c); qaRender(); };
+      lv.appendChild(b);
+    }
+    $('qaReach').textContent = !qa.team ? 'what the team reaches is ticked for you' : ct && ct.reach ? `team ${qa.team} reaches ${ct.reachLabel}` : `team ${qa.team} has no crew on Teams & crew: every level offered`;
+    /* the aisles, by zone, each saying who has it now */
+    const box = $('qaAisles');
+    box.innerHTML = '';
+    const zones = new Map();
+    for (const a of qa.overview) { const z = a.zone ? titleCase(a.zone) : 'Aisles'; if (!zones.has(z)) zones.set(z, []); zones.get(z).push(a); }
+    const taken = new Map();      // aisle -> what is on it
+    for (const r of qa.rows) { if (!taken.has(r.aisle)) taken.set(r.aisle, []); taken.get(r.aisle).push(r); }
+    for (const [z, list] of zones) {
+      const row = document.createElement('div'); row.className = 'qa-zone';
+      row.appendChild(Object.assign(document.createElement('span'), { className: 'zname', textContent: z }));
+      for (const a of list.sort((x, y) => x.aisle.localeCompare(y.aisle, undefined, { numeric: true }))) {
+        const on = taken.get(a.aisle) || [];
+        const active = on.filter((r) => r.status === 'active'), queued = on.filter((r) => r.status === 'queued'), done = on.filter((r) => r.status === 'done');
+        const idx = qa.aisles.indexOf(a.aisle);
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'qa-aisle' + (idx >= 0 ? ' picked' : '') + (active.length ? ' busy' : '') + (done.length && !active.length && !queued.length ? ' done' : ''); b.dataset.aisle = a.aisle; b.disabled = !can;
+        const st = active.length ? `team ${active.map((r) => r.team).join('+')} counting` : queued.length ? `queued · team ${queued.map((r) => r.team).join(', ')}` : done.length ? 'done' : `${a.bins} bins`;
+        b.title = `${aisleLabel(a.aisle, a.zone)} · ${a.bins} bins${a.bins_counted ? `, ${a.bins_counted} counted` : ''}${active.length ? ` · ${active.map((r) => `team ${r.team} on ${levelsLabel(r.levels)}`).join(', ')}` : ''}${queued.length ? ` · queued for ${queued.map((r) => `team ${r.team} (${levelsLabel(r.levels)})`).join(', ')}` : ''}`;
+        b.innerHTML = '<b></b><span class="st"></span>';
+        b.querySelector('b').textContent = a.aisle; b.querySelector('.st').textContent = st;
+        if (idx >= 0) b.appendChild(Object.assign(document.createElement('span'), { className: 'ord', textContent: String(idx + 1) }));
+        b.onclick = () => { if (idx >= 0) qa.aisles.splice(idx, 1); else qa.aisles.push(a.aisle); qaRender(); };
+        row.appendChild(b);
+      }
+      box.appendChild(row);
+    }
+    if (!qa.overview.length) box.appendChild(Object.assign(document.createElement('span'), { className: 'muted', textContent: 'No aisles yet — upload the bin list under Settings.' }));
+    for (const b of $('qaFrom').querySelectorAll('button')) b.classList.toggle('selected', b.dataset.dir === qa.dir);
+    const go = $('btnQuickQueue');
+    const ready = can && qa.team && qa.aisles.length && qa.levels.size;
+    go.disabled = !ready;
+    go.textContent = !qa.team ? 'Pick a team and an aisle' : !qa.aisles.length ? `Pick the aisles for team ${qa.team}` : !qa.levels.size ? 'Tick at least one level'
+      : `Queue ${qa.aisles.join(' → ')} for team ${qa.team} · ${levelsLabel([...'ABCDEF'].filter((c) => qa.levels.has(c)).join(''))}${qa.dir === 'down' ? ' · from the far end' : ''}`;
+  }
+  $('btnQaClear').onclick = () => { qa.team = ''; qa.aisles = []; qa.levels = new Set(); qa.dir = 'up'; qaRender(); };
+  for (const b of $('qaFrom').querySelectorAll('button')) b.onclick = () => { qa.dir = b.dataset.dir; qaRender(); };
+  $('btnQuickQueue').onclick = async () => {
+    if (!needSession($('assignMsg'))) return;
+    const team = qa.team, aisles = qa.aisles.join(', '), levels = qaLevelsText(), direction = qa.dir;
+    const go = (force) => postJson(`/api/admin/sessions/${sessionId}/assignments`, { team, aisles, levels, direction, force });
+    try {
+      let r;
+      try { r = await go(false); }
+      catch (err) { if (!/cannot reach level/.test(err.message) || !confirm(`${err.message}\n\nAssign it anyway?`)) throw err; r = await go(true); }
+      const parts = [];
+      if (r.added.length) parts.push(`queued ${r.added.join(', ')} for team ${team}`);
+      if (r.activated.length) parts.push(`started ${r.activated.map((a) => `team ${a.team} in ${a.aisle}`).join('; ')}`);
+      msg($('assignMsg'), r.skipped.length ? 'warn' : 'ok', parts.join(' · ') || 'Nothing to queue', r.skipped.map((s) => `${s.aisle}: ${s.reason}`).join(' · '));
+      qa.aisles = [];
+      await refreshAll();
+    } catch (err) { msg($('assignMsg'), 'err', err.message); }
+  };
+
   const drag = { kind: '', aisle: '', id: 0, team: '' };
   const dragKind = (e) => { try { const d = JSON.parse(e.dataTransfer.getData('text/plain') || '{}'); return d.kind ? d : drag; } catch { return drag; } };
   /* "ABCDEF" -> "A-F", for the Levels box */
@@ -485,6 +570,8 @@
     const can = api.can('assign');
     const crewTeams = new Map((crew.teams || []).map((t) => [String(t.name), t]));
     $('planTeamNames').replaceChildren(...[...crewTeams.keys()].map((n) => Object.assign(document.createElement('option'), { value: n })));
+    qa.teams = crewTeams; qa.overview = aisles; qa.rows = rows;
+    qaRender();
     const byAisle = new Map(aisles.map((a) => [a.aisle, a]));
     const blockOf = new Map(aisles.map((a) => [a.aisle, a.block]));
     const activeInBlock = new Map(); // block -> [{team, levels}]
@@ -621,6 +708,8 @@
       if (!items.length) {
         /* a team with nothing queued: one tap fills the form for it, levels from what it reaches */
         const go = button('Queue aisles for this team', 'sm', () => {
+          qa.team = team; qa.levels = new Set(ct && ct.reach ? [...ct.reach] : [...'ABCDEF']); qa.aisles = []; qaRender();
+          $('quickAssign').scrollIntoView({ block: 'start', behavior: 'smooth' });
           $('fAssignTeam').value = team;
           if (ct && ct.reach) $('fAssignLevels').value = levelsBox(ct.reach);
           $('fAssignAisles').focus();
