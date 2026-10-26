@@ -334,9 +334,12 @@ check('Handheld T1: back online → queue drained', (await t1.T('#chipNet')) ===
 // history + void
 await t1.p.click('#btnHistory'); await t1.p.waitForSelector('#scrHistory.active'); await t1.p.waitForTimeout(200);
 const before = (await t1.p.$$('#historyList .item')).length;
-await t1.p.click('#historyList .item button'); await t1.p.waitForTimeout(500);
-check('Handheld T1: history lists lines and voids one', before >= 10 && /voided/.test(await t1.p.$eval('#historyList .item', (el) => el.className)), `${before} lines`);
+const voidBin = (await t1.p.$eval('#historyList .item .top span', (el) => el.textContent)).split('@').pop().trim();
+await t1.p.click('#historyList .item button'); await t1.p.waitForTimeout(700);
+check('Handheld T1: history lists lines, and voiding one sends the team back to that bin', before >= 10 && await t1.p.isVisible('#scrScan.active') && /Go back to/.test(await t1.T('#nextBin')) && (await t1.T('#nextBin')).includes(voidBin), `${before} lines · ${await t1.T('#nextBin')}`);
 await shot(t1.p, 'hh-history-void');
+await t1.p.click('#btnHistory'); await t1.p.waitForSelector('#scrHistory.active'); await t1.p.waitForTimeout(200);
+check('…and History shows it crossed out', /voided/.test(await t1.p.$eval('#historyList .item', (el) => el.className)));
 await t1.p.click('#btnHistoryBack'); await t1.p.waitForTimeout(200);
 
 /* ================= TEAM 2 on SCANNER-02 ================= */

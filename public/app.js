@@ -120,6 +120,7 @@
     deviceToken: '', // what it proves itself with from then on
     deviceRejected: '',
     team: '',
+    redoBin: '',       // a bin a line was voided in: the guide sends the team back to it
     employees: [],
     session: null,     // { id, name, palletMode, guided, askComments, masterVersion }
     assignment: null,  // team-status payload from the server
@@ -377,7 +378,7 @@
     const keys = await wrap(tx('meta', 'readonly').getAllKeys());
     for (const k of keys) if (String(k).startsWith(`closedBins:${session.id}:`)) await wrap(tx('meta', 'readwrite').delete(k));
     countedInAisle = new Set(); tagsInBin = new Map(); closedBins = new Set();
-    state.lastBin = ''; state.lastPallet = null;
+    state.lastBin = ''; state.lastPallet = null; state.redoBin = '';
     await metaSet(key, session.clearedAt);
     updateChips();
     if (seen !== undefined || old.length) {
@@ -491,7 +492,12 @@
     const since = (await metaGet('dupWatermark')) || '';
     const q = since ? `?since=${encodeURIComponent(since)}` : '';
     const data = await api(`/api/sessions/${state.session.id}/counted-pallets${q}`);
-    if (data.pallets.length) await bulkPut('dup', data.pallets, ([p, loc, team]) => ({ p, loc, team }));
+    if (data.pallets.length) {
+      // a line this gun voided can still be in the list, the void not yet on the server: keep it out
+      const voided = new Set((await wrap(tx('lines', 'readonly').getAll())).filter((l) => l.sessionId === state.session.id && l.voidedLocal).map((l) => `${l.palletId}@${l.location}`));
+      const fresh = data.pallets.filter(([p, loc]) => !voided.has(`${p}@${loc}`));
+      if (fresh.length) await bulkPut('dup', fresh, ([p, loc, team]) => ({ p, loc, team }));
+    }
     if (data.watermark) await metaSet('dupWatermark', data.watermark);
   }
 
@@ -805,6 +811,8 @@
       holdUpright();          // now that this count's settings are in hand
       state.draft = {};
       state.stepIndex = 0;
+      // a new crew starts clean: not in the bin the last crew left off in
+      state.lastBin = ''; state.lastPallet = null; state.redoBin = ''; state.multi = null;
       $('hdrTitle').textContent = state.mode === 'move' ? 'Front2Back' : state.mode === 'missing' ? 'Not in Location' : `#${session.id} · ${session.name}`;
       $('btnToAssign').hidden = !session.guided && session.mode !== 'cycle';
       if (session.mode === 'cycle') $('btnToAssign').textContent = 'My list';
@@ -1125,7 +1133,10 @@
     const mine = all.find((l) => l.sessionId === state.session.id && !l.voidedLocal && l.palletId === palletId);
     if (mine) return { loc: mine.location, team: mine.team, here: true };
     const other = await lookupDup(palletId);
-    return other ? { loc: other.loc, team: other.team, here: false } : null;
+    if (!other) return null;
+    /* the echo of a line this gun voided - the server's list caught it before the void did - is not a duplicate */
+    const voidedHere = all.some((l) => l.sessionId === state.session.id && l.voidedLocal && l.palletId === palletId && l.location === other.loc && String(l.team) === String(other.team));
+    return voidedHere ? null : { loc: other.loc, team: other.team, here: false };
   }
 
   /*
@@ -1529,9 +1540,19 @@
     renderNextBin();
   }
 
+  /** The bin a line was just voided in, while nothing has been counted there since. */
+  function redoBinCode() {
+    const a = state.assignment;
+    const code = state.redoBin;
+    if (!code) return null;
+    if (!a || !a.active || !Array.isArray(a.bins) || !a.bins.includes(code)) { state.redoBin = ''; return null; }
+    return code;
+  }
   function nextBinCode() {
     const a = state.assignment;
     if (!a || !a.active || !Array.isArray(a.bins)) return null;
+    const redo = redoBinCode();
+    if (redo) return redo;
     // a.bins is the assigned aisle and levels already; code order is 001, 002, 003 ... - or from the far end back
     const ordered = [...a.bins].sort((x, y) => String(x).localeCompare(String(y), undefined, { numeric: true }));
     if (a.active.direction === 'down') ordered.reverse();
@@ -1553,7 +1574,8 @@
     const onTask = !!state.recount;
     if (onTask || !a || !a.active || !state.session?.guided || !layoutCfg().showNextBin) { el.hidden = true; return; }
     const total = (a.bins || []).length;
-    const open = openBinCode();
+    const redo = redoBinCode();
+    const open = redo ? null : openBinCode();
     const next = nextBinCode();
     el.hidden = false;
     el.innerHTML = '';
@@ -1591,11 +1613,11 @@
       return;
     }
 
-    el.className = 'nextbin';
-    lead.textContent = 'Next bin';
+    el.className = 'nextbin' + (redo ? ' redo' : '');
+    lead.textContent = redo ? 'Go back to' : 'Next bin';
     code.textContent = next;
     where.textContent = describeBin(next) || '';
-    prog.textContent = `${countedInAisle.size} of ${total}`;
+    prog.textContent = redo ? 'a line was voided here' : `${countedInAisle.size} of ${total}`;
     el.append(lead, code, where, prog);
   }
 
@@ -2170,6 +2192,7 @@
       // an EMPTY line is the counter saying there is nothing in this bin at all
       if (line.emptyBin) closedBins.add(line.location);
       state.lastBin = line.location;
+      if (state.redoBin === line.location) state.redoBin = '';
       if (!line.emptyBin && !line.aliasOf) state.lastPallet = { id: line.palletId, bin: line.location };
     }
     renderNextBin();
@@ -2317,6 +2340,7 @@
       tagsInBin.set(code, (tagsInBin.get(code) || 0) + 1);
       closedBins.add(code);
       state.lastBin = code;
+      if (state.redoBin === code) state.redoBin = '';
     }
     updateChips();
     renderNextBin();
@@ -2793,12 +2817,21 @@
   }
 
   /* ------------------------------------------------------------ history */
-  async function renderHistory() {
+  /* The team's own lines on this scanner - not the crew before them - in the
+     last twenty bins they scanned, newest first. */
+  async function historyLines() {
     const all = await wrap(tx('lines', 'readonly').getAll());
-    const mine = all.filter((l) => l.sessionId === state.session.id).sort((a, b) => (a.ts < b.ts ? 1 : -1)).slice(0, 50);
+    const own = all.filter((l) => l.sessionId === state.session.id && (!state.team || String(l.team) === String(state.team)))
+      .sort((a, b) => (a.ts < b.ts ? 1 : -1));
+    const bins = [];
+    for (const l of own) { const b = l.location || ''; if (!bins.includes(b)) { if (bins.length >= 20) break; bins.push(b); } }
+    return own.filter((l) => bins.includes(l.location || ''));
+  }
+  async function renderHistory() {
+    const mine = await historyLines();
     const list = $('historyList');
     list.innerHTML = '';
-    if (!mine.length) { list.innerHTML = '<div class="muted">Nothing counted on this scanner yet.</div>'; return; }
+    if (!mine.length) { list.innerHTML = '<div class="muted">Nothing counted by your team on this scanner yet.</div>'; return; }
     for (const l of mine) {
       const div = document.createElement('div');
       div.className = 'item' + (l.voidedLocal ? ' voided' : '');
@@ -2826,13 +2859,37 @@
             } catch { /* the sync loop retries it */ }
           }
           beep('warn');
-          renderHistory();
           updateChips();
+          await voidedGoBack(l);
         };
         div.appendChild(btn);
       }
       list.appendChild(div);
     }
+  }
+
+  /* A voided line leaves a hole in that bin: the guide takes the team back to it.
+     The bin's tags on this gun go back to what is really there, an EMPTY that was
+     voided reopens the bin, and "Next bin" points at it until a count lands there. */
+  async function voidedGoBack(l) {
+    const code = l.location;
+    const a = state.assignment;
+    if (code && a && a.active && Array.isArray(a.bins) && a.bins.includes(code) && !state.recount) {
+      await refreshCounted();
+      if (l.emptyBin) {
+        closedBins.delete(code);
+        const key = closedKey();
+        await metaSet(key, ((await metaGet(key)) || []).filter((c) => c !== code));
+      }
+      state.redoBin = code;
+      state.lastBin = code;
+      showScreen('scrScan');
+      renderNextBin();
+      feedback($('scanMsg'), 'warn', `Line voided — go back to ${code}`, l.emptyBin ? 'Scan its rack label and count what is there.' : 'Scan its rack label, then the pallet, and count it again.');
+      focusScan();
+      return;
+    }
+    renderHistory();
   }
 
   /* ----------------------------------------------------------------- SOS
@@ -3084,6 +3141,7 @@
     }
     // signing off ends the crew: the next team scans their own badges in
     state.team = '';
+    state.lastBin = ''; state.lastPallet = null; state.redoBin = ''; state.multi = null; state.draft = {}; state.stepIndex = 0;
     state.session = null;
     state.assignment = null;
     state.crew = null;

@@ -433,6 +433,87 @@ ${sheets}
 </body></html>`;
 }
 
+/* ------------------------------------------------------------------ roster
+ * Who has been through the classroom: every employee on Teams & crew, ticked
+ * off by the trainer as they finish, with who ticked them and when. The
+ * trainees printed for the wall are not on it - they are props. A real badge
+ * that signed on to the training count shows when, as a hint to the trainer.
+ */
+db.exec(`CREATE TABLE IF NOT EXISTS training_roster (
+  badge      TEXT PRIMARY KEY,
+  trained_at TEXT NOT NULL,
+  trained_by TEXT,
+  note       TEXT
+)`);
+
+export function trainingRoster() {
+  const t = trainingSession();
+  const seen = new Map();   // badge -> first sign-on to the training count
+  if (t) {
+    for (const r of db.prepare('SELECT employees, started_at FROM signons WHERE session_id = ? ORDER BY started_at').all(t.id)) {
+      let list = [];
+      try { list = JSON.parse(r.employees || '[]'); } catch { list = []; }
+      for (const b of list) { const k = norm(b); if (k && !seen.has(k)) seen.set(k, r.started_at); }
+    }
+  }
+  const ticks = new Map(db.prepare('SELECT * FROM training_roster').all().map((r) => [r.badge, r]));
+  const rows = listEmployees()
+    .filter((e) => e.active !== 0 && !/^TRN-\d+$/i.test(e.badge) && !/training/i.test(e.dept || ''))
+    .map((e) => {
+      const k = norm(e.badge);
+      const tick = ticks.get(k);
+      return { badge: e.badge, name: e.name, dept: e.dept || '', shift: e.shift || '', team: e.team || '', signedOn: seen.get(k) || null,
+        trained: !!tick, trainedAt: tick ? tick.trained_at : null, trainedBy: tick ? tick.trained_by : null, note: tick ? tick.note || '' : '' };
+    })
+    .sort((a, b) => String(a.shift).localeCompare(String(b.shift)) || String(a.team).localeCompare(String(b.team), undefined, { numeric: true }) || a.name.localeCompare(b.name));
+  const byShift = {};
+  for (const r of rows) { const k = r.shift || '-'; byShift[k] = byShift[k] || { people: 0, trained: 0 }; byShift[k].people++; if (r.trained) byShift[k].trained++; }
+  return { rows, totals: { people: rows.length, trained: rows.filter((r) => r.trained).length, signedOn: rows.filter((r) => r.signedOn).length, byShift } };
+}
+
+export function markTrained({ badge, trained = true, note = '', by = '' }) {
+  const k = norm(badge);
+  if (!k) throw Object.assign(new Error('clock in number required'), { status: 400 });
+  if (trained) db.prepare('INSERT INTO training_roster (badge, trained_at, trained_by, note) VALUES (?, ?, ?, ?) ON CONFLICT(badge) DO UPDATE SET trained_at = excluded.trained_at, trained_by = excluded.trained_by, note = excluded.note')
+    .run(k, new Date().toISOString(), by || null, String(note || '').slice(0, 200) || null);
+  else db.prepare('DELETE FROM training_roster WHERE badge = ?').run(k);
+  return trainingRoster();
+}
+
+export function rosterCsv() {
+  const { rows } = trainingRoster();
+  const q = (v) => { const t = v == null ? '' : String(v); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+  return ['Clock In Number,Name,Shift,Team,Department,Trained,Trained On,Trained By,Signed On To Training Count,Note']
+    .concat(rows.map((r) => [r.badge, r.name, r.shift, r.team, r.dept, r.trained ? 'yes' : 'no', r.trainedAt ? r.trainedAt.slice(0, 10) : '', r.trainedBy || '', r.signedOn ? r.signedOn.slice(0, 16).replace('T', ' ') : '', r.note].map(q).join(',')))
+    .join('\r\n') + '\r\n';
+}
+
+/** The roster on paper: a clipboard sheet with a box to tick, by shift. */
+export function rosterSheet() {
+  const { rows, totals } = trainingRoster();
+  const shifts = [...new Set(rows.map((r) => r.shift || ''))];
+  const word = (s) => (s === '1' ? '1st shift' : s === '2' ? '2nd shift' : s ? `Shift ${s}` : 'No shift');
+  const table = (list) => `<table><thead><tr><th class="bx">Trained</th><th>Clock-in</th><th>Name</th><th>Team</th><th>Dept</th><th>On the wall</th><th>Sign</th></tr></thead><tbody>${list.map((r) => `
+    <tr><td class="bx">${r.trained ? '☑' : '☐'}</td><td class="mono">${esc(r.badge)}</td><td>${esc(r.name)}</td><td class="mono">${esc(r.team)}</td><td>${esc(r.dept)}</td><td>${r.signedOn ? esc(r.signedOn.slice(11, 16)) : ''}</td><td class="sig"></td></tr>`).join('')}</tbody></table>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Training roster</title><style>
+  @page { size: letter portrait; margin: 12mm; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #000; background: #fff; margin: 0; padding: 12px; font-size: 10.5pt; }
+  h1 { font-size: 16pt; margin: 0 0 2px; } .sub { color: #444; font-size: 9.5pt; margin-bottom: 10px; }
+  h2 { font-size: 12pt; margin: 14px 0 4px; break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid #999; padding: 4px 6px; text-align: left; }
+  th { background: #eee; font-size: 9pt; letter-spacing: .04em; text-transform: uppercase; }
+  td.bx { font-size: 16pt; text-align: center; width: 14mm; } td.mono { font-family: ui-monospace, Menlo, Consolas, monospace; } td.sig { width: 34mm; }
+  tr { break-inside: avoid; }
+  .noprint { margin-bottom: 10px; padding: 6px 12px; } @media print { .noprint { display: none; } }
+</style></head><body>
+<button class="noprint" onclick="window.print()">Print</button>
+<h1>Training roster — classroom training</h1>
+<div class="sub">${totals.people} people on Teams &amp; crew · ${totals.trained} trained so far · printed ${esc(localDate())} · tick the box as each person finishes the wall, and sign</div>
+${shifts.map((sh) => `<h2>${esc(word(sh))} · ${rows.filter((r) => (r.shift || '') === sh).length} people</h2>${table(rows.filter((r) => (r.shift || '') === sh))}`).join('')}
+${!rows.length ? '<p>No employees on Teams &amp; crew yet — upload the crew list first.</p>' : ''}
+</body></html>`;
+}
+
 /** One team number per person on Teams & crew - every member of every team, and at least one card a team. */
 export function crewTeamList() {
   const out = [];

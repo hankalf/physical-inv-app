@@ -672,7 +672,43 @@
     if (!api.me || api.me.role !== 'admin') { card.hidden = true; return; }
     card.hidden = false;
     drawTraining(await api.json('/api/admin/training'));
+    refreshRoster().catch(() => {});
   }
+
+  /* ---- the roster: tick people off as they finish the wall ---- */
+  let roster = null;
+  const when = (iso) => (iso ? new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '');
+  function drawRoster() {
+    if (!roster) return;
+    const shift = $('fRosterShift').value, find = $('fRosterFind').value.trim().toLowerCase(), openOnly = $('fRosterOpen').checked;
+    const rows = roster.rows.filter((r) => (!shift || String(r.shift) === shift) && (!openOnly || !r.trained) && (!find || `${r.name} ${r.badge} ${r.team}`.toLowerCase().includes(find)));
+    const t = roster.totals;
+    const parts = [`${t.trained} of ${t.people} trained`];
+    for (const [k, v] of Object.entries(t.byShift || {})) if (k !== '-') parts.push(`${k === '1' ? '1st' : k === '2' ? '2nd' : k} shift ${v.trained}/${v.people}`);
+    $('rosterSummary').textContent = t.people ? parts.join(' · ') : 'No employees on Teams & crew yet';
+    const body = $('rosterTable').querySelector('tbody');
+    body.innerHTML = '';
+    for (const r of rows) {
+      const tr = document.createElement('tr');
+      tr.dataset.badge = r.badge;
+      tr.className = r.trained ? 'trained' : '';
+      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = r.trained; cb.setAttribute('aria-label', `Trained: ${r.name}`);
+      cb.onchange = async () => {
+        cb.disabled = true;
+        try { roster = await api.post('/api/admin/training/roster', { badge: r.badge, trained: cb.checked }); drawRoster(); }
+        catch (err) { cb.checked = !cb.checked; msg($('trainMsg'), 'err', err.message); }
+        finally { cb.disabled = false; }
+      };
+      const cells = [cb, r.badge, r.name, r.shift === '1' ? '1st' : r.shift === '2' ? '2nd' : r.shift, r.team, r.dept, r.signedOn ? when(r.signedOn) : '', r.trained ? `${when(r.trainedAt)}${r.trainedBy ? ` · ${r.trainedBy}` : ''}` : ''];
+      for (const c of cells) { const td = document.createElement('td'); if (c instanceof Node) td.appendChild(c); else td.textContent = c; tr.appendChild(td); }
+      body.appendChild(tr);
+    }
+    if (!rows.length) { const tr = document.createElement('tr'); const td = document.createElement('td'); td.colSpan = 8; td.className = 'muted'; td.textContent = roster.rows.length ? 'Nobody matches.' : 'Upload the crew list on Teams & crew first.'; tr.appendChild(td); body.appendChild(tr); }
+  }
+  async function refreshRoster() { roster = await api.json('/api/admin/training/roster'); drawRoster(); }
+  for (const id of ['fRosterShift', 'fRosterFind', 'fRosterOpen']) $(id).addEventListener('input', drawRoster);
+  $('btnRosterPrint').onclick = () => trainPrint('/api/admin/training/print/roster');
+  $('btnRosterCsv').onclick = () => trainPrint('/api/admin/training/roster.csv');
   const trainAct = async (path, confirmText, done) => {
     if (confirmText && !confirm(confirmText)) return;
     try { const t = await api.post(path, {}); drawTraining(t.session === undefined ? await api.json('/api/admin/training') : t); msg($('trainMsg'), 'ok', done(t)); }

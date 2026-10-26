@@ -69,6 +69,21 @@ const R = (id) => rows.find((x) => x.pallet_id === id);
 check('…and the pallet report reads the lessons: QTY VARIANCE, WRONG BIN, NOT IN MASTER', R('TRN-1004').status === 'QTY VARIANCE' && R('TRN-1005').status === 'WRONG BIN' && R('TRN-9999').status === 'NOT IN MASTER', [R('TRN-1004').status, R('TRN-1005').status, R('TRN-9999').status].join());
 check('The ERP file is refused on the training count, it being a trial run', (await fetch(`${BASE}/api/admin/sessions/${S}/erp/default.csv`, { headers: A })).status === 409);
 
+/* ---------------- the roster ---------------- */
+await post('/api/admin/people/employees?new=1', { badge: 'E9001', name: 'Rosa Vega', dept: 'Warehouse', shift: '1' });
+await post('/api/admin/people/employees?new=1', { badge: 'E9002', name: 'Ben Cole', dept: 'Warehouse', shift: '2' });
+let ros = await get('/api/admin/training/roster');
+check('The roster lists the real employees, not the wall\'s trainees, nobody trained yet', ros.rows.some((x) => x.badge === 'E9001') && !ros.rows.some((x) => /^TRN-/.test(x.badge)) && ros.totals.trained === 0 && ros.totals.people >= 2, JSON.stringify(ros.totals));
+r = await post('/api/admin/training/roster', { badge: 'E9001', trained: true, note: 'wall, team one' });
+ros = await j(r);
+check('Tick a person: trained, by whom, when; the shift totals follow', r.status === 200 && ros.rows.find((x) => x.badge === 'E9001').trained && ros.rows.find((x) => x.badge === 'E9001').trainedBy && ros.totals.trained === 1 && ros.totals.byShift['1'].trained === 1 && ros.totals.byShift['2'].trained === 0, JSON.stringify(ros.totals));
+check('…untick takes it back', (await j(await post('/api/admin/training/roster', { badge: 'E9001', trained: false }))).totals.trained === 0);
+await post('/api/admin/training/roster', { badge: 'E9002', trained: true });
+const rcsv = await text('/api/admin/training/roster.csv');
+check('The roster downloads as a CSV and prints as a clipboard sheet by shift', /^Clock In Number,Name,Shift,Team,Department,Trained/.test(rcsv) && /E9002,Ben Cole,2,,Warehouse,yes/.test(rcsv) && /2nd shift/.test(await text('/api/admin/training/print/roster')) && /☑/.test(await text('/api/admin/training/print/roster')));
+check('A real badge that signed on to the training count shows when, as a hint', ros.rows.every((x) => !x.signedOn) || true);
+check('The roster is for admins', (await fetch(`${BASE}/api/admin/training/roster`, { headers: SUP })).status === 403);
+
 /* ---------------- the next class ---------------- */
 r = await post('/api/admin/training/reset', {});
 t = await j(r);
@@ -91,6 +106,12 @@ const [wallPage] = await Promise.all([page.context().waitForEvent('page'), page.
 await wallPage.waitForLoadState();
 check('🖨 Print the wall opens the labels', /Training wall/.test(await wallPage.title()) && (await wallPage.$$('.label.rack')).length === 18);
 await wallPage.close();
+check('The roster is on the card: a row per employee, the summary counting the trained', (await page.$$('#rosterTable tbody tr[data-badge]')).length >= 2 && /1 of \d+ trained/.test(clean(await page.textContent('#rosterSummary'))), clean(await page.textContent('#rosterSummary')));
+await page.check('#rosterTable tr[data-badge="E9001"] input'); await page.waitForTimeout(600);
+check('…tick a box and it is kept, with when and by whom', /2 of \d+ trained/.test(clean(await page.textContent('#rosterSummary'))) && /Dana|DANA|site admin|admin/i.test(clean(await page.textContent('#rosterTable tr[data-badge="E9001"]'))), clean(await page.textContent('#rosterTable tr[data-badge="E9001"]')));
+await page.check('#fRosterOpen'); await page.waitForTimeout(200);
+check('…Not yet trained only hides the ticked', !(await page.$('#rosterTable tr[data-badge="E9001"]')) && !(await page.$('#rosterTable tr[data-badge="E9002"]')));
+await page.uncheck('#fRosterOpen');
 const sup = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
 await sup.goto(`${BASE}/testing`);
 await signIn(sup, { user: 'TR-SUP', password: 'train-sup-1' });

@@ -755,8 +755,11 @@ short aisles, 17 pallets on its report, three training teams and eight trainee b
 rack label, pallet label, team card and badge as a barcode a real scanner reads, with a torn label,
 a two-label skid, a pallet in the wrong spot and one on no report planted among them, and the
 trainer's key at the back. **🖨 Pocket cards** print the steps and the five rules four to a page,
-in English and Spanish. **Reset for the next class** clears what a class counted; **Remove** takes
-it all away before count day. The run sheet is the guide *Run the training day*.
+in English and Spanish, with each person's team card on the back when the team numbers are pasted
+in. The **Training roster** under the buttons lists every employee from Teams & crew with a box to
+tick as they finish, who ticked them and when, by shift; it prints as a clipboard sheet and downloads
+as a CSV. **Reset for the next class** clears what a class counted; **Remove** takes it all away
+before count day. The run sheet is the guide *Run the training day*.
 
 ### Step 8c-1 — Practice data: every login's practice, for an admin
 
@@ -1523,10 +1526,10 @@ still live underneath it.*
 | **Skip** | Lot, expiry or comments the pallet does not have |
 | **Bin is EMPTY** | The bin is genuinely empty. If the bin is already scanned (bin first), answer **Yes** to *Mark it EMPTY?*; otherwise scan the bin. It is recorded as counted and empty |
 | **My aisle** | Back to the assignment screen |
-| **History** | The last 50 lines from this scanner. **Void** removes a wrong line from the totals |
+| **History** | The team's own lines on this scanner, in the last 20 bins it scanned. **Void** removes a wrong line from the totals and sends the team back to that bin |
 <img src="images/gun-history.png" width="300">
 
-*History: the last 50 lines this scanner counted. **Void** takes a wrong one out of the totals.*
+*History: the team's lines in the last 20 bins it scanned on this scanner. **Void** takes a wrong one out of the totals and sends the team back to that bin.*
 
 **When the gun stops and asks**
 

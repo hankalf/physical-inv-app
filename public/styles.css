@@ -285,6 +285,8 @@ button.sos:active { background: #4a181d; }
 /* still working this bin: a different colour, so a glance tells you whether the
    code on the banner is where you are or where you are going next */
 .nextbin.staying { background: #2a2110; border-color: #8a6a1f; }
+.nextbin.redo { border-color: var(--bad, #ff5a5f); }
+.nextbin.redo .nb-lead { color: var(--bad, #ff5a5f); }
 .nextbin.staying .nb-code { color: #ffd479; }
 .nextbin .nb-done {
   flex-basis: 100%; margin: 8px 0 0; padding: 10px 12px; font-size: 15px; font-weight: 700;

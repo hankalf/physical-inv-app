@@ -77,7 +77,7 @@ function systemsView(req) {
 }
 import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, unlockPlace, PER_LOGIN, PER_PLACE } from './routes/login-limit.js';
 import { recordAccess, accessMap, lookupPending } from './routes/access-map.js';
-import { ensureTraining, resetTraining, removeTraining, trainingStatus, wallLabels, pocketCard, crewTeamList } from './routes/training.js';
+import { ensureTraining, resetTraining, removeTraining, trainingStatus, wallLabels, pocketCard, crewTeamList, trainingRoster, markTrained, rosterCsv, rosterSheet } from './routes/training.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards, barcodeBook, teamCodes } from './routes/printing.js';
 import {
@@ -1211,6 +1211,16 @@ async function handleAdmin(req, res, url, m) {
       audit(actor, 'removed the training count', `#${out.removed} ${out.name}, its teams and trainees`);
       return sendJson(req, res, 200, out);
     }
+    /* the roster: who has been through the classroom, ticked off by the trainer */
+    if (p === '/api/admin/training/roster' && method === 'GET') return sendJson(req, res, 200, trainingRoster());
+    if (p === '/api/admin/training/roster' && method === 'POST') {
+      const body = await readJson(req);
+      const out = markTrained({ badge: body.badge, trained: body.trained !== false, note: body.note, by: actor });
+      audit(actor, body.trained !== false ? 'marked an employee trained' : 'unmarked an employee trained', `${norm(body.badge)}${body.note ? ` · ${String(body.note).slice(0, 80)}` : ''}`);
+      return sendJson(req, res, 200, out);
+    }
+    if (p === '/api/admin/training/roster.csv') { audit(actor, 'downloaded the training roster'); return sendCsv(req, res, 'training-roster.csv', rosterCsv()); }
+    if (p === '/api/admin/training/print/roster') { audit(actor, 'printed the training roster'); return send(req, res, 200, rosterSheet(), { 'content-type': 'text/html; charset=utf-8' }); }
     if (p === '/api/admin/training/print/wall') {
       audit(actor, 'printed the training wall', `${url.searchParams.get('size') || 'big'} ${url.searchParams.get('part') || 'all'}`);
       return send(req, res, 200, wallLabels({ size: url.searchParams.get('size') || 'big', part: url.searchParams.get('part') || 'all' }), { 'content-type': 'text/html; charset=utf-8' });

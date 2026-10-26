@@ -539,7 +539,7 @@ is signal. The top of the screen shows **online** or **OFFLINE** and how many li
 | **Label will not scan** | Type what is printed, or count it without a label. It goes on the office's list of labels to replace |
 | **Back** | Wrong entry: one question back |
 | **Keyboard** | Brings up the keys to type by hand |
-| **History** | The last 50 lines. **Void** removes a wrong one |
+| **History** | Your team's lines in the last 20 bins. **Void** removes a wrong one and sends you back to that bin |
 | **Report a problem** | Damage, or a bin blocked by a truck. Not an emergency |
 | **SOS — I need help** | An emergency. It tells the office the team, the aisle and the last bin |
 | **Start second counts** | When the scanner says bins are waiting to be counted again (step 21) |

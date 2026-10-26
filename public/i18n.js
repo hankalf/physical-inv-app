@@ -188,8 +188,10 @@
 
     // history
     'Recent counts': 'Conteos recientes',
-    'Most recent 50 lines from this scanner. Void removes a line from the totals.':
-      'Las últimas 50 líneas de este escáner. Anular quita una línea de los totales.',
+    'Your team’s lines on this scanner, in the last 20 bins you scanned. Void removes a line from the totals and sends you back to that bin.':
+      'Las líneas de tu equipo en este escáner, en las últimas 20 ubicaciones que escaneaste. Anular quita una línea de los totales y te regresa a esa ubicación.',
+    'Nothing counted by your team on this scanner yet.': 'Tu equipo todavía no ha contado nada en este escáner.',
+    'Go back to': 'Regresa a', 'a line was voided here': 'aquí se anuló una línea',
     'Nothing counted on this scanner yet.': 'Todavía no hay nada contado en este escáner.',
     'Void this line': 'Anular esta línea',
 

@@ -588,7 +588,7 @@ try {
   /* ---------------------------------------------------------- 6 */
   await part(6, L('Help and fixes', 'Ayuda y correcciones'), L('Mistakes, messages, no Wi-Fi, problems, and the SOS button.', 'Errores, mensajes, sin Wi-Fi, problemas y el botón SOS.'));
   await atStep(P.bin);
-  await say(L('Made a mistake?', '¿Te equivocaste?'), L('Typed the wrong number before finishing? <b>Back</b> goes back one step. Already saved? Tap <b>History</b>: your last 50 lines. <b>Void this line</b> takes a wrong one out.', '¿Escribiste mal antes de terminar? <b>Atrás</b> regresa un paso. ¿Ya se guardó? Toca <b>Historial</b>: tus últimas 50 líneas. <b>Anular esta línea</b> quita una mal hecha.'), '', { hold: false });
+  await say(L('Made a mistake?', '¿Te equivocaste?'), L('Typed the wrong number before finishing? <b>Back</b> goes back one step. Already saved? Tap <b>History</b>: your team’s lines in the last 20 bins. <b>Void this line</b> takes a wrong one out and sends you back to that bin.', '¿Escribiste mal antes de terminar? <b>Atrás</b> regresa un paso. ¿Ya se guardó? Toca <b>Historial</b>: las líneas de tu equipo en las últimas 20 ubicaciones. <b>Anular esta línea</b> quita una mal hecha.'), '', { hold: false });
   await beat(5400);
   await tap('#btnHistory', { hold: 2000 });
   await beat(1600);
@@ -804,7 +804,7 @@ try {
   /* ---------------------------------------------------------- 5 */
   await part(5, L('Help and fixes', 'Ayuda y correcciones'), L('Mistakes, messages, no Wi-Fi, problems, and the SOS button.', 'Errores, mensajes, sin Wi-Fi, problemas y el botón SOS.'));
   await atStep(P.bin);
-  await say(L('Made a mistake?', '¿Te equivocaste?'), L('Typed the wrong number before finishing? <b>Back</b> goes back one step. Already saved? Tap <b>History</b>: your last 50 lines. <b>Void this line</b> takes a wrong one out.', '¿Escribiste mal antes de terminar? <b>Atrás</b> regresa un paso. ¿Ya se guardó? Toca <b>Historial</b>: tus últimas 50 líneas. <b>Anular esta línea</b> quita una mal hecha.'), '', { hold: false });
+  await say(L('Made a mistake?', '¿Te equivocaste?'), L('Typed the wrong number before finishing? <b>Back</b> goes back one step. Already saved? Tap <b>History</b>: your team’s lines in the last 20 bins. <b>Void this line</b> takes a wrong one out and sends you back to that bin.', '¿Escribiste mal antes de terminar? <b>Atrás</b> regresa un paso. ¿Ya se guardó? Toca <b>Historial</b>: las líneas de tu equipo en las últimas 20 ubicaciones. <b>Anular esta línea</b> quita una mal hecha.'), '', { hold: false });
   await beat(4800);
   await tap('#btnHistory', { hold: 2000 });
   await beat(1600);

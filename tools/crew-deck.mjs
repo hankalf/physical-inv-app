@@ -362,7 +362,7 @@ content({
   title: L('Made a mistake?', '¿Te equivocaste?'),
   lines: [
     [L('Before finishing the pallet: ', 'Antes de terminar la tarima: '), { text: L('Back', 'Atrás'), bold: true }, L(' goes back one step.', ' regresa un paso.')],
-    [L('Already saved: tap ', 'Ya guardada: toca '), { text: L('History', 'Historial'), bold: true }, L(' — your last 50 lines. ', ' — tus últimas 50 líneas. '), { text: L('Void this line', 'Anular esta línea'), bold: true }, L(' takes a wrong one out.', ' quita una mal hecha.')],
+    [L('Already saved: tap ', 'Ya guardada: toca '), { text: L('History', 'Historial'), bold: true }, L(' — your team’s lines in the last 20 bins. ', ' — las líneas de tu equipo en las últimas 20 ubicaciones. '), { text: L('Void this line', 'Anular esta línea'), bold: true }, L(' takes a wrong one out and sends you back to that bin.', ' quita una mal hecha y te regresa a esa ubicación.')],
   ],
   shots: ['history'],
   notes: L('Void only your own wrong line. The office keeps a record that it was voided.', 'Anula solo tu propia línea equivocada. La oficina guarda el registro de que se anuló.'),

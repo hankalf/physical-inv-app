@@ -15,8 +15,9 @@ only difference from count day is the name on it: **Training count — not real 
 - [4 — The session, minute by minute](#4--the-session-minute-by-minute)
 - [5 — The wall run-through, spot by spot](#5--the-wall-run-through-spot-by-spot)
 - [6 — What the office screen shows](#6--what-the-office-screen-shows)
-- [7 — Between classes, and after](#7--between-classes-and-after)
-- [8 — Checklist](#8--checklist)
+- [7 — The roster: who has been trained](#7--the-roster-who-has-been-trained)
+- [8 — Between classes, and after](#8--between-classes-and-after)
+- [9 — Checklist](#9--checklist)
 
 ## 1 — What you need
 
@@ -27,6 +28,7 @@ only difference from count day is the name on it: **Training count — not real 
 | The wall: 18 rack labels, 18 pallet labels, 3 team cards, 8 badges | **Testing Suite → Classroom training → 🖨 Print the wall** |
 | The trainer's key | the last pages of the same print: every spot, what the report says, what hangs there, the lesson |
 | Pocket cards, four to a page | **🖨 Pocket cards · English** and **🖨 Tarjetas · Español** — one per person, laminated if you can. Paste the team numbers into the box above the buttons, one line per person, and each card gets that person's **team card** (QR and barcode) on the back |
+| The roster | the same card, under the buttons: every employee from Teams & crew with a box to tick as they finish; **🖨 Print the roster** for a clipboard copy |
 | Scanners | three or four, charged, on the site's Wi-Fi, the app open at the sign-on screen |
 | A screen | the break-room TV or a projector, for the film, the deck and then the Dashboard |
 | Tape | the labels go on a wall, a whiteboard or two tables pushed together |
@@ -135,7 +137,9 @@ bin: T01A001** on the gun.
   scan** → **I can read it — let me type it** → type TRN-1010 → its quantity. The office gets a
   list of labels to reprint.
 - **T01B002** — level B, plain. Type 40, then press **Back** once to show a step undone, and type
-  40 again.
+  40 again. Then show the other fix: tap **History** — only this team's lines, in the last twenty
+  bins — and **Void this line** on T01B001. The gun jumps back to the scan screen with **Go back
+  to T01B001**: scan its rack and the pallet again. A void never leaves a hole behind.
 - **T01B003** — empty, as the report says. Rack, **Bin is EMPTY**, **Yes**.
 - **T01B004** — the last spot. After it the scanner says *every bin in T01 has a count — tell your
   supervisor*. There is no button for this on the gun. On the big screen, **Team plan → T01 →
@@ -171,7 +175,22 @@ goes:
 The report's Cost columns are there too; the point to make is that **the scanner never showed a
 cost or an expected quantity**.
 
-## 7 — Between classes, and after
+## 7 — The roster: who has been trained
+
+Under the buttons on the Classroom training card is the **Training roster**: every employee
+uploaded on Teams & crew (the wall's eight trainees are not on it), with their shift, team and
+department. As each person finishes the wall, tick their box. The app keeps who ticked them and
+when, and the summary at the top counts the trained by shift, so at the end of the day you can see
+who still needs a session.
+
+- **On the wall** fills in by itself when a person's own badge signs on to the training count, as a
+  hint; the tick is still yours to give.
+- **Not yet trained only**, the shift box and the search narrow the list for a big crew.
+- **🖨 Print the roster** is the clipboard version, a sheet per shift with a box to tick and a line
+  to sign. **⬇ roster.csv** is the same list for HR or the supervisors.
+- A tick can be taken back. Nothing on the roster touches the count itself.
+
+## 8 — Between classes, and after
 
 - **Reset for the next class** clears every count, sign-on, second count and alert on the training
   count and puts the aisles back at the start. The wall stays as it is. Press it between groups
@@ -183,7 +202,7 @@ cost or an expected quantity**.
 - On count day the real teams sign on with **their** team cards and badges. The pocket card is
   the same.
 
-## 8 — Checklist
+## 9 — Checklist
 
 - ☐ Training count set up; **Team plan** shows T01 and T02 planned
 - ☐ Wall printed and hung in the key's order; TRN-1005 under T01A006, TRN-9999 beside TRN-1007
@@ -192,4 +211,5 @@ cost or an expected quantity**.
 - ☐ Film and deck open on the big screen in the room's language; Dashboard in a second tab
 - ☐ Scanners charged, on Wi-Fi, at the sign-on screen; one spot scanned yourself the day before
 - ☐ **Reset for the next class** pressed before the class walks in
+- ☐ Roster ticked for everyone who finished; **⬇ roster.csv** sent to the supervisors
 - ☐ After the last group: **Reset**, and **Remove** before count day

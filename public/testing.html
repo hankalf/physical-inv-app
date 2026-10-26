@@ -357,6 +357,21 @@
             </div>
             <div class="feedback" id="trainMsg"></div>
             <div class="hint" id="trainStatus"></div>
+
+            <!-- the roster: every employee on Teams & crew, ticked off as they finish the wall -->
+            <div class="aisle-panel" id="rosterPanel" style="margin-top:14px">
+              <div class="inline" style="align-items:center">
+                <div class="auto"><h3 style="margin:0">Training roster</h3></div>
+                <div class="auto"><span class="muted" id="rosterSummary"></span></div>
+                <div class="auto"><select id="fRosterShift" class="sm"><option value="">Every shift</option><option value="1">1st shift</option><option value="2">2nd shift</option></select></div>
+                <div class="auto"><input id="fRosterFind" class="sm" placeholder="Name or number" style="width:150px"></div>
+                <div class="auto"><label class="cb"><input type="checkbox" id="fRosterOpen"> Not yet trained only</label></div>
+                <div class="auto"><button class="fit" id="btnRosterPrint" title="A clipboard sheet with a box to tick, by shift">🖨 Print the roster</button></div>
+                <div class="auto"><button class="fit" id="btnRosterCsv">⬇ roster.csv</button></div>
+              </div>
+              <div class="hint" style="margin-top:4px">The employees uploaded on Teams &amp; crew. Tick each person as they finish the wall; it keeps who ticked them and when. <b>On the wall</b> shows when their badge signed on to the training count.</div>
+              <div class="table-wrap" style="margin-top:8px; max-height: 420px; overflow:auto"><table class="data" id="rosterTable"><thead><tr><th>Trained</th><th>Clock-in</th><th>Name</th><th>Shift</th><th>Team</th><th>Dept</th><th>On the wall</th><th>Ticked</th></tr></thead><tbody></tbody></table></div>
+            </div>
           </div>
 
           <div class="card" id="readyCard">

@@ -192,7 +192,7 @@ says which bin is next.
 | **Label will not scan** | Type what is printed, or count it without a label |
 | **Back** | Wrong entry: go back one question |
 | **Keyboard** | Type something by hand |
-| **History** | The last 50 lines. **Void** removes a wrong one |
+| **History** | Your team's lines in the last 20 bins. **Void** removes a wrong one and sends you back to that bin |
 | **Report a problem** | Damage, or a bin blocked by a truck |
 | **SOS — I need help** | An emergency. The office sees the team, the aisle and the last bin |
 | **Start second counts** | When the scanner says bins are waiting to be counted again |
