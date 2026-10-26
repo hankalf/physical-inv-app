@@ -325,6 +325,33 @@
             </div>
           </div>
 
+          <!-- a class with scanners in their hands: a real count on a warehouse that fits on a wall (admins) -->
+          <div class="card" id="classroomCard" hidden data-fold>
+            <h2>Classroom training <span class="muted">a real count for real scanners, on a warehouse printed for the wall</span></h2>
+            <div class="hint" style="margin-top:0">
+              For a group with scanners in their hands. <b>Set up the training count</b> makes a count the floor scanners can sign on to —
+              two short aisles, a report behind them, three training teams and eight trainee badges — and <b>Print the wall</b> prints every rack
+              label, pallet label, team card and badge as a real barcode, big enough to scan from arm's length, with a trainer's key of what each
+              spot teaches: two pallets in one spot, an empty spot, a short count, a pallet in the wrong spot, one not on the list, one with two
+              labels, one whose label will not scan. The scanners see it as a <b>trial run</b>. <b>Reset for the next class</b> clears everything
+              counted and puts the aisles back; <b>Remove</b> takes the count, its teams and trainees away.
+            </div>
+            <div class="inline" style="margin-top:10px">
+              <div class="auto"><button class="primary fit" id="btnTrainSetup">Set up the training count</button></div>
+              <div class="auto"><button class="fit" id="btnTrainWall">🖨 Print the wall (big labels)</button></div>
+              <div class="auto"><button class="fit" id="btnTrainWallSmall" title="Two per page, for a desk or a table">🖨 Small labels</button></div>
+              <div class="auto"><button class="fit" id="btnTrainCardEn">🖨 Pocket cards · English</button></div>
+              <div class="auto"><button class="fit" id="btnTrainCardEs">🖨 Tarjetas · Español</button></div>
+            </div>
+            <div class="inline" style="margin-top:8px">
+              <div class="auto"><button class="fit" id="btnTrainReset">Reset for the next class</button></div>
+              <div class="auto"><button class="fit danger" id="btnTrainRemove">Remove the training count</button></div>
+              <div class="auto"><a id="lnkTrainDash" href="/admin" target="_blank" rel="noopener" style="color:var(--accent);font-weight:700;text-decoration:none">Open the dashboard on it ↗</a></div>
+            </div>
+            <div class="feedback" id="trainMsg"></div>
+            <div class="hint" id="trainStatus"></div>
+          </div>
+
           <div class="card" id="readyCard">
             <h2>Before you start <span class="muted" id="readySum"></span></h2>
             <div class="checks ready" id="readyList"></div>

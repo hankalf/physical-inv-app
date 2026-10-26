@@ -658,7 +658,37 @@
     }, 500);
   }
 
+  /* ---- classroom training: the count for a class with real scanners (admins) ---- */
+  function drawTraining(t) {
+    const el = $('trainStatus');
+    if (!t.session) { el.textContent = `No training count yet. Set up makes one with ${t.wall.bins} racks, ${t.wall.pallets} pallet labels, ${t.wall.teams} teams and ${t.wall.trainees} badges on the wall.`; $('lnkTrainDash').hidden = true; return; }
+    el.innerHTML = '';
+    const b = document.createElement('b'); b.textContent = `#${t.session.id} ${t.session.name}`;
+    el.append(b, document.createTextNode(` · ${t.session.trial ? 'a trial run on the scanners' : 'not marked as a trial'}${t.session.showOnGuns ? ', offered to the scanners' : ', hidden from the scanners'} · ${t.loaded.bins} bins, ${t.loaded.pallets} pallets, ${t.loaded.teams} teams, ${t.loaded.trainees} trainees · counted so far: ${t.counted.lines} lines in ${t.counted.bins} bins, ${t.counted.signons} sign-ons, ${t.counted.recounts} second counts open`));
+    $('lnkTrainDash').hidden = false;
+  }
+  async function refreshTraining() {
+    const card = $('classroomCard');
+    if (!api.me || api.me.role !== 'admin') { card.hidden = true; return; }
+    card.hidden = false;
+    drawTraining(await api.json('/api/admin/training'));
+  }
+  const trainAct = async (path, confirmText, done) => {
+    if (confirmText && !confirm(confirmText)) return;
+    try { const t = await api.post(path, {}); drawTraining(t.session === undefined ? await api.json('/api/admin/training') : t); msg($('trainMsg'), 'ok', done(t)); }
+    catch (err) { msg($('trainMsg'), 'err', err.message); }
+  };
+  $('btnTrainSetup').onclick = () => trainAct('/api/admin/training', '', (t) => `Training count ready: #${t.session.id}. Print the wall, hang it, and sign a scanner on with a team card and badges from it.`);
+  $('btnTrainReset').onclick = () => trainAct('/api/admin/training/reset', 'Clear everything the class counted on the training count, and put the aisles back?', (t) => `Cleared: ${t.cleared.lines} lines, ${t.cleared.signons} sign-ons, ${t.cleared.secondCounts} second counts. Ready for the next class.`);
+  $('btnTrainRemove').onclick = () => trainAct('/api/admin/training/remove', 'Remove the training count, its three teams and eight trainees? The wall labels no longer scan into anything until it is set up again.', () => 'The training count is gone.');
+  const trainPrint = (path) => window.open(`${path}${path.includes('?') ? '&' : '?'}t=${encodeURIComponent(api.token)}`, '_blank');
+  $('btnTrainWall').onclick = () => trainPrint('/api/admin/training/print/wall?size=big');
+  $('btnTrainWallSmall').onclick = () => trainPrint('/api/admin/training/print/wall?size=small');
+  $('btnTrainCardEn').onclick = () => trainPrint('/api/admin/training/print/pocket-card?lang=en');
+  $('btnTrainCardEs').onclick = () => trainPrint('/api/admin/training/print/pocket-card?lang=es');
+
   async function refresh() {
+    refreshTraining().catch(() => {});
     const next = await api.json('/api/admin/practice');
     if (!next.session) return start();
     render(next);

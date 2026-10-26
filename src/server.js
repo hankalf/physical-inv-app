@@ -77,6 +77,7 @@ function systemsView(req) {
 }
 import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, unlockPlace, PER_LOGIN, PER_PLACE } from './routes/login-limit.js';
 import { recordAccess, accessMap, lookupPending } from './routes/access-map.js';
+import { ensureTraining, resetTraining, removeTraining, trainingStatus, wallLabels, pocketCard } from './routes/training.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards, barcodeBook, teamCodes } from './routes/printing.js';
 import {
@@ -1191,6 +1192,34 @@ async function handleAdmin(req, res, url, m) {
   }
 
   // --- accounts
+  /* --- classroom training: a real count on a warehouse that fits on a wall, and its printed labels */
+  if (p === '/api/admin/training' || p.startsWith('/api/admin/training/')) {
+    requireAccess('admin');
+    if (p === '/api/admin/training' && method === 'GET') return sendJson(req, res, 200, trainingStatus());
+    if (p === '/api/admin/training' && method === 'POST') {
+      const out = ensureTraining({ by: actor });
+      audit(actor, out.session ? 'set up the training count' : 'training', `${out.loaded.bins} bins, ${out.loaded.pallets} pallets, ${out.loaded.teams} teams, ${out.loaded.trainees} trainees`, out.session ? out.session.id : null);
+      return sendJson(req, res, 200, out);
+    }
+    if (p === '/api/admin/training/reset' && method === 'POST') {
+      const out = resetTraining();
+      audit(actor, 'reset the training count for the next class', `${out.cleared.lines} lines, ${out.cleared.signons} sign-ons, ${out.cleared.secondCounts} second counts cleared`, out.session.id);
+      return sendJson(req, res, 200, out);
+    }
+    if (p === '/api/admin/training/remove' && method === 'POST') {
+      const out = removeTraining();
+      audit(actor, 'removed the training count', `#${out.removed} ${out.name}, its teams and trainees`);
+      return sendJson(req, res, 200, out);
+    }
+    if (p === '/api/admin/training/print/wall') {
+      audit(actor, 'printed the training wall', `${url.searchParams.get('size') || 'big'} ${url.searchParams.get('part') || 'all'}`);
+      return send(req, res, 200, wallLabels({ size: url.searchParams.get('size') || 'big', part: url.searchParams.get('part') || 'all' }), { 'content-type': 'text/html; charset=utf-8' });
+    }
+    if (p === '/api/admin/training/print/pocket-card') {
+      return send(req, res, 200, pocketCard({ lang: url.searchParams.get('lang') || 'en' }), { 'content-type': 'text/html; charset=utf-8' });
+    }
+    throw httpError(404, 'unknown training endpoint');
+  }
   /* --- where the sign-ons come from: the site admin's alone, scanners and logins alike */
   if (p === '/api/admin/access-map' || p === '/api/admin/access-map/lookup') {
     if (!isSiteAdmin(whoNow)) throw httpError(403, 'only the site admin sees where sign-ons come from');
