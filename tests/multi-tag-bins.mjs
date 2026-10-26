@@ -220,15 +220,16 @@ check('Gun: the "tap here to scan" warning is out of the way while the app has t
 
 /* ---- the scan box keeps the focus, whatever gets tapped ---- */
 await gun.click('#btnHistory'); await gun.waitForTimeout(500);
-await gun.click('#btnHistoryBack, #btnBackFromHistory, #scrHistory button').catch(() => {});
+await gun.click('#btnHistoryBack').catch(() => {});   // Back - not the first button on the screen, which is a Void
 await gun.waitForTimeout(700);
 if (await gun.$('#scrScan.active')) {
   await gun.evaluate(() => document.getElementById('btnKeyboard').focus());
-  await gun.keyboard.type('P-6');
+  await gun.keyboard.type('P-7');
   await gun.keyboard.press('Enter');
   await gun.waitForTimeout(500);
+  // the scan was taken: the box is empty again and the gun moved on - to the quantity, or to a question about that pallet
   check('Gun: a scan that lands on a button is put in the box, not swallowed by it',
-    /QUANTITY/i.test(await gun.textContent('#prompt')), clean(await gun.textContent('#prompt')));
+    (await gun.inputValue('#fScan')) === '' && (/QUANTITY/i.test(await gun.textContent('#prompt')) || await gun.isVisible('#scrOverride.active')), `${clean(await gun.textContent('#prompt'))} · ${await gun.isVisible('#scrOverride.active')}`);
 }
 await gun.close();
 

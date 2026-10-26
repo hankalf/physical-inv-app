@@ -2883,7 +2883,10 @@
       }
       state.redoBin = code;
       state.lastBin = code;
+      // back to the rack: the count there starts over, whatever step the gun was on
+      if (!state.multi) { state.draft = {}; state.stepIndex = 0; }
       showScreen('scrScan');
+      renderStep();
       renderNextBin();
       feedback($('scanMsg'), 'warn', `Line voided — go back to ${code}`, l.emptyBin ? 'Scan its rack label and count what is there.' : 'Scan its rack label, then the pallet, and count it again.');
       focusScan();
