@@ -400,6 +400,7 @@
     [/^(\d+) counts? still on this scanner$/, (m) => `${m[1]} ${m[1] === '1' ? 'conteo sigue' : 'conteos siguen'} en este escáner`],
     [/^The oldest is (\d+) minutes old and the server has not taken it yet\. Tell a supervisor before you put this scanner down\.$/,
       (m) => `El más viejo tiene ${m[1]} minutos y el servidor no lo ha recibido. Avisa a un supervisor antes de dejar el escáner.`],
+    [/^Count #(\d+) was closed before (it|they) sent\. A supervisor reopens that count for a minute and (?:it sends|they send) by (?:itself|themselves)\.$/, (m) => `El conteo #${m[1]} se cerró antes de enviar${m[2] === 'it' ? 'lo' : 'los'}. Un supervisor vuelve a abrir ese conteo un minuto y ${m[2] === 'it' ? 'se envía solo' : 'se envían solos'}.`],
     [/^No signal for (\d+) minutes\. Nothing is lost — walk somewhere with Wi-Fi and they will send themselves\.$/,
       (m) => `Sin señal por ${m[1]} minutos. No se pierde nada — camina a donde haya Wi-Fi y se enviarán solos.`],
     [/^(.+) — (\S+) — empty$/, (m) => `${m[1]} — ${m[2]} — vacía`],

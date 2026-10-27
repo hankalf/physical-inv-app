@@ -285,11 +285,25 @@
 
   /* How long the oldest line on this device has been waiting to be sent. */
   async function queueAge() {
-    const pending = await wrap(tx('lines', 'readonly').index('synced').getAll(0));
-    if (!pending.length) return { count: 0, oldest: 0 };
+    const pending = (await wrap(tx('lines', 'readonly').index('synced').getAll(0))).filter(sendable);
+    if (!pending.length) return { count: 0, oldest: 0, closed: 0 };
     const oldest = pending.reduce((t, l) => Math.min(t, new Date(l.ts).getTime()), Date.now());
-    return { count: pending.length, oldest: Math.round((Date.now() - oldest) / 60000) };
+    const closed = pending.filter((l) => l.held === 'closed');
+    return { count: pending.length, oldest: Math.round((Date.now() - oldest) / 60000), closed: closed.length, closedCount: closed.length ? closed[0].sessionId : null };
   }
+
+  /*
+   * A line that is never going to send is not "still on this scanner".
+   *
+   * Voided before it sent: the server never needs it. Its count deleted (a
+   * training count removed, a test count thrown away): there is nowhere for it
+   * to go, and count numbers are never used again. Refused by the server as
+   * unreadable: sending it again gets the same answer. Each stays on the gun
+   * with the reason, and stops holding the queue up. A line whose count was
+   * closed is different - a real count that arrived late - so it keeps trying,
+   * and the gun says what lets it in: reopening the count.
+   */
+  const sendable = (l) => !l.voidedLocal && l.held !== 'removed' && l.held !== 'refused';
 
   /*
    * Counts that have not left the handheld yet.
@@ -302,14 +316,16 @@
    * same. So once the queue is old enough to matter, the gun says so.
    */
   const QUEUE_NAG_MINS = 15;
-  function renderQueueWarning({ count, oldest }) {
+  function renderQueueWarning({ count, oldest, closed = 0, closedCount = null }) {
     const el = $('queueBar');
     if (!el) return;
     const show = count > 0 && oldest >= QUEUE_NAG_MINS;
     el.hidden = !show;
     if (!show) return;
     $('queueBarWhat').textContent = `${count} count${count === 1 ? '' : 's'} still on this scanner`;
-    $('queueBarWhy').textContent = online()
+    $('queueBarWhy').textContent = closed === count
+      ? `Count #${closedCount} was closed before ${count === 1 ? 'it' : 'they'} sent. A supervisor reopens that count for a minute and ${count === 1 ? 'it sends' : 'they send'} by ${count === 1 ? 'itself' : 'themselves'}.`
+      : online()
       ? `The oldest is ${oldest} minutes old and the server has not taken it yet. Tell a supervisor before you put this scanner down.`
       : `No signal for ${oldest} minutes. Nothing is lost — walk somewhere with Wi-Fi and they will send themselves.`;
   }
@@ -426,13 +442,28 @@
   async function sendLines(sessionId, lines) {
     for (let i = 0; i < lines.length; i += 200) {
       const batch = lines.slice(i, i + 200);
-      const result = await api(`/api/sessions/${sessionId}/counts`, {
-        method: 'POST', body: JSON.stringify(batch.map(wireLine)),
-      });
+      let result;
+      try {
+        result = await api(`/api/sessions/${sessionId}/counts`, {
+          method: 'POST', body: JSON.stringify(batch.map(wireLine)),
+        });
+      } catch (err) {
+        // the count is gone, or closed: a fact about the count, not the network - the lines are marked with it
+        const held = err.status === 404 && err.message === 'session not found' ? 'removed' : err.status === 409 && err.message === 'session is closed' ? 'closed' : '';
+        if (!held) throw err;
+        const t = idb.transaction('lines', 'readwrite');
+        for (const l of batch) t.objectStore('lines').put({ ...l, held, heldAt: new Date().toISOString() });
+        await new Promise((r) => { t.oncomplete = r; });
+        continue;
+      }
       const ok = new Set(result.accepted || []);
+      const refused = new Map((result.rejected || []).map((x) => [x.clientId, x.reason]));
       const t = idb.transaction('lines', 'readwrite');
       const os = t.objectStore('lines');
-      for (const l of batch) if (ok.has(l.clientId)) os.put({ ...l, synced: 1 });
+      for (const l of batch) {
+        if (ok.has(l.clientId)) { const { held, heldAt, ...rest } = l; os.put({ ...rest, synced: 1 }); }
+        else if (refused.has(l.clientId)) os.put({ ...l, held: 'refused', heldWhy: String(refused.get(l.clientId) || ''), heldAt: new Date().toISOString() });
+      }
       await new Promise((r) => { t.oncomplete = r; });
     }
   }
@@ -448,7 +479,7 @@
    */
   async function flushPending() {
     if (!online() || !state.deviceToken) return;
-    const pending = (await wrap(tx('lines', 'readonly').index('synced').getAll(0))).filter((l) => !l.voidedLocal);
+    const pending = (await wrap(tx('lines', 'readonly').index('synced').getAll(0))).filter(sendable);
     if (!pending.length) return;
     const bySession = new Map();
     for (const l of pending) {
@@ -468,7 +499,7 @@
     state.syncing = true;
     try {
       const pending = await wrap(tx('lines', 'readonly').index('synced').getAll(0));
-      await sendLines(state.session.id, pending.filter((l) => l.sessionId === state.session.id && !l.voidedLocal));
+      await sendLines(state.session.id, pending.filter((l) => l.sessionId === state.session.id && sendable(l)));
       const voids = (await wrap(tx('lines', 'readonly').getAll()))
         .filter((l) => l.voidedLocal && l.synced === 1 && !l.voidSynced);
       for (const l of voids) {
