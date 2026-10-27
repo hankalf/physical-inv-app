@@ -88,7 +88,7 @@ you the next one. You do not wait for a supervisor.
 
 A bin the office wants counted again. **Start second counts** on the assignment screen gives
 you the nearest ones. The gun shows the bin and why, never the numbers and never who counted
-it first. Count the bin fully, then **Bin done — nothing more here**.
+it first. Count the bin fully: the gun moves on once every pallet expected there is counted, and **Bin done — nothing more here** is for a bin with fewer.
 
 ## 7 — Blocked, broken, help
 

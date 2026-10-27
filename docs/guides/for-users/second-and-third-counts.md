@@ -23,7 +23,7 @@ it once more: a **third count**. This guide is how that works on the gun and on 
 - A second count is **blind**: you are told the bin and the kind of problem, never the numbers.
 - It is never given to the team that did the first count; a third count goes to a team that did
   **neither**.
-- **Count the whole bin** — every pallet in it — then tap **Bin done**.
+- **Count the whole bin** — every pallet in it. The gun moves on once every pallet expected there is counted; fewer there, tap **Bin done**.
 - The latest count of a bin is the one that stands: a second count replaces the first, a third
   count replaces both.
 
@@ -53,7 +53,7 @@ A supervisor can also send any bin back by hand.
 3. Go to that bin and **scan every pallet in it**, the normal way: pallet, quantity, bin. Count
    everything in the bin, not only the pallet that brought you there.
 4. Nothing in the bin: **Bin is EMPTY**.
-5. When the bin is finished, tap **Bin done — nothing more here**. The gun moves to the next one.
+5. Once every pallet the report expects in the bin is counted, the gun finishes the second count by itself and moves to the next one. Fewer pallets there than that: tap **Bin done — nothing more here** when the bin is finished.
 6. **My aisle** takes you back to your own aisle at any time; the second counts wait for you.
 
 No signal? Keep counting. The lines and the *Bin done* wait on the gun and send when it is back

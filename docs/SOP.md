@@ -1890,7 +1890,8 @@ supervisor.
   tasks. It deliberately leaves alone pallets in aisles nobody has counted yet — mid-count
   those are not missing, just not reached — and tells you how many it skipped and why.
 - The tasks appear on the handhelds: a team taps **Start second counts** on the
-  assignment screen, counts the bin again, and presses **Bin done — nothing more here**. The
+  assignment screen and counts the bin again; once every pallet the report expects there is
+  counted the gun moves on by itself (**Bin done — nothing more here** is for a bin with fewer). The
   list is **nearest first**: the aisle the team is in, then its racking block, then the aisles
   nearest by number, so a team finishing F11 is not sent to F01.
 - **How a second count is judged.** The second count of a bin replaces its first count for every

@@ -411,8 +411,8 @@ check('Handheld T2: re-scanning the pallet in a recount is not a duplicate stop'
 await t2.scan('96'); await t2.scan('F01C001');
 check('Handheld T2: a different bin is refused during a recount', new RegExp(`This second count is for bin ${qtyTask.bin}`).test(await t2.T('#scanMsg')), await t2.T('#scanMsg'));
 await t2.scan(qtyTask.bin); await t2.p.click('#btnSkip'); await t2.p.waitForTimeout(400);
-await t2.p.click('#btnRecountDone'); await t2.p.waitForTimeout(1000);
-check('Handheld T2: bin done → straight on to the next second count', /SECOND COUNT · bin /.test(await t2.T('#recountBanner')) && (await t2.p.getAttribute('#recountBanner', 'data-bin')) !== qtyTask.bin, `${qtyTask.bin} -> ${await t2.p.getAttribute('#recountBanner', 'data-bin')}`);
+await t2.p.waitForTimeout(1000);
+check('Handheld T2: once the pallet the second count is for is counted, the gun goes straight on to the next one by itself', /SECOND COUNT · bin /.test(await t2.T('#recountBanner')) && (await t2.p.getAttribute('#recountBanner', 'data-bin')) !== qtyTask.bin, `${qtyTask.bin} -> ${await t2.p.getAttribute('#recountBanner', 'data-bin')}`);
 recs = await getRecs();
 const doneTask = recs.find((r) => r.id === qtyTask.id);
 check('Recounts: task done by team 2, both counts on record', doneTask.status === 'done' && doneTask.done_by_team === '2' && /×/.test(doneTask.first_result) && /×96/.test(doneTask.second_result), `${doneTask.first_result} → ${doneTask.second_result}`);

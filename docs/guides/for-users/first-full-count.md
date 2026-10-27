@@ -234,8 +234,9 @@ limits, the bin goes on this list for a different team to count again.
 
 1. **Raise from all variances now** adds everything that disagrees so far. Aisles nobody has
    reached are left alone.
-2. On the scanner, a team taps **Start second counts**, counts the bin again without seeing the
-   first count, and presses **Bin done — nothing more here**.
+2. On the scanner, a team taps **Start second counts** and counts the bin again without seeing the
+   first count. Once every pallet expected there is counted the gun moves on by itself; **Bin done —
+   nothing more here** is for a bin with fewer.
 3. The second count replaces the first:
    - **it agrees with the first count** — the difference is real;
    - **it agrees with the ERP** — the first count was wrong;

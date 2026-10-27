@@ -385,6 +385,7 @@
     [/^Between you: (.+) — reaches (.+)\.$/, (m) => `Entre ustedes: ${T(m[1])} — alcanzan ${T(m[2])}.`],
     [/^(.+) · reaches (.+)$/, (m) => `${T(m[1])} · alcanzan ${T(m[2])}`],
     [/^(CYCLE COUNT|SECOND COUNT|THIRD COUNT) · bin (\S+)$/, (m) => `${m[1] === 'CYCLE COUNT' ? 'CONTEO CÍCLICO' : m[1] === 'THIRD COUNT' ? 'TERCER CONTEO' : 'SEGUNDO CONTEO'} · ubicación ${m[2]}`],
+    [/^(.*) — (.*)\. Scan every pallet in this bin\. It moves on once every pallet expected here is counted — fewer here, tap Bin done\.$/, (m) => `${T(m[1])} — ${T(m[2])}. Escanea cada tarima de esta ubicación. Sigue sola cuando cada tarima esperada aquí está contada — si hay menos, toca Ubicación terminada.`],
     [/^(.*) — (.*)\. Scan every pallet in this bin, then tap Bin done\.$/, (m) => `${T(m[1])} — ${T(m[2])}. Escanea cada tarima de esta ubicación, luego toca Ubicación terminada.`],
     [/^Bin (\S+) second count done$/, (m) => `Segundo conteo de ${m[1]} terminado`],
     [/^Bin (\S+) third count done$/, (m) => `Tercer conteo de ${m[1]} terminado`],

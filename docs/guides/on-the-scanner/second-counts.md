@@ -12,16 +12,17 @@ When a first count does not agree with the report, the office sends a different 
 
 ![](../../images/scanner-film-second-count.png)
 
-*A second count: go to the bin, count everything in it, then Bin done.*
+*A second count: go to the bin and count everything in it. It moves on once every pallet expected there is counted.*
 
 ## What to do
 
 1. On **My aisle**, tap **Start second counts**.
 2. The banner at the top says which bin to go to.
-3. Count everything in that spot: rack label, pallet label, quantity, for every pallet. An empty spot: **Bin is EMPTY**.
-4. Tap **Bin done — nothing more here**. The next one comes up.
-5. You cannot get to it right now: tap **Leave for another team**.
-6. Scanned a different bin by mistake? The scanner says *This second count is for bin …*. Scan the right one.
+3. Count everything in that spot: rack label, pallet label, quantity, for every pallet.
+4. Once every pallet the report expects in that spot is counted, the scanner finishes the second count by itself: *Bin … done — every pallet expected there is counted*, and the next one comes up.
+5. Fewer pallets there than that, or none at all: tap **Bin done — nothing more here** when you have counted what is there. An empty spot: **Bin is EMPTY**.
+6. You cannot get to it right now: tap **Leave for another team**.
+7. Scanned a different bin by mistake? The scanner says *This second count is for bin …*. Scan the right one.
 
 ## What the office sees
 

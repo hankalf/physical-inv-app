@@ -1084,11 +1084,32 @@
     $('recountBanner').dataset.kind = t.kind || 'recount';
     $('recountBanner').appendChild(document.createTextNode(`${t.kind === 'cycle' ? 'CYCLE COUNT' : Number(t.round) === 3 ? 'THIRD COUNT' : 'SECOND COUNT'} · bin ${t.bin}`));
     const d = document.createElement('div'); d.className = 'detail';
-    d.textContent = `${describeBin(t.bin)} — ${t.reason}. Scan every pallet in this bin, then tap Bin done.`;
+    d.textContent = t.kind === 'cycle' ? `${describeBin(t.bin)} — ${t.reason}. Scan every pallet in this bin, then tap Bin done.`
+      : `${describeBin(t.bin)} — ${t.reason}. Scan every pallet in this bin. It moves on once every pallet expected here is counted — fewer here, tap Bin done.`;
     $('recountBanner').appendChild(d);
   }
 
-  async function finishRecount(emptyLine) {
+  /* A second count is finished when every pallet the report puts in its bin - and
+     the pallet that raised it - has a count on it: the gun moves on, the way a
+     first count moves to the next bin. A bin with fewer pallets than that waits
+     for Bin done, which is the counter saying so. */
+  async function recountComplete(t) {
+    if (!t || t.kind === 'cycle' || !state.session) return false;
+    const want = new Set((await wrap(tx('pal', 'readonly').getAll())).filter((p) => p.expLoc === t.bin).map((p) => p.p));
+    if (t.palletId) want.add(t.palletId);
+    if (!want.size) return false;
+    const got = new Set((await wrap(tx('lines', 'readonly').getAll()))
+      .filter((l) => l.sessionId === state.session.id && !l.voidedLocal && !l.emptyBin && l.recountId === t.id).map((l) => l.palletId));
+    return [...want].every((p) => got.has(p));
+  }
+  async function finishRecountIfComplete() {
+    const t = state.recount;
+    if (!t || state.multi || !(await recountComplete(t))) return false;
+    await finishRecount(false, { auto: true });
+    return true;
+  }
+
+  async function finishRecount(emptyLine, { auto = false } = {}) {
     const t = state.recount;
     if (!t) return;
     state.recountsDoneLocal = [...(state.recountsDoneLocal || []), t.id];
@@ -1096,14 +1117,15 @@
     state.recount = null;
     await flushRecountsDone();
     const next = nextRecountTask();
+    const why = auto ? ' — every pallet expected there is counted' : '';
     if (next) {
       feedback($('scanMsg'), 'ok', `Bin ${t.bin} ${Number(t.round) === 3 ? 'third' : 'second'} count done`, `Next: bin ${next.bin}`);
       await startRecount(next);
-      feedback($('scanMsg'), 'ok', `Bin ${t.bin} done`, `Now bin ${next.bin} — ${describeBin(next.bin)}`);
+      feedback($('scanMsg'), 'ok', `Bin ${t.bin} done${why}`, `Now bin ${next.bin} — ${describeBin(next.bin)}`);
     } else {
       renderAssignment();
       showScreen('scrAssign');
-      feedback($('assignMsg'), 'ok', 'All second counts done', 'Nothing more to go back to right now.');
+      feedback($('assignMsg'), 'ok', auto ? `Bin ${t.bin} done${why}` : 'All second counts done', 'Nothing more to go back to right now.');
     }
   }
 
@@ -2232,6 +2254,7 @@
     if (line.emptyBin) feedback($('scanMsg'), 'ok', `Bin ${line.location} recorded as EMPTY`, [describeBin(line.location), line.overrideReason ? 'flagged' : ''].filter(Boolean).join(' — '));
     else feedback($('scanMsg'), 'ok', `Counted ${line.palletId}`,
       `${line.qty} @ ${line.location}${line.overrideReason ? ' · flagged' : ''}`);
+    if (state.recount && !line.emptyBin && (await finishRecountIfComplete())) return;
     /* A line is finished and the queue may have just drained: the one moment in
        a counter's day when reloading costs them nothing. */
     if (updateReady) setTimeout(() => applyUpdate(), 1500);
@@ -3187,7 +3210,7 @@
   };
   $('btnSameLabel').onclick = () => { startSameLabel(); };
   $('btnMultiLabel').onclick = startMultiLabel;
-  $('btnMultiDone').onclick = () => finishMultiLabel();
+  $('btnMultiDone').onclick = async () => { finishMultiLabel(); if (state.recount) await finishRecountIfComplete(); };
   $('btnSos').onclick = openSos;
   $('btnReasonKeyboard').onclick = () => {
     const f = $('fReasonNote');

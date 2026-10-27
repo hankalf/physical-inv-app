@@ -578,8 +578,9 @@ thresholds in step 14.
 
 1. They are raised by themselves as lines arrive. **Raise from all variances now** goes through
    everything that disagrees so far. It leaves aisles nobody has counted yet alone.
-2. On the scanner, a team taps **Start second counts**, counts the bin again blind, and presses
-   **Bin done — nothing more here**. The nearest bins come first.
+2. On the scanner, a team taps **Start second counts** and counts the bin again blind. Once every
+   pallet expected there is counted the gun moves on by itself; **Bin done — nothing more here** is
+   for a bin with fewer. The nearest bins come first.
 3. The second count replaces the first:
    - **it agrees with the first count** — the difference is real, and goes to adjustments;
    - **it agrees with the report** — the first count was wrong, and the line now matches;

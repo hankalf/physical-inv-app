@@ -87,7 +87,7 @@ A bin has one open second count at a time; asking again says so.
 3. Go to that bin and **scan every pallet in it** as normal: pallet, quantity, bin. Count everything
    in the bin, not only the pallet named — the whole bin is counted again.
 4. A bin with nothing in it: **Bin is EMPTY**.
-5. When the bin is finished, tap **Bin done — nothing more here**. The gun moves to the next one.
+5. Once every pallet the report expects in the bin is counted, the gun finishes the second count by itself and moves to the next one. Fewer pallets there than that: tap **Bin done — nothing more here** when the bin is finished.
 6. **My aisle** goes back to the team's own aisle at any time; the second counts wait.
 
 No signal? The lines and the *Bin done* queue on the gun and go when it has signal. The server

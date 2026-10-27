@@ -82,9 +82,9 @@ await scan('F34511-111');
 await step('…then the quantity', /quantity/i);
 await scan('40'); await wait(600);
 if (await gun(`const b = d.querySelector('#btnSkip'); return !!b && !b.hidden && !!b.offsetParent;`)) { await step('…comments', /Optional/); await gunClick('#btnSkip'); }
-await step('After the last pallet the tip is Bin done, not the bin again', /Everything in F03A001 is counted.*Bin done/);
-await gunClick('#btnRecountDone'); await wait(1200);
-await step('The next bin starts with its bin again', /First, the bin — click F03A002/);
+// every pallet expected in F03A001 counted: the gun finishes that second count by itself
+await wait(1200);
+await step('After the last pallet the gun moves on by itself, and the next bin starts with its bin again', /First, the bin — click F03A002/);
 await scan('F03A002');
 await step('…its first pallet', /Click F34512-111/);
 

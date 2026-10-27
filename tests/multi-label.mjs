@@ -91,7 +91,9 @@ await scan('ML-1'); await scan('11'); await skip();
 await scan('ML-2'); await scan('12'); await skip();
 await gun.click('#btnMultiDone'); await gun.waitForTimeout(400);
 check('…both labels go in, then Done', /Pallet with 2 labels counted in M01A001/.test(await T('#scanMsg')), await T('#scanMsg'));
-await gun.click('#btnRecountDone'); await gun.waitForTimeout(1500);
+// both labels the report has there are counted: the second count finishes by itself (Bin done only if it did not)
+if (await gun.isVisible('#btnRecountDone')) await gun.click('#btnRecountDone');
+await gun.waitForTimeout(1500);
 // the second count stands over the first: ML-1 now reads 11, ML-2 12, both from pass 2
 let after = [];
 for (let i = 0; i < 20 && !after.some((r) => r.pallet_id === 'ML-1' && Number(r.counted_qty) === 11); i++) { await wait(500); after = (await get(`/api/admin/sessions/${S}/pallets?limit=50`)).rows; }

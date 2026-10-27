@@ -1139,7 +1139,7 @@
         const row = next ? $('modePane').querySelector(`tr[data-pallet="${next.id}"]`) : null;
         if (c) return { key: 'comments', target: GUN(), step: 'Comments', pos: 'left', text: 'Optional. Tap a reason on the gun, or <b>Skip</b> — or just wait, it moves on by itself.' };
         if (!next) {
-          if (b.shelf.length) return { key: 'sc:done:' + b.bin, target: GUN(), step: `Second count · bin ${b.bin}`, pos: 'left', text: `Everything in <b>${b.bin}</b> is counted. Tap <b>Bin done — nothing more here</b>; the gun moves to the next bin.` };
+          if (b.shelf.length) return { key: 'sc:done:' + b.bin, target: GUN(), step: `Second count · bin ${b.bin}`, pos: 'left', text: `Everything in <b>${b.bin}</b> is counted. If the gun has not moved to the next bin by itself, tap <b>Bin done — nothing more here</b>.` };
           if (p && !b.recordedEmpty) return { key: 'sc:empty:' + b.bin, target: paneChip(b.bin), step: `Second count · bin ${b.bin}`, text: `Nothing is in <b>${b.bin}</b>. On the gun tap <b>Bin is EMPTY — scan the bin</b>, then click <b>${b.bin}</b>.` };
           if (bn && !b.recordedEmpty) return { key: 'sc:bin:' + b.bin, target: paneChip(b.bin), step: `Second count · bin ${b.bin}`, text: `Click <b>${b.bin}</b>, the bin. Nothing is in it: at the pallet step the gun offers <b>Bin is EMPTY</b>.` };
           return null;

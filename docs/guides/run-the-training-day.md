@@ -158,7 +158,7 @@ T02A006: **Sign off this scanner**.
 
 **The second counts.** S2-DS01 signs on with its card and two badges. **My aisle** shows **Start
 second counts**: the two short counts from the wall. At each, count everything in the spot — rack,
-pallet, quantity, **Bin done — nothing more here**. The second count agrees with the label, so
+pallet, quantity — and the gun moves to the next one by itself once the pallet is counted. The second count agrees with the label, so
 the office sees the first count was wrong.
 
 ## 6 — What the office screen shows

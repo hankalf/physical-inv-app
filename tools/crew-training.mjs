@@ -659,11 +659,13 @@ try {
   await tap('#btnRecounts', { hold: 2600, shot: 'second-counts-offered' });
   await gun().waitForSelector('#scrScan.active', { timeout: 20000 });
   await beat(1400);
-  await say(L('Count it like any spot', 'Cuéntalo como cualquier lugar'), L('The screen shows <b>SECOND COUNT</b> and the spot. Go there and count everything in it — rack, pallet, quantity. You are not told the first count. Then tap <b>Bin done — nothing more here</b>.', 'La pantalla muestra <b>SEGUNDO CONTEO</b> y el lugar. Ve ahí y cuenta todo — rack, tarima, cantidad. No te dicen el primer conteo. Luego toca <b>Ubicación terminada — no hay más aquí</b>.'));
+  await say(L('Count it like any spot', 'Cuéntalo como cualquier lugar'), L('The screen shows <b>SECOND COUNT</b> and the spot. Go there and count everything in it — rack, pallet, quantity. You are not told the first count. When every pallet expected there is counted, the scanner moves on by itself; fewer there, tap <b>Bin done — nothing more here</b>.', 'La pantalla muestra <b>SEGUNDO CONTEO</b> y el lugar. Ve ahí y cuenta todo — rack, tarima, cantidad. No te dicen el primer conteo. Cuando cada tarima esperada ahí está contada, el escáner sigue solo; si hay menos, toca <b>Ubicación terminada — no hay más aquí</b>.'));
   await toTop(); await beat(600);
   await shotPhone('second-count');
   await countLine(palletAt.get(recBin)[0], recBin);
-  await tap('#btnRecountDone', { hold: 2600 });
+  // every pallet expected in the spot is counted: the scanner finishes the second count by itself
+  if (await gun().isVisible('#btnRecountDone').catch(() => false)) await tap('#btnRecountDone', { hold: 2600 });
+  else await beat(2600);
   await beat(1600);
   if (!(await gun().isVisible('#scrAssign.active').catch(() => false))) await tap('#btnToAssign', { hold: 1400 }).catch(() => {});
   await gun().waitForSelector('#scrAssign.active', { timeout: 20000 }).catch(() => {});
