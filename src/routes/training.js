@@ -726,3 +726,223 @@ export function rosterDocx() {
   if (!rows.length) d.paragraph('No employees on Teams & crew yet — upload the crew list first.');
   return d.build({ title: 'Training roster' });
 }
+
+/* ------------------------------------------------------------ more for the classroom
+ * For a crew to whom the whole system is new: a check-off sheet the trainer signs
+ * for each person, a short quiz with its answers, the scanner's words in English
+ * and Spanish, and a page for the supervisors on count day. Each prints, and each
+ * comes as Word to edit.
+ */
+const SKILLS = {
+  en: [
+    ['Signs on', 'Team card into Team number, then their badge — or one badge alone on a cycle count'],
+    ['Follows Next bin', 'Scans the rack label of the spot in front of them, every time'],
+    ['Rack · pallet · quantity', 'Types the cases that are really there, not what the label says'],
+    ['Several pallets in a spot', 'Counts every one before moving on'],
+    ['An empty spot', 'Bin is EMPTY, then Yes'],
+    ['Two labels on one pallet', 'This pallet has more than one label, each label with its cases, Done'],
+    ['A torn label', 'Label will not scan → types it on the scanner’s keys'],
+    ['No label at all', 'Label will not scan → Nothing readable on it'],
+    ['A pallet not on the list', 'Count it anyway? → YES'],
+    ['A mistake', 'Back before the line is saved; History → Void after, and goes back to that bin'],
+    ['A second count', 'Counts the spot blind; Bin done when there are fewer pallets than expected'],
+    ['SOS or Report a problem', 'Knows which is which, and that SOS with no signal is not sent'],
+    ['No Wi-Fi', 'Keeps counting; signs off only with nothing queued'],
+    ['Finishing', 'Tells the supervisor; Sign off this scanner; scanner on the charger'],
+  ],
+  es: [
+    ['Entra', 'Tarjeta del equipo en Número de equipo, luego su gafete — o un solo gafete en un conteo cíclico'],
+    ['Sigue Siguiente ubicación', 'Escanea la etiqueta del rack del lugar que tiene enfrente, cada vez'],
+    ['Rack · tarima · cantidad', 'Escribe las cajas que de verdad hay, no lo que dice la etiqueta'],
+    ['Varias tarimas en un lugar', 'Cuenta cada una antes de seguir'],
+    ['Un lugar vacío', 'Ubicación VACÍA, luego Sí'],
+    ['Dos etiquetas en una tarima', 'Esta tarima tiene más de una etiqueta, cada etiqueta con sus cajas, Listo'],
+    ['Una etiqueta rota', 'La etiqueta no escanea → la escribe con las teclas del escáner'],
+    ['Sin etiqueta', 'La etiqueta no escanea → No se puede leer nada'],
+    ['Una tarima que no está en la lista', '¿Contarla de todos modos? → SÍ'],
+    ['Un error', 'Atrás antes de guardar; Historial → Anular después, y regresa a esa ubicación'],
+    ['Un segundo conteo', 'Cuenta el lugar a ciegas; Ubicación terminada cuando hay menos tarimas de las esperadas'],
+    ['SOS o Reportar un problema', 'Sabe cuál es cuál, y que un SOS sin señal no se manda'],
+    ['Sin Wi-Fi', 'Sigue contando; sale solo cuando no queda nada en cola'],
+    ['Terminar', 'Avisa al supervisor; Salir de este escáner; escáner al cargador'],
+  ],
+};
+const CHECK_WORDS = {
+  en: { title: 'Scanner check-off', name: 'Name', badge: 'Clock-in number', team: 'Team', date: 'Date', skill: 'Can do it on the wall', ok: 'Done', trainer: 'Trainer', sign: 'Signature',
+    note: 'The trainer ticks each one as the person does it on the training wall, on a real scanner. All ticked: trained — tick them on the Training roster too.' },
+  es: { title: 'Revisión del escáner', name: 'Nombre', badge: 'Número de gafete', team: 'Equipo', date: 'Fecha', skill: 'Lo hace en la pared', ok: 'Hecho', trainer: 'Entrenador', sign: 'Firma',
+    note: 'El entrenador marca cada una cuando la persona la hace en la pared de entrenamiento, con un escáner real. Todas marcadas: entrenado — márcalo también en la lista de entrenamiento.' },
+};
+
+/** One check-off per person: from the roster (the not-yet-trained first), or blank ones to fill in. */
+export function checkoffPeople({ who = 'blank', count = 4 } = {}) {
+  if (who === 'roster') {
+    const rows = trainingRoster().rows.filter((r) => !r.trained);
+    if (rows.length) return rows.map((r) => ({ name: r.name, badge: r.badge, team: r.team }));
+  }
+  return Array.from({ length: Math.max(1, Math.min(200, Number(count) || 4)) }, () => ({ name: '', badge: '', team: '' }));
+}
+
+export function checkoffSheet({ lang = 'en', who = 'blank', count = 4 } = {}) {
+  const es = lang === 'es';
+  const W = CHECK_WORDS[es ? 'es' : 'en'];
+  const people = checkoffPeople({ who, count });
+  const one = (p) => `
+    <div class="co">
+      <div class="h"><b>${esc(W.title)}</b><span>Full Harvest Inventory</span></div>
+      <table class="who"><tr><td>${esc(W.name)}: <b>${esc(p.name)}</b></td><td>${esc(W.badge)}: <b>${esc(p.badge)}</b></td><td>${esc(W.team)}: <b>${esc(p.team)}</b></td><td>${esc(W.date)}:</td></tr></table>
+      <table class="sk"><tr><th></th><th>${esc(W.skill)}</th><th class="ok">${esc(W.ok)}</th></tr>
+      ${SKILLS[es ? 'es' : 'en'].map(([a, b], i) => `<tr><td class="n">${i + 1}</td><td><b>${esc(a)}</b> — ${esc(b)}</td><td class="ok">☐</td></tr>`).join('')}</table>
+      <div class="foot"><span>${esc(W.trainer)}: ____________________</span><span>${esc(W.sign)}: ____________________</span></div>
+      <div class="note">${esc(W.note)}</div>
+    </div>`;
+  return `<!doctype html><html lang="${es ? 'es' : 'en'}"><head><meta charset="utf-8"><title>${esc(W.title)}</title><style>
+  @page { size: letter portrait; margin: 9mm; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #000; margin: 0; padding: 6px; font-size: 9pt; }
+  .co { border: 1.5px dashed #777; border-radius: 8px; padding: 4mm 5mm; margin-bottom: 5mm; break-inside: avoid; page-break-inside: avoid; height: 124mm; box-sizing: border-box; overflow: hidden; }
+  .h { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #1e4f8f; padding-bottom: 1mm; margin-bottom: 2mm; }
+  .h b { font-size: 13pt; } .h span { color: #666; font-size: 8pt; }
+  table { width: 100%; border-collapse: collapse; }
+  .who td { padding: 1mm 0; font-size: 9pt; }
+  .sk th { text-align: left; font-size: 7.5pt; letter-spacing: .06em; text-transform: uppercase; color: #444; border-bottom: 1px solid #999; padding: 1mm; }
+  .sk td { border-bottom: 1px solid #ddd; padding: .9mm 1mm; vertical-align: top; line-height: 1.25; }
+  .sk .n { width: 5mm; color: #666; } .sk .ok { width: 12mm; text-align: center; font-size: 13pt; }
+  .foot { display: flex; justify-content: space-between; margin-top: 3mm; font-size: 9pt; }
+  .note { color: #555; font-size: 7.5pt; margin-top: 2mm; font-style: italic; }
+  .noprint { margin-bottom: 8px; padding: 6px 12px; } @media print { .noprint { display: none; } body { padding: 0; } }
+</style></head><body><button class="noprint" onclick="window.print()">Print</button>
+${people.map(one).join('')}
+</body></html>`;
+}
+
+export function checkoffDocx({ lang = 'en', who = 'blank', count = 4 } = {}) {
+  const es = lang === 'es';
+  const W = CHECK_WORDS[es ? 'es' : 'en'];
+  const d = new Docx({ margin: 720 });
+  const TW = 12240 - 2 * 720;
+  checkoffPeople({ who, count }).forEach((p, i) => {
+    if (i && i % 2 === 0) d.pageBreak();
+    d.paragraph([{ text: W.title, bold: true, size: 26 }, { text: '   Full Harvest Inventory', size: 16, color: '666666' }], { before: i % 2 ? 240 : 0, after: 60 });
+    d.paragraph([{ text: `${W.name}: ${p.name || '____________________'}    ${W.badge}: ${p.badge || '________'}    ${W.team}: ${p.team || '________'}    ${W.date}: ________`, size: 18 }], { after: 80 });
+    const rows = [['', W.skill, W.ok]].concat(SKILLS[es ? 'es' : 'en'].map(([a, b], k) => [String(k + 1), `${a} — ${b}`, '☐']));
+    d.table(rows.map((r, k) => r.map((t, c) => [d.paragraphXml([{ text: t, size: c === 2 && k ? 24 : 17, bold: !k }], { after: 0, align: c === 2 ? 'center' : 'left' })])), { widths: [400, TW - 1300, 900], border: 'single', borderColor: 'BBBBBB', cellMargin: 50, headerShade: 'EEEEEE' });
+    d.paragraph([{ text: `${W.trainer}: ____________________      ${W.sign}: ____________________`, size: 18 }], { before: 120, after: 40 });
+    d.paragraph([{ text: W.note, size: 15, italic: true, color: '555555' }], { after: 0 });
+  });
+  return d.build({ title: W.title });
+}
+
+/* ---- the quiz: what do you do when ... ---- */
+const QUIZ = {
+  en: { title: 'Scanner quiz', sub: 'Circle one answer. Then the trainer goes through the answers with the group.', key: 'Answers', name: 'Name', qs: [
+    ['The label says 48 cases. You count 45. What do you type?', ['48', '45', 'Nothing — tell the office'], 1],
+    ['There is nothing at all in the spot. What do you do?', ['Walk past it', 'Scan the rack label, Bin is EMPTY, Yes', 'Scan the next spot’s label'], 1],
+    ['The pallet label is torn but you can read the number.', ['Skip the pallet', 'Label will not scan → I can read it — let me type it', 'Count it under the pallet next to it'], 1],
+    ['A pallet has two labels on it.', ['Count one label and add both quantities', 'This pallet has more than one label — each label with its own cases', 'Count it twice'], 1],
+    ['The scanner asks “Count it anyway?” for a pallet not on the list.', ['YES, and count it', 'NO, it is not ours', 'Take the label off'], 0],
+    ['The top of the screen says OFFLINE.', ['Stop and wait for Wi-Fi', 'Keep counting — it sends when the signal is back', 'Sign off'], 1],
+    ['You saved a line with the wrong number.', ['History → Void this line, then count that bin again', 'Count the next spot twice', 'Tell nobody'], 0],
+    ['Someone is hurt in the aisle.', ['Report a problem', 'SOS — I need help, and get help', 'Finish the aisle first'], 1],
+    ['Every spot in your aisle has a count.', ['Tap a button to finish the aisle', 'Tell your supervisor — they mark it done', 'Start the next aisle on your own'], 1],
+    ['A second count asks you to count a spot again. What were the first count’s numbers?', ['You are told them', 'You are not told — count what is there', 'Ask the other team'], 1],
+  ] },
+  es: { title: 'Prueba del escáner', sub: 'Encierra una respuesta. Luego el entrenador repasa las respuestas con el grupo.', key: 'Respuestas', name: 'Nombre', qs: [
+    ['La etiqueta dice 48 cajas. Cuentas 45. ¿Qué escribes?', ['48', '45', 'Nada — avisar a la oficina'], 1],
+    ['No hay nada en el lugar. ¿Qué haces?', ['Pasar de largo', 'Escanear el rack, Ubicación VACÍA, Sí', 'Escanear la etiqueta del siguiente lugar'], 1],
+    ['La etiqueta de la tarima está rota pero puedes leer el número.', ['Saltar la tarima', 'La etiqueta no escanea → La puedo leer — la escribo', 'Contarla con la tarima de al lado'], 1],
+    ['Una tarima tiene dos etiquetas.', ['Contar una etiqueta y sumar las dos cantidades', 'Esta tarima tiene más de una etiqueta — cada etiqueta con sus cajas', 'Contarla dos veces'], 1],
+    ['El escáner pregunta “¿Contarla de todos modos?” por una tarima que no está en la lista.', ['SÍ, y contarla', 'NO, no es nuestra', 'Quitar la etiqueta'], 0],
+    ['Arriba de la pantalla dice SIN SEÑAL.', ['Parar y esperar el Wi-Fi', 'Seguir contando — se manda cuando regresa la señal', 'Salir'], 1],
+    ['Guardaste una línea con el número equivocado.', ['Historial → Anular esta línea, y volver a contar esa ubicación', 'Contar dos veces el siguiente lugar', 'No decir nada'], 0],
+    ['Alguien está lastimado en el pasillo.', ['Reportar un problema', 'SOS — necesito ayuda, y buscar ayuda', 'Terminar el pasillo primero'], 1],
+    ['Cada lugar de tu pasillo tiene un conteo.', ['Tocar un botón para terminar el pasillo', 'Avisar a tu supervisor — él lo marca terminado', 'Empezar el siguiente pasillo solo'], 1],
+    ['Un segundo conteo te pide volver a contar un lugar. ¿Cuáles eran los números del primer conteo?', ['Te los dicen', 'No te los dicen — cuenta lo que hay', 'Preguntar al otro equipo'], 1],
+  ] },
+};
+
+export function quizSheet({ lang = 'en' } = {}) {
+  const Q = QUIZ[lang === 'es' ? 'es' : 'en'];
+  const letters = ['A', 'B', 'C'];
+  return `<!doctype html><html lang="${lang === 'es' ? 'es' : 'en'}"><head><meta charset="utf-8"><title>${esc(Q.title)}</title><style>
+  @page { size: letter portrait; margin: 13mm; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #000; margin: 0; padding: 6px; font-size: 11pt; }
+  h1 { font-size: 18pt; margin: 0 0 1mm; } .sub { color: #444; margin-bottom: 3mm; } .nm { margin-bottom: 5mm; }
+  ol { padding-left: 6mm; margin: 0; } li { margin-bottom: 3.2mm; break-inside: avoid; } li b { display: block; margin-bottom: 1mm; }
+  .opt { display: block; margin-left: 2mm; } .key { page-break-before: always; break-before: page; }
+  .key table { border-collapse: collapse; width: 100%; } .key td { border-bottom: 1px solid #ccc; padding: 2mm; vertical-align: top; }
+  .noprint { margin-bottom: 8px; padding: 6px 12px; } @media print { .noprint { display: none; } body { padding: 0; } }
+</style></head><body><button class="noprint" onclick="window.print()">Print</button>
+<h1>${esc(Q.title)}</h1><div class="sub">${esc(Q.sub)}</div><div class="nm">${esc(Q.name)}: ______________________________</div>
+<ol>${Q.qs.map(([q, opts]) => `<li><b>${esc(q)}</b>${opts.map((o, i) => `<span class="opt">${letters[i]}. ${esc(o)}</span>`).join('')}</li>`).join('')}</ol>
+<div class="key"><h1>${esc(Q.title)} — ${esc(Q.key)}</h1><table>${Q.qs.map(([q, opts, a], i) => `<tr><td>${i + 1}</td><td>${esc(q)}</td><td><b>${letters[a]}. ${esc(opts[a])}</b></td></tr>`).join('')}</table></div>
+</body></html>`;
+}
+
+export function quizDocx({ lang = 'en' } = {}) {
+  const Q = QUIZ[lang === 'es' ? 'es' : 'en'];
+  const letters = ['A', 'B', 'C'];
+  const d = new Docx({ margin: 900 });
+  d.paragraph([{ text: Q.title, bold: true, size: 36 }], { after: 40 });
+  d.paragraph([{ text: Q.sub, size: 20, color: '444444' }], { after: 80 });
+  d.paragraph([{ text: `${Q.name}: ______________________________`, size: 20 }], { after: 200 });
+  const list = d.newList();
+  for (const [q, opts] of Q.qs) {
+    d.paragraph([{ text: q, bold: true, size: 21 }], { numbered: list, after: 40, keepNext: true });
+    for (const [i, o] of opts.entries()) d.paragraph([{ text: `${letters[i]}. ${o}`, size: 20 }], { after: 20 });
+    d.paragraph('', { after: 80 });
+  }
+  d.paragraph([{ text: `${Q.title} — ${Q.key}`, bold: true, size: 30 }], { pageBreakBefore: true, after: 120 });
+  const W = 12240 - 2 * 900;
+  d.table(Q.qs.map(([q, opts, a], i) => [String(i + 1), q, `${letters[a]}. ${opts[a]}`].map((t, c) => [d.paragraphXml([{ text: t, size: 19, bold: c === 2 }], { after: 0 })])), { widths: [500, W - 3700, 3200], border: 'single', borderColor: 'CCCCCC', cellMargin: 70 });
+  return d.build({ title: Q.title });
+}
+
+/* ---- the scanner's words, English and Spanish ---- */
+const WORDS = [
+  ['Rack label / Bin', 'Etiqueta del rack / Ubicación', 'The yellow label on the beam under the spot. Scanned first, every spot.'],
+  ['Pallet label', 'Etiqueta de la tarima', 'The barcode on the pallet. Scanned second.'],
+  ['Quantity', 'Cantidad', 'The cases that are really there. Typed on the keys, never scanned.'],
+  ['Aisle · level · position', 'Pasillo · nivel · posición', 'F01A003: aisle F01, level A, position 003.'],
+  ['Team card · Team number', 'Tarjeta del equipo · Número de equipo', 'Scanned into Team number at sign-on.'],
+  ['Badge · Clock In Numbers', 'Gafete · Números de gafete', 'Everyone on the crew scans theirs.'],
+  ['Sign on & load list', 'Entrar y cargar la lista', 'Starts the count on this scanner.'],
+  ['My aisle', 'Mi pasillo', 'Your aisle and levels, and second counts when there are some.'],
+  ['Next bin', 'Siguiente ubicación', 'Where to go next. Follow it.'],
+  ['Still in this bin', 'Sigues en esta ubicación', 'More pallets expected in this spot.'],
+  ['Bin is EMPTY', 'Ubicación VACÍA', 'Nothing in the spot.'],
+  ['Several empty bins in a row', 'Varias ubicaciones vacías seguidas', 'A run of empty spots in one go.'],
+  ['This pallet has more than one label', 'Esta tarima tiene más de una etiqueta', 'Two loads on one pallet, each with its cases.'],
+  ['Label will not scan', 'La etiqueta no escanea', 'Torn, iced or faded: type it, or count it with no label.'],
+  ['Count it anyway?', '¿Contarla de todos modos?', 'A pallet not on the list: YES.'],
+  ['Back · History · Void this line', 'Atrás · Historial · Anular esta línea', 'Fixing a mistake.'],
+  ['Second count', 'Segundo conteo', 'A spot counted again, blind, by another team.'],
+  ['Bin done — nothing more here', 'Ubicación terminada — no hay más aquí', 'The spot is finished.'],
+  ['Cycle count', 'Conteo cíclico', 'One person, a short list of bins for the day.'],
+  ['OFFLINE', 'SIN SEÑAL', 'No Wi-Fi. Keep counting: nothing is lost.'],
+  ['Report a problem', 'Reportar un problema', 'Damage or a blocked spot. Not an emergency.'],
+  ['SOS — I need help', 'SOS — necesito ayuda', 'An emergency. The office is told at once.'],
+  ['Got it', 'Entendido', 'You read the office’s message.'],
+  ['Sign off this scanner', 'Salir de este escáner', 'Break or end of shift. Then the charger.'],
+];
+export function glossarySheet() {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Scanner words — English and Spanish</title><style>
+  @page { size: letter portrait; margin: 11mm; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #000; margin: 0; padding: 6px; font-size: 10pt; }
+  h1 { font-size: 17pt; margin: 0 0 1mm; } .sub { color: #444; margin-bottom: 3mm; }
+  table { width: 100%; border-collapse: collapse; } th { text-align: left; background: #1e4f8f; color: #fff; font-size: 8.5pt; padding: 1.8mm 2mm; letter-spacing: .05em; text-transform: uppercase; }
+  td { border-bottom: 1px solid #ddd; padding: 1.6mm 2mm; vertical-align: top; } td.en, td.es { font-weight: 700; width: 30%; } td.es { color: #1e4f8f; }
+  tr:nth-child(even) td { background: #f6f8fb; }
+  .noprint { margin-bottom: 8px; padding: 6px 12px; } @media print { .noprint { display: none; } body { padding: 0; } }
+</style></head><body><button class="noprint" onclick="window.print()">Print</button>
+<h1>Scanner words — English and Spanish · Palabras del escáner</h1><div class="sub">What the scanner says, in both languages. The Español / English button at the top of the scanner switches every screen.</div>
+<table><tr><th>English</th><th>Español</th><th>What it means</th></tr>${WORDS.map(([en, es, w]) => `<tr><td class="en">${esc(en)}</td><td class="es">${esc(es)}</td><td>${esc(w)}</td></tr>`).join('')}</table>
+</body></html>`;
+}
+export function glossaryDocx() {
+  const d = new Docx({ margin: 720 });
+  const W = 12240 - 2 * 720;
+  d.paragraph([{ text: 'Scanner words — English and Spanish · Palabras del escáner', bold: true, size: 32 }], { after: 60 });
+  d.paragraph([{ text: 'What the scanner says, in both languages. The Español / English button at the top of the scanner switches every screen.', size: 19, color: '444444' }], { after: 160 });
+  d.table([['English', 'Español', 'What it means'], ...WORDS].map((r, i) => r.map((t, c) => [d.paragraphXml([{ text: t, size: 18, bold: !i || c < 2, color: i && c === 1 ? '1E4F8F' : undefined }], { after: 0 })])), { widths: [3000, 3200, W - 6200], border: 'single', borderColor: 'CCCCCC', cellMargin: 60, headerShade: 'DCE6F2' });
+  return d.build({ title: 'Scanner words' });
+}

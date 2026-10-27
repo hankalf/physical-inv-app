@@ -54,6 +54,13 @@ const FILES = [
   ...optional('5 Trainer/run-the-training-day.docx', join(T, 'print', 'run-the-training-day.docx')),
   ...optional('5 Trainer/training-roster.pdf', join(T, 'print', 'training-roster.pdf')),
   ...optional('5 Trainer/training-roster.docx', join(T, 'print', 'training-roster.docx')),
+  // for each trainee: the check-off the trainer signs, the quiz and its answers, the words in both languages
+  ...['en', 'es'].flatMap((l) => ['pdf', 'docx'].flatMap((x) => [
+    ...optional(`7 For each trainee/scanner-check-off-${l}.${x}`, join(T, 'print', `scanner-check-off-${l}.${x}`)),
+    ...optional(`7 For each trainee/scanner-quiz-${l}.${x}`, join(T, 'print', `scanner-quiz-${l}.${x}`)),
+  ])),
+  ...optional('7 For each trainee/scanner-words-en-es.pdf', join(T, 'print', 'scanner-words-en-es.pdf')),
+  ...optional('7 For each trainee/scanner-words-en-es.docx', join(T, 'print', 'scanner-words-en-es.docx')),
   ['5 Trainer/set-up-second-and-third-counts.pdf', join(ROOT, 'docs', 'guides', 'set-up-second-and-third-counts.pdf')],
   ['5 Trainer/second-and-third-counts.pdf', join(ROOT, 'docs', 'guides', 'second-and-third-counts.pdf')],
   // On the scanner: a page for each thing that is different on a full count
@@ -77,6 +84,7 @@ writeFileSync(join(top, 'START HERE.txt'), [
   '3 The wall      Print "training-wall-labels-big.pdf" one label per page and hang it in the order the trainer\'s key gives. Real scanners read these.',
   '4 Pocket cards  Four to a page, one per person, English and Spanish. Cut along the lines. The "two-sided" files carry each person\'s team card on the back: print double-sided, flipped on the long edge.',
   '5 Trainer       The run sheet: the day before, the session minute by minute, every spot on the wall. Plus the roster and the second-count guides.',
+  '7 For each trainee  A check-off sheet the trainer signs as each person does it on the wall; a ten-question quiz with its answers; the scanner\'s words in English and Spanish. English and Spanish, PDF and Word.',
   '6 On the scanner  One page for each thing on a full count that is not the plain rack, pallet, quantity: two labels, no label, a rack label that will not scan, empty bins and the rest. One booklet (PDF and Word) and each page on its own.',
   '',
   'Every printed piece is here twice: as a PDF to print as it is, and as a Word document (.docx) to edit first. Barcodes in the Word files are pictures.',

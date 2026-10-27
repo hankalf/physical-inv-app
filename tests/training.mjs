@@ -64,6 +64,14 @@ check('The pocket cards download as a Word document, the team cards on the back 
 const wd = await docx('/api/admin/training/print/wall.docx');
 check('…so does the wall, 47 labels and the key, every barcode a picture', wd.status === 200 && wd.pk && (wd.text.match(/word\/media\/image\d+\.png/g) || []).length / 2 === 47, `${(wd.text.match(/word\/media\/image\d+\.png/g) || []).length / 2} pictures`);
 check('…and the roster', (await docx('/api/admin/training/roster.docx')).pk);
+const co = await text('/api/admin/training/print/checkoff?lang=en&count=2');
+check('A check-off sheet per trainee: the fourteen things to do on the wall, a box each, a line to sign', (co.match(/class="co"/g) || []).length === 2 && (co.match(/<td class="ok">☐<\/td>/g) || []).length === 28 && /Signature/.test(co));
+check('…in Spanish too, and filled from the roster’s not-yet-trained when asked', /Revisión del escáner/.test(await text('/api/admin/training/print/checkoff?lang=es')) && /Rosa Vega|Ben Cole|<b>[A-Z]/.test(await text('/api/admin/training/print/checkoff?who=roster')));
+const qz = await text('/api/admin/training/print/quiz?lang=es');
+check('A ten-question quiz, with its answers on a page of their own, English and Spanish', (qz.match(/<li>/g) || []).length === 10 && /Respuestas/.test(qz) && /Scanner quiz/.test(await text('/api/admin/training/print/quiz?lang=en')));
+check('The scanner’s words, English beside Spanish', /Ubicación terminada — no hay más aquí/.test(await text('/api/admin/training/print/words')) && /SIN SEÑAL/.test(await text('/api/admin/training/print/words')));
+const wordFiles = await Promise.all(['checkoff.docx?lang=en', 'checkoff.docx?lang=es', 'quiz.docx?lang=en', 'quiz.docx?lang=es', 'words.docx'].map(async (q) => Buffer.from(await (await fetch(`${BASE}/api/admin/training/print/${q}`, { headers: A })).arrayBuffer()).subarray(0, 2).toString()));
+check('…and every one of them as Word', wordFiles.every((x) => x === 'PK'), wordFiles.join());
 check('The pocket card prints in English and Spanish, four to a page', (await text('/api/admin/training/print/pocket-card?lang=en')).split('class="pc"').length === 5 && /Escanea la etiqueta del RACK/.test(await text('/api/admin/training/print/pocket-card?lang=es')));
 
 /* ---------------- a real scanner walks the wall ---------------- */

@@ -21,7 +21,7 @@ const supList = (await j(await fetch(`${BASE}/api/admin/guides`, { headers: S })
 check('Every login gets the six guides for users, the first full count first', supList.filter((g) => g.edition === 'user').map((g) => `${g.edition}/${g.name}`).join() === 'user/first-full-count,user/second-and-third-counts,user/erp-upload-by-aisle,user/reports-and-exports,user/employees-teams-and-gear,user/live-and-test', supList.map((g) => g.name).join());
 const onGun = supList.filter((g) => g.edition === 'scanner');
 check('…and On the scanner, one page for each thing that is different on a full count, in the order they come up', onGun.length === 23 && onGun[0].name === 'two-or-more-labels' && ['no-label', 'label-will-not-scan', 'bin-label-will-not-scan', 'several-empty-bins', 'pallet-not-on-the-list', 'fixing-a-mistake', 'second-counts'].every((n) => onGun.some((g) => g.name === n)) && onGun.every((g) => g.when && g.blurb.length < 400), onGun.map((g) => g.name).join());
-check('…an admin gets the admin editions too, the set-up guide for second and third counts among them', adminList.length === 37 && adminList.filter((g) => g.edition === 'admin').length === 8 && adminList.some((g) => g.edition === 'admin' && g.name === 'set-up-second-and-third-counts' && g.sections.length >= 9));
+check('…an admin gets the admin editions too, the set-up guide for second and third counts among them', adminList.length === 38 && adminList.filter((g) => g.edition === 'admin').length === 9 && adminList.some((g) => g.edition === 'admin' && g.name === 'set-up-second-and-third-counts' && g.sections.length >= 9));
 const nl = await j(await fetch(`${BASE}/api/admin/guides/scanner/no-label`, { headers: S }));
 check('A scanner page reads on its own: what you see, what to do, what the office sees, do not', nl.title === 'On the scanner — A pallet with no label' && ['What you see', 'What to do', 'What the office sees', 'Do not'].every((t) => nl.sections.some((x) => x.title === t)) && /Nothing readable on it/.test(nl.html) && /src="\/guide-images\/scanner-no-label\.png"/.test(nl.html), nl.sections.map((x) => x.title).join());
 const fetchFile = async (path, h = S) => { const r = await fetch(BASE + path, { headers: h }); const b = Buffer.from(await r.arrayBuffer()); return { r, b, name: r.headers.get('content-disposition') || '', type: r.headers.get('content-type') || '' }; };
@@ -114,7 +114,7 @@ const ap = await ctx.newPage();
 await ap.goto(`${BASE}/guide`);
 await ap.fill('#fPassword', 'changeme'); await ap.click('#btnLogin');
 await ap.waitForSelector('#howtosAdminList .howto');
-check('An admin sees the admin editions under For admins', (await ap.locator('#howtosAdminList .howto').count()) === 8 && /Admin edition/.test(await ap.textContent('#howtosAdminList')));
+check('An admin sees the admin editions under For admins', (await ap.locator('#howtosAdminList .howto').count()) === 9 && /Admin edition/.test(await ap.textContent('#howtosAdminList')));
 await browser.close();
 
 const passed = results.filter(Boolean).length;

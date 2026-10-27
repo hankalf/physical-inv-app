@@ -744,6 +744,18 @@
   $('btnTrainCardDocxEn').onclick = () => trainFile(docxUrl('en'), `scanner-pocket-card-en${trainTeams().length ? '-two-sided' : ''}.docx`);
   $('btnTrainCardDocxEs').onclick = () => trainFile(docxUrl('es'), `scanner-pocket-card-es${trainTeams().length ? '-two-sided' : ''}.docx`);
   $('btnTrainWallDocx').onclick = () => trainFile('/api/admin/training/print/wall.docx', 'training-wall.docx');
+  const hasRoster = () => !!(roster && roster.rows.some((r) => !r.trained));
+  $('btnTrainCheckoff').onclick = () => trainPrint(`/api/admin/training/print/checkoff?lang=en&who=${hasRoster() ? 'roster' : 'blank'}`);
+  $('btnTrainQuizEn').onclick = () => trainPrint('/api/admin/training/print/quiz?lang=en');
+  $('btnTrainQuizEs').onclick = () => trainPrint('/api/admin/training/print/quiz?lang=es');
+  $('btnTrainWords').onclick = () => trainPrint('/api/admin/training/print/words');
+  $('btnTrainMoreDocx').onclick = async () => {
+    await trainFile(`/api/admin/training/print/checkoff.docx?lang=en&who=${hasRoster() ? 'roster' : 'blank'}`, 'scanner-check-off-en.docx');
+    await trainFile('/api/admin/training/print/checkoff.docx?lang=es', 'scanner-check-off-es.docx');
+    await trainFile('/api/admin/training/print/quiz.docx?lang=en', 'scanner-quiz-en.docx');
+    await trainFile('/api/admin/training/print/quiz.docx?lang=es', 'scanner-quiz-es.docx');
+    await trainFile('/api/admin/training/print/words.docx', 'scanner-words-en-es.docx');
+  };
 
   async function refresh() {
     refreshTraining().catch(() => {});

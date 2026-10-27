@@ -77,7 +77,7 @@ function systemsView(req) {
 }
 import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, unlockPlace, PER_LOGIN, PER_PLACE } from './routes/login-limit.js';
 import { recordAccess, accessMap, lookupPending } from './routes/access-map.js';
-import { ensureTraining, resetTraining, removeTraining, trainingStatus, wallLabels, pocketCard, crewTeamList, trainingRoster, markTrained, rosterCsv, rosterSheet, pocketCardDocx, wallDocx, rosterDocx } from './routes/training.js';
+import { ensureTraining, resetTraining, removeTraining, trainingStatus, wallLabels, pocketCard, crewTeamList, trainingRoster, markTrained, rosterCsv, rosterSheet, pocketCardDocx, wallDocx, rosterDocx, checkoffSheet, checkoffDocx, quizSheet, quizDocx, glossarySheet, glossaryDocx } from './routes/training.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards, barcodeBook, teamCodes } from './routes/printing.js';
 import {
@@ -1232,6 +1232,19 @@ async function handleAdmin(req, res, url, m) {
       return asDocx(`scanner-pocket-card-${lang}${teams.length ? '-two-sided' : ''}.docx`, pocketCardDocx({ lang, teams }));
     }
     if (p === '/api/admin/training/print/wall.docx') { audit(actor, 'downloaded the training wall as Word', url.searchParams.get('part') || 'all'); return asDocx(`training-wall-${url.searchParams.get('part') || 'all'}.docx`, wallDocx({ part: url.searchParams.get('part') || 'all' })); }
+    /* more for the classroom: the check-off sheet, the quiz, the words in both languages */
+    {
+      const lang = url.searchParams.get('lang') === 'es' ? 'es' : 'en';
+      const who = url.searchParams.get('who') === 'roster' ? 'roster' : 'blank';
+      const count = Number(url.searchParams.get('count') || 4);
+      const html = (body) => send(req, res, 200, body, { 'content-type': 'text/html; charset=utf-8' });
+      if (p === '/api/admin/training/print/checkoff') return html(checkoffSheet({ lang, who, count }));
+      if (p === '/api/admin/training/print/checkoff.docx') return asDocx(`scanner-check-off-${lang}.docx`, checkoffDocx({ lang, who, count }));
+      if (p === '/api/admin/training/print/quiz') return html(quizSheet({ lang }));
+      if (p === '/api/admin/training/print/quiz.docx') return asDocx(`scanner-quiz-${lang}.docx`, quizDocx({ lang }));
+      if (p === '/api/admin/training/print/words') return html(glossarySheet());
+      if (p === '/api/admin/training/print/words.docx') return asDocx('scanner-words-en-es.docx', glossaryDocx());
+    }
     if (p === '/api/admin/training/roster.docx') { audit(actor, 'downloaded the training roster as Word'); return asDocx('training-roster.docx', rosterDocx()); }
     if (p === '/api/admin/training/print/wall') {
       audit(actor, 'printed the training wall', `${url.searchParams.get('size') || 'big'} ${url.searchParams.get('part') || 'all'}`);
