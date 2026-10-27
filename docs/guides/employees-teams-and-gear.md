@@ -99,7 +99,7 @@ The columns are matched by name, in any order:
   crew list as it stands, sizes included.
 - **⬇ Badge labels (Avery 5960, Word)** prints a label for each active person: their name, their
   clock-in number, and the number as a barcode the scanner's sign-on screen reads. Pick everyone or
-  one shift, and 1, 2 or 3 of each person side by side. It fits Avery 5960, 5160 and 8160 — print at
+  one shift, and 1, 2 or 3 of each person side by side (3, a full row, unless you pick fewer). It fits Avery 5960, 5160 and 8160 — print at
   **Actual size**, not "Fit to page".
 
 **Employees and teams at once.** **Teams & crew → Employees → Crew workbook** takes one Excel file

@@ -22,7 +22,7 @@ const MODULE_IN = 0.0145;                       // narrowest bar: 0.37mm, read e
 const QUIET = 10;                               // modules of white either side
 const BAR_H_IN = 0.4;
 
-export function badgeLabelsDocx(people, { perPerson = 2, title = 'Badge labels' } = {}) {
+export function badgeLabelsDocx(people, { perPerson = 3, title = 'Badge labels' } = {}) {
   const per = Math.min(3, Math.max(1, Number(perPerson) || 1));
   const doc = new Docx({ margin: { top: Math.round(0.5 * TW), left: Math.round(0.1875 * TW), right: 0, bottom: 0 } });
   const label = (p) => {

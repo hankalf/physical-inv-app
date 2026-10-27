@@ -1513,7 +1513,7 @@ async function handleAdmin(req, res, url, m) {
     const shift = url.searchParams.get('shift') || '';
     const people = listEmployees().filter((e) => e.active && (!shift || String(e.shift || '') === shift)).map((e) => ({ badge: e.badge, name: e.name || '' }));
     if (!people.length) throw httpError(404, shift ? `nobody active on shift ${shift}` : 'there is nobody on the crew list yet');
-    const per = Number(url.searchParams.get('per')) || 2;
+    const per = Number(url.searchParams.get('per')) || 3;
     audit(actor, 'printed badge labels', `${people.length} people, ${per} each${shift ? ', shift ' + shift : ''}`);
     return send(req, res, 200, badgeLabelsDocx(people, { perPerson: per, title: 'Badge labels — Avery 5960' }), { 'content-type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'content-disposition': `attachment; filename="badge-labels-avery-5960${shift ? '-shift-' + shift : ''}.docx"`, 'cache-control': 'no-cache' });
   }
