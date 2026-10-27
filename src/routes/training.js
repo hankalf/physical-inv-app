@@ -101,6 +101,19 @@ export const TRAINEES = [
   ['TRN-07', 'Jordan Lee', 'S2-DS01'], ['TRN-08', 'Sam Ortiz', 'S2-DS01'],
 ];
 const itemOf = (key) => ITEMS[key];
+
+/* The cycle count on the same wall: a person on their own with a list of bins for
+   the day, counting each as it stands and tapping Bin done. The same rack and
+   pallet labels; the list is these bins, in this order. */
+export const CYCLE_NAME = 'Training cycle count — not real stock';
+export const CYCLE_LIST = [
+  { bin: 'T01A002', lesson: 'Two pallets in one bin: count both — rack, pallet, quantity, each time — then tap Bin done. The next bin on the list comes up.' },
+  { bin: 'T01A003', lesson: 'Nothing in it: scan the rack, Bin is EMPTY, Yes. An empty bin finishes by itself.' },
+  { bin: 'T01A007', lesson: 'TRN-1007 and TRN-9999: count TRN-1007, then TRN-9999 asks Count it anyway? — YES, count it. Then Bin done.' },
+  { bin: 'T01B001', lesson: 'The torn label: Label will not scan → I can read it — let me type it → TRN-1010 on the scanner’s keys. Then Bin done.' },
+  { bin: 'T02A004', lesson: 'Scan the rack of T02A005 first, by mistake: the scanner refuses it — this cycle count is for T02A004. Then count both pallets and tap Bin done.' },
+  { bin: 'T02A006', lesson: 'The last bin on the list. Count it and tap Bin done: the list is empty. Sign off this scanner, and the next trainee signs on with their own badge.' },
+];
 /** The pallets of the report: a label the class scans may be hanging under another rack than the report says. */
 export const palletsOnReport = () => WALL.flatMap((b) => b.report.map(([id, item, qty, lot]) => ({ id, item, qty, lot, bin: b.bin })));
 const binsCsv = () => 'Bin Code,Zone,Aisle,Level\n' + WALL.map((b) => `${b.bin},${ZONE},${b.bin.slice(0, 3)},${b.bin[3]}`).join('\n') + '\n';
@@ -121,6 +134,39 @@ function reportCsv() {
 const settingGet = (k) => { const r = db.prepare('SELECT value FROM settings WHERE key = ?').get(k); return r ? r.value : null; };
 const settingSet = (k, v) => db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(k, String(v));
 const settingDel = (k) => db.prepare('DELETE FROM settings WHERE key = ?').run(k);
+
+/** The training cycle count, if there is one. */
+export function trainingCycleSession() {
+  const id = Number(settingGet('trainingCycle') || 0);
+  const s = id ? getSession(id) : null;
+  if (id && !s) settingDel('trainingCycle');
+  return s;
+}
+
+/* today's list on the training cycle count: the bins above, any team, in order */
+function makeCycleList(id) {
+  if (db.prepare("SELECT COUNT(*) n FROM recounts WHERE session_id = ? AND reason = 'CYCLE' AND status != 'done'").get(id).n) return;
+  const now = new Date().toISOString();
+  const batch = db.prepare(`INSERT INTO cycle_batches (session_id, name, due_date, target, strategy, scope, auto, created_at) VALUES (?, ?, ?, ?, 'oldest', '{}', 0, ?)`)
+    .run(id, 'The classroom list', now.slice(0, 10), CYCLE_LIST.length, now).lastInsertRowid;
+  const ins = db.prepare(`INSERT INTO recounts (session_id, bin, reason, detail, source, team, batch_id, status, created_at) VALUES (?, ?, 'CYCLE', ?, 'cycle', NULL, ?, 'open', ?)`);
+  for (const c of CYCLE_LIST) ins.run(id, c.bin, 'on the classroom list', batch, now);
+}
+
+/** The cycle count on the same wall: made, loaded and given its list - or refreshed. */
+function ensureTrainingCycle() {
+  let c = trainingCycleSession();
+  if (!c) {
+    c = createSession({ name: CYCLE_NAME, mode: 'cycle', palletMode: 'warn', askComments: 0 });
+    settingSet('trainingCycle', c.id);
+  }
+  importMaster(c.id, 'bins', binsCsv(), { replace: true });
+  importMaster(c.id, 'pallets', reportCsv(), { replace: true, source: 'TRAINING' });
+  db.prepare('UPDATE sessions SET ask_comments = 0, auto_recount = 0, show_on_guns = 1, require_approval = 0, master_version = master_version + 1 WHERE id = ?').run(c.id);
+  if (!getSession(c.id).trial) setTrial(c.id, true);
+  makeCycleList(c.id);
+  return c;
+}
 
 /** The training count, if there is one. */
 export function trainingSession() {
@@ -167,6 +213,7 @@ export function ensureTraining({ by = '' } = {}) {
     queueAssignments(s.id, 'S1-DS02', ['T02'], 'A', { force: true });
     queueAssignments(s.id, 'S2-DS01', ['T01', 'T02'], 'A-B', { force: true });
   }
+  ensureTrainingCycle();
   return trainingStatus();
 }
 
@@ -177,6 +224,15 @@ export function resetTraining() {
   if (!s.trial) setTrial(s.id, true);
   const out = endTrial(s.id);
   setTrial(s.id, true);
+  // the cycle count too: what was counted cleared, and the list back as it was
+  const c = trainingCycleSession();
+  if (c) {
+    if (!c.trial) setTrial(c.id, true);
+    const oc = endTrial(c.id);
+    setTrial(c.id, true);
+    makeCycleList(c.id);
+    for (const k of Object.keys(out.cleared || {})) if (typeof out.cleared[k] === 'number' && oc.cleared && typeof oc.cleared[k] === 'number') out.cleared[k] += oc.cleared[k];
+  } else ensureTrainingCycle();
   return { ...trainingStatus(), cleared: out.cleared };
 }
 
@@ -187,6 +243,12 @@ export function removeTraining() {
   db.prepare("UPDATE sessions SET status = 'closed', closed_at = ? WHERE id = ?").run(new Date().toISOString(), s.id);
   deleteSession(s.id, { confirmName: s.name });
   settingDel('trainingSession');
+  const c = trainingCycleSession();
+  if (c) {
+    db.prepare("UPDATE sessions SET status = 'closed', closed_at = ? WHERE id = ?").run(new Date().toISOString(), c.id);
+    deleteSession(c.id, { confirmName: c.name });
+    settingDel('trainingCycle');
+  }
   for (const [badge] of TRAINEES) { try { deleteEmployee(badge); } catch { /* already gone */ } }
   for (const t of listTeams()) if (TEAMS.some((x) => x.name === t.name)) { try { deleteTeam(t.id); } catch { /* has other members: left */ } }
   return { removed: s.id, name: s.name };
@@ -204,6 +266,14 @@ export function trainingStatus() {
     loaded: { bins: n('SELECT COUNT(*) n FROM locations WHERE session_id = ?'), pallets: n('SELECT COUNT(*) n FROM pallets WHERE session_id = ?'),
       teams: listTeams().filter((t) => TEAMS.some((x) => x.name === t.name)).length, trainees: TRAINEES.filter(([b]) => trainees.has(b)).length },
     wall: { bins: WALL.length, pallets: WALL.reduce((n2, b) => n2 + b.wall.length, 0), teams: TEAMS.length, trainees: TRAINEES.length },
+    cycle: (() => {
+      const c = trainingCycleSession();
+      if (!c) return null;
+      const q = (sql) => db.prepare(sql).get(c.id).n;
+      return { id: c.id, name: c.name, trial: !!c.trial, showOnGuns: c.show_on_guns !== 0,
+        bins: q("SELECT COUNT(*) n FROM recounts WHERE session_id = ? AND reason = 'CYCLE'"), done: q("SELECT COUNT(*) n FROM recounts WHERE session_id = ? AND reason = 'CYCLE' AND status = 'done'"),
+        lines: q('SELECT COUNT(*) n FROM counts WHERE session_id = ? AND voided = 0') };
+    })(),
   };
 }
 
@@ -294,6 +364,11 @@ export function wallLabels({ size = 'big', part = 'all' } = {}) {
     <div class="sub">Hang the rack labels in this order, left to right, level A low and level B above it; hang each pallet label under the rack it names. Keep this page off the wall.</div>
     <table class="key"><tr><th>Rack</th><th>Report says</th><th>On the wall</th><th>The lesson</th></tr>
     ${WALL.map((b) => `<tr><td><b>${esc(b.bin)}</b></td><td>${b.report.length ? b.report.map(([id, item, qty]) => `${esc(id)} · ${esc(itemOf(item)[1])} · ${qty}`).join('<br>') : '<i>empty (OPEN)</i>'}</td><td>${b.wall.length ? b.wall.map(esc).join('<br>') : '<i>nothing</i>'}</td><td>${esc(b.lesson)}</td></tr>`).join('')}
+    </table>
+    <h2>Cycle count practice — on the same wall</h2>
+    <div class="sub">A second training count, <b>${esc(CYCLE_NAME)}</b>, has a list of ${CYCLE_LIST.length} bins on this wall. On the scanner: tap <b>Cycle count</b> at the top of the sign-on screen, pick it, scan <b>one badge</b> — on a cycle count the person is the team — then <b>Sign on &amp; load list</b> and <b>Start counting the list</b>. Each bin is counted as it stands, then <b>Bin done</b>.</div>
+    <table class="key cycle"><tr><th>#</th><th>Bin</th><th>On the wall</th><th>The lesson</th></tr>
+    ${CYCLE_LIST.map((c, i) => { const w = WALL.find((b) => b.bin === c.bin); return `<tr><td>${i + 1}</td><td><b>${esc(c.bin)}</b></td><td>${w && w.wall.length ? w.wall.map(esc).join('<br>') : '<i>nothing</i>'}</td><td>${esc(c.lesson)}</td></tr>`; }).join('')}
     </table>
     <h2>Teams and badges</h2>
     <table class="key"><tr><th>Team</th><th>Shift</th><th>Plan</th><th>Badges</th></tr>
@@ -620,6 +695,10 @@ export function wallDocx({ part = 'all' } = {}) {
       b.lesson,
     ]));
     d.table(rows.map((r, i) => r.map((t) => [d.paragraphXml([{ text: t, size: i ? 18 : 18, bold: !i }], { after: 0 })])), { widths: [1300, 2600, 2400, W - 6300], border: 'single', borderColor: 'BBBBBB', cellMargin: 80, headerShade: 'E8EEF6' });
+    d.paragraph([{ text: 'Cycle count practice — on the same wall', bold: true, size: 28 }], { before: 300, after: 80, keepNext: true });
+    d.paragraph([{ text: `A second training count, ${CYCLE_NAME}, has a list of ${CYCLE_LIST.length} bins on this wall. On the scanner: tap Cycle count at the top of the sign-on screen, pick it, scan one badge (on a cycle count the person is the team), then Sign on & load list and Start counting the list. Each bin is counted as it stands, then Bin done.`, size: 19 }], { after: 120 });
+    const crows = [['#', 'Bin', 'On the wall', 'The lesson']].concat(CYCLE_LIST.map((c, i) => { const w = WALL.find((b) => b.bin === c.bin); return [String(i + 1), c.bin, w && w.wall.length ? w.wall.join(', ') : 'nothing', c.lesson]; }));
+    d.table(crows.map((r, i) => r.map((t) => [d.paragraphXml([{ text: t, size: 18, bold: !i }], { after: 0 })])), { widths: [500, 1300, 2200, W - 4000], border: 'single', borderColor: 'BBBBBB', cellMargin: 80, headerShade: 'E8EEF6' });
   }
   return d.build({ title: 'Training wall' });
 }

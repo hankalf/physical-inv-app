@@ -14,6 +14,7 @@ only difference from count day is the name on it: **Training count — not real 
 - [3 — The wall](#3--the-wall)
 - [4 — The session, minute by minute](#4--the-session-minute-by-minute)
 - [5 — The wall run-through, spot by spot](#5--the-wall-run-through-spot-by-spot)
+- [5a — Cycle counts on the same wall](#5a--cycle-counts-on-the-same-wall)
 - [6 — What the office screen shows](#6--what-the-office-screen-shows)
 - [7 — The roster: who has been trained](#7--the-roster-who-has-been-trained)
 - [8 — Between classes, and after](#8--between-classes-and-after)
@@ -47,7 +48,8 @@ will do cycle counts, not for count day.
    pallets on its inventory report — plus three training teams (S1-DS01, S1-DS02, S2-DS01) and
    eight trainee badges (TRN-01 to TRN-08), and plans T01 for S1-DS01 and T02 for S1-DS02. It is
    a trial run: nothing on it ever reaches the ERP file, and the scanners see it as **Training
-   count — not real stock**.
+   count — not real stock**. It also makes **Training cycle count — not real stock**: the same
+   wall, with a list of six bins for practising cycle counts (section 5a).
 2. **🖨 Print the wall (big labels)**. One label per page: rack labels first, then pallet labels,
    then the team cards and badges, then the trainer's key. **🖨 Small labels** puts two to a page
    for a table-top version.
@@ -106,6 +108,7 @@ About two hours for a group of eight; split a bigger group into two wall session
 | 1:25 | The second counts: S2-DS01 signs on and walks the second counts raised by the two short counts | 10 min |
 | 1:35 | The office screen: the Pallet report with the class's own mistakes on it, in words | 10 min |
 | 1:45 | Questions; everybody signs on once with their own badge; sign off; scanners on the chargers | 15 min |
+| +0:20 | **Cycle counts**, for the people who will do them: one trainee at a time works the six-bin list (section 5a) | 20 min |
 
 Let a different person hold the scanner at every spot. The person scanning reads the top line of
 the screen out loud before they do anything: that habit is most of the training.
@@ -161,6 +164,32 @@ second counts**: the two short counts from the wall. At each, count everything i
 pallet, quantity — and the gun moves to the next one by itself once the pallet is counted. The second count agrees with the label, so
 the office sees the first count was wrong.
 
+## 5a — Cycle counts on the same wall
+
+A cycle count is one person with a scanner and a short list of bins for the day: each bin is
+counted as it stands, then **Bin done**, and the next bin on the list comes up. The wall is the
+same; the list is on its own count, **Training cycle count — not real stock**. The trainer's key has
+it at the back, under *Cycle count practice*. Play the cycle-count film first
+(`scanner-training-cycle-en.mp4` or `-es.mp4`).
+
+**Sign on.** At the top of the sign-on screen tap **Cycle count**, and pick the training cycle
+count. There is no team card on a cycle count: the person is the team, so **one badge** only —
+TRN-07, say. **Sign on & load list**, then **Start counting the list**. The banner says
+*CYCLE COUNT · bin T01A002*.
+
+| # | Bin | On the wall | Say at this bin |
+|---|---|---|---|
+| 1 | T01A002 | TRN-1002, TRN-1003 | Two pallets: rack, pallet, quantity for each, then **Bin done**. The next bin comes up |
+| 2 | T01A003 | nothing | Rack label, **Bin is EMPTY**, **Yes**: an empty bin finishes by itself |
+| 3 | T01A007 | TRN-1007, TRN-9999 | TRN-9999 asks *Count it anyway?* — **YES**. Then **Bin done** |
+| 4 | T01B001 | TRN-1010, torn | **Label will not scan** → **I can read it — let me type it** → TRN-1010 on the scanner's keys |
+| 5 | T02A004 | TRN-2004, TRN-2005 | Scan T02A005's rack first, on purpose: *This cycle count is for bin T02A004*. Then both pallets, **Bin done** |
+| 6 | T02A006 | TRN-2007 | The last one: **Bin done**, and the list is empty. **Sign off this scanner**; the next trainee signs on |
+
+On the office side, **Cycle Counts** in the sidebar, with the training cycle count picked, shows the
+list going down bin by bin, who did each and when. **Reset for the next class** clears the cycle
+count too and puts the six bins back on the list.
+
 ## 6 — What the office screen shows
 
 Keep the Dashboard on the big screen with the training count picked, and switch tabs as the class
@@ -208,6 +237,7 @@ who still needs a session.
 ## 9 — Checklist
 
 - ☐ Training count set up; **Team plan** shows T01 and T02 planned
+- ☐ The training cycle count shows six bins on its list (the Classroom training card says so)
 - ☐ Wall printed and hung in the key's order; TRN-1005 under T01A006, TRN-9999 beside TRN-1007
 - ☐ Team cards and badges on the sign-on table
 - ☐ Pocket cards cut, in both languages

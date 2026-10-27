@@ -1816,7 +1816,7 @@
         });
       }
       if (state.recount && value !== state.recount.bin) {
-        feedback($('scanMsg'), 'err', `This second count is for bin ${state.recount.bin}`, `You scanned ${value}. Scan ${state.recount.bin}, or tap Bin done.`);
+        feedback($('scanMsg'), 'err', `This ${state.recount.kind === 'cycle' ? 'cycle count' : 'second count'} is for bin ${state.recount.bin}`, `You scanned ${value}. Scan ${state.recount.bin}, or tap Bin done.`);
         $('fScan').value = ''; focusScan(); return;
       }
       const myLevels = state.recount ? '' : (state.session.guided ? (state.assignment?.active?.levels || '') : '');

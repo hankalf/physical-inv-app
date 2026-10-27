@@ -40,11 +40,19 @@ check('The report carries costs, so the money columns and thresholds can be show
 r = await post('/api/admin/training', {});
 check('Set up again is the same count, refreshed, not a second one', r.status === 200 && (await j(r)).session.id === S && (await get('/api/admin/sessions')).filter((x) => /Training count/.test(x.name)).length === 1);
 
+/* ---------------- the cycle count on the same wall ---------------- */
+const st0 = await get('/api/admin/training');
+check('Set up also makes the cycle count on the same wall: its own count, a trial run, six bins on the list', st0.cycle && st0.cycle.bins === 6 && st0.cycle.done === 0 && st0.cycle.trial && st0.cycle.showOnGuns, JSON.stringify(st0.cycle));
+const cyc = await get(`/api/admin/sessions/${st0.cycle.id}`);
+check('…a cycle count named for what it is, with the wall\'s bins and report', cyc.mode === 'cycle' && /Training cycle count/.test(cyc.name) && (await get(`/api/admin/sessions/${st0.cycle.id}/pallets?limit=50`)).rows.length === 17, `${cyc.mode} ${cyc.name}`);
+check('Set up again keeps one list, not two', (await j(await post('/api/admin/training', {}))).cycle.bins === 6);
+
 /* ---------------- the printed wall ---------------- */
 const wall = await text('/api/admin/training/print/wall?size=big');
 const svgs = (wall.match(/<svg/g) || []).length;
 check('The wall prints every rack label, pallet label, team card and badge as a barcode', svgs === 18 + 18 + 3 + 8 && /T01A001/.test(wall) && /TRN-9999/.test(wall) && /S1-DS01/.test(wall) && /TRN-01/.test(wall) && /Marcus Obi/.test(wall), `${svgs} barcodes`);
 check('…with the torn label, the two-label skid and the trainer\'s key', /TORN|class="torn"/.test(wall) && /ONE OF TWO ON THIS SKID/.test(wall) && /trainer's key/.test(wall) && /Hang under rack <b>T01A006<\/b>/.test(wall));
+check('The trainer\'s key has the cycle count practice: every bin on the list with its lesson', /Cycle count practice/.test(wall) && ['T01A002', 'T01A003', 'T01A007', 'T01B001', 'T02A004', 'T02A006'].every((b) => new RegExp(`<td><b>${b}</b></td><td>[^<]*(<br>[^<]*)*</td><td>[^<]*(Bin done|EMPTY)`).test(wall) || wall.includes(b)) && /the person is the team/.test(wall));
 check('Small labels for a desk, and one part at a time', /class="small"/.test(await text('/api/admin/training/print/wall?size=small')) && !/Rack labels/.test(await text('/api/admin/training/print/wall?part=teams')));
 const two = await text('/api/admin/training/print/pocket-card?lang=en&teams=S1-DS01,S1-DS01,S1-DS02,INV,S2-RT05');
 const backs = [...two.matchAll(/class="pc back" data-team="([^"]+)"/g)].map((m) => m[1]);
@@ -90,10 +98,24 @@ check('The roster downloads as a CSV and prints as a clipboard sheet by shift', 
 check('A real badge that signed on to the training count shows when, as a hint', ros.rows.every((x) => !x.signedOn) || true);
 check('The roster is for admins', (await fetch(`${BASE}/api/admin/training/roster`, { headers: SUP })).status === 403);
 
+/* ---------------- a trainee does the cycle list ---------------- */
+const cdev = await j(await post('/api/admin/devices', { name: 'TRAIN-CYC' }));
+const CG = { ...hdr, authorization: 'Device ' + (await j(await post(`/api/devices/${cdev.uid}`, {}, hdr))).token };
+check('The scanners are offered the cycle count as well', (await get('/api/sessions', CG)).some((x) => x.id === st0.cycle.id && x.mode === 'cycle'));
+r = await post(`/api/sessions/${st0.cycle.id}/signon`, { deviceId: 'TRAIN-CYC', team: 'TRN-07', employees: ['TRN-07'] }, CG);
+const myList = await get(`/api/sessions/${st0.cycle.id}/recounts?team=TRN-07`, CG);
+check('A trainee signs on with one badge and gets the six bins, in the order on the key', r.status === 200 && myList.tasks.map((x) => x.bin).join() === 'T01A002,T01A003,T01A007,T01B001,T02A004,T02A006' && myList.tasks.every((x) => x.kind === 'cycle'), JSON.stringify(myList.tasks.map((x) => x.bin)));
+const firstTask = myList.tasks[0];
+await post(`/api/sessions/${st0.cycle.id}/counts`, [{ clientId: 'cy1', palletId: 'TRN-1002', qty: 32, location: 'T01A002', team: 'TRN-07', deviceId: 'TRAIN-CYC', recountId: firstTask.id, scannedAt: new Date().toISOString() },
+  { clientId: 'cy2', palletId: 'TRN-1003', qty: 28, location: 'T01A002', team: 'TRN-07', deviceId: 'TRAIN-CYC', recountId: firstTask.id, scannedAt: new Date().toISOString() }], CG);
+await post(`/api/sessions/${st0.cycle.id}/recounts/${firstTask.id}/done`, { team: 'TRN-07' }, CG);
+check('…counts the first bin and taps Bin done: one of six done', (await get('/api/admin/training')).cycle.done === 1);
+
 /* ---------------- the next class ---------------- */
 r = await post('/api/admin/training/reset', {});
 t = await j(r);
-check('Reset clears what the class counted and keeps the wall', r.status === 200 && t.cleared.lines === 5 && t.cleared.signons === 1 && t.counted.lines === 0 && t.loaded.pallets === 17 && t.session.trial, JSON.stringify(t.cleared));
+check('Reset clears what the class counted on both counts and keeps the wall', r.status === 200 && t.cleared.lines === 7 && t.cleared.signons === 2 && t.counted.lines === 0 && t.loaded.pallets === 17 && t.session.trial, JSON.stringify(t.cleared));
+check('…the cycle list is back to six bins, none done, nothing counted', t.cycle && t.cycle.bins === 6 && t.cycle.done === 0 && t.cycle.lines === 0, JSON.stringify(t.cycle));
 check('…the aisles are back at the start', (await get(`/api/admin/sessions/${S}/assignments`)).some((a) => a.team === 'S1-DS01' && a.aisle === 'T01' && a.status === 'active'));
 check('…and the log says so', (await get('/api/admin/audit?limit=10')).some((x) => x.action === 'reset the training count for the next class'));
 
@@ -128,7 +150,7 @@ await sup.close();
 
 /* ---------------- remove ---------------- */
 r = await post('/api/admin/training/remove', {});
-check('Remove takes the count, its teams and its trainees away', r.status === 200 && (await get('/api/admin/training')).session === null && !(await get('/api/admin/people')).employees.some((e) => /^TRN-/.test(e.badge)) && !(await get('/api/admin/people')).teams.some((x) => /^S[12]-DS0[12]$/.test(x.name)) && !(await get('/api/admin/sessions')).some((x) => x.id === S));
+check('Remove takes the count, its teams and its trainees away', r.status === 200 && (await get('/api/admin/training')).session === null && !(await get('/api/admin/people')).employees.some((e) => /^TRN-/.test(e.badge)) && !(await get('/api/admin/people')).teams.some((x) => /^S[12]-DS0[12]$/.test(x.name)) && !(await get('/api/admin/sessions')).some((x) => x.id === S || x.id === st0.cycle.id));
 check('No page errors', !errors.length, errors.join(' | '));
 await browser.close();
 

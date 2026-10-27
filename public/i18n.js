@@ -329,6 +329,7 @@
     [/^Recorded against (\S+)$/, (m) => `Registrado en ${m[1]}`],
     [/^The report says this pallet is lot (.+)\.$/, (m) => `El reporte dice que esta tarima es del lote ${m[1]}.`],
     [/^This second count is for bin (\S+)$/, (m) => `Este segundo conteo es para la ubicación ${m[1]}`],
+    [/^This cycle count is for bin (\S+)$/, (m) => `Este conteo cíclico es para la ubicación ${m[1]}`],
     [/^You scanned (\S+)\. Scan (\S+), or tap Bin done\.$/, (m) => `Escaneaste ${m[1]}. Escanea ${m[2]}, o toca Ubicación terminada.`],
     [/^Bin (\S+) is on level (\S+)\. Your team is assigned (.+) of this aisle\.$/, (m) => `La ubicación ${m[1]} está en el nivel ${m[2]}. A tu equipo le tocan ${T(m[3])} de este pasillo.`],
     [/^It is another label on the pallet with (\S+)$/, (m) => `Es otra etiqueta de la tarima con ${m[1]}`],

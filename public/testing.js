@@ -665,6 +665,7 @@
     el.innerHTML = '';
     const b = document.createElement('b'); b.textContent = `#${t.session.id} ${t.session.name}`;
     el.append(b, document.createTextNode(` · ${t.session.trial ? 'a trial run on the scanners' : 'not marked as a trial'}${t.session.showOnGuns ? ', offered to the scanners' : ', hidden from the scanners'} · ${t.loaded.bins} bins, ${t.loaded.pallets} pallets, ${t.loaded.teams} teams, ${t.loaded.trainees} trainees · counted so far: ${t.counted.lines} lines in ${t.counted.bins} bins, ${t.counted.signons} sign-ons, ${t.counted.recounts} second counts open`));
+    if (t.cycle) el.append(document.createElement('br'), document.createTextNode(`Cycle count practice: #${t.cycle.id} ${t.cycle.name} · ${t.cycle.bins} bins on the list, ${t.cycle.done} done${t.cycle.lines ? `, ${t.cycle.lines} lines` : ''} — on the scanner tap Cycle count, then one badge.`));
     $('lnkTrainDash').hidden = false;
   }
   async function refreshTraining() {
