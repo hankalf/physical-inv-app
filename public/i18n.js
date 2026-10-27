@@ -194,6 +194,10 @@
     'Type the bin code on the scanner’s keys, then Enter': 'Escribe el código de la ubicación con las teclas del escáner, luego Enter',
     'Tap Keyboard for the on-screen one. The line will be flagged so the label gets replaced.': 'Toca Teclado para el de la pantalla. La línea queda marcada para cambiar la etiqueta.',
     "Type on the scanner's keys": 'Escribe con las teclas del escáner',
+    'Yes — it is empty': 'Sí — está vacía',
+    'NO LABEL': 'SIN ETIQUETA',
+    'Your levels': 'Tus niveles',
+    'The quantity is typed, not scanned: type the number of cases and press Enter.': 'La cantidad se escribe, no se escanea: escribe el número de cajas y oprime Enter.',
     'By team': 'Por el equipo',
     'Where': 'Dónde',
     'Its aisle': 'Su pasillo',
@@ -323,6 +327,10 @@
     [/^(\S+) is a bin, not a pallet$/, (m) => `${m[1]} es una ubicación, no una tarima`],
     [/^(\S+) is not a bin on this count$/, (m) => `${m[1]} no es una ubicación de este conteo`],
     [/^(\S+) is not a pallet or a bin$/, (m) => `${m[1]} no es una tarima ni una ubicación`],
+    [/^Mark (\S+) EMPTY\? Nothing at all is in it\.$/, (m) => `¿Marcar ${m[1]} VACÍA? No hay nada en ella.`],
+    [/^That is (a bin|a pallet label), not a quantity$/, (m) => `Eso es ${m[1] === 'a bin' ? 'una ubicación' : 'una etiqueta de tarima'}, no una cantidad`],
+    [/^Bin (\S+) is in aisle (\S+)\. Your team is assigned to aisle (\S+)\.$/, (m) => `La ubicación ${m[1]} está en el pasillo ${m[2]}. A tu equipo le toca el pasillo ${m[3]}.`],
+    [/^Bin (\S+) is in aisle (\S+), but your team has no active aisle right now\.$/, (m) => `La ubicación ${m[1]} está en el pasillo ${m[2]}, pero tu equipo no tiene un pasillo activo ahora.`],
     [/^Counted in$/, () => 'Contada en'],
     [/^Counted (.+)$/, (m) => `Contada ${m[1]}`],
     [/^Pallet (.+)$/, (m) => `Tarima ${m[1]}`],
@@ -447,7 +455,7 @@
     [/^Cached: session #(\d+), ([\d,]+) bins, ([\d,]+) pallets(.*)$/, (m) => `Guardado: sesión #${m[1]}, ${m[2]} ubicaciones, ${m[3]} tarimas${m[4].replace(' (downloaded ', ' (descargada ')}`],
     [/^(.+) \(cached\)$/, (m) => `${m[1]} (guardada)`],
     [/^(\d+) @ (\S+)(.*)$/, (m) => `${m[1]} @ ${m[2]}${m[3].replace('· flagged', '· marcado')}`],
-    [/^(.+) · (synced|queued)(.*)$/, (m) => `${m[1]} · ${m[2] === 'synced' ? 'enviado' : 'en espera'}${m[3].replace(' · 2nd count', ' · 2º conteo').replace(' · 3rd count', ' · 3er conteo').replace(/ · flagged: (.*)$/, (x, why) => ` · marcado: ${T(why)}`).replace('marked empty as part of a run', 'marcada vacía en grupo').replace(/second label on (\S+)/, 'segunda etiqueta de $1').replace(/another label on the same pallet as (\S+)/, 'otra etiqueta en la misma tarima que $1')}`],
+    [/^(.+) · (synced|queued)(.*)$/, (m) => `${m[1]} · ${m[2] === 'synced' ? 'enviado' : 'en espera'}${m[3].replace(' · 2nd count', ' · 2º conteo').replace(' · 3rd count', ' · 3er conteo').replace(/ · flagged: (.*)$/, (x, why) => ` · marcado: ${T(why)}`).replace('marked empty as part of a run', 'marcada vacía en grupo').replace(/second label on (\S+)/, 'segunda etiqueta de $1').replace(/another label on the same pallet as (\S+)/, 'otra etiqueta en la misma tarima que $1').replace('no readable bin label', 'ubicación sin etiqueta legible').replace('no readable label', 'sin etiqueta legible').replace('bin label unreadable', 'etiqueta de ubicación ilegible')}`],
   ];
 
   /* the pieces that labels are built from: "Freezer – Aisle F01 · levels A–F" */
