@@ -198,7 +198,9 @@ check('Every hour is saved, with when the next copy goes', st.every === 1 && !!s
 const before = new Set(ms.files.keys());
 const extra = await until(async () => [...ms.files.keys()].find((k) => !before.has(k) && /-offsite\.db$/.test(k)), 12000);
 check('A fresh copy goes on the hour by itself', !!extra, extra || [...ms.files.keys()].join(' | '));
-const localNames = (await j(await get('/api/admin/backups'))).backups.map((b) => b.name);
+// the file reaches OneDrive a moment before the server deletes its own copy: give it that moment
+const names = async () => (await j(await get('/api/admin/backups'))).backups.map((b) => b.name);
+const localNames = (await until(async () => { const n = await names(); return n.some((x) => /-offsite/.test(x)) ? null : n; }, 5000)) || await names();
 check('…and is not kept on the server, so the dailies are not crowded out', !localNames.some((n) => /-offsite/.test(n)), localNames.join(' | '));
 await post('/api/admin/onedrive/config', { every: 24 });
 const settled = new Set(ms.files.keys());
