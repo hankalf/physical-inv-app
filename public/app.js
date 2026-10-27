@@ -1126,7 +1126,7 @@
     } else {
       renderAssignment();
       showScreen('scrAssign');
-      feedback($('assignMsg'), 'ok', auto ? `Bin ${t.bin} done${why}` : 'All second counts done', 'Nothing more to go back to right now.');
+      feedback($('assignMsg'), 'ok', auto ? `Bin ${t.bin} done${why}` : t.kind === 'cycle' ? 'Cycle count list done' : 'All second counts done', t.kind === 'cycle' ? 'Every bin on your list is counted.' : 'Nothing more to go back to right now.');
     }
   }
 
