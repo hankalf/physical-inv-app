@@ -105,7 +105,7 @@
     for (const q of G.questions) add({ kind: 'ask', title: q.q, text: q.a, from: 'General', goto: q.goto });
     for (const e of G.errors) add({ kind: 'issue', title: e.see, text: `${e.means} ${e.fix}`, from: 'What the screen says', goto: e.goto, means: e.means, fix: e.fix });
     // the how-to guides, a section at a time: the user editions only, so an answer is never the setup version
-    for (const g of guides.filter((x) => x.edition === 'user')) {
+    for (const g of guides.filter((x) => x.edition !== 'admin')) {
       for (const sec of g.sections) add({ kind: 'howto', title: `${g.title.replace(/ — .*$/, '')}: ${sec.title}`, text: sec.text.slice(0, 320) + (sec.text.length > 320 ? '…' : ''), extra: sec.text, from: 'How-to guide', guide: g, section: sec.id });
     }
     INDEX = out;
@@ -190,7 +190,8 @@
       const t = el('div', 'howto');
       t.dataset.guide = `${g.edition}/${g.name}`;
       if (g.edition === 'admin') t.appendChild(el('div', 'ed', 'Admin edition'));
-      t.append(el('div', 't', g.title), el('div', 'w', g.who), el('div', 'b', g.blurb));
+      if (g.edition === 'scanner') t.append(el('div', 't', g.title.replace(/^On the scanner — /, '')), el('div', 'w', g.when ? g.when[0].toUpperCase() + g.when.slice(1) : ''));
+      else t.append(el('div', 't', g.title), el('div', 'w', g.who), el('div', 'b', g.blurb));
       const acts = el('div', 'acts');
       const read = el('button', 'sm primary', 'Read');
       read.type = 'button';
@@ -212,15 +213,27 @@
     };
     const users = guides.filter((g) => g.edition === 'user');
     const admins = guides.filter((g) => g.edition === 'admin');
+    const onGun = guides.filter((g) => g.edition === 'scanner');
+    $('scannerCard').hidden = !onGun.length;
+    $('scannerGuides').replaceChildren(...onGun.map(tile));
     $('howtoCard').hidden = !guides.length;
     $('howtos').replaceChildren(...users.map(tile));
     $('howtosAdmin').hidden = !admins.length;
     $('howtosAdminList').replaceChildren(...admins.map(tile));
   }
+  const allOf = (kind) => async (e) => {
+    const btn = e.currentTarget, was = btn.textContent;
+    btn.disabled = true; btn.textContent = '…';
+    try { await api.download(`/api/admin/guides/on-the-scanner.${kind}`, `on-the-scanner.${kind}`); }
+    catch (err) { alert(err.message); }
+    finally { btn.disabled = false; btn.textContent = was; }
+  };
+  $('btnScannerAllPdf').onclick = allOf('pdf');
+  $('btnScannerAllDocx').onclick = allOf('docx');
   async function downloadGuide(g, btn, kind = 'pdf') {
     const was = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = '…'; }
-    try { await api.download(`/api/admin/guides/${g.edition}/${g.name}.${kind}`, `${g.name}${g.edition === 'admin' ? '-admin' : ''}.${kind}`); }
+    try { await api.download(`/api/admin/guides/${g.edition}/${g.name}.${kind}`, `${g.edition === 'scanner' ? 'on-the-scanner-' : ''}${g.name}${g.edition === 'admin' ? '-admin' : ''}.${kind}`); }
     catch (err) { alert(err.message); }
     finally { if (btn) { btn.disabled = false; btn.textContent = was; } }
   }

@@ -324,7 +324,7 @@
     $('chipNet').textContent = online() ? 'online' : 'OFFLINE';
     $('chipNet').className = 'chip ' + (online() ? 'online' : 'offline');
     $('chipDevice').hidden = !state.deviceId;
-    $('chipDevice').textContent = state.deviceId + (state.team ? (state.team === state.employees[0] ? ' · ' + (soloName() || state.team) : ' · T' + state.team) : '');
+    $('chipDevice').textContent = state.deviceId + (state.team ? (state.team === state.employees[0] ? ' · ' + (soloName() || state.team) : ' · ' + (/^\d+$/.test(state.team) ? 'T' + state.team : state.team)) : '');
   }
 
   /* On a job one person does alone - a cycle count, Front2Back, Not in

@@ -29,6 +29,11 @@ they finish the wall, who ticked them and when, by shift; it prints for a clipbo
 a CSV. *Reset for the next class* clears what a class counted; *Remove* takes it all away before
 count day. The run sheet above walks the whole session.
 
+**On the scanner.** One page for each thing on a full count that is not the plain rack, pallet,
+quantity — [docs/guides/on-the-scanner](../guides/on-the-scanner/) — in the app under **User guide → On the
+scanner**, each page as PDF and Word, and every page in one booklet. The zip carries the booklet and
+each page.
+
 **In Word, PowerPoint and PDF.** Every printed piece — the wall, the key, the pocket cards, the
 roster, the trainer's guide — comes out of the app as a PDF (the 🖨 buttons, then *Save as PDF*) and
 as a Word document to edit first (the ⬇ .docx buttons on the Classroom training card, and ⬇ Word on

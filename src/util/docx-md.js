@@ -32,9 +32,10 @@ const cells = (row) => row.replace(/^\||\|$/g, '').split('|').map((c) => c.trim(
  * md -> Docx. `images` is the folder `../images/x.png` resolves against.
  * Returns the Docx, so the caller can build it with its own title.
  */
-export function markdownToDocx(md, { images = '', title = '' } = {}) {
+export function markdownToDocx(md, { images = '', title = '', pictureMaxHeight = 0 } = {}) {
   const d = new Docx({ margin: 1080 });
   const lines = md.replace(/\r\n/g, '\n').split('\n');
+  let breakNext = false;
   const para = [];
   const flush = () => {
     if (!para.length) return;
@@ -43,16 +44,21 @@ export function markdownToDocx(md, { images = '', title = '' } = {}) {
     if (/^\*[^*].*\*$/.test(text)) d.paragraph(inlineRuns(text.slice(1, -1), { italic: true, color: '555555', size: 18 }), { align: 'center', after: 200 });
     else d.paragraph(inlineRuns(text), { after: 140, line: 264 });
   };
-  const picture = (src) => {
+  /** A picture as Word XML, no wider and no taller than it is given room for, in inches. */
+  const pictureXml = (src, maxWIn = 6.3, maxHIn = pictureMaxHeight) => {
     const file = join(images, src.replace(/^(\.\.\/)*images\//, ''));
-    if (!images || !/\.png$/i.test(file) || !existsSync(file)) return;
+    if (!images || !/\.png$/i.test(file) || !existsSync(file)) return '';
     const png = readFileSync(file);
     const sz = pngSize(png);
-    if (!sz) return;
-    const maxW = 6.3 * EMU_PER_INCH;
-    const w = Math.min(maxW, sz.width * 6000), h = Math.round(w * sz.height / sz.width);
-    d.body.push(d.pictureXml(png, { width: Math.round(w), height: h, name: src }));
+    if (!sz) return '';
+    let w = Math.min(maxWIn * EMU_PER_INCH, sz.width * 6000), h = Math.round(w * sz.height / sz.width);
+    if (maxHIn && h > maxHIn * EMU_PER_INCH) { h = Math.round(maxHIn * EMU_PER_INCH); w = Math.round(h * sz.width / sz.height); }
+    return d.pictureXml(png, { width: Math.round(w), height: h, name: src });
   };
+  const picture = (src) => { const x = pictureXml(src); if (x) d.body.push(x); };
+  const IMG = /^!\[([^\]]*)\]\(([^)]+)\)\s*$/;
+  const CAP = /^\*[^*].*\*$/;
+  const usable = 12240 - 2 * 1080;   // the page between the margins, in twips
   let i = 0;
   while (i < lines.length) {
     const line = lines[i];
@@ -70,13 +76,41 @@ export function markdownToDocx(md, { images = '', title = '' } = {}) {
       flush();
       const level = h[1].length;
       const text = h[2].replace(/^\*\*(.*)\*\*$/, '$1');
-      d.paragraph(inlineRuns(text, { bold: true, size: level === 1 ? 40 : level === 2 ? 30 : level === 3 ? 25 : 22, color: level === 1 ? '000000' : '1E2761' }), { before: level === 1 ? 0 : 280, after: 120, keepNext: true });
+      d.paragraph(inlineRuns(text, { bold: true, size: level === 1 ? 40 : level === 2 ? 30 : level === 3 ? 25 : 22, color: level === 1 ? '000000' : '1E2761' }), { before: level === 1 ? 0 : 280, after: 120, keepNext: true, pageBreakBefore: breakNext });
+      breakNext = false;
       i++;
       continue;
     }
     if (/^---+$/.test(line.trim())) { flush(); d.paragraph([{ text: '' }], { after: 0 }); i++; continue; }
-    const fig = /^!\[([^\]]*)\]\(([^)]+)\)\s*$/.exec(line);
-    if (fig) { flush(); picture(fig[2]); i++; continue; }
+    const fig = IMG.exec(line);
+    if (fig) {
+      flush();
+      /* pictures one after another, each with its caption under it: side by side in one row */
+      const group = [];
+      while (i < lines.length) {
+        const m = IMG.exec(lines[i].trim());
+        if (!m) break;
+        let cap = '';
+        let k = i + 1;
+        while (k < lines.length && !lines[k].trim()) k++;
+        if (k < lines.length && CAP.test(lines[k].trim())) { cap = lines[k].trim().slice(1, -1); k++; }
+        group.push({ src: m[2], cap });
+        i = k;
+        while (i < lines.length && !lines[i].trim()) i++;
+      }
+      if (group.length === 1) {
+        picture(group[0].src);
+        if (group[0].cap) d.paragraph(inlineRuns(group[0].cap, { italic: true, color: '555555', size: 18 }), { align: 'center', after: 200 });
+      } else {
+        const per = Math.floor(usable / group.length);
+        const cells = group.map((g) => [pictureXml(g.src, per / 1440 - 0.2, pictureMaxHeight || 4) || d.paragraphXml(''), d.paragraphXml(inlineRuns(g.cap, { italic: true, color: '555555', size: 16 }), { align: 'center', before: 60, after: 0 })]);
+        d.body.push(d.tableXml([cells], { widths: group.map(() => per), border: 'none', cellMargin: 60 }));
+        d.paragraph([{ text: '' }], { after: 80 });
+      }
+      continue;
+    }
+    // a new page: the heading that follows starts it, so a page that ends full never leaves a blank one behind
+    if (line.trim() === '<!-- pagebreak -->') { flush(); breakNext = true; i++; continue; }
     if (line.startsWith('<')) { flush(); const m = /src="([^"]+)"/.exec(line); if (m) picture(m[1]); i++; continue; }
     if (line.startsWith('>')) {
       flush();
@@ -98,7 +132,12 @@ export function markdownToDocx(md, { images = '', title = '' } = {}) {
       const sum = longest.reduce((a, b) => a + Math.min(b, 60), 0);
       const widths = longest.map((l) => Math.round(total * Math.min(l, 60) / sum));
       const blank = head.every((c) => !c);
-      const row = (r, isHead) => Array.from({ length: n }, (_, c) => [d.paragraphXml(inlineRuns(r[c] || '', isHead ? { bold: true, size: 18 } : { size: 19 }), { after: 0 })]);
+      const cellXml = (text, c, isHead) => {
+        const pics = [...String(text || '').matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map((m) => pictureXml(m[1], widths[c] / 1440 - 0.2, 3.2)).filter(Boolean);
+        const words = String(text || '').replace(/!\[[^\]]*\]\([^)]+\)/g, '').trim();
+        return [...pics, d.paragraphXml(inlineRuns(words, isHead ? { bold: true, size: 18 } : { size: pics.length ? 16 : 19, italic: pics.length > 0, color: pics.length ? '555555' : undefined }), { after: 0, align: pics.length ? 'center' : 'left' })];
+      };
+      const row = (r, isHead) => Array.from({ length: n }, (_, c) => cellXml(r[c] || '', c, isHead));
       const rows = (blank ? [] : [row(head, true)]).concat(body.map((r) => row(r, false)));
       d.body.push(d.tableXml(rows, { widths, border: 'single', borderColor: 'BBBBBB', cellMargin: 80, headerShade: blank ? '' : 'E8EEF6' }));
       d.paragraph([{ text: '' }], { after: 60 });
@@ -108,6 +147,7 @@ export function markdownToDocx(md, { images = '', title = '' } = {}) {
     if (li) {
       flush();
       const ordered = /\d/.test(li[2]);
+      const listId = ordered ? d.newList() : 0;
       const start = i;
       while (i < lines.length) {
         const m = /^(\s*)([-*]|\d+\.)\s+(.*)$/.exec(lines[i]);
@@ -116,7 +156,7 @@ export function markdownToDocx(md, { images = '', title = '' } = {}) {
           const parts = [m[3]];
           i++;
           while (i < lines.length && lines[i].trim() && /^\s{2,}/.test(lines[i]) && !/^\s*[-*]\s/.test(lines[i])) { parts.push(lines[i].trim()); i++; }
-          d.paragraph(inlineRuns(parts.join(' ').replace(/^☐\s*/, '☐ ')), { bullet: !ordered, numbered: ordered, after: 60, line: 252 });
+          d.paragraph(inlineRuns(parts.join(' ').replace(/^☐\s*/, '☐ ')), { bullet: !ordered, numbered: ordered ? listId : false, after: 60, line: 252 });
           // nested bullets, each with the lines wrapped under it
           while (i < lines.length && /^\s{2,}[-*]\s/.test(lines[i])) {
             const sub = [lines[i].replace(/^\s*[-*]\s+/, '')];

@@ -28,6 +28,7 @@ only difference from count day is the name on it: **Training count — not real 
 | The wall: 18 rack labels, 18 pallet labels, 3 team cards, 8 badges | **Testing Suite → Classroom training → 🖨 Print the wall** |
 | The trainer's key | the last pages of the same print: every spot, what the report says, what hangs there, the lesson |
 | Pocket cards, four to a page | **🖨 Pocket cards · English** and **🖨 Tarjetas · Español** — one per person, laminated if you can. Paste the team numbers into the box above the buttons, one line per person, and each card gets that person's **team card** (QR and barcode) on the back |
+| On the scanner | **User guide → On the scanner**: one page for each thing that is different on a full count — two labels, no label, a rack label that will not scan, empty bins, a pallet not on the list and the rest. Print the booklet for the break room and the leads |
 | The roster | the same card, under the buttons: every employee from Teams & crew with a box to tick as they finish; **🖨 Print the roster** for a clipboard copy |
 | Scanners | three or four, charged, on the site's Wi-Fi, the app open at the sign-on screen |
 | A screen | the break-room TV or a projector, for the film, the deck and then the Dashboard |

@@ -15,10 +15,13 @@ import { markdownToDocx } from '../util/docx-md.js';
  */
 
 const DOCS = join(new URL('.', import.meta.url).pathname, '..', '..', 'docs');
-const FOLDERS = { user: join(DOCS, 'guides', 'for-users'), admin: join(DOCS, 'guides') };
+/* on the scanner: one page for each thing on a full count that is not the plain rack-pallet-quantity, for everyone */
+const FOLDERS = { user: join(DOCS, 'guides', 'for-users'), scanner: join(DOCS, 'guides', 'on-the-scanner'), admin: join(DOCS, 'guides') };
 const NAME = /^[a-z0-9-]+$/;
 // the order they are listed in: the first full count from scratch, then the count's own work
-const ORDER = ['first-full-count', 'second-and-third-counts', 'set-up-second-and-third-counts', 'erp-upload-by-aisle', 'reports-and-exports', 'employees-teams-and-gear', 'live-and-test', 'run-the-training-day'];
+const ORDER = ['first-full-count', 'second-and-third-counts', 'set-up-second-and-third-counts', 'erp-upload-by-aisle', 'reports-and-exports', 'employees-teams-and-gear', 'live-and-test', 'run-the-training-day',
+  // on the scanner, in the order they come up on the floor
+  'two-or-more-labels', 'label-will-not-scan', 'no-label', 'bin-label-will-not-scan', 'several-pallets-in-a-bin', 'empty-bin', 'several-empty-bins', 'pallet-not-on-the-list', 'bin-not-on-the-list', 'pallet-already-counted', 'not-your-aisle-or-level', 'pallet-in-the-wrong-bin', 'wrong-label-in-the-wrong-box', 'a-big-quantity', 'lot-and-expiry', 'comments', 'fixing-a-mistake', 'no-wifi', 'report-a-problem', 'sos', 'message-from-the-office', 'second-counts', 'finishing-the-aisle'];
 
 const cache = new Map();                      // path -> { mtime, guide }
 
@@ -33,7 +36,9 @@ function readGuide(edition, name) {
   const title = (/^#\s+(.*)$/m.exec(md) || [, name])[1].trim();
   const role = /^\*\*Role:\*\*\s*(.+?)(?:\s{2,}\*\*|$)/m.exec(md);
   const tocAt = md.indexOf('## Contents');
-  const intro = md.slice(md.indexOf('\n', md.indexOf('# ')), tocAt > 0 ? tocAt : undefined)
+  // the lead: up to the contents list, or - on a one-page guide with none - up to the first section
+  const leadEnd = tocAt > 0 ? tocAt : md.indexOf('\n## ');
+  const intro = md.slice(md.indexOf('\n', md.indexOf('# ')), leadEnd > 0 ? leadEnd : undefined)
     .split('\n').filter((l) => l.trim() && !/^\*\*Role:\*\*/.test(l)).join(' ').trim();
   // the page: everything after the title and the role line, contents list included (it links within the page)
   const body = md.slice(md.indexOf('\n', md.indexOf('# '))).replace(/^\*\*Role:\*\*.*$/m, '');
@@ -55,6 +60,7 @@ function readGuide(edition, name) {
   }
   const guide = {
     edition, name, title, who: role ? role[1].trim() : '',
+    when: ((/\*\*When:\*\*\s*(.+)$/m.exec(md) || [])[1] || '').trim(),
     blurb: intro.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1'),
     html, sections, pdf: existsSync(join(FOLDERS[edition], `${name}.pdf`)),
   };
@@ -65,12 +71,12 @@ function readGuide(edition, name) {
 /** Every guide this login may read: the user guides for everyone, the admin ones for an admin. */
 export function listGuides({ admin = false } = {}) {
   const out = [];
-  for (const edition of admin ? ['user', 'admin'] : ['user']) {
+  for (const edition of admin ? ['user', 'scanner', 'admin'] : ['user', 'scanner']) {
     if (!existsSync(FOLDERS[edition])) continue;
     const rank = (f) => { const i = ORDER.indexOf(f.slice(0, -3)); return i < 0 ? 99 : i; };
     for (const f of readdirSync(FOLDERS[edition]).filter((x) => x.endsWith('.md') && x !== 'README.md').sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))) {
       const g = readGuide(edition, f.slice(0, -3));
-      if (g) out.push({ edition, name: g.name, title: g.title, who: g.who, blurb: g.blurb, pdf: g.pdf, sections: g.sections });
+      if (g) out.push({ edition, name: g.name, title: g.title, who: g.who, when: g.when, blurb: g.blurb, pdf: g.pdf, sections: g.sections });
     }
   }
   return out;
@@ -88,15 +94,34 @@ export function guidePdf(edition, name, opts) {
   const g = getGuide(edition, name, opts);
   const file = join(FOLDERS[edition], `${name}.pdf`);
   if (!existsSync(file)) throw Object.assign(new Error('this guide has no PDF yet'), { status: 404 });
-  return { body: readFileSync(file), filename: `${name}${edition === 'admin' ? '-admin' : ''}.pdf`, title: g.title };
+  return { body: readFileSync(file), filename: fileName(edition, name, 'pdf'), title: g.title };
 }
 
 /** The guide as a Word document, pictures included, for a site that wants it in its own words. */
 export function guideDocx(edition, name, opts) {
   const g = getGuide(edition, name, opts);
   const md = readFileSync(join(FOLDERS[edition], `${name}.md`), 'utf8').replace(/^\*\*Role:\*\*.*$/m, '');
-  const body = markdownToDocx(md, { images: join(DOCS, 'images') }).build({ title: g.title });
-  return { body, filename: `${name}${edition === 'admin' ? '-admin' : ''}.docx`, title: g.title };
+  const body = markdownToDocx(md, { images: join(DOCS, 'images'), pictureMaxHeight: edition === 'scanner' ? 2.6 : 0 }).build({ title: g.title });
+  return { body, filename: fileName(edition, name, 'docx'), title: g.title };
+}
+
+const fileName = (edition, name, ext) => `${edition === 'scanner' ? 'on-the-scanner-' : ''}${name}${edition === 'admin' ? '-admin' : ''}.${ext}`;
+
+/** Every page of On the scanner in one PDF: printed by tools/scanner-guides-pdf.mjs. */
+export function scannerBookletPdf() {
+  const file = join(FOLDERS.scanner, 'on-the-scanner.pdf');
+  if (!existsSync(file)) throw Object.assign(new Error('the booklet has not been printed yet'), { status: 404 });
+  return { body: readFileSync(file), filename: 'on-the-scanner.pdf' };
+}
+
+/** …and in one Word document, a page each, to edit in the site's own words. */
+export function scannerBookletDocx() {
+  const list = listGuides().filter((g) => g.edition === 'scanner');
+  const contents = list.map((g, i) => `${i + 1}. **${g.title.replace(/^On the scanner — /, '')}** — ${g.when}`).join('\n');
+  const md = [`# On the scanner\n\nOne page for each thing on a full count that is not the plain rack label, pallet label, quantity. Find the one in front of you, and do what it says.\n\n${contents}`]
+    .concat(list.map((g) => readFileSync(join(FOLDERS.scanner, `${g.name}.md`), 'utf8').replace(/^\*\*Role:\*\*.*$/m, (l) => l.replace(/^\*\*Role:\*\*\s*Everyone counting on a full count\s*/, ''))))
+    .join('\n\n<!-- pagebreak -->\n\n');
+  return { body: markdownToDocx(md, { images: join(DOCS, 'images'), pictureMaxHeight: 2.6 }).build({ title: 'On the scanner' }), filename: 'on-the-scanner.docx' };
 }
 
 /** A picture a guide shows: from docs/images, by its plain name only. */

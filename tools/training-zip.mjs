@@ -8,7 +8,7 @@
  * Run tools/training-prints.mjs first if docs/training/print is missing or stale.
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, copyFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, copyFileSync, rmSync, statSync, writeFileSync, readdirSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -56,6 +56,11 @@ const FILES = [
   ...optional('5 Trainer/training-roster.docx', join(T, 'print', 'training-roster.docx')),
   ['5 Trainer/set-up-second-and-third-counts.pdf', join(ROOT, 'docs', 'guides', 'set-up-second-and-third-counts.pdf')],
   ['5 Trainer/second-and-third-counts.pdf', join(ROOT, 'docs', 'guides', 'second-and-third-counts.pdf')],
+  // On the scanner: a page for each thing that is different on a full count
+  ['6 On the scanner/on-the-scanner.pdf', join(ROOT, 'docs', 'guides', 'on-the-scanner', 'on-the-scanner.pdf')],
+  ...optional('6 On the scanner/on-the-scanner.docx', join(T, 'print', 'on-the-scanner.docx')),
+  ...readdirSync(join(ROOT, 'docs', 'guides', 'on-the-scanner')).filter((f) => f.endsWith('.pdf') && f !== 'on-the-scanner.pdf').sort()
+    .map((f) => [`6 On the scanner/one page each/${f}`, join(ROOT, 'docs', 'guides', 'on-the-scanner', f)]),
   ['README.md', join(T, 'README.md')],
 ];
 const missing = FILES.filter(([, src]) => !existsSync(src)).map(([, src]) => src.replace(ROOT + '/', ''));
@@ -72,6 +77,7 @@ writeFileSync(join(top, 'START HERE.txt'), [
   '3 The wall      Print "training-wall-labels-big.pdf" one label per page and hang it in the order the trainer\'s key gives. Real scanners read these.',
   '4 Pocket cards  Four to a page, one per person, English and Spanish. Cut along the lines. The "two-sided" files carry each person\'s team card on the back: print double-sided, flipped on the long edge.',
   '5 Trainer       The run sheet: the day before, the session minute by minute, every spot on the wall. Plus the roster and the second-count guides.',
+  '6 On the scanner  One page for each thing on a full count that is not the plain rack, pallet, quantity: two labels, no label, a rack label that will not scan, empty bins and the rest. One booklet (PDF and Word) and each page on its own.',
   '',
   'Every printed piece is here twice: as a PDF to print as it is, and as a Word document (.docx) to edit first. Barcodes in the Word files are pictures.',
   '',

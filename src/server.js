@@ -26,7 +26,7 @@ import { autoPlan, applyPlan } from './routes/auto-plan.js';
 import { endTrial, setTrial } from './routes/trial.js';
 import { exportEverything } from './routes/export-all.js';
 import { recountSideBySide } from './routes/recount-sheet.js';
-import { listGuides, getGuide, guidePdf, guideDocx, guideImage } from './routes/guides.js';
+import { listGuides, getGuide, guidePdf, guideDocx, guideImage, scannerBookletPdf, scannerBookletDocx } from './routes/guides.js';
 import { erpAisles, erpAisleSheet } from './routes/erp-aisles.js';
 import { archiveAisle, finalReadiness, finalReport, listArchives, archivePath } from './routes/archive.js';
 import { idleConfig, saveIdleConfig, teamClocks, checkIdle, answerIdle, openIdleAlerts, recentIdleAlerts, tellTeamsIdle, idleTick, recordSignoff } from './routes/idle.js';
@@ -2033,16 +2033,26 @@ async function handleAdmin(req, res, url, m) {
   if (p === '/api/admin/guides' && method === 'GET') {
     return sendJson(req, res, 200, { guides: listGuides({ admin: whoNow && whoNow.role === 'admin' }) });
   }
-  if ((m = p.match(/^\/api\/admin\/guides\/(user|admin)\/([a-z0-9-]+)\.pdf$/)) && method === 'GET') {
+  // On the scanner, every page in one: a PDF to print, a Word document to edit
+  if (p === '/api/admin/guides/on-the-scanner.pdf' && method === 'GET') {
+    const b = scannerBookletPdf();
+    return send(req, res, 200, b.body, { 'content-type': 'application/pdf', 'content-disposition': `attachment; filename="${b.filename}"`, 'cache-control': 'no-cache' });
+  }
+  if (p === '/api/admin/guides/on-the-scanner.docx' && method === 'GET') {
+    const b = scannerBookletDocx();
+    audit(actor, 'downloaded On the scanner as Word', 'every page');
+    return send(req, res, 200, b.body, { 'content-type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'content-disposition': `attachment; filename="${b.filename}"`, 'cache-control': 'no-cache' });
+  }
+  if ((m = p.match(/^\/api\/admin\/guides\/(user|scanner|admin)\/([a-z0-9-]+)\.pdf$/)) && method === 'GET') {
     const pdf = guidePdf(m[1], m[2], { admin: whoNow && whoNow.role === 'admin' });
     return send(req, res, 200, pdf.body, { 'content-type': 'application/pdf', 'content-disposition': `attachment; filename="${pdf.filename}"`, 'cache-control': 'no-cache' });
   }
-  if ((m = p.match(/^\/api\/admin\/guides\/(user|admin)\/([a-z0-9-]+)\.docx$/)) && method === 'GET') {
+  if ((m = p.match(/^\/api\/admin\/guides\/(user|scanner|admin)\/([a-z0-9-]+)\.docx$/)) && method === 'GET') {
     const doc = guideDocx(m[1], m[2], { admin: whoNow && whoNow.role === 'admin' });
     audit(actor, 'downloaded a guide as Word', `${m[1]}/${m[2]}`);
     return send(req, res, 200, doc.body, { 'content-type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'content-disposition': `attachment; filename="${doc.filename}"`, 'cache-control': 'no-cache' });
   }
-  if ((m = p.match(/^\/api\/admin\/guides\/(user|admin)\/([a-z0-9-]+)$/)) && method === 'GET') {
+  if ((m = p.match(/^\/api\/admin\/guides\/(user|scanner|admin)\/([a-z0-9-]+)$/)) && method === 'GET') {
     return sendJson(req, res, 200, getGuide(m[1], m[2], { admin: whoNow && whoNow.role === 'admin' }));
   }
 

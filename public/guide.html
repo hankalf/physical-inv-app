@@ -79,6 +79,9 @@
   .howto .b { font-size: 12.5px; color: var(--text-dim); line-height: 1.45; flex: 1 1 auto; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .howto .acts { display: flex; gap: 6px; margin-top: 6px; }
   .howto .ed { font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--warn); }
+  .howtos.scanner { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .howtos.scanner .howto .t { font-size: 14px; }
+  .howtos.scanner .howto .b { display: none; }
   .howtos-sub { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 14px; }
   #readerCard .readhead { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   #readerCard .readhead h2 { flex: 1 1 auto; margin: 0; border: 0; padding: 0; }
@@ -160,6 +163,15 @@
           <div class="howtos-sub">For admins — the same jobs, with setting the site up</div>
           <div class="howtos" id="howtosAdminList"></div>
         </div>
+      </div>
+
+      <div class="card" id="scannerCard" hidden>
+        <h2>On the scanner <span class="muted">one page for each thing on a full count that is not the plain rack, pallet, quantity</span></h2>
+        <div class="inline" style="margin-top:6px">
+          <div class="auto"><button class="sm" id="btnScannerAllPdf" type="button">⬇ Every page, one PDF</button></div>
+          <div class="auto"><button class="sm" id="btnScannerAllDocx" type="button">⬇ Every page, one Word document</button></div>
+        </div>
+        <div class="howtos scanner" id="scannerGuides"></div>
       </div>
 
       <div class="card" id="readerCard" hidden>

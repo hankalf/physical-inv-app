@@ -58,6 +58,7 @@ try {
   await file('/api/admin/training/print/wall.docx', 'training-wall.docx');
   await file('/api/admin/training/roster.docx', 'training-roster.docx');
   await file('/api/admin/guides/admin/run-the-training-day.docx', 'run-the-training-day.docx');
+  await file('/api/admin/guides/on-the-scanner.docx', 'on-the-scanner.docx');
   const raw = process.env.TEAMS || '';
   const teams = (raw && existsSync(raw) ? readFileSync(raw, 'utf8') : raw).split(/[\s,;]+/).filter(Boolean);
   if (teams.length) {
