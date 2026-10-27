@@ -101,6 +101,12 @@ The columns are matched by name, in any order:
   clock-in number, and the number as a barcode the scanner's sign-on screen reads. Pick everyone or
   one shift, and 1, 2 or 3 of each person side by side (3, a full row, unless you pick fewer). It fits Avery 5960, 5160 and 8160 — print at
   **Actual size**, not "Fit to page".
+- **🖨 Gear box labels (4×6)** prints a 4×6 label for each active person — everyone or one shift —
+  for the box their gear waits in on count day: their name in big letters, clock-in number, shift
+  and team, and their **Jacket**, **Bibs** and **Boots** sizes in three boxes. A size not on the crew
+  list prints as an empty box to write in. **⬇ Word** gives the same labels as a Word document with
+  4×6 pages, to change before printing. On a label printer pick the 4×6 label size; print at
+  **Actual size**.
 
 **Employees and teams at once.** **Teams & crew → Employees → Crew workbook** takes one Excel file
 with an **Employees** sheet and a **Teams** sheet — or one sheet with both sets of columns, a row

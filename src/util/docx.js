@@ -95,7 +95,9 @@ export const TWIP = 635;   // EMU per twip
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 export class Docx {
-  constructor({ landscape = false, margin = 720 } = {}) {
+  constructor({ landscape = false, margin = 720, page = null } = {}) {
+    // page: { w, h } in twips for label stock (a 4x6 label is 5760 x 8640); letter otherwise
+    this.page = page;
     this.body = [];
     this.media = [];            // { name, data }
     this.lists = 0;             // numbered lists after the first: each starts again at 1
@@ -169,7 +171,7 @@ export class Docx {
   }
 
   build({ title = 'Document', creator = 'Full Harvest Inventory' } = {}) {
-    const W = this.landscape ? 15840 : 12240, H = this.landscape ? 12240 : 15840;
+    const W = this.page ? this.page.w : this.landscape ? 15840 : 12240, H = this.page ? this.page.h : this.landscape ? 12240 : 15840;
     const sect = `<w:sectPr><w:pgSz w:w="${W}" w:h="${H}"${this.landscape ? ' w:orient="landscape"' : ''}/><w:pgMar w:top="${this.margins.top}" w:right="${this.margins.right}" w:bottom="${this.margins.bottom}" w:left="${this.margins.left}" w:header="360" w:footer="360" w:gutter="0"/></w:sectPr>`;
     const document = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><w:body>${this.body.join('')}${sect}</w:body></w:document>`;

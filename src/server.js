@@ -78,6 +78,7 @@ function systemsView(req) {
 import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, unlockPlace, PER_LOGIN, PER_PLACE } from './routes/login-limit.js';
 import { recordAccess, accessMap, lookupPending } from './routes/access-map.js';
 import { badgeLabelsDocx } from './util/badge-labels.js';
+import { gearLabels, gearLabelsDocx } from './util/gear-labels.js';
 import { ensureTraining, resetTraining, removeTraining, trainingStatus, wallLabels, pocketCard, crewTeamList, trainingRoster, markTrained, rosterCsv, rosterSheet, pocketCardDocx, wallDocx, rosterDocx, checkoffSheet, checkoffDocx, quizSheet, quizDocx, glossarySheet, glossaryDocx } from './routes/training.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards, barcodeBook, teamCodes } from './routes/printing.js';
@@ -1670,6 +1671,19 @@ async function handleAdmin(req, res, url, m) {
 
   // --- setup cards: one QR per scanner, to cut up and tape to the cradles
   // team numbers as QR codes, a card a team: scanned at sign-on instead of typed
+  /* a 4x6 label for each person's gear box: name, number, shift, team, jacket / bibs / boots */
+  if (p === '/api/admin/print/gear-labels' || p === '/api/admin/people/export/gear-labels.docx') {
+    const shift = url.searchParams.get('shift') || '';
+    const people = listEmployees().filter((e) => e.active && (!shift || String(e.shift || '') === shift));
+    const scope = shift ? (shift === '1' ? '1st shift' : shift === '2' ? '2nd shift' : `shift ${shift}`) : 'everyone';
+    const sized = people.filter((e) => e.jacket || e.bibs || e.boots).length;
+    audit(actor, 'printed gear box labels', `${people.length} people (${sized} with sizes), ${scope}`);
+    if (p.endsWith('.docx')) {
+      if (!people.length) throw httpError(404, shift ? `nobody active on shift ${shift}` : 'there is nobody on the crew list yet');
+      return send(req, res, 200, gearLabelsDocx(people, { title: 'Gear box labels' }), { 'content-type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'content-disposition': `attachment; filename="gear-box-labels-4x6${shift ? '-shift-' + shift : ''}.docx"`, 'cache-control': 'no-cache' });
+    }
+    return send(req, res, 200, gearLabels(people, { scope, printed: `printed ${localDate()}` }), { 'content-type': 'text/html; charset=utf-8' });
+  }
   if (p === '/api/admin/print/team-codes') {
     const shift = ['1', '2'].includes(url.searchParams.get('shift') || '') ? url.searchParams.get('shift') : '';
     const only = (url.searchParams.get('only') || '').split(',').map((x) => x.trim().toUpperCase()).filter(Boolean);

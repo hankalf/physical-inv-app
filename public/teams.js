@@ -747,6 +747,16 @@
   $('btnTeamsExport').onclick = () => api.download('/api/admin/people/export/teams.csv', 'teams.csv').catch((err) => msg($('teamFileMsg'), 'err', err.message));
   $('btnExport').onclick = () => api.download('/api/admin/people/export/employees.csv', 'employees.csv')
     .catch((err) => msg($('uploadMsg'), 'err', err.message));
+  $('btnGearLabels').onclick = () => {
+    const q = new URLSearchParams({ t: window.appApi.token });
+    if ($('fGearShift').value) q.set('shift', $('fGearShift').value);
+    window.open(`/api/admin/print/gear-labels?${q}`, '_blank');
+  };
+  $('btnGearLabelsDocx').onclick = () => {
+    const shift = $('fGearShift').value;
+    api.download(`/api/admin/people/export/gear-labels.docx${shift ? '?shift=' + shift : ''}`, `gear-box-labels-4x6${shift ? '-shift-' + shift : ''}.docx`)
+      .catch((err) => msg($('badgeMsg'), 'err', 'No labels', err.message));
+  };
   $('btnBadgeLabels').onclick = () => {
     const shift = $('fBadgeShift').value;
     api.download(`/api/admin/people/export/badge-labels.docx?per=${$('fBadgePer').value}${shift ? '&shift=' + shift : ''}`, `badge-labels-avery-5960${shift ? '-shift-' + shift : ''}.docx`)

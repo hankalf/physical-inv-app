@@ -58,6 +58,17 @@ check('…a shift with nobody says so', r.status === 404 && /nobody active on sh
 r = await fetch(`${BASE}/api/admin/people/export/badge-labels.docx`);
 check('…and it is for a signed-in office user', r.status === 401 || r.status === 403, String(r.status));
 
+/* gear box labels: 4x6, one a person, with the sizes */
+await post('/api/admin/people/employees', { badge: 'BL101', name: 'Ana Lima', shift: '1', equipment: [], jacket: '2XL', bibs: 'XL', boots: '10 1/2' });
+r = await fetch(`${BASE}/api/admin/print/gear-labels?shift=1&t=${encodeURIComponent(tok)}`);
+const gear = await r.text();
+check('Gear box labels: a 4x6 page for each active person on the shift', r.status === 200 && /@page \{ size: 4in 6in; margin: 0; \}/.test(gear) && (gear.match(/<section class="label">/g) || []).length === 2 && /Ana Lima/.test(gear) && /Cy Dunn/.test(gear) && !/Ben Cole|Left Already/.test(gear));
+check('…with the jacket, bibs and boot sizes, a missing one blank to write in', /JACKET<\/div><div class="val">2XL</.test(gear) && /BOOTS<\/div><div class="val">10\.5</.test(gear) && /<div class="val blank"><\/div>/.test(gear));
+check('…the number, shift and team, and the number as a barcode', /#BL101 &nbsp;·&nbsp; 1st shift/.test(gear) && (gear.match(/<svg/g) || []).length >= 2);
+r = await fetch(`${BASE}/api/admin/people/export/gear-labels.docx?shift=1`, { headers: A });
+doc = await unzipText(Buffer.from(await r.arrayBuffer()));
+check('…and as Word: 4x6 pages, one label each', r.status === 200 && /<w:pgSz w:w="5760" w:h="8640"\/>/.test(doc) && (doc.match(/<w:pageBreakBefore\/>/g) || []).length === 1 && /Ana Lima/.test(doc) && />2XL<\/w:t>/.test(doc));
+
 /* the button */
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 const page = await browser.newPage({ acceptDownloads: true });
@@ -68,6 +79,9 @@ await signIn(page); await page.waitForTimeout(600);
 await page.selectOption('#fBadgeShift', '2'); await page.selectOption('#fBadgePer', '2');
 const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 10000 }).catch(() => null), page.click('#btnBadgeLabels')]);
 check('The button downloads the labels for the shift chosen', dl && dl.suggestedFilename() === 'badge-labels-avery-5960-shift-2.docx', dl ? dl.suggestedFilename() : 'no download');
+const [pop] = await Promise.all([page.waitForEvent('popup', { timeout: 10000 }).catch(() => null), page.click('#btnGearLabels')]);
+if (pop) await pop.waitForLoadState().catch(() => {});
+check('Gear box labels (4×6) opens the labels to print', pop && (await pop.$$('section.label')).length >= 3, pop ? pop.url().replace(/t=[^&]+/, 't=…') : 'no window');
 check('No page errors', !errors.length, errors.join(' | '));
 await browser.close();
 
