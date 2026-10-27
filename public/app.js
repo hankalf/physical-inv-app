@@ -976,7 +976,8 @@
     clearFeedback($('assignMsg'));
     const tasks = (state.recounts || []).filter((t) => !(state.recountsDoneLocal || []).includes(t.id));
     const cycle = tasks.filter((t) => t.kind === 'cycle').length;
-    const cycleOnly = cycle === tasks.length;
+    // a list made only of cycle bins - an empty list on a full count is still an aisle, not a list
+    const cycleOnly = tasks.length > 0 && cycle === tasks.length;
     $('recountCard').hidden = !tasks.length;
     $('btnRecounts').hidden = !tasks.length;
     $('recountCount').textContent = tasks.length;
