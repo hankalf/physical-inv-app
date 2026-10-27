@@ -100,7 +100,8 @@ export class Docx {
     this.media = [];            // { name, data }
     this.lists = 0;             // numbered lists after the first: each starts again at 1
     this.landscape = landscape;
-    this.margin = margin;
+    // one number for every side, or { top, right, bottom, left } - a label sheet has its own
+    this.margins = typeof margin === 'object' ? { top: 720, right: 720, bottom: 720, left: 720, ...margin } : { top: margin, right: margin, bottom: margin, left: margin };
   }
 
   /** Runs: a string, or [{ text, bold, italic, size (half-points), color, font }]. */
@@ -152,7 +153,9 @@ export class Docx {
    * widths in twips (1440 per inch). Dashed borders by default: these are cards to cut.
    */
   table(rows, opts) { this.body.push(this.tableXml(rows, opts)); return this; }
-  tableXml(rows, { widths, border = 'dashed', borderColor = '888888', cellMargin = 160, rowHeight = 0, keepTogether = true, headerShade = '' } = {}) {
+  tableXml(rows, { widths, border = 'dashed', borderColor = '888888', cellMargin = 160, rowHeight = 0, keepTogether = true, headerShade = '', indent = null } = {}) {
+    // cell padding: one number, or { top, right, bottom, left }
+    const pad = typeof cellMargin === 'object' ? { top: 0, right: 0, bottom: 0, left: 0, ...cellMargin } : { top: cellMargin, right: cellMargin, bottom: cellMargin, left: cellMargin };
     const b = (side) => `<w:${side} w:val="${border}" w:sz="8" w:space="0" w:color="${borderColor}"/>`;
     const borders = `<w:tblBorders>${['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(b).join('')}</w:tblBorders>`;
     const grid = `<w:tblGrid>${widths.map((w) => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>`;
@@ -162,12 +165,12 @@ export class Docx {
       const tcpr = `<w:tcPr><w:tcW w:w="${widths[i]}" w:type="dxa"/>${shade ? `<w:shd w:val="clear" w:color="auto" w:fill="${shade}"/>` : ''}${cell.valign ? `<w:vAlign w:val="${cell.valign}"/>` : ''}</w:tcPr>`;
       return `<w:tc>${tcpr}${cell.xml.join('') || '<w:p/>'}</w:tc>`;
     }).join('')}</w:tr>`).join('');
-    return `<w:tbl><w:tblPr><w:tblW w:w="${widths.reduce((a, x) => a + x, 0)}" w:type="dxa"/><w:tblLayout w:type="fixed"/>${borders}<w:tblCellMar><w:top w:w="${cellMargin}" w:type="dxa"/><w:left w:w="${cellMargin}" w:type="dxa"/><w:bottom w:w="${cellMargin}" w:type="dxa"/><w:right w:w="${cellMargin}" w:type="dxa"/></w:tblCellMar></w:tblPr>${grid}${trs}</w:tbl>`;
+    return `<w:tbl><w:tblPr><w:tblW w:w="${widths.reduce((a, x) => a + x, 0)}" w:type="dxa"/>${indent == null ? '' : `<w:tblInd w:w="${indent}" w:type="dxa"/>`}<w:tblLayout w:type="fixed"/>${borders}<w:tblCellMar><w:top w:w="${pad.top}" w:type="dxa"/><w:left w:w="${pad.left}" w:type="dxa"/><w:bottom w:w="${pad.bottom}" w:type="dxa"/><w:right w:w="${pad.right}" w:type="dxa"/></w:tblCellMar></w:tblPr>${grid}${trs}</w:tbl>`;
   }
 
   build({ title = 'Document', creator = 'Full Harvest Inventory' } = {}) {
     const W = this.landscape ? 15840 : 12240, H = this.landscape ? 12240 : 15840;
-    const sect = `<w:sectPr><w:pgSz w:w="${W}" w:h="${H}"${this.landscape ? ' w:orient="landscape"' : ''}/><w:pgMar w:top="${this.margin}" w:right="${this.margin}" w:bottom="${this.margin}" w:left="${this.margin}" w:header="360" w:footer="360" w:gutter="0"/></w:sectPr>`;
+    const sect = `<w:sectPr><w:pgSz w:w="${W}" w:h="${H}"${this.landscape ? ' w:orient="landscape"' : ''}/><w:pgMar w:top="${this.margins.top}" w:right="${this.margins.right}" w:bottom="${this.margins.bottom}" w:left="${this.margins.left}" w:header="360" w:footer="360" w:gutter="0"/></w:sectPr>`;
     const document = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><w:body>${this.body.join('')}${sect}</w:body></w:document>`;
     const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

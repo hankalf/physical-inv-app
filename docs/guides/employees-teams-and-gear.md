@@ -97,6 +97,10 @@ The columns are matched by name, in any order:
   a wide boot keeps its **W**. A file with **no size columns leaves the sizes already entered**.
 - **⬇ Sample CSV** downloads a file in the right shape. **Export current list** downloads the
   crew list as it stands, sizes included.
+- **⬇ Badge labels (Avery 5960, Word)** prints a label for each active person: their name, their
+  clock-in number, and the number as a barcode the scanner's sign-on screen reads. Pick everyone or
+  one shift, and 1, 2 or 3 of each person side by side. It fits Avery 5960, 5160 and 8160 — print at
+  **Actual size**, not "Fit to page".
 
 **Employees and teams at once.** **Teams & crew → Employees → Crew workbook** takes one Excel file
 with an **Employees** sheet and a **Teams** sheet — or one sheet with both sets of columns, a row

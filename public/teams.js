@@ -747,6 +747,11 @@
   $('btnTeamsExport').onclick = () => api.download('/api/admin/people/export/teams.csv', 'teams.csv').catch((err) => msg($('teamFileMsg'), 'err', err.message));
   $('btnExport').onclick = () => api.download('/api/admin/people/export/employees.csv', 'employees.csv')
     .catch((err) => msg($('uploadMsg'), 'err', err.message));
+  $('btnBadgeLabels').onclick = () => {
+    const shift = $('fBadgeShift').value;
+    api.download(`/api/admin/people/export/badge-labels.docx?per=${$('fBadgePer').value}${shift ? '&shift=' + shift : ''}`, `badge-labels-avery-5960${shift ? '-shift-' + shift : ''}.docx`)
+      .catch((err) => msg($('badgeMsg'), 'err', 'No labels', err.message));
+  };
 
   /* the team numbers as QR codes: a printable page, every team or one shift */
   $('btnTeamCodes').onclick = () => {

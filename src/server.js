@@ -77,6 +77,7 @@ function systemsView(req) {
 }
 import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, unlockPlace, PER_LOGIN, PER_PLACE } from './routes/login-limit.js';
 import { recordAccess, accessMap, lookupPending } from './routes/access-map.js';
+import { badgeLabelsDocx } from './util/badge-labels.js';
 import { ensureTraining, resetTraining, removeTraining, trainingStatus, wallLabels, pocketCard, crewTeamList, trainingRoster, markTrained, rosterCsv, rosterSheet, pocketCardDocx, wallDocx, rosterDocx, checkoffSheet, checkoffDocx, quizSheet, quizDocx, glossarySheet, glossaryDocx } from './routes/training.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards, barcodeBook, teamCodes } from './routes/printing.js';
@@ -1506,6 +1507,15 @@ async function handleAdmin(req, res, url, m) {
     }
     audit(actor, 'exported the teams', `${teams.length} teams, ${rows.length} rows`);
     return sendCsv(req, res, `teams-${localDate()}.csv`, toCsv(rows, ['Team #', 'Shift', 'Department', 'Employee', 'Clock In Number', 'Person shift', 'Equipment', 'Seat', 'On crew list', 'Team notes', 'Team reaches']));
+  }
+  /* badge labels on Avery 5960: name, clock-in number, and its barcode for the scanner's sign-on */
+  if (p === '/api/admin/people/export/badge-labels.docx') {
+    const shift = url.searchParams.get('shift') || '';
+    const people = listEmployees().filter((e) => e.active && (!shift || String(e.shift || '') === shift)).map((e) => ({ badge: e.badge, name: e.name || '' }));
+    if (!people.length) throw httpError(404, shift ? `nobody active on shift ${shift}` : 'there is nobody on the crew list yet');
+    const per = Number(url.searchParams.get('per')) || 2;
+    audit(actor, 'printed badge labels', `${people.length} people, ${per} each${shift ? ', shift ' + shift : ''}`);
+    return send(req, res, 200, badgeLabelsDocx(people, { perPerson: per, title: 'Badge labels — Avery 5960' }), { 'content-type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'content-disposition': `attachment; filename="badge-labels-avery-5960${shift ? '-shift-' + shift : ''}.docx"`, 'cache-control': 'no-cache' });
   }
   if (p === '/api/admin/people/export/employees.csv') {
     const rows = listEmployees().map((e) => ({ ...e, equipment: e.equipment.join('; '), team: e.team || '' }));

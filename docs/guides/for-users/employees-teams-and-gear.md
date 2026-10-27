@@ -76,6 +76,9 @@ them **Jacket**, **Bibs**, **Boots**. **⬇ Sample CSV** downloads one in the ri
 - Sizes are read however they are written — *xx-large* is **2XL**, *10 1/2* is **10.5**. A file
   without size columns leaves the sizes already there.
 - **Export current list** downloads the list as it stands.
+- **⬇ Badge labels (Avery 5960, Word)** prints each person's name, clock-in number and its barcode
+  for the scanner's sign-on — everyone or one shift, 1 to 3 of each side by side. Print at
+  **Actual size**.
 
 **Employees and teams at once.** **Teams & crew → Employees → Crew workbook** takes one Excel file
 with an **Employees** sheet and a **Teams** sheet, or one sheet with both. **Check the workbook**

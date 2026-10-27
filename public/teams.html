@@ -242,6 +242,13 @@
         <div class="auto"><a id="lnkTemplate" href="/templates/employees-template.csv" download style="color:var(--accent);font-weight:700;text-decoration:none">⬇ Sample CSV</a></div>
         <div class="auto"><button id="btnExport">Export current list</button></div>
       </div>
+      <div class="row" style="margin-top:8px;align-items:end">
+        <div class="auto"><label for="fBadgeShift">Badge labels for</label><select id="fBadgeShift"><option value="">Everyone</option><option value="1">1st shift</option><option value="2">2nd shift</option></select></div>
+        <div class="auto"><label for="fBadgePer">Labels each</label><select id="fBadgePer"><option value="1">1</option><option value="2" selected>2, side by side</option><option value="3">3, a full row</option></select></div>
+        <div class="auto"><button id="btnBadgeLabels">⬇ Badge labels (Avery 5960, Word)</button></div>
+        <div class="hint auto" style="flex:1;min-width:200px">Name, clock-in number and its barcode, for the sign-on screen. Fits Avery 5960, 5160 and 8160: print at Actual size.</div>
+      </div>
+      <div class="feedback" id="badgeMsg"></div>
       <div class="hint" style="margin-top:8px">
         Columns matched by name: <b>Clock In Number</b> (also accepts Badge, Employee ID), then Name, Department, Shift (1 or 2), Equipment, and — if you have them — Jacket, Bibs, Boots. Equipment can be a list —
         <code>Scissor lift; High reach</code>. Spellings like <i>forklift</i>, <i>reach truck</i>, <i>pallet jack</i> are understood.
