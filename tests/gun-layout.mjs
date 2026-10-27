@@ -68,6 +68,8 @@ check('Gun: the Keyboard button asks for one, and a number pad at that',
   (await inputMode()) === 'decimal' && /Keyboard on/i.test(await gun.textContent('#btnKeyboard')), await inputMode());
 await gun.click('#btnKeyboard'); await gun.waitForTimeout(400);
 check('Gun: and turns it off again', (await inputMode()) === 'none', await inputMode());
+check('Gun: every box a scan goes into tells the browser the page decides when the keyboard shows',
+  await gun.evaluate(() => ['fTeam', 'fEmployee', 'fScan', 'fEmptyScan', 'fIssueScan', 'fIssueNote', 'fSosNote', 'fReasonNote'].every((id) => document.getElementById(id).getAttribute('virtualkeyboardpolicy') === 'manual')));
 await gun.click('#btnKeyboard'); await gun.waitForTimeout(400);
 await scan(String(p1[4]));
 check('Gun: the on-screen keyboard is for one entry: once the number is in, it goes away by itself',

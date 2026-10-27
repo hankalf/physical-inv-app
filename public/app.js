@@ -1904,6 +1904,7 @@
     state.keyboardOn = false;
     $('btnKeyboard').textContent = 'Keyboard';
     try { $('fScan').blur(); } catch { /* ignore */ }
+    lowerKeyboard($('fScan'));
     focusScan();
   }
 
@@ -1967,6 +1968,7 @@
     $('fReason').value = '';
     $('fReasonNote').value = '';
     $('fReasonNote').inputMode = 'none';
+    lowerKeyboard($('fReasonNote'));
     showScreen('scrOverride');
   }
 
@@ -2452,6 +2454,7 @@
     $('issueConfirm').hidden = true;
     $('fIssueNote').value = '';
     $('fIssueNote').inputMode = 'none';
+    lowerKeyboard($('fIssueNote'));
     clearFeedback($('issueMsg'));
     const c = issueContext();
     kv($('issueWhere'), [['Pallet', c.pallet || '—'], ['Bin', c.bin || '—'], ['Aisle', c.aisle || '—']].filter((r) => r[1] !== '—'));
@@ -2504,6 +2507,7 @@
     const f = $('fIssueScan');
     f.value = '';
     f.inputMode = 'none';
+    lowerKeyboard(f);
     issueTyped = false;
     try { f.focus({ preventScroll: true }); } catch { f.focus(); }
   }
@@ -2947,6 +2951,7 @@
     ]);
     $('fSosNote').value = '';
     $('fSosNote').inputMode = 'none';
+    lowerKeyboard($('fSosNote'));
     clearFeedback($('sosMsg'));
     showScreen('scrSos');
   }
@@ -3122,6 +3127,7 @@
     // a team number can carry letters (S1-DS01), so the team box gets the full keyboard too
     $('fTeam').inputMode = on ? 'text' : 'none';
     $('fEmployee').inputMode = on ? 'text' : 'none';
+    if (!on) { lowerKeyboard($('fTeam')); lowerKeyboard($('fEmployee')); }
     $('btnSignonKeyboard').textContent = on
       ? 'Keyboard on — tap to put it away'
       : 'Type it instead — show the keyboard';
@@ -3129,8 +3135,8 @@
   $('btnSignonKeyboard').onclick = () => {
     const on = $('fTeam').inputMode === 'none' || !$('fTeam').inputMode;
     signonKeyboard(on);
-    if (on) setTimeout(() => { try { $('fEmployee').focus(); $('fEmployee').click(); } catch { /* ignore */ } }, 40);
-    else $('fEmployee').blur();
+    if (on) setTimeout(() => raiseKeyboard($('fEmployee')), 40);
+    else { $('fEmployee').blur(); lowerKeyboard($('fEmployee')); lowerKeyboard($('fTeam')); }
   };
   $('fEmployee').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); addEmployee(); } });
   $('fTeam').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); $('fEmployee').focus(); } });
@@ -3187,7 +3193,7 @@
     const f = $('fReasonNote');
     f.inputMode = f.inputMode === 'none' ? 'text' : 'none';
     f.blur();
-    if (f.inputMode === 'text') setTimeout(() => { try { f.focus(); f.click(); } catch { /* ignore */ } }, 40);
+    if (f.inputMode === 'text') setTimeout(() => raiseKeyboard(f), 40); else lowerKeyboard(f);
   };
   $('btnSosBack').onclick = backFromSos;
   $('btnSos').addEventListener('click', () => { if (!['scrMove', 'scrFind'].includes(state.sosReturn)) state.sosReturn = ''; }, true);
@@ -3195,7 +3201,7 @@
     const f = $('fSosNote');
     f.inputMode = f.inputMode === 'none' ? 'text' : 'none';
     f.blur();
-    if (f.inputMode === 'text') setTimeout(() => { try { f.focus(); f.click(); } catch { /* ignore */ } }, 40);
+    if (f.inputMode === 'text') setTimeout(() => raiseKeyboard(f), 40); else lowerKeyboard(f);
   };
   $('btnNoScan').onclick = askNoScan;
   $('btnNoScanType').onclick = noScanTyped;
@@ -3225,9 +3231,9 @@
   $('btnIssue').onclick = openIssue;
   $('btnIssueBack').onclick = backFromIssue;
   $('fIssueScan').addEventListener('keydown', (e) => { if (SCAN_ENTER.has(e.key)) { e.preventDefault(); confirmIssueScan($('fIssueScan').value); } });
-  $('btnIssueScanKeyboard').onclick = () => { issueTyped = true; const f = $('fIssueScan'); f.inputMode = 'text'; try { f.focus(); f.click(); } catch { /* ignore */ } };
+  $('btnIssueScanKeyboard').onclick = () => { issueTyped = true; const f = $('fIssueScan'); f.inputMode = 'text'; raiseKeyboard(f); };
   $('btnIssueRepick').onclick = () => { $('issueConfirm').hidden = true; $('issueKinds').hidden = false; clearFeedback($('issueMsg')); renderIssueKinds(); renderIssueReasons(); };
-  $('btnIssueKeyboard').onclick = () => { $('fIssueNote').inputMode = 'text'; try { $('fIssueNote').focus(); $('fIssueNote').click(); } catch { /* ignore */ } };
+  $('btnIssueKeyboard').onclick = () => { $('fIssueNote').inputMode = 'text'; raiseKeyboard($('fIssueNote')); };
   $('btnMoveSignoff').onclick = () => $('btnSignoff').click();
   $('btnEmptyRun').onclick = openEmptyRun;
   $('btnEmptyRunSave').onclick = () => { saveEmptyRun().catch((err) => feedback($('erMsg'), 'err', 'Could not save', err.message)); };
@@ -3296,6 +3302,32 @@
     renderStep();
     feedback($('scanMsg'), 'warn', `${tag} — another label on the pallet with ${of}`, 'Enter its quantity. It is counted in the same bin, flagged as not on the report.');
   };
+  /*
+   * The on-screen keyboard, and only when asked for.
+   *
+   * The guns have keys of their own, and a keyboard that comes up over half the
+   * screen whenever a box takes the focus is a keyboard in the way. inputmode="none"
+   * asks the browser not to show one, but some keyboards on some devices take it
+   * as a hint. So the boxes also say virtualkeyboardpolicy="manual": the page, not
+   * the browser, decides when the keyboard shows - and the page shows it only from
+   * a Keyboard button, and hides it again whenever a box takes the focus without
+   * one. Typing on the gun's own keys, and the scanner's keystrokes, are untouched.
+   */
+  const vk = () => (typeof navigator !== 'undefined' && navigator.virtualKeyboard) || null;
+  function raiseKeyboard(f) {
+    try { f.dataset.kb = '1'; f.focus(); f.click(); vk()?.show(); } catch { /* ignore */ }
+  }
+  function lowerKeyboard(f) {
+    try { if (f) delete f.dataset.kb; vk()?.hide(); } catch { /* ignore */ }
+  }
+  // a box that took the focus without a Keyboard button asking: no keyboard
+  document.addEventListener('focusin', (e) => {
+    const t = e.target;
+    if (!t || t.tagName !== 'INPUT' || t.getAttribute('virtualkeyboardpolicy') !== 'manual') return;
+    if (t.dataset.kb === '1' && t.inputMode !== 'none') return;
+    try { vk()?.hide(); } catch { /* ignore */ }
+  });
+
   function setKeyboard(on) {
     state.keyboardOn = !!on;
     $('btnKeyboard').textContent = state.keyboardOn ? 'Keyboard on' : 'Keyboard';
@@ -3307,8 +3339,8 @@
     /* Android decides whether to show the keyboard when a field takes focus, so
        the field has to be focused again after inputmode changes - that is what
        makes the keypad appear on the tap that asked for it, and only then. */
-    if (state.keyboardOn) setTimeout(() => { try { f.focus(); f.click(); } catch { /* ignore */ } }, 40);
-    else focusScan();
+    if (state.keyboardOn) setTimeout(() => raiseKeyboard(f), 40);
+    else { lowerKeyboard(f); focusScan(); }
   }
   $('btnKeyboard').onclick = () => setKeyboard(!state.keyboardOn);
 

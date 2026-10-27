@@ -83,12 +83,12 @@
 
     <div id="teamBlock">
       <label for="fTeam">Team number</label>
-      <input id="fTeam" class="big" inputmode="none" autocomplete="off" autocapitalize="characters" placeholder="e.g. 3 or S1-DS01">
+      <input id="fTeam" virtualkeyboardpolicy="manual" class="big" inputmode="none" autocomplete="off" autocapitalize="characters" placeholder="e.g. 3 or S1-DS01">
     </div>
 
     <label for="fEmployee" id="employeeLabel">Clock In Numbers — scan them, then Enter</label>
     <div class="row">
-      <input id="fEmployee" inputmode="none" autocomplete="off" autocapitalize="characters" placeholder="Scan a badge">
+      <input id="fEmployee" virtualkeyboardpolicy="manual" inputmode="none" autocomplete="off" autocapitalize="characters" placeholder="Scan a badge">
       <button id="btnAddEmployee" class="fit" style="margin-top:0">Add</button>
     </div>
     <button class="link" id="btnSignonKeyboard">Type it instead — show the keyboard</button>
@@ -158,7 +158,7 @@
     <div class="step" id="stepLabel">Step 1 of 4</div>
     <h2 class="prompt" id="prompt">Scan PALLET ID</h2>
 
-    <input id="fScan" class="big" autocomplete="off" autocorrect="off" autocapitalize="characters"
+    <input id="fScan" virtualkeyboardpolicy="manual" class="big" autocomplete="off" autocorrect="off" autocapitalize="characters"
            spellcheck="false" inputmode="none" enterkeyhint="done">
 
     <div class="chips" id="commentChips" hidden></div>
@@ -212,7 +212,7 @@
       <label id="issueReasonLabel">What is wrong</label>
       <div class="chips" id="issueReasons"></div>
       <label for="fIssueNote">Anything else (optional)</label>
-      <input id="fIssueNote" autocomplete="off" inputmode="none" placeholder="Tap to type">
+      <input id="fIssueNote" virtualkeyboardpolicy="manual" autocomplete="off" inputmode="none" placeholder="Tap to type">
       <button class="ghost" id="btnIssueKeyboard">Type it instead — show the keyboard</button>
     </div>
     <!-- a report about a bin or a pallet is sent only once the counter has scanned
@@ -220,7 +220,7 @@
     <div id="issueConfirm" hidden>
       <div class="chosen" id="issueChosen"></div>
       <label for="fIssueScan" id="issueScanLabel">Scan the bin to confirm</label>
-      <input id="fIssueScan" data-scan-target="1" autocomplete="off" autocapitalize="characters" inputmode="none" placeholder="Scan it">
+      <input id="fIssueScan" virtualkeyboardpolicy="manual" data-scan-target="1" autocomplete="off" autocapitalize="characters" inputmode="none" placeholder="Scan it">
       <button class="ghost" id="btnIssueScanKeyboard">Label will not scan — type it</button>
       <button class="ghost" id="btnIssueRepick">Pick another reason</button>
     </div>
@@ -295,7 +295,7 @@
   <!-- ---------------- a run of empty bins ---------------- -->
   <section class="screen" id="scrEmptyRun">
     <h2 class="prompt" id="erPrompt">Scan the FIRST empty bin</h2>
-    <input id="fEmptyScan" class="big" autocomplete="off" autocorrect="off" autocapitalize="characters"
+    <input id="fEmptyScan" virtualkeyboardpolicy="manual" class="big" autocomplete="off" autocorrect="off" autocapitalize="characters"
            spellcheck="false" inputmode="none" enterkeyhint="done">
     <div class="feedback" id="erMsg"></div>
     <div class="erlist" id="erList"></div>
@@ -309,7 +309,7 @@
     <div class="context" id="sosWhere"></div>
     <div class="chips" id="sosReasons"></div>
     <label for="fSosNote">Anything else (optional)</label>
-    <input id="fSosNote" autocomplete="off" inputmode="none" placeholder="Tap to type">
+    <input id="fSosNote" virtualkeyboardpolicy="manual" autocomplete="off" inputmode="none" placeholder="Tap to type">
     <button class="ghost" id="btnSosKeyboard">Type it instead — show the keyboard</button>
     <div class="feedback" id="sosMsg"></div>
     <button class="ghost" id="btnSosBack">Back to counting</button>
@@ -336,7 +336,7 @@
         <option>Other</option>
       </select>
       <label for="fReasonNote">Note (optional)</label>
-      <input id="fReasonNote" autocomplete="off" inputmode="none" placeholder="Type on the scanner's keys">
+      <input id="fReasonNote" virtualkeyboardpolicy="manual" autocomplete="off" inputmode="none" placeholder="Type on the scanner's keys">
       <button class="ghost" id="btnReasonKeyboard" type="button">Type it instead — show the keyboard</button>
       <button class="primary" id="btnOverrideAccept">Accept and continue</button>
     </div>
