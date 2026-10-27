@@ -190,6 +190,10 @@
     'Recent counts': 'Conteos recientes',
     'Your team’s lines on this scanner, in the last 20 bins you scanned. Void removes a line from the totals and sends you back to that bin.':
       'Las líneas de tu equipo en este escáner, en las últimas 20 ubicaciones que escaneaste. Anular quita una línea de los totales y te regresa a esa ubicación.',
+    'Type the pallet ID on the scanner’s keys, then Enter': 'Escribe el número de tarima con las teclas del escáner, luego Enter',
+    'Type the bin code on the scanner’s keys, then Enter': 'Escribe el código de la ubicación con las teclas del escáner, luego Enter',
+    'Tap Keyboard for the on-screen one. The line will be flagged so the label gets replaced.': 'Toca Teclado para el de la pantalla. La línea queda marcada para cambiar la etiqueta.',
+    "Type on the scanner's keys": 'Escribe con las teclas del escáner',
     'Nothing counted by your team on this scanner yet.': 'Tu equipo todavía no ha contado nada en este escáner.',
     'Go back to': 'Regresa a', 'a line was voided here': 'aquí se anuló una línea',
     'Nothing counted on this scanner yet.': 'Todavía no hay nada contado en este escáner.',

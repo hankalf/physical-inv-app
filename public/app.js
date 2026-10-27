@@ -190,6 +190,7 @@
        Team number (its old value selected, so a fresh scan replaces it) and
        Enter moves it to the badge box. A solo job with no team box starts on
        the badges. */
+    if (name === 'scrSignon') signonKeyboard(false);
     if (name === 'scrSignon') setTimeout(() => {
       const team = $('fTeam');
       const f = team.offsetParent !== null && !$('teamBlock').hidden ? team : $('fEmployee');
@@ -1896,7 +1897,18 @@
     state.draft.overrideReason = state.draft.overrideReason ? `${state.draft.overrideReason} | ${reason}` : reason;
   }
 
+  /* The on-screen keyboard is for the one entry it was asked for: once that is in,
+     it goes away again, so it never covers the screen for the scans after. */
+  function keyboardAway() {
+    if (!state.keyboardOn) return;
+    state.keyboardOn = false;
+    $('btnKeyboard').textContent = 'Keyboard';
+    try { $('fScan').blur(); } catch { /* ignore */ }
+    focusScan();
+  }
+
   async function advance(kind, text, detail) {
+    keyboardAway();
     feedback($('scanMsg'), kind, text, detail);
     state.stepIndex++;
     // the steps are configurable, so whichever one is last has to be the one
@@ -1954,6 +1966,7 @@
     kv($('ovCtx'), spec.rows);
     $('fReason').value = '';
     $('fReasonNote').value = '';
+    $('fReasonNote').inputMode = 'none';
     showScreen('scrOverride');
   }
 
@@ -2077,9 +2090,10 @@
     const bin = state.steps[state.stepIndex] === 'bin';
     if (bin) state.draft.binLabelIssue = 'typed';
     else state.draft.labelIssue = 'typed';
-    setKeyboard(true);
-    feedback($('scanMsg'), 'warn', bin ? 'Type the bin code' : 'Type the pallet ID',
-      'The line will be flagged so the label gets replaced.');
+    /* The guns have keys of their own: the on-screen keyboard stays away unless
+       somebody taps Keyboard for it. */
+    feedback($('scanMsg'), 'warn', bin ? 'Type the bin code on the scanner’s keys, then Enter' : 'Type the pallet ID on the scanner’s keys, then Enter',
+      'Tap Keyboard for the on-screen one. The line will be flagged so the label gets replaced.');
     focusScan();
   }
 
@@ -2437,6 +2451,7 @@
     issueReason = '';
     $('issueConfirm').hidden = true;
     $('fIssueNote').value = '';
+    $('fIssueNote').inputMode = 'none';
     clearFeedback($('issueMsg'));
     const c = issueContext();
     kv($('issueWhere'), [['Pallet', c.pallet || '—'], ['Bin', c.bin || '—'], ['Aisle', c.aisle || '—']].filter((r) => r[1] !== '—'));
@@ -3103,14 +3118,17 @@
   $('btnAddEmployee').onclick = addEmployee;
   /* Badges and team numbers are scanned, so the sign-on fields ask the device
      for no keyboard either. Whoever has to type one says so first. */
-  $('btnSignonKeyboard').onclick = () => {
+  function signonKeyboard(on) {
     // a team number can carry letters (S1-DS01), so the team box gets the full keyboard too
-    const on = $('fTeam').inputMode === 'none' || !$('fTeam').inputMode;
     $('fTeam').inputMode = on ? 'text' : 'none';
     $('fEmployee').inputMode = on ? 'text' : 'none';
     $('btnSignonKeyboard').textContent = on
       ? 'Keyboard on — tap to put it away'
       : 'Type it instead — show the keyboard';
+  }
+  $('btnSignonKeyboard').onclick = () => {
+    const on = $('fTeam').inputMode === 'none' || !$('fTeam').inputMode;
+    signonKeyboard(on);
     if (on) setTimeout(() => { try { $('fEmployee').focus(); $('fEmployee').click(); } catch { /* ignore */ } }, 40);
     else $('fEmployee').blur();
   };
@@ -3165,6 +3183,12 @@
   $('btnMultiLabel').onclick = startMultiLabel;
   $('btnMultiDone').onclick = () => finishMultiLabel();
   $('btnSos').onclick = openSos;
+  $('btnReasonKeyboard').onclick = () => {
+    const f = $('fReasonNote');
+    f.inputMode = f.inputMode === 'none' ? 'text' : 'none';
+    f.blur();
+    if (f.inputMode === 'text') setTimeout(() => { try { f.focus(); f.click(); } catch { /* ignore */ } }, 40);
+  };
   $('btnSosBack').onclick = backFromSos;
   $('btnSos').addEventListener('click', () => { if (!['scrMove', 'scrFind'].includes(state.sosReturn)) state.sosReturn = ''; }, true);
   $('btnSosKeyboard').onclick = () => {

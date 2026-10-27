@@ -68,7 +68,10 @@ check('Gun: the Keyboard button asks for one, and a number pad at that',
   (await inputMode()) === 'decimal' && /Keyboard on/i.test(await gun.textContent('#btnKeyboard')), await inputMode());
 await gun.click('#btnKeyboard'); await gun.waitForTimeout(400);
 check('Gun: and turns it off again', (await inputMode()) === 'none', await inputMode());
+await gun.click('#btnKeyboard'); await gun.waitForTimeout(400);
 await scan(String(p1[4]));
+check('Gun: the on-screen keyboard is for one entry: once the number is in, it goes away by itself',
+  (await inputMode()) === 'none' && !/Keyboard on/i.test(await gun.textContent('#btnKeyboard')), `${await inputMode()} · ${await gun.textContent('#btnKeyboard')}`);
 await gun.waitForTimeout(1800);
 check('Gun: and the line commits on the last question, whichever one that is',
   /PALLET|BIN/.test(await gun.textContent('#prompt')), clean(await gun.textContent('#prompt')));

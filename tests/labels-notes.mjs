@@ -59,8 +59,8 @@ await gun.click('#btnNoScan'); await gun.waitForTimeout(300);
 check('Gun: it asks which kind of problem it is rather than guessing',
   await gun.$eval('#noScanRow', (b) => !b.hidden));
 await gun.click('#btnNoScanType'); await gun.waitForTimeout(400);
-check('Gun: "I can read it" turns the keyboard on, because now somebody has to type',
-  (await gun.$eval('#fScan', (f) => f.inputMode)) === 'text', await gun.$eval('#fScan', (f) => f.inputMode));
+check('Gun: "I can read it" says to type it on the scanner\'s keys, and leaves the on-screen keyboard away',
+  (await gun.$eval('#fScan', (f) => f.inputMode)) === 'none' && /scanner’s keys/.test(await gun.textContent('#scanMsg')), `${await gun.$eval('#fScan', (f) => f.inputMode)} · ${await gun.textContent('#scanMsg')}`);
 await scan('LB1');
 check('Gun: and the pallet goes on as normal from there', /QUANTITY/.test(await prompt()), await prompt());
 await scan('100');
