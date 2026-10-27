@@ -799,15 +799,15 @@ export function checkoffSheet({ lang = 'en', who = 'blank', count = 4 } = {}) {
   return `<!doctype html><html lang="${es ? 'es' : 'en'}"><head><meta charset="utf-8"><title>${esc(W.title)}</title><style>
   @page { size: letter portrait; margin: 9mm; }
   body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #000; margin: 0; padding: 6px; font-size: 9pt; }
-  .co { border: 1.5px dashed #777; border-radius: 8px; padding: 4mm 5mm; margin-bottom: 5mm; break-inside: avoid; page-break-inside: avoid; height: 124mm; box-sizing: border-box; overflow: hidden; }
+  .co { border: 1.5px dashed #777; border-radius: 8px; padding: 3.5mm 5mm 3mm; margin-bottom: 4mm; break-inside: avoid; page-break-inside: avoid; height: 126mm; box-sizing: border-box; overflow: hidden; }
   .h { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #1e4f8f; padding-bottom: 1mm; margin-bottom: 2mm; }
   .h b { font-size: 13pt; } .h span { color: #666; font-size: 8pt; }
   table { width: 100%; border-collapse: collapse; }
   .who td { padding: 1mm 0; font-size: 9pt; }
   .sk th { text-align: left; font-size: 7.5pt; letter-spacing: .06em; text-transform: uppercase; color: #444; border-bottom: 1px solid #999; padding: 1mm; }
-  .sk td { border-bottom: 1px solid #ddd; padding: .9mm 1mm; vertical-align: top; line-height: 1.25; }
-  .sk .n { width: 5mm; color: #666; } .sk .ok { width: 12mm; text-align: center; font-size: 13pt; }
-  .foot { display: flex; justify-content: space-between; margin-top: 3mm; font-size: 9pt; }
+  .sk td { border-bottom: 1px solid #ddd; padding: .45mm 1mm; vertical-align: top; line-height: 1.15; font-size: 8.4pt; }
+  .sk .n { width: 5mm; color: #666; } .sk .ok { width: 12mm; text-align: center; font-size: 11pt; line-height: 1; }
+  .foot { display: flex; justify-content: space-between; margin-top: 2.5mm; font-size: 9pt; }
   .note { color: #555; font-size: 7.5pt; margin-top: 2mm; font-style: italic; }
   .noprint { margin-bottom: 8px; padding: 6px 12px; } @media print { .noprint { display: none; } body { padding: 0; } }
 </style></head><body><button class="noprint" onclick="window.print()">Print</button>
@@ -865,9 +865,9 @@ export function quizSheet({ lang = 'en' } = {}) {
   const letters = ['A', 'B', 'C'];
   return `<!doctype html><html lang="${lang === 'es' ? 'es' : 'en'}"><head><meta charset="utf-8"><title>${esc(Q.title)}</title><style>
   @page { size: letter portrait; margin: 13mm; }
-  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #000; margin: 0; padding: 6px; font-size: 11pt; }
-  h1 { font-size: 18pt; margin: 0 0 1mm; } .sub { color: #444; margin-bottom: 3mm; } .nm { margin-bottom: 5mm; }
-  ol { padding-left: 6mm; margin: 0; } li { margin-bottom: 3.2mm; break-inside: avoid; } li b { display: block; margin-bottom: 1mm; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #000; margin: 0; padding: 6px; font-size: 10.3pt; line-height: 1.3; }
+  h1 { font-size: 17pt; margin: 0 0 1mm; } .sub { color: #444; margin-bottom: 2mm; } .nm { margin-bottom: 3.5mm; }
+  ol { padding-left: 6mm; margin: 0; } li { margin-bottom: 2.2mm; break-inside: avoid; } li b { display: block; margin-bottom: .6mm; }
   .opt { display: block; margin-left: 2mm; } .key { page-break-before: always; break-before: page; }
   .key table { border-collapse: collapse; width: 100%; } .key td { border-bottom: 1px solid #ccc; padding: 2mm; vertical-align: top; }
   .noprint { margin-bottom: 8px; padding: 6px 12px; } @media print { .noprint { display: none; } body { padding: 0; } }
@@ -930,7 +930,7 @@ export function glossarySheet() {
   body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #000; margin: 0; padding: 6px; font-size: 10pt; }
   h1 { font-size: 17pt; margin: 0 0 1mm; } .sub { color: #444; margin-bottom: 3mm; }
   table { width: 100%; border-collapse: collapse; } th { text-align: left; background: #1e4f8f; color: #fff; font-size: 8.5pt; padding: 1.8mm 2mm; letter-spacing: .05em; text-transform: uppercase; }
-  td { border-bottom: 1px solid #ddd; padding: 1.6mm 2mm; vertical-align: top; } td.en, td.es { font-weight: 700; width: 30%; } td.es { color: #1e4f8f; }
+  td { border-bottom: 1px solid #ddd; padding: 1.1mm 2mm; vertical-align: top; line-height: 1.25; } td.en, td.es { font-weight: 700; width: 30%; } td.es { color: #1e4f8f; }
   tr:nth-child(even) td { background: #f6f8fb; }
   .noprint { margin-bottom: 8px; padding: 6px 12px; } @media print { .noprint { display: none; } body { padding: 0; } }
 </style></head><body><button class="noprint" onclick="window.print()">Print</button>

@@ -30,6 +30,7 @@ only difference from count day is the name on it: **Training count — not real 
 | The trainer's key | the last pages of the same print: every spot, what the report says, what hangs there, the lesson |
 | Pocket cards, four to a page | **🖨 Pocket cards · English** and **🖨 Tarjetas · Español** — one per person, laminated if you can. Paste the team numbers into the box above the buttons, one line per person, and each card gets that person's **team card** (QR and barcode) on the back |
 | On the scanner | **User guide → On the scanner**: one page for each thing that is different on a full count — two labels, no label, a rack label that will not scan, empty bins, a pallet not on the list and the rest. Print the booklet for the break room and the leads |
+| Check-off sheets, the quiz, the words | the same card, **For each trainee**: a sheet per person the trainer signs as they do each thing on the wall (filled from the roster's not-yet-trained, or blank); a ten-question quiz with its answers; the scanner's words in English and Spanish. English and Spanish, print or Word |
 | The roster | the same card, under the buttons: every employee from Teams & crew with a box to tick as they finish; **🖨 Print the roster** for a clipboard copy |
 | Scanners | three or four, charged, on the site's Wi-Fi, the app open at the sign-on screen |
 | A screen | the break-room TV or a projector, for the film, the deck and then the Dashboard |
@@ -106,7 +107,7 @@ About two hours for a group of eight; split a bigger group into two wall session
 | 0:45 | **The wall, team one**: S1-DS01 signs on with its card and three badges and counts T01. The rest of the class watches the Dashboard on the big screen | 25 min |
 | 1:10 | **The wall, team two**: S1-DS02 counts T02. Team one watches the second counts appear | 15 min |
 | 1:25 | The second counts: S2-DS01 signs on and walks the second counts raised by the two short counts | 10 min |
-| 1:35 | The office screen: the Pallet report with the class's own mistakes on it, in words | 10 min |
+| 1:35 | The office screen: the Pallet report with the class's own mistakes on it, in words. Then the quiz, ten questions, and its answers together | 15 min |
 | 1:45 | Questions; everybody signs on once with their own badge; sign off; scanners on the chargers | 15 min |
 | +0:20 | **Cycle counts**, for the people who will do them: one trainee at a time works the six-bin list (section 5a) | 20 min |
 

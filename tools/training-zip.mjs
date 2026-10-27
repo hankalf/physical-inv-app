@@ -66,6 +66,8 @@ const FILES = [
   // On the scanner: a page for each thing that is different on a full count
   ['6 On the scanner/on-the-scanner.pdf', join(ROOT, 'docs', 'guides', 'on-the-scanner', 'on-the-scanner.pdf')],
   ...optional('6 On the scanner/on-the-scanner.docx', join(T, 'print', 'on-the-scanner.docx')),
+  ...optional('6 On the scanner/en-el-escaner.pdf', join(ROOT, 'docs', 'guides', 'on-the-scanner', 'es', 'en-el-escaner.pdf')),
+  ...optional('6 On the scanner/en-el-escaner.docx', join(T, 'print', 'en-el-escaner.docx')),
   ...readdirSync(join(ROOT, 'docs', 'guides', 'on-the-scanner')).filter((f) => f.endsWith('.pdf') && f !== 'on-the-scanner.pdf').sort()
     .map((f) => [`6 On the scanner/one page each/${f}`, join(ROOT, 'docs', 'guides', 'on-the-scanner', f)]),
   ['README.md', join(T, 'README.md')],

@@ -221,15 +221,17 @@
     $('howtosAdmin').hidden = !admins.length;
     $('howtosAdminList').replaceChildren(...admins.map(tile));
   }
-  const allOf = (kind) => async (e) => {
+  const allOf = (kind, name = 'on-the-scanner') => async (e) => {
     const btn = e.currentTarget, was = btn.textContent;
     btn.disabled = true; btn.textContent = '…';
-    try { await api.download(`/api/admin/guides/on-the-scanner.${kind}`, `on-the-scanner.${kind}`); }
+    try { await api.download(`/api/admin/guides/${name}.${kind}`, `${name}.${kind}`); }
     catch (err) { alert(err.message); }
     finally { btn.disabled = false; btn.textContent = was; }
   };
   $('btnScannerAllPdf').onclick = allOf('pdf');
   $('btnScannerAllDocx').onclick = allOf('docx');
+  $('btnScannerEsPdf').onclick = allOf('pdf', 'en-el-escaner');
+  $('btnScannerEsDocx').onclick = allOf('docx', 'en-el-escaner');
   async function downloadGuide(g, btn, kind = 'pdf') {
     const was = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = '…'; }

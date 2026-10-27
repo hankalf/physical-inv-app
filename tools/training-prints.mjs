@@ -64,6 +64,7 @@ try {
   await file('/api/admin/training/roster.docx', 'training-roster.docx');
   await file('/api/admin/guides/admin/run-the-training-day.docx', 'run-the-training-day.docx');
   await file('/api/admin/guides/on-the-scanner.docx', 'on-the-scanner.docx');
+  await file('/api/admin/guides/en-el-escaner.docx', 'en-el-escaner.docx');
   for (const l of ['en', 'es']) {
     await file(`/api/admin/training/print/checkoff.docx?lang=${l}&count=4`, `scanner-check-off-${l}.docx`);
     await file(`/api/admin/training/print/quiz.docx?lang=${l}`, `scanner-quiz-${l}.docx`);

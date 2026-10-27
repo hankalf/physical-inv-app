@@ -5,6 +5,8 @@
  *
  *   node tools/scanner-guides-pdf.mjs     -> docs/guides/on-the-scanner/<page>.pdf
  *                                            docs/guides/on-the-scanner/on-the-scanner.pdf
+ *   node tools/scanner-guides-pdf.mjs --es -> docs/guides/on-the-scanner/es/<page>.pdf
+ *                                            docs/guides/on-the-scanner/es/en-el-escaner.pdf
  */
 import { readFileSync, writeFileSync, readdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -13,23 +15,28 @@ import { chromium } from 'playwright-core';
 import { markdownToHtml, inline } from './md.mjs';
 
 const ROOT = join(new URL('.', import.meta.url).pathname, '..');
-const DIR = join(ROOT, 'docs', 'guides', 'on-the-scanner');
+const ES = process.argv.includes('--es');
+const DIR = join(ROOT, 'docs', 'guides', 'on-the-scanner', ...(ES ? ['es'] : []));
+const W = ES
+  ? { band: 'En el escáner · conteo completo', of: 'de', when: 'Cuándo', pages: 'páginas', title: 'En el escáner', sub: 'Una página para cada cosa de un conteo completo que no es lo normal de rack, tarima, cantidad. Busca la que tienes enfrente y haz lo que dice.', printed: 'impreso', booklet: 'en-el-escaner.pdf', locale: 'es-MX' }
+  : { band: 'On the scanner · full count', of: 'of', when: 'When', pages: 'pages', title: 'On the scanner', sub: 'One page for each thing on a full count that is not the plain rack label, pallet label, quantity. Find the one in front of you, and do what it says.', printed: 'printed', booklet: 'on-the-scanner.pdf', locale: 'en-US' };
 const IMAGES = join(ROOT, 'docs', 'images');
 // the order the app lists them in
 const ORDER = (/const ORDER = \[([\s\S]*?)\];/.exec(readFileSync(join(ROOT, 'src', 'routes', 'guides.js'), 'utf8'))[1].match(/'([a-z0-9-]+)'/g) || []).map((x) => x.slice(1, -1));
 const names = readdirSync(DIR).filter((f) => f.endsWith('.md') && f !== 'README.md').map((f) => f.slice(0, -3))
   .sort((a, b) => ((ORDER.indexOf(a) + 1 || 999) - (ORDER.indexOf(b) + 1 || 999)) || a.localeCompare(b));
-const printed = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+const printed = new Date().toLocaleDateString(W.locale, { year: 'numeric', month: 'long', day: 'numeric' });
 
 /** One guide: its title, when, lead, the pictures with their captions, and the sections as HTML. */
 function read(name) {
   const md = readFileSync(join(DIR, `${name}.md`), 'utf8');
-  const title = /^#\s+(.*)$/m.exec(md)[1].replace(/^On the scanner — /, '');
-  const when = (/\*\*When:\*\*\s*(.+)$/m.exec(md) || [, ''])[1].trim();
+  const title = /^#\s+(.*)$/m.exec(md)[1].replace(/^(On the scanner|En el escáner) — /, '');
+  const when = (/\*\*(?:When|Cuándo):\*\*\s*(.+)$/m.exec(md) || [, , ''])[1].trim();
   const parts = md.split(/^## /m);
-  const lead = parts[0].replace(/^#.*$/m, '').replace(/^\*\*Role:\*\*.*$/m, '').trim();
+  const lead = parts[0].replace(/^#.*$/m, '').replace(/^\*\*(Role|Rol):\*\*.*$/m, '').trim();
   const sections = parts.slice(1).map((p) => ({ head: p.slice(0, p.indexOf('\n')).trim(), body: p.slice(p.indexOf('\n')).trim() }));
-  const see = sections.find((s) => s.head === 'What you see');
+  // the first section is the pictures: What you see, Lo que ves
+  const see = sections[0];
   const pics = [];
   let note = '';
   if (see) {
@@ -40,7 +47,7 @@ function read(name) {
       else note += lines[i] + '\n';
     }
   }
-  const rest = sections.filter((s) => s.head !== 'What you see');
+  const rest = sections.slice(1);
   return { name, title, when, lead, pics, note, rest };
 }
 
@@ -90,14 +97,14 @@ const CSS = `
 `;
 
 function sheet(g, n, total) {
-  const cls = (head) => (head === 'What the office sees' ? 'sec office' : head === 'Do not' ? 'sec dont' : 'sec');
+  const cls = (head) => (/office|oficina/i.test(head) ? 'sec office' : /^(Do not|No hagas)/.test(head) ? 'sec dont' : 'sec');
   const pics = g.pics.length
     ? g.pics.map((p) => `<figure><img src="${p.src}"><figcaption>${inline(p.cap)}</figcaption></figure>`).join('')
     : g.note ? `<div class="note">${markdownToHtml(g.note)}</div>` : '';
   return `<section class="sheet">
-    <div class="band"><span class="k">On the scanner · full count</span><span class="n">${n ? `${n} of ${total}` : ''}</span></div>
+    <div class="band"><span class="k">${W.band}</span><span class="n">${n ? `${n} ${W.of} ${total}` : ''}</span></div>
     <h1>${inline(g.title)}</h1>
-    <div class="when"><b>When:</b> ${inline(g.when)}</div>
+    <div class="when"><b>${W.when}:</b> ${inline(g.when)}</div>
     <div class="lead">${markdownToHtml(g.lead)}</div>
     <div class="cols${pics ? '' : ' nopics'}">
       <div class="pics${pics ? '' : ' none'}${g.pics.length >= 3 ? ' n3' : ''}">${pics}</div>
@@ -105,12 +112,12 @@ function sheet(g, n, total) {
     </div>
   </section>`;
 }
-const doc = (body, title) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${title}</title><style>${CSS}</style></head><body>${body}</body></html>`;
+const doc = (body, title) => `<!doctype html><html lang="${ES ? 'es' : 'en'}"><head><meta charset="utf-8"><title>${title}</title><style>${CSS}</style></head><body>${body}</body></html>`;
 
 const guides = names.map(read);
 const dir = mkdtempSync(join(tmpdir(), 'scannerpdf-'));
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
-const footer = (label) => `<div style="width:100%;margin:0 13mm;font:7.5pt 'DejaVu Sans',Arial,sans-serif;color:#7b8694;display:flex;justify-content:space-between;border-top:1px solid #d5dae1;padding-top:1.5mm"><span>${label}</span><span>Full Harvest Inventory · printed ${printed}</span></div>`;
+const footer = (label) => `<div style="width:100%;margin:0 13mm;font:7.5pt 'DejaVu Sans',Arial,sans-serif;color:#7b8694;display:flex;justify-content:space-between;border-top:1px solid #d5dae1;padding-top:1.5mm"><span>${label}</span><span>Full Harvest Inventory · ${W.printed} ${printed}</span></div>`;
 const opts = (label) => ({ format: 'Letter', printBackground: true, displayHeaderFooter: true, headerTemplate: '<div></div>', footerTemplate: footer(label), margin: { top: '12mm', bottom: '16mm', left: '13mm', right: '13mm' } });
 const over = [];
 try {
@@ -126,20 +133,20 @@ try {
   await tab.setViewportSize({ width: 816, height: 1056 });
   for (const [i, g] of guides.entries()) {
     const html = doc(sheet(g, 0, 0), g.title);
-    await render(html, join(DIR, `${g.name}.pdf`), `On the scanner — ${g.title}`);
+    await render(html, join(DIR, `${g.name}.pdf`), `${W.title} — ${g.title}`);
     const h = await tab.evaluate(() => document.querySelector('.sheet').getBoundingClientRect().height);
     // Letter less the margins, in CSS pixels at 96 per inch
     if (h > (279.4 - 12 - 16) / 25.4 * 96) over.push(`${g.name} (${Math.round(h)}px)`);
-    console.log(`docs/guides/on-the-scanner/${g.name}.pdf written`);
+    console.log(`${join(DIR, g.name).replace(ROOT + '/', '')}.pdf written`);
   }
   const cover = `<section class="sheet cover">
-    <div class="band"><span class="k">On the scanner · full count</span><span class="n">${guides.length} pages</span></div>
-    <h1>On the scanner</h1>
-    <div class="sub">One page for each thing on a full count that is not the plain rack label, pallet label, quantity. Find the one in front of you, and do what it says.</div>
+    <div class="band"><span class="k">${W.band}</span><span class="n">${guides.length} ${W.pages}</span></div>
+    <h1>${W.title}</h1>
+    <div class="sub">${W.sub}</div>
     <table>${guides.map((g, i) => `<tr><td class="p">${i + 2}</td><td class="t">${inline(g.title)}</td><td class="w">${inline(g.when)}</td></tr>`).join('')}</table>
   </section>`;
-  await render(doc(cover + guides.map((g, i) => sheet(g, i + 1, guides.length)).join(''), 'On the scanner'), join(DIR, 'on-the-scanner.pdf'), 'On the scanner');
-  console.log(`docs/guides/on-the-scanner/on-the-scanner.pdf written - ${guides.length} pages and the contents`);
+  await render(doc(cover + guides.map((g, i) => sheet(g, i + 1, guides.length)).join(''), W.title), join(DIR, W.booklet), W.title);
+  console.log(`${join(DIR, W.booklet).replace(ROOT + '/', '')} written - ${guides.length} pages and the contents`);
   if (over.length) console.log(`\nlonger than one page: ${over.join(', ')}`);
 } finally {
   await browser.close();

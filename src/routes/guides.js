@@ -108,20 +108,27 @@ export function guideDocx(edition, name, opts) {
 const fileName = (edition, name, ext) => `${edition === 'scanner' ? 'on-the-scanner-' : ''}${name}${edition === 'admin' ? '-admin' : ''}.${ext}`;
 
 /** Every page of On the scanner in one PDF: printed by tools/scanner-guides-pdf.mjs. */
-export function scannerBookletPdf() {
-  const file = join(FOLDERS.scanner, 'on-the-scanner.pdf');
+export function scannerBookletPdf({ lang = 'en' } = {}) {
+  const file = lang === 'es' ? join(FOLDERS.scanner, 'es', 'en-el-escaner.pdf') : join(FOLDERS.scanner, 'on-the-scanner.pdf');
   if (!existsSync(file)) throw Object.assign(new Error('the booklet has not been printed yet'), { status: 404 });
-  return { body: readFileSync(file), filename: 'on-the-scanner.pdf' };
+  return { body: readFileSync(file), filename: lang === 'es' ? 'en-el-escaner.pdf' : 'on-the-scanner.pdf' };
 }
 
 /** …and in one Word document, a page each, to edit in the site's own words. */
-export function scannerBookletDocx() {
-  const list = listGuides().filter((g) => g.edition === 'scanner');
-  const contents = list.map((g, i) => `${i + 1}. **${g.title.replace(/^On the scanner — /, '')}** — ${g.when}`).join('\n');
-  const md = [`# On the scanner\n\nOne page for each thing on a full count that is not the plain rack label, pallet label, quantity. Find the one in front of you, and do what it says.\n\n${contents}`]
-    .concat(list.map((g) => readFileSync(join(FOLDERS.scanner, `${g.name}.md`), 'utf8').replace(/^\*\*Role:\*\*.*$/m, (l) => l.replace(/^\*\*Role:\*\*\s*Everyone counting on a full count\s*/, ''))))
+export function scannerBookletDocx({ lang = 'en' } = {}) {
+  const es = lang === 'es';
+  const dir = es ? join(FOLDERS.scanner, 'es') : FOLDERS.scanner;
+  const names = listGuides().filter((g) => g.edition === 'scanner').map((g) => g.name).filter((n) => existsSync(join(dir, `${n}.md`)));
+  const read = (n) => readFileSync(join(dir, `${n}.md`), 'utf8');
+  const titleOf = (md) => (/^#\s+(.*)$/m.exec(md) || [, ''])[1].replace(/^(On the scanner|En el escáner) — /, '');
+  const whenOf = (md) => ((/\*\*(?:When|Cuándo):\*\*\s*(.+)$/m.exec(md) || [])[1] || '').trim();
+  const contents = names.map((n, i) => { const md = read(n); return `${i + 1}. **${titleOf(md)}** — ${whenOf(md)}`; }).join('\n');
+  const head = es
+    ? `# En el escáner\n\nUna página para cada cosa de un conteo completo que no es lo normal de rack, tarima, cantidad. Busca la que tienes enfrente y haz lo que dice.\n\n${contents}`
+    : `# On the scanner\n\nOne page for each thing on a full count that is not the plain rack label, pallet label, quantity. Find the one in front of you, and do what it says.\n\n${contents}`;
+  const md = [head].concat(names.map((n) => read(n).replace(/^\*\*(?:Role|Rol):\*\*\s*(Everyone counting on a full count|Todos los que cuentan en un conteo completo)\s*/m, '')))
     .join('\n\n<!-- pagebreak -->\n\n');
-  return { body: markdownToDocx(md, { images: join(DOCS, 'images'), pictureMaxHeight: 2.6 }).build({ title: 'On the scanner' }), filename: 'on-the-scanner.docx' };
+  return { body: markdownToDocx(md, { images: join(DOCS, 'images'), pictureMaxHeight: 2.6 }).build({ title: es ? 'En el escáner' : 'On the scanner' }), filename: es ? 'en-el-escaner.docx' : 'on-the-scanner.docx' };
 }
 
 /** A picture a guide shows: from docs/images, by its plain name only. */

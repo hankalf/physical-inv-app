@@ -29,10 +29,21 @@ they finish the wall, who ticked them and when, by shift; it prints for a clipbo
 a CSV. *Reset for the next class* clears what a class counted; *Remove* takes it all away before
 count day. The run sheet above walks the whole session.
 
+**For each trainee.** The Classroom training card also prints a **check-off sheet** per person —
+fourteen things to do on the wall, a box each, a line for the trainer to sign — filled from the
+roster's not-yet-trained or blank; a **ten-question quiz** with its answers on a page of their own;
+and the **scanner's words**, English beside Spanish. English and Spanish, print or Word.
+
+**Cycle counts in the classroom.** Set up also makes *Training cycle count — not real stock* on the
+same wall, with a list of six bins; the trainer's key has the list and what each bin teaches.
+
+**For the supervisors.** The admin guide *Run the floor on count day* is one page: what each thing
+a scanner does looks like in the office, and the button that answers it.
+
 **On the scanner.** One page for each thing on a full count that is not the plain rack, pallet,
 quantity — [docs/guides/on-the-scanner](../guides/on-the-scanner/) — in the app under **User guide → On the
-scanner**, each page as PDF and Word, and every page in one booklet. The zip carries the booklet and
-each page.
+scanner**, each page as PDF and Word, and every page in one booklet — in English, and in Spanish with the
+scanner's Spanish screens. The zip carries both booklets and each page.
 
 **In Word, PowerPoint and PDF.** Every printed piece — the wall, the key, the pocket cards, the
 roster, the trainer's guide — comes out of the app as a PDF (the 🖨 buttons, then *Save as PDF*) and

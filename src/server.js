@@ -2047,12 +2047,12 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, { guides: listGuides({ admin: whoNow && whoNow.role === 'admin' }) });
   }
   // On the scanner, every page in one: a PDF to print, a Word document to edit
-  if (p === '/api/admin/guides/on-the-scanner.pdf' && method === 'GET') {
-    const b = scannerBookletPdf();
+  if ((p === '/api/admin/guides/on-the-scanner.pdf' || p === '/api/admin/guides/en-el-escaner.pdf') && method === 'GET') {
+    const b = scannerBookletPdf({ lang: p.includes('escaner') ? 'es' : 'en' });
     return send(req, res, 200, b.body, { 'content-type': 'application/pdf', 'content-disposition': `attachment; filename="${b.filename}"`, 'cache-control': 'no-cache' });
   }
-  if (p === '/api/admin/guides/on-the-scanner.docx' && method === 'GET') {
-    const b = scannerBookletDocx();
+  if ((p === '/api/admin/guides/on-the-scanner.docx' || p === '/api/admin/guides/en-el-escaner.docx') && method === 'GET') {
+    const b = scannerBookletDocx({ lang: p.includes('escaner') ? 'es' : 'en' });
     audit(actor, 'downloaded On the scanner as Word', 'every page');
     return send(req, res, 200, b.body, { 'content-type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'content-disposition': `attachment; filename="${b.filename}"`, 'cache-control': 'no-cache' });
   }
