@@ -750,11 +750,13 @@
   $('btnGearLabels').onclick = () => {
     const q = new URLSearchParams({ t: window.appApi.token });
     if ($('fGearShift').value) q.set('shift', $('fGearShift').value);
+    if ($('fGearWho').value) q.set('who', $('fGearWho').value);
     window.open(`/api/admin/print/gear-labels?${q}`, '_blank');
   };
   $('btnGearLabelsDocx').onclick = () => {
-    const shift = $('fGearShift').value;
-    api.download(`/api/admin/people/export/gear-labels.docx${shift ? '?shift=' + shift : ''}`, `gear-box-labels-4x6${shift ? '-shift-' + shift : ''}.docx`)
+    const shift = $('fGearShift').value, who = $('fGearWho').value;
+    const q = new URLSearchParams(); if (shift) q.set('shift', shift); if (who) q.set('who', who);
+    api.download(`/api/admin/people/export/gear-labels.docx${q.toString() ? '?' + q : ''}`, `gear-box-labels-4x6${shift ? '-shift-' + shift : ''}${who ? '-everyone' : ''}.docx`)
       .catch((err) => msg($('badgeMsg'), 'err', 'No labels', err.message));
   };
   $('btnBadgeLabels').onclick = () => {

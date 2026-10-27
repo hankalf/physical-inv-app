@@ -1674,13 +1674,17 @@ async function handleAdmin(req, res, url, m) {
   /* a 4x6 label for each person's gear box: name, number, shift, team, jacket / bibs / boots */
   if (p === '/api/admin/print/gear-labels' || p === '/api/admin/people/export/gear-labels.docx') {
     const shift = url.searchParams.get('shift') || '';
-    const people = listEmployees().filter((e) => e.active && (!shift || String(e.shift || '') === shift));
-    const scope = shift ? (shift === '1' ? '1st shift' : shift === '2' ? '2nd shift' : `shift ${shift}`) : 'everyone';
-    const sized = people.filter((e) => e.jacket || e.bibs || e.boots).length;
+    /* by default the people who need gear: a size on file that is not all OWN (they bring their own) */
+    const everyone = url.searchParams.get('who') === 'all';
+    const own = (v) => /^own$/i.test(String(v || '').trim());
+    const needsGear = (e) => [e.jacket, e.bibs, e.boots].some((v) => v && !own(v));
+    const people = listEmployees().filter((e) => e.active && (!shift || String(e.shift || '') === shift) && (everyone || needsGear(e)));
+    const scope = [shift ? (shift === '1' ? '1st shift' : shift === '2' ? '2nd shift' : `shift ${shift}`) : 'every shift', everyone ? 'everyone' : 'people with sizes, not bringing their own'].join(' · ');
+    const sized = people.filter(needsGear).length;
     audit(actor, 'printed gear box labels', `${people.length} people (${sized} with sizes), ${scope}`);
     if (p.endsWith('.docx')) {
-      if (!people.length) throw httpError(404, shift ? `nobody active on shift ${shift}` : 'there is nobody on the crew list yet');
-      return send(req, res, 200, gearLabelsDocx(people, { title: 'Gear box labels' }), { 'content-type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'content-disposition': `attachment; filename="gear-box-labels-4x6${shift ? '-shift-' + shift : ''}.docx"`, 'cache-control': 'no-cache' });
+      if (!people.length) throw httpError(404, everyone ? (shift ? `nobody active on shift ${shift}` : 'there is nobody on the crew list yet') : `nobody${shift ? ' on shift ' + shift : ''} has gear sizes on the crew list - choose Everyone for blank labels`);
+      return send(req, res, 200, gearLabelsDocx(people, { title: 'Gear box labels' }), { 'content-type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'content-disposition': `attachment; filename="gear-box-labels-4x6${shift ? '-shift-' + shift : ''}${everyone ? '-everyone' : ''}.docx"`, 'cache-control': 'no-cache' });
     }
     return send(req, res, 200, gearLabels(people, { scope, printed: `printed ${localDate()}` }), { 'content-type': 'text/html; charset=utf-8' });
   }

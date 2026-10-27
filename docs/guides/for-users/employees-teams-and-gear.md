@@ -80,7 +80,8 @@ them **Jacket**, **Bibs**, **Boots**. **⬇ Sample CSV** downloads one in the ri
   for the scanner's sign-on — everyone or one shift, 1 to 3 of each side by side. Print at
   **Actual size**.
 - **🖨 Gear box labels (4×6)** prints one 4×6 label a person for their gear box: name, number, shift,
-  team, and jacket, bibs and boot sizes — a missing size is a blank box to write in. **⬇ Word** gives
+  team, and jacket, bibs and boot sizes. By default only the people with sizes, not those whose sizes
+  are all OWN; **Everyone** prints all, a missing size a blank box to write in. **⬇ Word** gives
   the same labels to edit.
 
 **Employees and teams at once.** **Teams & crew → Employees → Crew workbook** takes one Excel file
