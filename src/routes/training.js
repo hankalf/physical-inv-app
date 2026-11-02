@@ -198,13 +198,18 @@ export function ensureTraining({ by = '' } = {}) {
   if (!getSession(s.id).trial) setTrial(s.id, true);
   // the teams and the trainees: a crew list entry each, so the scanner's crew check lets them on
   const lift = liftFor('B');
+  /* The wall's team names are real team names on most sites (S1-DS01 and the rest). A team
+     that is already on the crew list is a real team: the trainees sign on with its card but
+     are not put on it - nobody needs to be on a team to sign on with it - so the real team's
+     people, reach and crew board stay its own. Only a team the training makes gets them. */
   const byName = new Map(listTeams().map((t) => [t.name, t]));
+  const made = new Set();
   for (const t of TEAMS) {
-    if (!byName.has(t.name)) byName.set(t.name, createTeam(t));
+    if (!byName.has(t.name)) { byName.set(t.name, createTeam(t)); made.add(t.name); }
   }
   TRAINEES.forEach(([badge, name, team], i) => {
     upsertEmployee({ badge, name, dept: ZONE, shift: team.startsWith('S2') ? '2' : '1', equipment: lift && i % 3 === 0 ? [lift] : [] });
-    assignMember(badge, byName.get(team).id);
+    if (made.has(team)) assignMember(badge, byName.get(team).id);
   });
   // the plan: T01 for the first team with every level on the wall, T02 for the second; the night team waits behind
   const planned = db.prepare('SELECT COUNT(*) n FROM assignments WHERE session_id = ?').get(s.id).n;
@@ -250,7 +255,14 @@ export function removeTraining() {
     settingDel('trainingCycle');
   }
   for (const [badge] of TRAINEES) { try { deleteEmployee(badge); } catch { /* already gone */ } }
-  for (const t of listTeams()) if (TEAMS.some((x) => x.name === t.name)) { try { deleteTeam(t.id); } catch { /* has other members: left */ } }
+  /* a team goes only when the training left it empty: a real team with the wall's name
+     (S1-DS01 is a real team on most sites) keeps its people, its seats and its name */
+  for (const t of listTeams()) {
+    if (!TEAMS.some((x) => x.name === t.name)) continue;
+    const members = db.prepare('SELECT COUNT(*) n FROM team_members WHERE team_id = ?').get(t.id).n;
+    const seats = db.prepare('SELECT COUNT(*) n FROM team_seats WHERE team_id = ?').get(t.id).n;
+    if (!members && !seats) deleteTeam(t.id);
+  }
   return { removed: s.id, name: s.name };
 }
 

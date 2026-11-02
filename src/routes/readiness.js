@@ -14,7 +14,8 @@
 import { db, getSession, listDevices } from '../db.js';
 import { defaultSessionId, jobsOffered, scannerPrompts, JOBS } from './scanner-prompts.js';
 import { idleConfig } from './idle.js';
-import { listEmployees } from './people.js';
+import { listEmployees, listTeams } from './people.js';
+import { trainingSession, trainingCycleSession } from './training.js';
 import { listBackups } from './admin-ops.js';
 import { onedriveStatus } from './onedrive.js';
 import { gdriveStatus } from './gdrive.js';
@@ -30,9 +31,12 @@ const fix = (sub, card, label, page = '/settings') => ({ page, sub, card, label 
 function countFor(sessionId) {
   const asked = sessionId ? getSession(sessionId) : null;
   if (asked && !asked.practice && (asked.mode || 'full') !== 'cycle') return asked;
+  // never the classroom's count, unless it is the only one there is
+  const train = trainingSession();
   const def = defaultSessionId() ? getSession(defaultSessionId()) : null;
-  if (def && !def.practice && (def.mode || 'full') !== 'cycle') return def;
-  return db.prepare("SELECT * FROM sessions WHERE status = 'open' AND practice = 0 AND COALESCE(mode, 'full') != 'cycle' ORDER BY id DESC LIMIT 1").get() || null;
+  if (def && !def.practice && (def.mode || 'full') !== 'cycle' && (!train || def.id !== train.id)) return def;
+  return db.prepare("SELECT * FROM sessions WHERE status = 'open' AND practice = 0 AND COALESCE(mode, 'full') != 'cycle' AND id != ? ORDER BY id DESC LIMIT 1").get(train ? train.id : 0)
+    || (def && !def.practice && (def.mode || 'full') !== 'cycle' ? def : null);
 }
 
 export function readiness(sessionId) {
@@ -83,6 +87,25 @@ export function readiness(sessionId) {
   const crew = listEmployees().filter((e) => e.active);
   if (!crew.length) add('warn', 'No crew list', 'Without one, any clock-in number can sign on and the scanner header shows numbers, not names.', fix('', '', 'Teams & crew', '/teams'));
   else add('ok', `${crew.length.toLocaleString()} people on the crew list`, 'A clock-in number not on it is turned away at sign-on: see a supervisor.');
+  // a placeholder where a clock-in number should be: the badge will not scan, so that person cannot sign on
+  const placeholder = crew.filter((e) => /^(MISSING|TBD|TBA|N\/?A|NONE|UNKNOWN|NEW|PENDING|X+|\?+|0+|-+)$/i.test(String(e.badge || '').trim()));
+  if (placeholder.length) add('warn', `${placeholder.length === 1 ? 'A clock-in number is' : `${placeholder.length} clock-in numbers are`} a placeholder: ${placeholder.slice(0, 4).map((e) => `${e.name || '?'} ("${e.badge}")`).join(', ')}${placeholder.length > 4 ? '…' : ''}`, 'Their badge will not match, so they cannot sign on by scanning it. Put the real number on the crew list.', fix('', '', 'Teams & crew', '/teams'));
+
+  /* ---- the classroom */
+  const classroom = [trainingSession(), trainingCycleSession()].filter((x) => x && x.status === 'open' && x.show_on_guns !== 0);
+  if (classroom.length) add('warn', 'The classroom training count is still on the scanners', 'A team signing on could pick it by mistake, and the trainees are still on the crew list. After the last class, press Remove on the Classroom training card: it takes the training counts and trainees away and leaves the real teams alone.', fix('', '', 'Testing Suite', '/testing'));
+
+  /* ---- what the teams can reach, against the levels the count has */
+  if (s) {
+    const levels = db.prepare("SELECT UPPER(TRIM(level)) AS lv, COUNT(*) AS n FROM locations WHERE session_id = ? AND TRIM(COALESCE(level, '')) != '' GROUP BY UPPER(TRIM(level)) ORDER BY lv").all(s.id);
+    const teams = listTeams().filter((t) => t.members.length);
+    if (levels.length && teams.length) {
+      const reached = new Set(teams.flatMap((t) => [...String(t.reach || '')]));
+      const nobody = levels.filter((l) => !reached.has(l.lv));
+      if (nobody.length) add('warn', `No team can reach level ${nobody.map((l) => l.lv).join(', ')} — ${nobody.reduce((n, l) => n + l.n, 0).toLocaleString()} bins`, `Between them the teams on the crew list reach ${[...reached].sort().join(', ') || 'nothing'}. The plan will not hand out ${nobody.length === 1 ? 'that level' : 'those levels'}, and a team sent there by hand is told nobody signed on can reach it. If the floor reaches it with the equipment it has, change the level rules under Teams & crew; otherwise put the equipment on a team.`, fix('', '', 'Teams & crew', '/teams'));
+      else add('ok', `Every level on the count has a team that can reach it`, `${levels.map((l) => l.lv).join(', ')}`);
+    }
+  }
 
   /* ---- when something goes wrong */
   const idle = idleConfig();
