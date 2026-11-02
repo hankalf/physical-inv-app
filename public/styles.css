@@ -417,3 +417,17 @@ html.has-systems[data-system-color="orange"] #systemPick button.selected { color
 
 /* the scanners are on another system alone: nothing to sign on to here */
 #scrSignon.sys-away > :not(#systemBlock):not(#sysGoTo):not(#signonMsg):not(.muted):not(#btnChangeDevice):not(.spacer) { display: none !important; }
+
+/* ---- a tablet or phone as a backup scanner: the camera reads the barcode */
+.cam-btn { display: block; width: 100%; margin: 8px 0 4px; padding: 14px 10px; font-size: 1.15rem; font-weight: 800; border-radius: 10px; border: 2px solid var(--accent, #3b82f6); background: rgba(59, 130, 246, .14); color: inherit; }
+.cam-btn[hidden] { display: none; }
+.cam-box { position: fixed; inset: 0; z-index: 9999; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.cam-box[hidden] { display: none; }
+.cam-box video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cam-aim { position: relative; width: 78%; max-width: 560px; height: 30%; max-height: 240px; border: 3px solid #facc15; border-radius: 12px; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .35); }
+.cam-msg { position: relative; margin-top: 18px; color: #fff; font-size: 1.1rem; font-weight: 700; text-shadow: 0 1px 3px #000; }
+.cam-row { position: absolute; bottom: 28px; left: 0; right: 0; display: flex; gap: 12px; justify-content: center; }
+.cam-row button { min-width: 140px; padding: 14px 18px; font-size: 1.1rem; font-weight: 800; border-radius: 10px; border: 0; background: #fff; color: #000; }
+.cam-row .cam-light[hidden] { display: none; }
+/* on a tablet's bigger screen the scanner stays a scanner-sized column, centered */
+body.tablet main, body.tablet .app { max-width: 720px; margin-left: auto; margin-right: auto; }

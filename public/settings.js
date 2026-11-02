@@ -1003,11 +1003,21 @@
       }
     }
     table($('deviceTable'),
-      [{ label: 'Scanner' }, { label: 'Link' }, { label: '' }, { label: 'Signed in' }, { label: 'Last seen' }, { label: 'Team' }, { label: 'Notes' }, { label: '' }],
+      [{ label: 'Scanner' }, { label: 'Type', title: 'A Zebra scanner scans with its trigger; a tablet or phone scans with its camera and brings up a keypad for numbers' }, { label: 'Link' }, { label: '' }, { label: 'Signed in' }, { label: 'Last seen' }, { label: 'Team' }, { label: 'Notes' }, { label: '' }],
       data.devices,
       (d) => {
         const tr = document.createElement('tr');
         tr.append(cell(d.name));
+        const tdKind = document.createElement('td');
+        const kind = document.createElement('select');
+        kind.className = 'sm'; kind.dataset.uid = d.uid;
+        for (const [v, t] of [['gun', 'Zebra scanner'], ['tablet', 'Tablet / phone']]) kind.appendChild(Object.assign(document.createElement('option'), { value: v, textContent: t, selected: (d.kind || 'gun') === v }));
+        kind.disabled = !!home;
+        kind.onchange = async () => {
+          try { await api.post(`/api/admin/devices/${d.uid}`, { kind: kind.value }); msg($('deviceMsg'), 'ok', `${d.name} is a ${kind.value === 'tablet' ? 'tablet or phone' : 'Zebra scanner'} now`, 'It takes the change the next time its link is opened, or when it is restarted.'); }
+          catch (err) { msg($('deviceMsg'), 'err', err.message); }
+        };
+        tdKind.appendChild(kind); tr.appendChild(tdKind);
         const tdLink = document.createElement('td');
         const code = document.createElement('code'); code.className = 'link'; code.textContent = deviceUrl(d.uid);
         tdLink.appendChild(code); tr.appendChild(tdLink);
@@ -1078,9 +1088,11 @@
 
   $('btnAddDevice').onclick = async () => {
     try {
-      const d = await api.post('/api/admin/devices', { name: $('fDevName').value, notes: $('fDevNotes').value });
+      const d = await api.post('/api/admin/devices', { name: $('fDevName').value, notes: $('fDevNotes').value, kind: $('fDevKind').value });
       $('fDevName').value = ''; $('fDevNotes').value = '';
-      msg($('deviceMsg'), 'ok', `Added ${d.name}`, `Its link is ${deviceUrl(d.uid)} — open it on the device and add to the home screen.`);
+      msg($('deviceMsg'), 'ok', `Added ${d.name}`, d.kind === 'tablet'
+        ? `Its link is ${deviceUrl(d.uid)} — open it in Chrome on the tablet, allow the camera when it asks, then menu → Add to Home screen.`
+        : `Its link is ${deviceUrl(d.uid)} — open it on the device and add to the home screen.`);
       await refreshDevices();
     } catch (err) { msg($('deviceMsg'), 'err', err.message); }
   };

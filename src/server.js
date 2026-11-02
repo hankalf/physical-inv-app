@@ -409,7 +409,7 @@ async function handleHandheld(req, res, url, m) {
     const enrolled = enrollDevice(d.uid);
     audit(d.name, 'scanner enrolled', `attempt ${(getDevice(d.uid).enrol_count)} for this link`);
     recordAccess('scanner', { who: d.name, detail: 'opened its link', ip: clientIp(req), ua: req.headers['user-agent'] });
-    return sendJson(req, res, 200, { uid: d.uid, name: d.name, token: enrolled.token, authRequired: SCANNER_AUTH });
+    return sendJson(req, res, 200, { uid: d.uid, name: d.name, token: enrolled.token, authRequired: SCANNER_AUTH, kind: getDevice(d.uid).kind || 'gun' });
   }
 
   // past this point a scanner must prove which scanner it is

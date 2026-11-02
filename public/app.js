@@ -1441,6 +1441,14 @@
        covers half a 240px screen and the counter did not ask for it. The
        Keyboard button turns it on for whoever really does need to type. */
     f.inputMode = !state.keyboardOn ? 'none' : (step === 'qty' ? 'decimal' : 'text');
+    /* A tablet has no keys of its own: the steps that are typed - the quantity, a date, a
+       comment - bring its keypad up by themselves, and the steps that are scanned offer the
+       camera instead. */
+    const typedStep = ['qty', 'expiry', 'comments'].includes(step);
+    if (state.tablet) {
+      if (typedStep) { f.inputMode = step === 'qty' ? 'decimal' : 'text'; setTimeout(() => { if (state.steps[state.stepIndex] === step && scanning()) raiseKeyboard(f); }, 60); }
+      if ($('cam_fScan')) $('cam_fScan').hidden = typedStep;
+    }
     // lot and expiry can be missing on a real pallet, so they are skippable
     $('btnSkip').hidden = !['comments', 'lot', 'expiry'].includes(step) || (step === 'comments' && prompts().commentsRequired === true);
     $('btnEmpty').hidden = step !== 'pallet' || !!state.multi;
@@ -3399,6 +3407,106 @@
     try { vk()?.hide(); } catch { /* ignore */ }
   });
 
+  /*
+   * A tablet or phone as a backup scanner.
+   *
+   * No trigger, so the camera reads the barcode. Each box that takes a scan gets
+   * a Camera button; what the camera reads goes into that box exactly as a
+   * trigger scan would, Enter and all, so everything after it - the checks, the
+   * guide, the second counts - is the same as on a Zebra. Chrome on Android reads
+   * barcodes itself (BarcodeDetector): nothing to install. A Bluetooth scanner
+   * paired to the tablet works too, the way a Zebra's does: it types.
+   */
+  const CAM_FORMATS = ['code_128', 'code_39', 'code_93', 'codabar', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'qr_code', 'data_matrix'];
+  let cam = null;
+  const MSG_FOR = { fTeam: 'signonMsg', fEmployee: 'signonMsg', fScan: 'scanMsg', fIssueScan: 'issueMsg', fEmptyScan: 'erMsg' };
+  const msgBoxFor = (f) => $(MSG_FOR[f.id] || 'scanMsg');
+  function cameraButtons() {
+    for (const id of ['fScan', 'fTeam', 'fEmployee', 'fIssueScan', 'fEmptyScan']) {
+      const f = $(id);
+      if (!f || f.dataset.cam) continue;
+      f.dataset.cam = '1';
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'cam-btn'; b.id = `cam_${id}`; b.textContent = '📷 Camera';
+      b.tabIndex = -1;
+      b.addEventListener('mousedown', (e) => e.preventDefault());
+      b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); openCamera(f); };
+      f.insertAdjacentElement('afterend', b);
+    }
+    if (!$('camBox')) {
+      const box = document.createElement('div');
+      box.id = 'camBox'; box.className = 'cam-box'; box.hidden = true;
+      box.innerHTML = '<video playsinline muted autoplay></video><div class="cam-aim"></div><div class="cam-msg">Point the camera at the barcode</div><div class="cam-row"><button type="button" class="cam-light" hidden>Light</button><button type="button" class="cam-cancel">Cancel</button></div>';
+      document.body.appendChild(box);
+      box.querySelector('.cam-cancel').onclick = () => closeCamera(true);
+      box.querySelector('.cam-light').onclick = async () => {
+        if (!cam) return;
+        cam.light = !cam.light;
+        try { await cam.stream.getVideoTracks()[0].applyConstraints({ advanced: [{ torch: cam.light }] }); } catch { /* not this camera */ }
+      };
+    }
+  }
+  async function openCamera(target) {
+    if (cam) return;
+    const say = (kind, a, b) => feedback(msgBoxFor(target), kind, a, b);
+    if (!('BarcodeDetector' in window) || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      say('warn', 'This device cannot read barcodes with its camera', 'Type it instead — the keyboard is up. Chrome on an Android tablet can; so can a Bluetooth scanner paired to it.');
+      target.inputMode = 'text'; raiseKeyboard(target);
+      return;
+    }
+    let formats = CAM_FORMATS;
+    try { const have = await window.BarcodeDetector.getSupportedFormats(); if (have && have.length) formats = CAM_FORMATS.filter((x) => have.includes(x)); } catch { /* use the list */ }
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }); }
+    catch (err) {
+      say('err', 'The camera is blocked', err && err.name === 'NotAllowedError' ? 'Allow the camera for this site: tap the lock beside the address, Permissions, Camera, Allow. Then tap Camera again.' : 'No camera could be opened. Close other apps using it and try again.');
+      return;
+    }
+    const detector = new window.BarcodeDetector({ formats });
+    const box = $('camBox');
+    const video = box.querySelector('video');
+    video.srcObject = stream;
+    box.hidden = false;
+    try { await video.play(); } catch { /* autoplay */ }
+    cam = { stream, target, light: false, busy: false, timer: 0 };
+    const caps = (stream.getVideoTracks()[0].getCapabilities && stream.getVideoTracks()[0].getCapabilities()) || {};
+    box.querySelector('.cam-light').hidden = !caps.torch;
+    const mine = cam;
+    const tick = async () => {
+      if (cam !== mine) return;
+      if (video.readyState >= 2 && !mine.busy) {
+        mine.busy = true;
+        try {
+          const codes = await detector.detect(video);
+          const hit = codes.find((c) => c.rawValue && String(c.rawValue).trim());
+          if (hit && cam === mine) { closeCamera(); deliverScan(target, String(hit.rawValue).trim()); return; }
+        } catch { /* a frame it could not read */ }
+        mine.busy = false;
+      }
+      mine.timer = setTimeout(tick, 120);
+    };
+    tick();
+  }
+  function closeCamera(cancelled) {
+    if (!cam) return;
+    clearTimeout(cam.timer);
+    try { for (const t of cam.stream.getTracks()) t.stop(); } catch { /* ignore */ }
+    const box = $('camBox');
+    box.hidden = true;
+    try { box.querySelector('video').srcObject = null; } catch { /* ignore */ }
+    const target = cam.target;
+    cam = null;
+    if (cancelled && target === $('fScan')) focusScan();
+  }
+  /** What the camera read goes into the box as a scan: the value, then Enter. */
+  function deliverScan(f, value) {
+    beep('ok');
+    f.value = value;
+    f.dispatchEvent(new Event('input', { bubbles: true }));
+    f.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  }
+  window.__deliverScan = (id, v) => deliverScan($(id), v);     // for the tests: the camera's hand-off without a camera
+
   function setKeyboard(on) {
     state.keyboardOn = !!on;
     $('btnKeyboard').textContent = state.keyboardOn ? 'Keyboard on' : 'Keyboard';
@@ -3654,6 +3762,7 @@
       await metaSet('deviceId', dev.name);
       await metaSet('deviceUid', dev.uid);
       await metaSet('deviceToken', dev.token);
+      await metaSet('deviceKind', dev.kind || 'gun');
       state.deviceToken = dev.token;
       state.deviceRejected = '';
       return { ok: true, name: dev.name };
@@ -3676,6 +3785,10 @@
     // the server sends the bare address to the office sign-in; this cookie says "a scanner lives here"
     if (!PRACTICE) { try { document.cookie = 'gun=1; path=/; max-age=31536000; SameSite=Lax'; } catch { /* a locked-down webview */ } }
     const linked = await identifyFromLink();
+    // a tablet or phone: the camera scans and the keypad comes up for numbers (?tablet=1 tries it on any device)
+    state.tablet = (await metaGet('deviceKind')) === 'tablet' || new URLSearchParams(location.search).get('tablet') === '1';
+    document.body.classList.toggle('tablet', state.tablet);
+    if (state.tablet) cameraButtons();
     state.deviceId = (await metaGet('deviceId')) || '';
     state.deviceUid = (await metaGet('deviceUid')) || '';
     if (linked && !linked.ok) feedback($('deviceMsg'), 'err', 'Scanner link problem', linked.reason);

@@ -260,6 +260,21 @@ working at once. Print its card again for the replacement.
 **A Zebra that counts nothing but this app** is set up on the device with Zebra's *Enterprise Home
 Screen* or your device management. That is a device setting, not one in this app.
 
+**A tablet or phone as a backup scanner.** An Android tablet counts like a Zebra. It scans with its
+camera, and a Bluetooth scanner paired to it also works.
+
+1. Under **Scanner setup**, type its name (`TABLET-01`) and set **Type** to **Tablet or phone
+   (scans with its camera)**. Press **Add scanner**.
+2. On the tablet, open its link in **Chrome**, or scan its setup card's QR code with the camera.
+   When Chrome asks, **allow the camera**.
+3. Chrome menu → **Add to Home screen**. From then on, open it from that icon.
+4. Try it: sign on, tap **📷 Camera** under the scan box, and point it at a rack label. The quantity
+   brings the number keypad up by itself.
+
+A scanner's **Type** can be changed on its row. The device takes the change the next time it opens.
+If Camera says the device cannot read barcodes, use Chrome on Android. Otherwise, pair a Bluetooth
+scanner, which types like a Zebra.
+
 ## 9 — What the counting screen asks
 
 **Settings → Scanners → How the counting screen is put together.** This is what a counter sees. The

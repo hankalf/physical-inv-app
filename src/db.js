@@ -469,6 +469,8 @@ if (!hasCol('pallets', 'variant')) db.exec('ALTER TABLE pallets ADD COLUMN varia
 if (!hasCol('pallets', 'entry_no')) db.exec('ALTER TABLE pallets ADD COLUMN entry_no TEXT');
 // a test scanner belongs to one person's practice
 if (!hasCol('devices', 'practice_owner')) db.exec('ALTER TABLE devices ADD COLUMN practice_owner TEXT');
+// a Zebra gun, or a tablet / phone that scans with its camera
+if (!hasCol('devices', 'kind')) db.exec("ALTER TABLE devices ADD COLUMN kind TEXT NOT NULL DEFAULT 'gun'");
 // whether the scanners are offered this count at sign-on (a count being set up, or kept for the office, is not)
 if (!hasCol('sessions', 'show_on_guns')) db.exec('ALTER TABLE sessions ADD COLUMN show_on_guns INTEGER NOT NULL DEFAULT 1');
 // a practice run built from a person's own file, and that file, so Start over can rebuild it
@@ -896,22 +898,23 @@ function newUid() {
 export const listDevices = () => db.prepare('SELECT * FROM devices ORDER BY name').all();
 export const getDevice = (uid) => db.prepare('SELECT * FROM devices WHERE uid = ?').get(String(uid || ''));
 
-export function createDevice({ name, notes }) {
+const deviceKind = (k) => (String(k || '').toLowerCase() === 'tablet' ? 'tablet' : 'gun');
+export function createDevice({ name, notes, kind }) {
   const n = norm(name);
   if (!n) throw Object.assign(new Error('scanner name required'), { status: 400 });
   if (db.prepare('SELECT 1 FROM devices WHERE name = ?').get(n)) throw Object.assign(new Error(`a scanner called ${n} already exists`), { status: 409 });
   let uid = newUid();
   while (getDevice(uid)) uid = newUid();
-  db.prepare('INSERT INTO devices (uid, name, notes, created_at) VALUES (?, ?, ?, ?)').run(uid, n, notes ? String(notes) : null, new Date().toISOString());
+  db.prepare('INSERT INTO devices (uid, name, notes, created_at, kind) VALUES (?, ?, ?, ?, ?)').run(uid, n, notes ? String(notes) : null, new Date().toISOString(), deviceKind(kind));
   return getDevice(uid);
 }
 
-export function updateDevice(uid, { name, notes }) {
+export function updateDevice(uid, { name, notes, kind }) {
   const d = getDevice(uid);
   if (!d) throw Object.assign(new Error('scanner not found'), { status: 404 });
   const n = name == null ? d.name : norm(name);
   if (!n) throw Object.assign(new Error('scanner name required'), { status: 400 });
-  db.prepare('UPDATE devices SET name = ?, notes = ? WHERE uid = ?').run(n, notes == null ? d.notes : String(notes), d.uid);
+  db.prepare('UPDATE devices SET name = ?, notes = ?, kind = ? WHERE uid = ?').run(n, notes == null ? d.notes : String(notes), kind == null ? (d.kind || 'gun') : deviceKind(kind), d.uid);
   return getDevice(uid);
 }
 
