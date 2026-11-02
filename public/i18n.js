@@ -271,7 +271,7 @@
     ', or the button below — then open it from the home-screen icon.': ', o el botón de abajo — luego ábrela desde el ícono.',
     'This scanner reloaded and is still on the old version. Tell a supervisor.': 'Este escáner se recargó y sigue con la versión anterior. Avisa a un supervisor.',
     'marked empty as part of a run': 'marcada vacía en grupo',
-    'The trial run was cleared': 'Se borró la prueba',
+    'The trial run was cleared': 'Se borró la prueba', 'The trainer reset this count': 'El entrenador reinició este conteo', 'Everything counted is cleared — start again from the first bin.': 'Se borró todo lo contado — empieza otra vez desde la primera ubicación.',
     'This pallet has more than one label': 'Esta tarima tiene más de una etiqueta',
     'Another label on the pallet just counted': 'Otra etiqueta en la tarima recién contada',
     'Done — that was every label': 'Listo — eran todas las etiquetas',

@@ -374,7 +374,7 @@
    * of pallets already counted, or every pallet of the trial would come back as
    * "already counted" on the real count.
    */
-  async function applyTrialClear(session) {
+  async function applyTrialClear(session, { live = false } = {}) {
     $('chipTrial').hidden = !session || !session.trial;
     if (!session || !session.clearedAt) return;
     const key = `clearedAt:${session.id}`;
@@ -396,12 +396,28 @@
     for (const k of keys) if (String(k).startsWith(`closedBins:${session.id}:`)) await wrap(tx('meta', 'readwrite').delete(k));
     countedInAisle = new Set(); tagsInBin = new Map(); closedBins = new Set();
     state.lastBin = ''; state.lastPallet = null; state.redoBin = '';
+    /* the second counts and cycle bins of before were deleted with the counting: a new list
+       (a reset classroom cycle count makes its six bins again) comes from the server */
+    const wasOnTask = !!state.recount;
+    state.recount = null; state.recounts = []; state.recountsDoneLocal = []; state.recountsSkipped = [];
+    await metaSet('recounts', []); await metaSet('recountsDoneLocal', []);
     await metaSet(key, session.clearedAt);
     updateChips();
-    if (seen !== undefined || old.length) {
-      feedback($('scanMsg'), 'warn', 'The trial run was cleared', 'This is the real count now — everything starts fresh.');
-      beep('warn');
+    if (seen === undefined && !old.length) return;
+    // still a trial: the trainer reset it for the next class; not a trial: this is the real count now
+    const word = session.trial ? ['The trainer reset this count', 'Everything counted is cleared — start again from the first bin.'] : ['The trial run was cleared', 'This is the real count now — everything starts fresh.'];
+    if (live && state.team) {
+      // a gun in the middle of counting: the aisle, the guide and the task list as they are now
+      state.multi = null; state.draft = {}; state.stepIndex = 0;
+      await refreshAssignment(true);
+      const next = nextRecountTask();
+      if (wasOnTask && next) await startRecount(next);
+      else if (wasOnTask) { renderAssignment(); showScreen('scrAssign'); }
+      else if ($('scrScan').classList.contains('active')) { await refreshNextBin(); renderStep(); }
     }
+    const where = $('scrAssign').classList.contains('active') ? 'assignMsg' : 'scanMsg';
+    feedback($(where), 'warn', word[0], word[1]);
+    beep('warn');
   }
 
   async function refreshSiteSettings() {
@@ -414,7 +430,7 @@
     const merged = { ...state.session, ...fresh, id: state.session.id, name: state.session.name };
     state.session = merged;
     await metaSet('session', merged);
-    await applyTrialClear(merged);
+    await applyTrialClear(merged, { live: true });
     /* the order of the questions may have changed - but a pallet with more than
        one label keeps the bin first, whatever the order, until it is done */
     if (state.multi) { state.multi.base = stepsFor(merged); state.steps = multiSteps(state.multi.base); }
