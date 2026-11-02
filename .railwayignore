@@ -1,0 +1,17 @@
+# What Railway needs to build and run the app: the Dockerfile and its settings,
+# package.json, src, public, and the guides with their pictures (the User guide
+# page serves them). The training films, decks and prints, the other docs, the
+# tests and the tools stay in git and out of the deploy - they made the snapshot
+# Railway takes of the repo too big to deploy.
+docs/*
+!docs/guides/
+!docs/images/
+tests/
+tools/
+node_modules/
+*.mp4
+*.mov
+*.pptx
+*.zip
+*.db
+*.db-*
