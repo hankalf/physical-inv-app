@@ -23,6 +23,8 @@ const DEFAULT_CONFIG = {
   },
   levelRules: [
     { levels: 'A', requires: [] },
+    // a dock stocker team - dock truck and on foot - counts the bottom two levels
+    { levels: 'AB', requires: ['DOCK TRUCK'] },
     { levels: 'BC', requires: ['DOCK TRUCK', 'SCISSOR LIFT'] },
     { levels: 'CDEF', requires: ['HIGH REACH', 'SCISSOR LIFT'] },
   ],
@@ -56,6 +58,27 @@ export function getConfig() {
 }
 
 export const getEquipment = () => getConfig().equipment;
+
+/* Once, on a site that saved its own rules before the dock truck reached level B on its own:
+   the DS teams (a dock truck and someone on foot) count levels A and B, so the saved rules get
+   that rule too. Marked done, so a site that takes it out again on the Teams page keeps it out. */
+(() => {
+  try {
+    if (db.prepare("SELECT 1 FROM settings WHERE key = 'migr:dockTruckB'").get()) return;
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'equipment'").get();
+    if (row) {
+      const cfg = JSON.parse(row.value);
+      const rules = cfg.levelRules || [];
+      const dockAlone = rules.some((r) => String(r.levels || '').includes('B') && (r.requires || []).every((e) => e === 'DOCK TRUCK'));
+      if (cfg.equipment && cfg.equipment['DOCK TRUCK'] && !dockAlone) {
+        rules.splice(Math.min(1, rules.length), 0, { levels: 'AB', requires: ['DOCK TRUCK'] });
+        cfg.levelRules = rules;
+        db.prepare("UPDATE settings SET value = ? WHERE key = 'equipment'").run(JSON.stringify(cfg));
+      }
+    }
+    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('migr:dockTruckB', ?)").run(new Date().toISOString());
+  } catch { /* the rules stay as they were */ }
+})();
 
 export function setConfig({ equipment, levelRules }) {
   const eq = {};

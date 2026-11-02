@@ -21,10 +21,10 @@ const S = (await post('/api/admin/sessions', { name: 'Wall to wall' })).id;
 const bins = ['F01A001', 'F01A002', 'F01B001', 'F01B002', 'F01B003', 'F01C001'];
 await fetch(`${BASE}/api/admin/sessions/${S}/master?kind=bins`, { method: 'POST', headers: csv, body: 'Bin Location,Zone,Aisle\n' + bins.map((b) => `${b},Freezer,F01`).join('\n') + '\n' });
 
-/* a crew whose teams reach A and C-F between them, and somebody whose number is a placeholder */
+/* a crew whose teams reach A and C-F between them (a team on foot reaches A only), and somebody whose number is a placeholder */
 const rt = await post('/api/admin/people/teams', { name: 'S1-RT05', shift: '1' });
 const ds = await post('/api/admin/people/teams', { name: 'S1-DS01', shift: '1' });
-for (const [badge, name, equipment, team] of [['999403', 'Jason Davies', ['HIGH REACH'], rt], ['999397', 'Donovan Lopez', ['SCISSOR LIFT'], rt], ['999424', 'Michael Roman Travera', ['DOCK TRUCK'], ds], ['MISSING', 'Silas Young', ['SCISSOR LIFT'], rt]]) {
+for (const [badge, name, equipment, team] of [['999403', 'Jason Davies', ['HIGH REACH'], rt], ['999397', 'Donovan Lopez', ['SCISSOR LIFT'], rt], ['999424', 'Oscar Tomasino', ['FOOT'], ds], ['MISSING', 'Silas Young', ['SCISSOR LIFT'], rt]]) {
   await post('/api/admin/people/employees', { badge, name, shift: '1', equipment });
   await post('/api/admin/people/assign', { badge, teamId: team.id });
 }
@@ -35,7 +35,7 @@ const ph = find(c, /placeholder/);
 check('A placeholder clock-in number is flagged by name', ph && ph.level === 'warn' && /Silas Young \("MISSING"\)/.test(ph.title), ph && ph.title);
 check('…no classroom line while there is no training count', !find(c, /classroom/i));
 
-/* fix the reach: a dock truck and a scissor lift on one team reach B */
+/* fix the reach: a dock truck reaches A and B */
 await post('/api/admin/people/employees', { badge: '999265', name: 'James Lopez', shift: '1', equipment: ['DOCK TRUCK'] });
 await post('/api/admin/people/assign', { badge: '999265', teamId: rt.id });
 c = await ready(S);

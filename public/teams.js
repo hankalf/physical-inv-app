@@ -858,6 +858,7 @@
       equipment: { FOOT: 'On foot', 'DOCK TRUCK': 'Dock truck', 'SCISSOR LIFT': 'Scissor lift', 'HIGH REACH': 'High reach truck' },
       levelRules: [
         { levels: 'A', requires: [] },
+        { levels: 'AB', requires: ['DOCK TRUCK'] },
         { levels: 'BC', requires: ['DOCK TRUCK', 'SCISSOR LIFT'] },
         { levels: 'CDEF', requires: ['HIGH REACH', 'SCISSOR LIFT'] },
       ],

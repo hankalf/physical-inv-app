@@ -1222,9 +1222,9 @@ keeps, one row per seat on each team: **Team #**, **Department**, **Employee**, 
   full keyboard, so *S1-DS01* can be keyed by hand.
 
 > **Check the level rules against these teams.** With the shipped rules (*What each level needs*),
-> a dock stocker team with someone on foot reaches **level A** only, because levels B–C need a dock
-> truck *and* a scissor lift; a reach-truck team (high reach and scissor lift) reaches **A and C–F**.
-> If a dock stocker reaches B–C on its own at your site, change the rule under *Teams & crew →
+> a dock stocker team (a dock truck, and someone on foot) reaches **levels A and B**; a dock truck
+> *and* a scissor lift together reach C as well; a reach-truck team (high reach and scissor lift)
+> reaches **A and C–F**. If your site works differently, change the rule under *Teams & crew →
 > Equipment rules* before you plan the aisles.
 
 **1st and 2nd shift.** Each team on Teams & crew has a **shift** — set it when you add the team,

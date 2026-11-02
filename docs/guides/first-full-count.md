@@ -205,8 +205,8 @@ levels it can be sent to, so a crew on foot is never given level D.
   the crew list*: add them under Employees and upload the sheet again.
 
 **Check the equipment rules.** **Teams & crew → Equipment rules** says which levels need which
-equipment. With the rules as shipped, a dock stocker with someone on foot reaches level A only, and a
-reach truck with a scissor lift reaches A and C–F. Change a rule here if your site works differently,
+equipment. With the rules as shipped, a dock stocker with someone on foot reaches levels A and B,
+and a reach truck with a scissor lift reaches A and C–F. Change a rule here if your site works differently,
 **before** you plan the aisles.
 
 **Print the team QR codes.** **🖨 Print team QR codes** prints a card per team with its number as a
