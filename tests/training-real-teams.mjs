@@ -28,7 +28,11 @@ await post('/api/admin/people/assign', { badge: '999407', teamId: real2.id });
 const before1 = names(await team('S1-DS01'));
 
 /* the trainer sets the classroom up */
+const real = await post('/api/admin/sessions', { name: 'Wednesday wall-to-wall' });
 const t = await post('/api/admin/training', {});
+const board = await j(await fetch(`${BASE}/api/board`));
+check('The office board shows the real count, never the classroom training count by itself', board.session && board.session.id === real.id, JSON.stringify(board.session && { id: board.session.id, name: board.session.name }));
+check('…the training count can still be put up by number', (await j(await fetch(`${BASE}/api/board?session=${t.session.id}`))).session.id === t.session.id);
 check('Set up works with the real teams already there', t.session && t.loaded.trainees === 8, JSON.stringify(t.loaded));
 check('…the trainees are not put on the real team S1-DS01', names(await team('S1-DS01')) === before1, names(await team('S1-DS01')));
 check('…nor on S2-DS01', names(await team('S2-DS01')) === '999407', names(await team('S2-DS01')));

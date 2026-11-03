@@ -16,11 +16,21 @@ import { countClock } from './count-clock.js';
  * people stand and watch, so it wins over a cycle program that runs all year.
  */
 export function defaultBoardSession() {
-  /* The Testing tab's practice count is never what the wall shows by itself;
-     it can still be put up by asking for it by number. */
-  return db.prepare("SELECT * FROM sessions WHERE status = 'open' AND mode != 'cycle' AND practice = 0 ORDER BY id DESC LIMIT 1").get()
-    || db.prepare("SELECT * FROM sessions WHERE status = 'open' AND practice = 0 ORDER BY id DESC LIMIT 1").get()
-    || db.prepare('SELECT * FROM sessions WHERE practice = 0 ORDER BY id DESC LIMIT 1').get()
+  /* The count the scanners land on, when one is set; else the newest open full
+     count. The Testing tab's practice count and the classroom's training counts
+     are never what the wall shows by itself - a week of trainees' second counts
+     looked like a count day gone wrong - though either can still be put up by
+     asking for it by number. */
+  const setting = (k) => { const r = db.prepare('SELECT value FROM settings WHERE key = ?').get(k); return r ? Number(r.value) || 0 : 0; };
+  const skip = [setting('trainingSession'), setting('trainingCycle')].filter(Boolean);
+  const landing = setting('defaultSessionId');
+  const notTraining = (row) => row && !skip.includes(row.id) ? row : null;
+  const one = (sql, ...a) => db.prepare(sql).get(...a);
+  if (landing && !skip.includes(landing)) { const s = one("SELECT * FROM sessions WHERE id = ? AND status = 'open' AND practice = 0", landing); if (s) return s; }
+  const ids = skip.length ? `AND id NOT IN (${skip.join(',')})` : '';
+  return notTraining(one(`SELECT * FROM sessions WHERE status = 'open' AND mode != 'cycle' AND practice = 0 ${ids} ORDER BY id DESC LIMIT 1`))
+    || notTraining(one(`SELECT * FROM sessions WHERE status = 'open' AND practice = 0 ${ids} ORDER BY id DESC LIMIT 1`))
+    || notTraining(one(`SELECT * FROM sessions WHERE practice = 0 ${ids} ORDER BY id DESC LIMIT 1`))
     || null;
 }
 
