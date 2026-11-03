@@ -117,7 +117,8 @@ await p.click('#btnSaveRules'); await p.waitForTimeout(700);
 const cfg = await j(await fetch(`${BASE}/api/admin/people`, { headers: A }));
 check('Teams page: the level rules can be edited and are saved', cfg.config.levelRules[1].levels === 'B', JSON.stringify(cfg.config.levelRules[1]));
 await p.click('#btnResetRules'); await p.click('#btnSaveRules'); await p.waitForTimeout(600);
-check('Teams page: defaults can be restored', (await j(await fetch(`${BASE}/api/admin/people`, { headers: A }))).config.levelRules[1].levels === 'BC');
+const back = (await j(await fetch(`${BASE}/api/admin/people`, { headers: A }))).config.levelRules;
+check('Teams page: defaults can be restored — a dock truck reaches A-B, with a scissor lift B-C', back[1].levels === 'AB' && back[1].requires.join() === 'DOCK TRUCK' && back[2].levels === 'BC', JSON.stringify(back));
 
 /* ---------------- sign-on check on the gun ---------------- */
 const dev = await j(await fetch(`${BASE}/api/admin/devices`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'REACH-01' }) }));
