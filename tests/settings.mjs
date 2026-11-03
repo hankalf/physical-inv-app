@@ -158,6 +158,9 @@ check('Shell: every section opens with a line on what is in it',
 check('Shell: every card has its name and a line on what it is for',
   await page.$$eval('[data-sub] > .card > h2', (hs) => hs.every((h) => h.querySelector(':scope > .muted'))),
   (await page.$$eval('[data-sub] > .card > h2', (hs) => hs.filter((h) => !h.querySelector(':scope > .muted')).map((h) => h.textContent.trim().slice(0, 40)))).join(' | '));
+check('Shell: the session bar shows on Scanners, where the count\'s own settings live',
+  !(await page.$eval('#scopeBar', (el) => el.hidden)) && !!(await page.$('[data-sub="gun"] #countGunCard #btnSaveSettings')));
+await page.click('#subTabs button:has-text("Backups")'); await page.waitForTimeout(500);
 check('Shell: the session bar hides on a pane that has no session to act on',
   await page.$eval('#scopeBar', (el) => el.hidden));
 await page.click('#subTabs button:has-text("Lists")'); await page.waitForTimeout(500);

@@ -282,7 +282,7 @@
         },
         {
           title: 'Set the count’s options',
-          do: 'Count session card: pallet check (off, warn, strict), guided bins, comments, the map drawing, and the second-count thresholds: Recount over N units, or over N %, or worth over $N (at the report’s cost), a cap, and a money threshold for a third count raised by itself. Adjustments need approval if the office signs off variances, with the same three kinds of threshold.',
+          do: 'Settings → Scanners → This count on the scanners: pallet check (off, warn, strict), guided bins, comments, the map drawing, and the second-count thresholds: Recount over N units, or over N %, or worth over $N (at the report’s cost), a cap, and a money threshold for a third count raised by itself. Adjustments need approval if the office signs off variances, with the same three kinds of threshold.',
           where: S('/settings', 'start', 'Settings → Count setup'),
           watch: [
             { see: 'The second-count list is enormous', means: 'The thresholds are at 0, so every difference raises one.', fix: 'Set Recount over to 2 to 5 units, a percent, and a cap.' },
@@ -345,7 +345,7 @@
           where: S('/admin', 'progress', 'Dashboard → Progress'),
           watch: [
             { see: 'A team shows stopped scanning', means: 'No line from them for longer than the limit.', fix: 'Message the team from the Team plan, or go and look. A dead spot queues lines and uploads them later, so a quiet gun is not always a stopped team.' },
-            { see: 'The map is a schematic, not your drawing', means: 'No rack drawing on this count.', fix: 'Count session → Map drawing.' },
+            { see: 'The map is a schematic, not your drawing', means: 'No rack drawing on this count.', fix: 'Settings → Scanners → This count on the scanners → Map drawing.' },
           ],
           ask: [
             { q: 'How often does the dashboard refresh?', a: 'Every few seconds, and only the panes you have open. The board every 15 seconds.' },
@@ -411,7 +411,7 @@
         },
         {
           title: 'See how they are raised',
-          do: 'Three ways. Automatically, as counts land, when Count session → Second counts → Raise them automatically is ticked — subject to the thresholds (Over N units, or over %) and Cap open, how many may be open at once — and when an aisle is handed back with expected pallets nobody saw. From the dashboard, Raise from all variances now goes through everything that currently disagrees and leaves alone pallets in aisles nobody has reached yet. And by hand: Second counts → Bin or Pallet ID, a note, Request second count — whenever a supervisor wants a bin looked at again.',
+          do: 'Three ways. Automatically, as counts land, when Scanners → This count on the scanners → Second counts → Raise them automatically is ticked — subject to the thresholds (Over N units, or over %) and Cap open, how many may be open at once — and when an aisle is handed back with expected pallets nobody saw. From the dashboard, Raise from all variances now goes through everything that currently disagrees and leaves alone pallets in aisles nobody has reached yet. And by hand: Second counts → Bin or Pallet ID, a note, Request second count — whenever a supervisor wants a bin looked at again.',
           where: S('/settings', 'start', 'Settings → Count setup → Count session'),
           watch: [
             { see: 'No second counts at all', means: 'No inventory report was uploaded, or Raise them automatically is off.', fix: 'Without a report there is nothing to compare: upload it under Count setup. Tick Raise them automatically, or press Raise from all variances now.' },
@@ -449,7 +449,7 @@
           ],
           ask: [
             { q: 'Both counts differ from the report and from each other?', a: 'Nobody knows which is right, so count it a third time. With Third count when the second settles nothing ticked (Settings → Count setup → Count session → Second counts) that happens on its own: the bin goes to a team that did neither count, the gun says THIRD COUNT, and the third count stands. Or press 3rd count on the finished row.' },
-            { q: 'Can one team do all the second counts?', a: 'Yes: tick Send them all to team in the count’s settings (Count session → Second counts) and type its number — inventory control’s, say. Every new second count goes to that team (a bin it counted first still goes to another team). When it is swamped, Hand open second counts from … to team … on the Second counts card passes some or all of them on: leave How many blank for all, or give a number or an aisle.', goto: S('/admin', 'second', 'Dashboard → Second counts') },
+            { q: 'Can one team do all the second counts?', a: 'Yes: tick Send them all to team in the count’s settings (Scanners → This count on the scanners → Second counts) and type its number — inventory control’s, say. Every new second count goes to that team (a bin it counted first still goes to another team). When it is swamped, Hand open second counts from … to team … on the Second counts card passes some or all of them on: leave How many blank for all, or give a number or an aisle.', goto: S('/admin', 'second', 'Dashboard → Second counts') },
             { q: 'A second count agreed with the first, or with the report?', a: 'With the first: the difference is real, two teams found the same — it goes to Adjustments. With the report: the first count was wrong, and the line now matches. Either way it is settled; no third count.' },
             { q: 'Can I see the first, second and third counts together?', a: 'Export 2nd & 3rd counts with the 1st (Excel), on the Second counts card: every bin counted again, a row a pallet — the report, each count with its team, the final count and which number stands. Type an aisle first for one aisle.' },
           ],
@@ -772,7 +772,7 @@
     { see: 'this count is a trial run - end the trial and count it for real before sending anything to the ERP', means: 'ERP export is blocked on a trial.', fix: 'End the trial under Count session.', goto: S('/settings', 'start', 'Count session') },
     { see: 'this login may not approve adjustments', means: 'The login lacks the approval function.', fix: 'An admin adds it under Supervisor logins.' },
     { see: 'the address has to start with http:// or https://', means: 'The Teams or pallet-system address is not a web address.', fix: 'Paste the whole https:// address.' },
-    { see: 'pick a layout drawing in the session settings first', means: 'The map has no drawing on this count.', fix: 'Count session → Map drawing.', goto: S('/settings', 'start', 'Count session') },
+    { see: 'pick a layout drawing in the session settings first', means: 'The map has no drawing on this count.', fix: 'Settings → Scanners → This count on the scanners → Map drawing.', goto: S('/settings', 'start', 'Count session') },
     { see: 'unauthorized', means: 'The sign-in ended or was never made.', fix: 'Sign in again.' },
     { see: 'Signed out — sign in again', means: 'The server no longer knows this sign-in: a logout elsewhere, or 30 days passed.', fix: 'Sign in again.' },
     { see: 'A scan does nothing', means: 'DataWedge is not sending a suffix.', fix: 'DataWedge → Basic data formatting → send ENTER (or TAB).' },
@@ -791,7 +791,7 @@
     { see: 'A scan opens the address bar and the text goes into it', means: 'The page lost the keyboard, usually because the app is not installed.', fix: 'Install the app. The red Tap here to scan bar puts it right meanwhile.' },
     { see: 'A bar with the web address appears on every scan', means: 'The app runs as a page in Chrome, not installed.', fix: 'Chrome menu → Install app, or Install on this scanner on the sign-on screen.' },
     { see: 'Second-count list is enormous', means: 'Thresholds at 0.', fix: 'Set Recount over, or over %, and a cap.', goto: S('/settings', 'start', 'Count session') },
-    { see: 'The map is a schematic, not your drawing', means: 'No rack drawing on this count.', fix: 'Count session → Map drawing.', goto: S('/settings', 'start', 'Count session') },
+    { see: 'The map is a schematic, not your drawing', means: 'No rack drawing on this count.', fix: 'Settings → Scanners → This count on the scanners → Map drawing.', goto: S('/settings', 'start', 'Count session') },
     { see: 'Can nobody sign in?', means: 'The admin logins were lost.', fix: 'Set SUPERADMIN_USER to a new username in the server variables and restart.' },
     { see: 'Numbers look wrong after an ERP import', means: 'The report moved on.', fix: 'Upload the new export (it adds to and updates what is loaded), then re-read the pallet report. Override is the site admin’s alone.', goto: S('/settings', 'lists', 'Lists & racking') },
     { see: 'A scanner’s scan times are hours out', means: 'The handheld’s clock is wrong.', fix: 'Nothing: the server corrects each line by the gun’s own send time. Set the clock when you can.' },

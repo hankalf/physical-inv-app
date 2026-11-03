@@ -68,6 +68,19 @@
 
       <div data-sub="start" data-sub-label="Count setup">
     <p class="pane-intro">Make a count, set how it runs, and check the site is ready before the first scanner signs on.</p>
+    <div class="card" id="countdayCard">
+      <h2>Count-day checklist <span class="tag" id="countdayState"></span>
+        <span class="muted">everything a count day needs, in the order it happens — each line says how, points at the guide, and takes you to the place</span></h2>
+      <div class="setup-bar"><i id="countdayBar" style="width:0%"></i></div>
+      <div class="feedback" id="countdayMsg"></div>
+      <div id="countdayList"></div>
+      <div class="toolbar">
+        <button class="ghost sm" id="btnCountdayPrint">🖨 Print the checklist</button>
+        <button class="ghost sm" id="btnCountdayRecheck">Check again</button>
+        <span class="muted" style="font-size:12px">A line marked <b>app</b> ticks itself from what is in the database and the log. The others you tick as you go; the tick says who and when. Ticks are kept per count.</span>
+      </div>
+    </div>
+
     <div class="card" id="readyCard">
       <h2>Ready for count day <span class="tag" id="readyState">checking…</span>
         <span class="muted">the site's settings checked against what a count day needs, worked out fresh every time this page opens</span></h2>
@@ -89,80 +102,10 @@
 
     <div class="card" id="sessionCard">
       <h2>Count session <span class="muted" id="sessionCardSub"></span></h2>
-      <div class="hint" style="margin-top:0">
-        Settings for the count picked in the header. A scanner already counting picks up a change
-        within about half a minute; the questions it asks change between pallets, never mid-line.
+      <div class="hint" style="margin-top:0" id="countSettingsPointer">
+        What this count's scanners ask, how the floor is run, second counts and adjustments are set under
+        <a href="/settings#gun" data-goto-sub="gun" style="color:var(--accent);font-weight:700">Scanners → This count on the scanners</a>, with every other scanner setting.
       </div>
-      <div class="fieldsets">
-        <div class="fieldset">
-          <div class="legend">What the gun asks</div>
-          <div class="inline">
-            <div class="auto">
-              <label for="fPalletMode">Pallet ID check</label>
-              <select id="fPalletMode">
-                <option value="warn">Validate — allow override with reason</option>
-                <option value="strict">Validate — no overrides</option>
-                <option value="off">Accept any ID (still blocks duplicates)</option>
-              </select>
-            </div>
-          </div>
-          <div class="inline" style="margin-top:10px">
-            <div class="auto"><label class="cb"><input type="checkbox" id="fAskComments"> Ask for comments</label></div>
-            <div class="auto"><label class="cb" title="Adds a LOT CODE question on the gun, checked against the inventory report. Off by default."><input type="checkbox" id="fAskLot"> Ask for the lot code</label></div>
-            <div class="auto"><label class="cb" title="Adds an EXPIRY question on the gun and flags anything already out of date. Off by default."><input type="checkbox" id="fAskExpiry"> Ask for the expiry date</label></div>
-          </div>
-        </div>
-
-        <div class="fieldset">
-          <div class="legend">How the floor is run</div>
-          <div class="inline">
-            <div class="auto"><label class="cb"><input type="checkbox" id="fGuided" title="The gun walks each team through its aisle bin by bin: it shows the next bin, and asks before a bin off the team’s aisle or levels is counted."> Guided by the plan, bin by bin</label></div>
-            <div class="auto"><label class="cb" title="Untick to keep this count off the scanners' list — while it is being set up, or once the floor is done with it."><input type="checkbox" id="fShowOnGuns"> Show on the scanners</label></div>
-            <div class="auto"><label class="cb" title="Every scanner lands on this count at sign-on. They can still pick another."><input type="checkbox" id="fDefaultSession"> Scanners start here</label></div>
-          </div>
-          <div class="inline" style="margin-top:10px">
-            <div class="auto">
-              <label for="fLayout">Map drawing</label>
-              <select id="fLayout"><option value="">Schematic (auto from bin codes)</option></select>
-            </div>
-          </div>
-        </div>
-
-        <div class="fieldset">
-          <div class="legend">Second counts</div>
-          <div class="inline">
-            <div class="auto"><label class="cb"><input type="checkbox" id="fAutoRecount"> Raise them automatically</label></div>
-            <div class="auto"><label class="cb" title="A bin whose second count agrees with neither the first count nor the report is counted a third time, by a team that did neither"><input type="checkbox" id="fThirdCount"> Third count when the second settles nothing</label></div>
-          </div>
-          <div class="inline" style="margin-top:8px">
-            <div class="auto"><label class="cb" title="Every new second count is given to this team - inventory control's, say. A bin the team counted first, it never gets; that one stays open for any other team. Dashboard → Second counts hands them to other teams when it is swamped."><input type="checkbox" id="fRecountTeamOn"> Send them all to team</label></div>
-            <div class="auto"><input id="fRecountTeam" class="sm" style="width:90px" placeholder="e.g. 90" aria-label="The team the second counts go to"></div>
-          </div>
-          <div class="inline" style="margin-top:10px">
-            <div class="auto"><label for="fRecMinQty" title="A quantity difference smaller than this and than the percentage below does not raise a second count. 0 raises every difference.">Over</label><input id="fRecMinQty" class="sm" type="number" min="0" style="width:74px" placeholder="0"><span class="muted"> units</span></div>
-            <div class="auto"><label for="fRecMinPct" title="...or a difference of at least this percentage of the expected quantity. Either threshold is enough.">or over</label><input id="fRecMinPct" class="sm" type="number" min="0" max="100" style="width:66px" placeholder="0"><span class="muted"> %</span></div>
-            <div class="auto"><label for="fRecMinValue" title="...or a difference worth at least this much, at the report's unit cost. Any one threshold is enough. A pallet with no cost on the report is judged by cases alone.">or worth over $</label><input id="fRecMinValue" class="sm" type="number" min="0" step="0.01" style="width:90px" placeholder="0"></div>
-            <div class="auto"><label for="fRecCap" title="Stop raising automatic second counts once this many are open. 0 is no cap.">Cap open</label><input id="fRecCap" class="sm" type="number" min="0" style="width:74px" placeholder="0"></div>
-          </div>
-          <div class="inline" style="margin-top:8px">
-            <div class="auto"><label for="fThirdMinValue" title="With third counts on: a bin whose second count settles nothing is counted a third time by itself only when its disagreement with the report is worth at least this much. 0 sends every such bin. A bin with no costs on it is always sent.">Third count by itself only when worth over $</label><input id="fThirdMinValue" class="sm" type="number" min="0" step="0.01" style="width:90px" placeholder="0"></div>
-          </div>
-          <div class="hint" style="margin-top:8px">All at 0 sends somebody back for a one-unit difference. The money thresholds use the <b>Cost</b> column of the inventory report (or its <b>Amount</b> ÷ quantity).</div>
-        </div>
-
-        <div class="fieldset">
-          <div class="legend">Adjustments</div>
-          <div class="inline">
-            <div class="auto"><label class="cb" title="Every difference from the report has to be approved with a reason code before it reaches the ERP file. Off by default."><input type="checkbox" id="fRequireApproval"> Adjustments need approval</label></div>
-          </div>
-          <div class="inline" style="margin-top:10px">
-            <div class="auto"><label for="fApprMinQty" title="Smaller than this and than the percentage beside it, an adjustment goes through without a signature. 0 and 0 means every one needs approving.">Approve over</label><input id="fApprMinQty" class="sm" type="number" min="0" style="width:74px" placeholder="0"><span class="muted"> units</span></div>
-            <div class="auto"><label for="fApprMinPct" title="...or at least this percentage of what the report expected. Either threshold is enough.">or over</label><input id="fApprMinPct" class="sm" type="number" min="0" max="100" style="width:66px" placeholder="0"><span class="muted"> %</span></div>
-            <div class="auto"><label for="fApprMinValue" title="...or an adjustment worth at least this much, at the report's unit cost. Any one threshold is enough.">or worth over $</label><input id="fApprMinValue" class="sm" type="number" min="0" step="0.01" style="width:90px" placeholder="0"></div>
-          </div>
-        </div>
-      </div>
-
       <div class="fieldset trialset" id="trialSet">
         <div class="legend">Trial run</div>
         <div class="hint" style="margin-top:0" id="trialHint">
@@ -178,7 +121,6 @@
       </div>
 
       <div class="toolbar">
-        <button class="primary" id="btnSaveSettings">Save</button>
         <span class="spacer"></span>
         <button id="btnCloseSession" class="danger">Close session</button>
         <button id="btnDeleteSession" class="danger" title="Close the count first. Everything counted against it goes with it.">Delete…</button>
@@ -287,6 +229,100 @@
         <b>Reset link</b> issues a new one and kills the old, and removing a scanner stops it entirely. A link used more than
         once is flagged, which is normal after a scanner is wiped and worth a look otherwise.
       </div>
+    </div>
+
+    <div class="card" id="countGunCard">
+      <h2>This count on the scanners <span class="muted" id="countGunSub"></span></h2>
+      <div class="hint" style="margin-top:0">
+        Settings for the count picked in the header. A scanner already counting picks up a change
+        within about half a minute; the questions it asks change between pallets, never mid-line. Press <b>Save</b> at the foot of the card.
+      </div>
+      <div class="fieldsets">
+        <div class="fieldset">
+          <div class="legend">What the gun asks</div>
+          <div class="opt">
+            <label for="fPalletMode">Pallet ID check</label>
+            <select id="fPalletMode">
+              <option value="warn">Validate — allow override with reason</option>
+              <option value="strict">Validate — no overrides</option>
+              <option value="off">Accept any ID (still blocks duplicates)</option>
+            </select>
+            <div class="opt-desc">What happens when a pallet scanned is not on the inventory report. <b>Allow override with reason</b>: the gun stops, and the counter can count it anyway by picking a reason; the line is flagged for the office. <b>No overrides</b>: it cannot be counted on the gun until a supervisor sorts it out. <b>Accept any ID</b>: any pallet number is taken. In every case a pallet already counted in another bin is stopped.</div>
+          </div>
+          <div class="opt"><label class="cb"><input type="checkbox" id="fAskComments"> Ask for comments</label>
+            <div class="opt-desc">After the quantity, the gun offers a comment step: one-tap reasons such as <i>Damaged</i> or <i>Partial pallet</i>, or a typed note. It can be skipped.</div></div>
+          <div class="opt"><label class="cb" title="Adds a LOT CODE question on the gun, checked against the inventory report. Off by default."><input type="checkbox" id="fAskLot"> Ask for the lot code</label>
+            <div class="opt-desc">Adds a <b>LOT</b> step after the quantity. A lot that differs from the report is flagged. It can be skipped, since a real pallet can be missing one.</div></div>
+          <div class="opt"><label class="cb" title="Adds an EXPIRY question on the gun and flags anything already out of date. Off by default."><input type="checkbox" id="fAskExpiry"> Ask for the expiry date</label>
+            <div class="opt-desc">Adds an <b>EXPIRY</b> step. A date already past is flagged for a supervisor. It can be skipped.</div></div>
+        </div>
+
+        <div class="fieldset">
+          <div class="legend">How the floor is run</div>
+          <div class="opt"><label class="cb"><input type="checkbox" id="fGuided" title="The gun walks each team through its aisle bin by bin: it shows the next bin, and asks before a bin off the team’s aisle or levels is counted."> Guided by the plan, bin by bin</label>
+            <div class="opt-desc">The gun shows each team its next bin, in order, in the aisle the Team plan gave it, and asks before a bin off its aisle or levels is counted. Off: teams scan any bin in any order.</div></div>
+          <div class="opt"><label class="cb" title="Untick to keep this count off the scanners' list — while it is being set up, or once the floor is done with it."><input type="checkbox" id="fShowOnGuns"> Show on the scanners</label>
+            <div class="opt-desc">The count is in the scanners’ list at sign-on. <b>Tick it for count day.</b> Untick it while the count is being set up, or once the floor is done with it.</div></div>
+          <div class="opt"><label class="cb" title="Every scanner lands on this count at sign-on. They can still pick another."><input type="checkbox" id="fDefaultSession"> Scanners start here</label>
+            <div class="opt-desc">Every scanner opens on this count at sign-on, so nobody picks the wrong one. They can still choose another.</div></div>
+          <div class="opt">
+            <label for="fLayout">Map drawing</label>
+            <select id="fLayout"><option value="">Schematic (auto from bin codes)</option></select>
+            <div class="opt-desc">What the dashboard’s floor map draws: a schematic worked out from the bin codes, or the site’s own rack layout drawing. The scanners are not affected.</div>
+          </div>
+        </div>
+
+        <div class="fieldset">
+          <div class="legend">Second counts</div>
+          <div class="opt"><label class="cb"><input type="checkbox" id="fAutoRecount"> Raise them automatically</label>
+            <div class="opt-desc">When a first count disagrees with the report by more than the thresholds below, a second count of that bin is raised straight away and offered on the scanners to a team that did not count it. Off: supervisors raise them by hand under Dashboard → Second counts.</div></div>
+          <div class="opt"><label class="cb" title="A bin whose second count agrees with neither the first count nor the report is counted a third time, by a team that did neither"><input type="checkbox" id="fThirdCount"> Third count when the second settles nothing</label>
+            <div class="opt-desc">A bin whose second count agrees with neither the first count nor the report is counted a third time, by a team that did neither.</div></div>
+          <div class="opt">
+            <div class="inline">
+              <div class="auto"><label class="cb" title="Every new second count is given to this team - inventory control's, say. A bin the team counted first, it never gets; that one stays open for any other team. Dashboard → Second counts hands them to other teams when it is swamped."><input type="checkbox" id="fRecountTeamOn"> Send them all to team</label></div>
+              <div class="auto"><input id="fRecountTeam" class="sm" style="width:90px" placeholder="e.g. 90" aria-label="The team the second counts go to"></div>
+            </div>
+            <div class="opt-desc">Every new second count goes to this one team, inventory control’s say, instead of any team. A bin that team counted first goes to another team.</div>
+          </div>
+          <div class="opt">
+            <div class="inline">
+              <div class="auto"><label for="fRecMinQty" title="A quantity difference smaller than this and than the percentage below does not raise a second count. 0 raises every difference.">Over</label><input id="fRecMinQty" class="sm" type="number" min="0" style="width:74px" placeholder="0"><span class="muted"> units</span></div>
+              <div class="auto"><label for="fRecMinPct" title="...or a difference of at least this percentage of the expected quantity. Either threshold is enough.">or over</label><input id="fRecMinPct" class="sm" type="number" min="0" max="100" style="width:66px" placeholder="0"><span class="muted"> %</span></div>
+              <div class="auto"><label for="fRecMinValue" title="...or a difference worth at least this much, at the report's unit cost. Any one threshold is enough. A pallet with no cost on the report is judged by cases alone.">or worth over $</label><input id="fRecMinValue" class="sm" type="number" min="0" step="0.01" style="width:90px" placeholder="0"></div>
+            </div>
+            <div class="opt-desc">How big a difference has to be to raise a second count automatically: more than this many units, <i>or</i> this percentage of what the report expected, <i>or</i> this much money at the report’s cost. Any one is enough. All at 0 sends somebody back for a one-unit difference.</div>
+          </div>
+          <div class="opt">
+            <div class="inline"><div class="auto"><label for="fRecCap" title="Stop raising automatic second counts once this many are open. 0 is no cap.">Cap open</label><input id="fRecCap" class="sm" type="number" min="0" style="width:74px" placeholder="0"></div></div>
+            <div class="opt-desc">Stop raising automatic second counts once this many are open, so the floor is not swamped. 0 is no cap.</div>
+          </div>
+          <div class="opt">
+            <div class="inline"><div class="auto"><label for="fThirdMinValue" title="With third counts on: a bin whose second count settles nothing is counted a third time by itself only when its disagreement with the report is worth at least this much. 0 sends every such bin. A bin with no costs on it is always sent.">Third count by itself only when worth over $</label><input id="fThirdMinValue" class="sm" type="number" min="0" step="0.01" style="width:90px" placeholder="0"></div></div>
+            <div class="opt-desc">With third counts on, a bin is sent for its third count by itself only when the difference is worth at least this much. 0 sends every one. A bin with no cost on the report is always sent.</div>
+          </div>
+          <div class="hint" style="margin-top:8px">The money thresholds use the <b>Cost</b> column of the inventory report (or its <b>Amount</b> ÷ quantity).</div>
+        </div>
+
+        <div class="fieldset">
+          <div class="legend">Adjustments</div>
+          <div class="opt"><label class="cb" title="Every difference from the report has to be approved with a reason code before it reaches the ERP file. Off by default."><input type="checkbox" id="fRequireApproval"> Adjustments need approval</label>
+            <div class="opt-desc">Every difference from the report has to be approved, with a reason, under Reports → Adjustments before it goes in the ERP file. Off: every difference goes in.</div></div>
+          <div class="opt">
+            <div class="inline">
+              <div class="auto"><label for="fApprMinQty" title="Smaller than this and than the percentage beside it, an adjustment goes through without a signature. 0 and 0 means every one needs approving.">Approve over</label><input id="fApprMinQty" class="sm" type="number" min="0" style="width:74px" placeholder="0"><span class="muted"> units</span></div>
+              <div class="auto"><label for="fApprMinPct" title="...or at least this percentage of what the report expected. Either threshold is enough.">or over</label><input id="fApprMinPct" class="sm" type="number" min="0" max="100" style="width:66px" placeholder="0"><span class="muted"> %</span></div>
+              <div class="auto"><label for="fApprMinValue" title="...or an adjustment worth at least this much, at the report's unit cost. Any one threshold is enough.">or worth over $</label><input id="fApprMinValue" class="sm" type="number" min="0" step="0.01" style="width:90px" placeholder="0"></div>
+            </div>
+            <div class="opt-desc">With approval on, only an adjustment bigger than this needs a signature: more units, <i>or</i> this percentage, <i>or</i> this much money. Smaller ones go through. All at 0: every one needs approving.</div>
+          </div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <button class="primary" id="btnSaveSettings">Save</button>
+        <span class="muted">Saves every setting on this card for the count in the header.</span>
+      </div>
+      <div class="feedback" id="countGunMsg"></div>
     </div>
 
     <div class="card" id="offersCard">

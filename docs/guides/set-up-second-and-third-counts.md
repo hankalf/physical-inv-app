@@ -62,7 +62,7 @@ it, so inventory control can price it in the ERP and upload again.
 
 ## 3 — The settings, in order
 
-**Settings → Count setup → Count session**, with the count picked at the top of the page. Under
+**Settings → Scanners → This count on the scanners**, with the count picked at the top of the page. Under
 **Second counts**:
 
 ![](../images/guide-third-count-option.png)

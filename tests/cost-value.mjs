@@ -154,7 +154,7 @@ check('Progress: the report\'s value and the difference so far, in money', /\$5,
 await page.evaluate(() => window.appApi.showSub('adjust'));
 await page.waitForTimeout(600);
 check('Positive and negative: the tiles carry the money', /\+\$16\.59/.test(clean(await page.textContent('#pnPlusSub'))) && /-\$305\.14/.test(clean(await page.textContent('#pnMinusSub'))) && /-\$288\.55/.test(clean(await page.textContent('#pnNetSub'))), clean(await page.textContent('#pnTiles')));
-await page.goto(`${BASE}/settings`);
+await page.goto(`${BASE}/settings#gun`);
 await page.waitForSelector('#fRecMinValue');
 await pickSession(page, a.S).catch(() => {});
 await page.waitForTimeout(800);

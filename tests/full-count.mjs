@@ -51,7 +51,7 @@ check('Settings: create session, and it points at what to upload next',
   clean(await admin.textContent('#sessionMsg')).slice(0, 90));
 await admin.selectOption('#fPalletMode', 'warn'); await admin.selectOption('#fLayout', 'front-royal');
 await admin.click('#btnSaveSettings'); await admin.waitForTimeout(500);
-check('Settings: save settings (Front Royal drawing, validate w/ override, guided, comments)', /Settings saved/.test(clean(await admin.textContent('#sessionMsg'))));
+check('Settings: save settings (Front Royal drawing, validate w/ override, guided, comments)', /Settings saved/.test(clean(await admin.textContent('#countGunMsg'))));
 await (await card('#fPalletMode')).asElement().screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-session.png` });
 
 // scanners: register two, check links, remove one later

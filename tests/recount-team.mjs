@@ -100,7 +100,7 @@ const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || 
 const page = await (await browser.newContext({ viewport: { width: 1500, height: 1000 } })).newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
-await page.goto(`${BASE}/settings#start`);
+await page.goto(`${BASE}/settings#gun`);
 await signIn(page);
 await pickSession(page, S);
 await page.waitForTimeout(800);
@@ -108,7 +108,7 @@ check('Settings → Count session: Send them all to team, ticked, team 90', (awa
 await page.fill('#fRecountTeam', '');
 await page.click('#btnSaveSettings');
 await page.waitForTimeout(500);
-check('…ticked with no team is refused, asking which', /Which team/.test(await page.textContent('#sessionMsg')));
+check('…ticked with no team is refused, asking which', /Which team/.test(await page.textContent('#countGunMsg')));
 await page.fill('#fRecountTeam', '91');
 await page.click('#btnSaveSettings');
 await page.waitForTimeout(900);

@@ -126,7 +126,7 @@ const ctx = await browser.newContext({ viewport: { width: 1500, height: 1000 }, 
 const page = await ctx.newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
-await page.goto(`${BASE}/settings#start`);
+await page.goto(`${BASE}/settings#gun`);
 await signIn(page);
 await pickSession(page, S);
 await page.waitForTimeout(800);

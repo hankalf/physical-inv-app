@@ -307,8 +307,9 @@ try {
   await pick(sess.id);
   await sub('start');
   await saveCard(desk, '#readyList', 'settings-ready', 14);
-  await saveCard(desk, '#fPalletMode', 'settings-count-session');
-  await sub('gun');    await saveCard(desk, '#stepOrder', 'settings-scanner-screen');
+  await saveCard(desk, '#countdayList', 'settings-countday', 14);
+  await sub('gun');    await saveCard(desk, '#fPalletMode', 'settings-count-session');
+  await saveCard(desk, '#stepOrder', 'settings-scanner-screen');
   await saveCard(desk, '#btnBookTemplate', 'settings-barcode-book');
   await saveCard(desk, '#deviceTable', 'settings-scanners');
   await desk.uncheck('#fJobCycle').catch(() => {}); await desk.uncheck('#fJobMove').catch(() => {}); await desk.uncheck('#fJobMissing').catch(() => {});

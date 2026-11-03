@@ -203,7 +203,9 @@ Both uploads are per count. The guided setup card says what the count still lack
 
 ## 7 — The count session and its settings
 
-**Settings → Count setup → Count session.**
+**Settings → Count setup → Count session** makes, closes and deletes a count and runs a trial;
+**Settings → Scanners → This count on the scanners** holds its options - what the gun asks, how the
+floor is run, second counts, adjustments - each saying what it does.
 
 - **New count**: from **Full Counts → New count** (a full count) or *Cycle counts → Program*
   (the year's cycle session); the Count session card does both too. **Full Counts** also lists

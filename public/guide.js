@@ -481,8 +481,11 @@
     // a guide that was open stays open when the page is reloaded
     let open = '';
     try { open = sessionStorage.getItem('guide:reading') || ''; } catch { /* fine */ }
-    const g = open && guides.find((x) => `${x.edition}/${x.name}` === open);
-    if (g) openGuide(g).catch(() => {});
+    // a link straight to a guide, and a section of it: /guide?open=admin/first-full-count&at=15--give-the-teams-their-aisles
+    const want = new URLSearchParams(location.search);
+    const asked = want.get('open') && guides.find((x) => `${x.edition}/${x.name}` === want.get('open'));
+    const g = asked || (open && guides.find((x) => `${x.edition}/${x.name}` === open));
+    if (g) openGuide(g, asked ? (want.get('at') || '') : '').catch(() => {});
     await rightNow();
     ask();
   }

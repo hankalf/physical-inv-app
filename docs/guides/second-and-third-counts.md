@@ -36,7 +36,7 @@ counts side by side.
 
 ## 2 — Set it up on the count
 
-**Settings → Count setup → Count session → Second counts.** Do this before the count starts.
+**Settings → Scanners → This count on the scanners → Second counts.** Do this before the count starts.
 
 ![](../images/guide-third-count-option.png)
 
@@ -154,7 +154,7 @@ known-wrong numbers in it, and **Final report** is not offered while one is open
 
 When one team does all the second counts — inventory control's, say:
 
-1. **Settings → Count setup → Count session → Second counts**: tick **Send them all to team** and
+1. **Settings → Scanners → This count on the scanners → Second counts**: tick **Send them all to team** and
    type the team number (*90*). **Save settings**.
 2. Every new second count is given to that team, and the open ones nobody had yet go to it at once.
    Its guns have them all; the other teams' guns are offered none.

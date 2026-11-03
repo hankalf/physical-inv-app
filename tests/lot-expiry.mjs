@@ -163,7 +163,7 @@ await page.waitForTimeout(2000);
 { // the two toggles live on the Count session card under Settings now
   const sp = await browser.newPage({ viewport: { width: 1400, height: 900 } });
   await sp.goto(BASE + '/settings'); await sp.fill('#fPassword', 'changeme'); await sp.click('#btnLogin');
-  await sp.goto(BASE + '/settings#start'); await sp.waitForSelector('#scrMain.active'); await sp.waitForTimeout(1200);
+  await sp.goto(BASE + '/settings#gun'); await sp.waitForSelector('#scrMain.active'); await sp.waitForTimeout(1200);
   await sp.selectOption('#fSessionPick', String(sess.id)); await sp.waitForTimeout(800);
   check('Settings: the two questions are opt-in toggles on the count', await sp.$eval('#fAskLot', (b) => b.checked) && await sp.$eval('#fAskExpiry', (b) => b.checked));
   await sp.close();

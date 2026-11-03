@@ -50,8 +50,9 @@ export function readiness(sessionId) {
   } else {
     const def = defaultSessionId();
     if (s.status !== 'open') add('fail', `"${s.name}" is closed`, 'A closed count takes no scans. Reopen it, or make a new one.', fix('start', 'sessionCard', 'Count session'));
+    else if (s.show_on_guns === 0) add('fail', `"${s.name}" is not on the scanners`, 'Show on the scanners is unticked, so no scanner can pick it at sign-on. Tick it for count day.', fix('gun', 'countGunCard', 'This count on the scanners'));
     else if (def === s.id) add('ok', `Scanners land on "${s.name}"`, 'It is the count every scanner starts on.');
-    else add('warn', `Scanners do not land on "${s.name}"`, def ? `They start on #${def} instead - make this one the count scanners land on.` : 'No count is set as the one scanners land on, so each counter picks from a list.', fix('start', 'sessionCard', 'Count session'));
+    else add('warn', `Scanners do not land on "${s.name}"`, def ? `They start on #${def} instead - make this one the count scanners land on.` : 'No count is set as the one scanners land on, so each counter picks from a list.', fix('gun', 'countGunCard', 'This count on the scanners'));
     if (s.trial) add('warn', 'The count is still a trial run', 'Lines scanned now are rehearsal and are cleared when the trial ends. End the trial before the real count.', fix('start', 'sessionCard', 'Count session'));
     const bins = db.prepare('SELECT COUNT(*) n FROM locations WHERE session_id = ?').get(s.id).n;
     const pallets = db.prepare('SELECT COUNT(*) n FROM pallets WHERE session_id = ?').get(s.id).n;

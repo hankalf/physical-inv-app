@@ -80,6 +80,7 @@ import { recordAccess, accessMap, lookupPending } from './routes/access-map.js';
 import { badgeLabelsDocx } from './util/badge-labels.js';
 import { gearLabels, gearLabelsDocx } from './util/gear-labels.js';
 import { aisleSheet, aisleSheetDocx, aisleRows, aisleCsvRows, AISLE_COLUMNS } from './routes/aisle-sheet.js';
+import { countdayChecklist, tickCountday, countdayPrint } from './routes/countday.js';
 import { ensureTraining, resetTraining, removeTraining, trainingStatus, wallLabels, pocketCard, crewTeamList, trainingRoster, markTrained, rosterCsv, rosterSheet, pocketCardDocx, wallDocx, rosterDocx, checkoffSheet, checkoffDocx, quizSheet, quizDocx, glossarySheet, glossaryDocx } from './routes/training.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards, barcodeBook, teamCodes } from './routes/printing.js';
@@ -1135,6 +1136,24 @@ async function handleAdmin(req, res, url, m) {
   // Team plan: the teams on Teams & crew, the plan out as a file, and a plan file in
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/plan$/)) && method === 'GET') {
     return sendJson(req, res, 200, { teams: planTeams() });
+  }
+  /* the count-day checklist: what the app can see ticks itself; the rest a supervisor ticks */
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/countday$/)) && method === 'GET') {
+    const c = countdayChecklist(m[1]);
+    if (!c) throw httpError(404, 'session not found');
+    return sendJson(req, res, 200, c);
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/countday\/tick$/)) && method === 'POST') {
+    const body = await readJson(req);
+    if (!/^[a-zA-Z]+$/.test(String(body.key || ''))) throw httpError(400, 'which line?');
+    const c = tickCountday(m[1], body.key, !!body.on, actor);
+    audit(actor, body.on ? 'ticked a count-day line' : 'unticked a count-day line', body.key, m[1]);
+    return sendJson(req, res, 200, c);
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/print\/countday$/)) && method === 'GET') {
+    if (!getSession(m[1])) throw httpError(404, 'session not found');
+    audit(actor, 'printed the count-day checklist', '', m[1]);
+    return send(req, res, 200, countdayPrint(m[1]), { 'content-type': 'text/html; charset=utf-8' });
   }
   /* the aisle sheet: every aisle on the bin list, with room to write which team does it */
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/(print\/aisle-sheet|export\/aisle-sheet\.(docx|csv))$/)) && method === 'GET') {

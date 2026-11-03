@@ -201,7 +201,7 @@ supervisor. Do not create the next count on top of this one; a closed count stay
 | A scan does nothing | DataWedge is not sending ENTER | DataWedge → Basic data formatting → send ENTER |
 | A keypad covers the screen | The Keyboard button was left on | Tap Keyboard again |
 | A team never got a message | Their gun has not synced | *Read by* shows who has; an offline gun gets it next sync |
-| The map is a schematic | No rack drawing on this count | Admin: Count session → Map drawing |
+| The map is a schematic | No rack drawing on this count | Admin: Scanners → This count on the scanners → Map drawing |
 | A change to the scanner screen has not reached a gun | It lands between pallets, within about half a minute | Wait for the pallet to finish; a new app version needs the green *Update ready* bar tapped |
 | Nobody can sign in to the Dashboard | — | The admin's problem; the guns keep counting offline meanwhile |
 | You do not know what a message means | — | Paste it into **User guide → Ask the guide** |

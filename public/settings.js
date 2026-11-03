@@ -90,6 +90,77 @@
     }
   }
 
+  /* ------------------------------------------------------------ the count-day checklist */
+  const openHow = new Set();
+  async function refreshCountday() {
+    const box = $('countdayList');
+    if (!sessionId) { box.innerHTML = ''; $('countdayState').textContent = ''; $('countdayBar').style.width = '0%'; msg($('countdayMsg'), 'warn', 'No count picked yet', 'Make one below, then the checklist is about it.'); return; }
+    const c = await api.json(`/api/admin/sessions/${sessionId}/countday`);
+    clearMsg($('countdayMsg'));
+    drawCountday(c);
+  }
+  function drawCountday(c) {
+    const box = $('countdayList');
+    $('countdayState').textContent = `${c.done} of ${c.total} done`;
+    $('countdayState').className = 'tag ' + (c.done === c.total ? 'MATCH' : c.required.length ? 'off' : 'queued');
+    $('countdayBar').style.width = Math.round((c.done / c.total) * 100) + '%';
+    box.innerHTML = '';
+    const NEED = { required: 'needed', wanted: '', optional: 'optional' };
+    const guideUrl = (g) => `/guide?open=${encodeURIComponent(g.name)}&at=${encodeURIComponent(g.section)}`;
+    for (const ph of c.phases) {
+      const sec = document.createElement('div'); sec.className = 'cd-phase';
+      const h = document.createElement('h3'); h.textContent = ph.title;
+      const note = document.createElement('span'); note.className = 'muted'; note.textContent = ph.note; h.appendChild(note);
+      sec.appendChild(h);
+      for (const it of ph.items) {
+        const row = document.createElement('div');
+        row.className = `cd-item${it.done ? ' done' : ''}${it.need === 'required' ? ' required' : ''}${openHow.has(it.key) ? ' open' : ''}`;
+        row.dataset.key = it.key;
+        const tick = document.createElement('button'); tick.type = 'button'; tick.className = 'cd-box'; tick.textContent = it.done ? '✓' : '';
+        tick.title = it.auto ? 'The app ticks this one itself, from what is in the database' : it.done ? `Ticked by ${it.by}. Press to untick.` : 'Tick it when it is done';
+        tick.disabled = !!it.auto;
+        tick.setAttribute('aria-label', `${it.title}: ${it.done ? 'done' : 'not done'}`);
+        if (!it.auto) tick.onclick = async () => {
+          try { drawCountday(await api.post(`/api/admin/sessions/${sessionId}/countday/tick`, { key: it.key, on: !it.done })); }
+          catch (err) { msg($('countdayMsg'), 'err', err.message); }
+        };
+        const mid = document.createElement('div');
+        const title = document.createElement('div'); title.className = 'cd-title'; title.textContent = it.title;
+        if (NEED[it.need]) { const t = document.createElement('span'); t.className = 'tag ' + (it.need === 'required' ? 'off' : ''); t.textContent = NEED[it.need]; title.appendChild(t); }
+        if (it.auto) { const t = document.createElement('span'); t.className = 'tag'; t.textContent = 'app'; t.title = 'Ticked by the app, from what is in the database'; title.appendChild(t); }
+        const detail = document.createElement('div'); detail.className = 'cd-detail'; detail.textContent = it.detail;
+        mid.append(title, detail);
+        if (!it.auto && it.done && it.by) { const by = document.createElement('div'); by.className = 'cd-by'; by.textContent = `ticked by ${it.by} · ${new Date(it.at).toLocaleString()}`; mid.appendChild(by); }
+        const how = document.createElement('div'); how.className = 'cd-how';
+        const ol = document.createElement('ol'); ol.style.margin = '0'; ol.style.paddingLeft = '0';
+        for (const step of it.how) { const li = document.createElement('li'); li.textContent = step; ol.appendChild(li); }
+        how.appendChild(ol);
+        if (it.guide) {
+          const links = document.createElement('div'); links.className = 'cd-links';
+          const a = document.createElement('a'); a.href = guideUrl(it.guide); a.target = '_blank'; a.textContent = 'Read the guide section →'; a.style.color = 'var(--accent)'; a.style.fontWeight = '700';
+          links.appendChild(a); how.appendChild(links);
+        }
+        mid.appendChild(how);
+        const btns = document.createElement('div'); btns.className = 'cd-btns';
+        const howBtn = button(openHow.has(it.key) ? 'Hide' : 'How?', 'sm ghost', () => {
+          if (openHow.has(it.key)) openHow.delete(it.key); else openHow.add(it.key);
+          row.classList.toggle('open'); howBtn.textContent = row.classList.contains('open') ? 'Hide' : 'How?';
+        });
+        btns.appendChild(howBtn);
+        if (it.guideOnly && it.guide) btns.appendChild(button(it.label, 'sm', () => { location.href = guideUrl(it.guide); }));
+        else if (it.goto && it.label) btns.appendChild(button(it.label, 'sm' + (it.need === 'required' && !it.done ? ' primary' : ''), () => {
+          if (it.goto.page === '/settings') goTo({ page: '/settings', sub: it.goto.sub, card: it.goto.card });
+          else location.href = `${it.goto.page}${it.goto.sub ? '#' + it.goto.sub : ''}`;
+        }));
+        row.append(tick, mid, btns);
+        sec.appendChild(row);
+      }
+      box.appendChild(sec);
+    }
+  }
+  $('btnCountdayRecheck').onclick = () => refreshCountday().catch((err) => msg($('countdayMsg'), 'err', err.message));
+  $('btnCountdayPrint').onclick = () => { if (!sessionId) return; const q = new URLSearchParams({ t: api.token }); window.open(`/api/admin/sessions/${sessionId}/print/countday?${q}`, '_blank'); };
+
   /* ------------------------------------------------------------ accounts */
   async function refreshMe() {
     me = await api.json('/api/admin/me');
@@ -2373,9 +2444,11 @@
     renderTrial(s);
     if (!s) {
       $('sessionCardSub').textContent = 'no count session yet — create one below';
+      $('countGunSub').textContent = 'no count yet — make one under Count setup first';
       return;
     }
     $('sessionCardSub').textContent = `#${s.id} · ${s.mode === 'cycle' ? 'cycle count' : 'full count'} · ${s.status}`;
+    $('countGunSub').textContent = `${s.name} · #${s.id} · ${s.status}`;
     $('fPalletMode').value = s.pallet_mode;
     $('fGuided').checked = !!s.guided;
     $('fAskComments').checked = !!s.ask_comments;
@@ -2501,9 +2574,9 @@
     } catch (err) { msg($('sessionMsg'), 'err', err.message); }
   };
   $('btnSaveSettings').onclick = async () => {
-    if (!needSession($('sessionMsg'))) return;
+    if (!needSession($('countGunMsg'))) return;
     try {
-      if ($('fRecountTeamOn').checked && !$('fRecountTeam').value.trim()) { msg($('sessionMsg'), 'err', 'Which team?', 'Type the team number the second counts go to, or untick Send them all to team.'); $('fRecountTeam').focus(); return; }
+      if ($('fRecountTeamOn').checked && !$('fRecountTeam').value.trim()) { msg($('countGunMsg'), 'err', 'Which team?', 'Type the team number the second counts go to, or untick Send them all to team.'); $('fRecountTeam').focus(); return; }
       const saved = await api.post(`/api/admin/sessions/${sessionId}/settings`, {
         palletMode: $('fPalletMode').value, guided: $('fGuided').checked, askComments: $('fAskComments').checked,
         autoRecount: $('fAutoRecount').checked, thirdCount: $('fThirdCount').checked, layout: $('fLayout').value,
@@ -2521,12 +2594,14 @@
         await refreshDefaultSession();
       }
       const handed = saved && saved.recountTeamHanded;
-      msg($('sessionMsg'), 'ok', 'Settings saved. Scanners pick them up within about half a minute.',
+      msg($('countGunMsg'), 'ok', 'Settings saved. Scanners pick them up within about half a minute.',
         [defaultSessionId === sessionId ? 'Every scanner will land on this count at sign-on.' : '',
           handed && handed.assigned ? `${handed.assigned} open second count${handed.assigned === 1 ? '' : 's'} went to team ${handed.team}${handed.left ? `; ${handed.left} stay open for other teams (team ${handed.team} counted those bins first)` : ''}.` : ''].filter(Boolean).join(' '));
       await loadSessions();
-    } catch (err) { msg($('sessionMsg'), 'err', err.message); }
+    } catch (err) { msg($('countGunMsg'), 'err', err.message); }
   };
+  // Count setup points at where the count's settings live now
+  for (const a of document.querySelectorAll('[data-goto-sub]')) a.addEventListener('click', (e) => { e.preventDefault(); goTo({ page: '/settings', sub: a.dataset.gotoSub, card: 'countGunCard' }); });
   $('btnCloseSession').onclick = async () => {
     const s = sessions.find((x) => x.id === sessionId);
     if (!s) return;
@@ -2573,9 +2648,10 @@
 
   // the session bar only means anything to the panes that act on a session
   document.addEventListener('subshow', (e) => {
-    $('scopeBar').hidden = !['lists', 'erp', 'start'].includes(e.detail);   // the panes that act on a count
+    $('scopeBar').hidden = !['lists', 'erp', 'start', 'gun'].includes(e.detail);   // the panes that act on a count
     if (e.detail === 'start') {
       refreshSetup().catch((err) => msg($('startMsg'), 'err', err.message));
+      refreshCountday().catch(() => {});
       refreshReady().catch(() => {});
     }
   });
@@ -2586,6 +2662,7 @@
     applySessionCard();
     refreshAisles().catch(() => {});
     refreshSetup().catch(() => {});
+    refreshCountday().catch(() => {});
     refreshReady().catch(() => {});
   };
 
@@ -2651,6 +2728,7 @@
     await refreshDefaultSession().catch(() => {});
     await loadSessions();
     await refreshSetup().catch(() => {});
+    await refreshCountday().catch(() => {});
     await refreshReady().catch(() => {});
   }
 

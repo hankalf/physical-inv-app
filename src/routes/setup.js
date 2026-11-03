@@ -85,7 +85,7 @@ export function setupState(sessionId) {
         title: 'Pick the rack drawing',
         why: 'Draws progress over the real floor plan instead of a schematic.',
         detail: s.layout ? `using ${s.layout}` : 'on the schematic',
-        goto: { page: '/settings', sub: 'start' }, label: 'Choose one',
+        goto: { page: '/settings', sub: 'gun' }, label: 'Choose one',
       },
       {
         key: 'blocks', need: 'wanted', done: blocked > 0,

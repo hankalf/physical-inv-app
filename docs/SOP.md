@@ -990,6 +990,21 @@ Run it the afternoon before, and again first thing. **Check again** re-reads it 
 
 *Ready for count day: red first, then amber, then what is already right — each with a way to the fix.*
 
+### Step 11b — The count-day checklist
+
+**Settings → Count setup → Count-day checklist.** Everything a count day needs, in the order it
+happens — the week before, the day before, the morning, during, and closing out. Each line has
+**How?**: the steps in a few words, and a link to the section of the first-full-count guide with the
+whole story; its button takes you to the place in the app. A line marked *app* ticks itself from the
+database and the log — the bin list is up, the plan is queued, the aisle sheet was printed, a backup
+was taken — and cannot be ticked by hand. The rest a supervisor ticks as it is done, and the tick
+says who and when. Ticks are kept per count, so the next count starts with a clean list.
+**🖨 Print the checklist** puts the same lines on paper, with the boxes.
+
+![](images/settings-countday.png)
+
+*The count-day checklist: the phases of the day, each line with how, where, and whether it is done.*
+
 ### Step 12 — Check the guided setup
 
 **Settings → Count setup.**
@@ -1009,7 +1024,7 @@ scanners, the scanner screen, racking blocks, a crew roster and a team plan.
 
 ### Step 13 — Set the count's options
 
-**Settings → Count setup → Count session.** These apply to the count picked at the top of the page,
+**Settings → Scanners → This count on the scanners.** These apply to the count picked at the top of the page,
 and a scanner that is already counting picks up a change within about half a minute. The
 questions it asks change between pallets, never mid-line.
 
@@ -1040,7 +1055,7 @@ questions it asks change between pallets, never mid-line.
 
 ![](images/settings-count-session.png)
 
-*Settings &rarr; Count setup &rarr; Count session: every option above, on one card, for the count picked at the top of the page.*
+*Settings &rarr; Scanners &rarr; This count on the scanners: every option above, on one card, each saying what it does, for the count picked at the top of the page.*
 
 ### Step 13a — A trial run, before the real count
 
@@ -1902,7 +1917,7 @@ supervisor.
   - **it agrees with the report** — the first count was wrong, and the line now matches;
   - **it agrees with neither** — nobody knows which number is right. That is what a third count is for.
 - **One team for the second counts.** If one team does them all — inventory control's, say —
-  tick **Send them all to team** in the count's settings (*Settings → Count setup → Count session →
+  tick **Send them all to team** in the count's settings (*Settings → Scanners → This count on the scanners →
   Second counts*) and type its team number. Every new second count is given to that team, and the
   open ones nobody had yet go to it at once. It stays blind: a bin that team counted first is never
   its own second count — that one stays open for any other team — and a third count only goes to it
@@ -1914,7 +1929,7 @@ supervisor.
   **Team** box on each row still moves one at a time. Untick it, and new second counts are for any
   team again; the ones already handed out stay where they are.
 - **Third count.** Tick **Third count when the second settles nothing** in the count's settings
-  (*Settings → Count setup → Count session → Second counts*; off on a new count). From then on a bin
+  (*Settings → Scanners → This count on the scanners → Second counts*; off on a new count). From then on a bin
   whose second count agrees with neither its first count nor the report is sent back a **third
   time**, by a team that did **neither** count — on the gun it reads *THIRD COUNT · bin …* — and
   its count stands over both. Judged when the second count's lines reach the server, so a gun that
@@ -2357,7 +2372,7 @@ description (*… Position # 001 – Front*), or, where the list does not say, f
 | The browser's address bar is in the way | Same thing — the app is not installed | As above. For a device that should run nothing else, use Zebra's Enterprise Home Screen |
 | Gun: *"Team N is counting aisle X"* | Another team holds that racking block | Wait, or hand the other aisle back first |
 | Second-count list is enormous | Thresholds are at 0 | Set **Recount over** and **or over %**, and a **cap** (Part 3, step 13) |
-| The map is a schematic, not your drawing | No rack drawing on this count | Settings → Count setup → Count session → **Map drawing** |
+| The map is a schematic, not your drawing | No rack drawing on this count | Settings → Scanners → This count on the scanners → **Map drawing** |
 | A reason code edit "did not reach" a gun | It takes up to about half a minute, and only lands between pallets; a gun on an old build does not take it at all | Wait for the counter to finish the pallet they are on; check the build line on the sign-on screen matches the server |
 | Can nobody sign in? | All logins lost | The superadmin is made from the Railway variables the first time the app starts; if it was deleted or demoted later, set `SUPERADMIN_USER` to a new username and restart, which makes a fresh admin login |
 | Numbers look wrong after an ERP import | The inventory report moved on | Re-upload it (an upload adds to and updates what is loaded), then re-read the pallet report. Throwing the loaded report away first — **Override** — is the site admin's alone |

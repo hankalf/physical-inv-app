@@ -397,7 +397,9 @@ block, so two teams are never working the same racking from both sides.
 
 ## 14 — The count's options
 
-**Settings → Count setup → Count session**, with the count in the picker.
+**Settings → Scanners → This count on the scanners**, with the count in the picker. Every scanner
+setting is on the Scanners tab: the scanners themselves, what they offer, how the counting screen is
+put together, and this card for the count picked at the top. Each option on it says what it does.
 
 | Option | What it does | Suggested for a first count |
 |---|---|---|
@@ -485,6 +487,13 @@ type **CLEAR**. Every counted line goes, while the lists, the plan and the setti
 
 ## 17 — The day before: Ready for count day
 
+**Settings → Count setup → Count-day checklist.** Everything a count day needs, in the order it
+happens: the week before, the day before, the morning, during, and closing out. Each line has
+**How?** with the steps in a few words and a link to the section of this guide, and a button to the
+place in the app. A line marked *app* ticks itself from the database and the log: the bin list is up,
+the plan is queued, a backup was taken. The rest you tick as you go, and the tick says who and when.
+**🖨 Print the checklist** puts it on paper with the same boxes. Ticks are kept per count.
+
 **Settings → Count setup → Ready for count day.** A check of everything a count day needs, worked out
 fresh each time the page opens. Red is something that will stop the count. Amber works, but you would
 want to know. Each line has a button to the card that fixes it.
@@ -509,7 +518,7 @@ the scanners, the counting screen, the racking blocks, the crew and the team pla
 ## 18 — Count day: the morning
 
 1. Open **Settings → Count setup → Ready for count day** and clear anything red.
-2. On **Count session**, check **Show on the scanners** and **Scanners start here** are both on, and
+2. On **Scanners → This count on the scanners**, check **Show on the scanners** and **Scanners start here** are both on, and
    that it is not still a trial run.
 3. Check **Settings → Scanners → Jobs on the sign-on screen** has **Full count** alone.
 4. Charge the scanners and put the team QR cards out.

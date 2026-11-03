@@ -42,8 +42,8 @@ Hand the admin this list a day ahead, filled in:
 | Create the count, name it, make it the scanners' default | Settings → Count setup → Count session |
 | Upload the bin list; pair the racking blocks | Settings → Lists & racking |
 | Upload each system's inventory report, naming the system | Settings → Lists & racking → Inventory report |
-| Thresholds: Recount over __ units / __ %, cap __; approvals on/off, threshold __ | Count session options |
-| Pallet check: off / warn / strict; guided bins on; the map drawing | Count session options |
+| Thresholds: Recount over __ units / __ %, cap __; approvals on/off, threshold __ | Scanners → This count on the scanners |
+| Pallet check: off / warn / strict; guided bins on; the map drawing | Scanners → This count on the scanners |
 | Scanners registered, links opened, app installed, charged | Settings → Scanners |
 | Jobs on the scanners: full count only for count day | Settings → Scanners → Jobs on the scanners |
 | A trial run, if the crew is new; End the trial before the real start | Count session → Trial run |
