@@ -155,13 +155,15 @@ export class Docx {
    * widths in twips (1440 per inch). Dashed borders by default: these are cards to cut.
    */
   table(rows, opts) { this.body.push(this.tableXml(rows, opts)); return this; }
-  tableXml(rows, { widths, border = 'dashed', borderColor = '888888', cellMargin = 160, rowHeight = 0, keepTogether = true, headerShade = '', indent = null } = {}) {
+  tableXml(rows, { widths, border = 'dashed', borderColor = '888888', cellMargin = 160, rowHeight = 0, keepTogether = true, headerShade = '', indent = null, repeatHeader = false } = {}) {
     // cell padding: one number, or { top, right, bottom, left }
     const pad = typeof cellMargin === 'object' ? { top: 0, right: 0, bottom: 0, left: 0, ...cellMargin } : { top: cellMargin, right: cellMargin, bottom: cellMargin, left: cellMargin };
     const b = (side) => `<w:${side} w:val="${border}" w:sz="8" w:space="0" w:color="${borderColor}"/>`;
     const borders = `<w:tblBorders>${['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(b).join('')}</w:tblBorders>`;
     const grid = `<w:tblGrid>${widths.map((w) => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>`;
-    const trs = rows.map((cells, r) => `<w:tr>${rowHeight ? `<w:trPr><w:trHeight w:val="${rowHeight}" w:hRule="exact"/>${keepTogether ? '<w:cantSplit/>' : ''}</w:trPr>` : keepTogether ? '<w:trPr><w:cantSplit/></w:trPr>' : ''}${cells.map((c, i) => {
+    // the first row repeated at the top of every page the table runs onto
+    const head = (r) => (repeatHeader && r === 0 ? '<w:tblHeader/>' : '');
+    const trs = rows.map((cells, r) => `<w:tr>${rowHeight ? `<w:trPr><w:trHeight w:val="${rowHeight}" w:hRule="exact"/>${keepTogether ? '<w:cantSplit/>' : ''}${head(r)}</w:trPr>` : keepTogether || head(r) ? `<w:trPr>${keepTogether ? '<w:cantSplit/>' : ''}${head(r)}</w:trPr>` : ''}${cells.map((c, i) => {
       const cell = typeof c === 'string' ? { xml: [this.paragraphXml(c, { after: 0, base: r === 0 && headerShade ? { bold: true } : {} })] } : Array.isArray(c) ? { xml: c } : c;
       const shade = cell.shade || (r === 0 && headerShade ? headerShade : '');
       const tcpr = `<w:tcPr><w:tcW w:w="${widths[i]}" w:type="dxa"/>${shade ? `<w:shd w:val="clear" w:color="auto" w:fill="${shade}"/>` : ''}${cell.valign ? `<w:vAlign w:val="${cell.valign}"/>` : ''}</w:tcPr>`;

@@ -2335,6 +2335,24 @@
     api.download(`/api/admin/sessions/${sessionId}/export/plan.csv`, `plan-${String((s && s.name) || 'count').replace(/[^A-Za-z0-9 _-]+/g, '').trim().replace(/\s+/g, '-') || 'count'}.csv`)
       .catch((err) => msg($('planFileMsg'), 'err', err.message));
   };
+  /* the aisle sheet: printed, as Word, or as a CSV - the aisles of the bin list with room to write */
+  const aisleSheetQuery = () => ($('fAisleSheetPlan').checked ? 'plan=1' : '');
+  const countFileName = () => String((currentSession() && currentSession().name) || 'count').replace(/[^A-Za-z0-9 _-]+/g, '').trim().replace(/\s+/g, '-') || 'count';
+  $('btnAisleSheet').onclick = () => {
+    if (!needSession($('planFileMsg'))) return;
+    const q = new URLSearchParams({ t: api.token });
+    if ($('fAisleSheetPlan').checked) q.set('plan', '1');
+    window.open(`/api/admin/sessions/${sessionId}/print/aisle-sheet?${q}`, '_blank');
+  };
+  $('btnAisleSheetTop').onclick = () => $('btnAisleSheet').click();
+  $('btnAisleSheetDocx').onclick = () => {
+    if (!needSession($('planFileMsg'))) return;
+    api.download(`/api/admin/sessions/${sessionId}/export/aisle-sheet.docx${aisleSheetQuery() ? '?' + aisleSheetQuery() : ''}`, `aisle-sheet-${countFileName()}.docx`).catch((err) => msg($('planFileMsg'), 'err', err.message));
+  };
+  $('btnAisleSheetCsv').onclick = () => {
+    if (!needSession($('planFileMsg'))) return;
+    api.download(`/api/admin/sessions/${sessionId}/export/aisle-sheet.csv${aisleSheetQuery() ? '?' + aisleSheetQuery() : ''}`, `aisle-sheet-${countFileName()}.csv`).catch((err) => msg($('planFileMsg'), 'err', err.message));
+  };
   $('btnPlanUpload').onclick = async () => {
     if (!needSession($('planFileMsg'))) return;
     const file = $('fPlanFile').files[0];

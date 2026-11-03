@@ -79,6 +79,7 @@ import { clientIp, waitFor, noteFailure, noteSuccess, listLocks, unlockLogin, un
 import { recordAccess, accessMap, lookupPending } from './routes/access-map.js';
 import { badgeLabelsDocx } from './util/badge-labels.js';
 import { gearLabels, gearLabelsDocx } from './util/gear-labels.js';
+import { aisleSheet, aisleSheetDocx, aisleRows, aisleCsvRows, AISLE_COLUMNS } from './routes/aisle-sheet.js';
 import { ensureTraining, resetTraining, removeTraining, trainingStatus, wallLabels, pocketCard, crewTeamList, trainingRoster, markTrained, rosterCsv, rosterSheet, pocketCardDocx, wallDocx, rosterDocx, checkoffSheet, checkoffDocx, quizSheet, quizDocx, glossarySheet, glossaryDocx } from './routes/training.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards, barcodeBook, teamCodes } from './routes/printing.js';
@@ -1134,6 +1135,17 @@ async function handleAdmin(req, res, url, m) {
   // Team plan: the teams on Teams & crew, the plan out as a file, and a plan file in
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/plan$/)) && method === 'GET') {
     return sendJson(req, res, 200, { teams: planTeams() });
+  }
+  /* the aisle sheet: every aisle on the bin list, with room to write which team does it */
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/(print\/aisle-sheet|export\/aisle-sheet\.(docx|csv))$/)) && method === 'GET') {
+    const sess = getSession(m[1]);
+    if (!sess) throw httpError(404, 'session not found');
+    const withPlan = url.searchParams.get('plan') === '1';
+    const name = String(sess.name || 'count').replace(/[^A-Za-z0-9 _-]+/g, '').trim().replace(/\s+/g, '-') || 'count';
+    audit(actor, 'printed the aisle sheet', `${m[3] || 'print'}${withPlan ? ', with the plan' : ''}`, m[1]);
+    if (m[3] === 'csv') return sendCsv(req, res, `aisle-sheet-${name}.csv`, toCsv(aisleCsvRows(aisleRows(m[1], { withPlan })), AISLE_COLUMNS));
+    if (m[3] === 'docx') return send(req, res, 200, aisleSheetDocx(m[1], { withPlan }), { 'content-type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'content-disposition': `attachment; filename="aisle-sheet-${name}.docx"`, 'cache-control': 'no-cache' });
+    return send(req, res, 200, aisleSheet(m[1], { withPlan }), { 'content-type': 'text/html; charset=utf-8' });
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/plan\.csv$/)) && method === 'GET') {
     const sess = getSession(m[1]);

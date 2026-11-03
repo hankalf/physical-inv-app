@@ -448,6 +448,12 @@ onto the list to take it off the plan.
 **Or by hand:** press **Queue aisles for this team** on an empty team, or fill the row above the
 board (team, aisles in order, levels, start from), and press **Queue**.
 
+**On paper first:** press **🖨 Aisle sheet** once the bin list is up. It prints every aisle, a row
+each, with its zone, racking block, bins and levels. Beside each aisle are columns to write in: the
+1st shift and 2nd shift team, the levels counted, the start and finish times, and who checked it.
+Under **⇅ Plan file**, the same sheet comes as **⬇ Word** or **⬇ CSV**. Tick **With the plan as it
+is now** to print the teams already queued in their columns, leaving the rest blank.
+
 **Or from a file:** press **⇅ Plan file**. **⬇ Sample plan** gives you the layout (Team, Aisle, Levels,
 Start). Fill it in and use **Upload a plan**. **⬇ Export the plan (CSV)** downloads the current plan
 to rework in Excel.

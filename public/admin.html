@@ -336,6 +336,7 @@
           <button type="button" class="primary" id="btnQuickQueue" disabled>Pick a team and an aisle</button>
           <button type="button" class="ghost" id="btnQaClear">Clear</button>
           <span class="spacer"></span>
+          <button type="button" class="fit" id="btnAisleSheetTop" title="Print every aisle on the bin list, a row each, with room to write which team does it on each shift - Word and CSV under ⇅ Plan file">🖨 Aisle sheet</button>
           <button type="button" class="fit" id="btnPlanFileTools" title="The plan as a file: export it, upload one, or start from the sample">⇅ Plan file</button>
           <button type="button" class="fit ghost" id="btnPlanHelp" title="How the plan works" aria-label="How the plan works">?</button>
         </div>
@@ -361,6 +362,12 @@
           <div class="auto"><label class="cb" title="Drop every aisle still queued or being counted first; finished aisles are left alone"><input type="checkbox" id="fPlanFileReplace"> Replace what is queued</label></div>
           <div class="auto"><button class="primary fit" id="btnPlanUpload">Upload</button></div>
           <div class="auto"><a id="lnkPlanSample" href="/templates/plan-template.csv" download="plan-template.csv" style="color:var(--accent);font-weight:700;text-decoration:none">⬇ Sample plan</a></div>
+        </div>
+        <div class="inline" style="margin-top:6px">
+          <div class="auto"><button class="fit" id="btnAisleSheet" title="Every aisle on the bin list, a row each, with room to write the team for each shift, the levels, the times and who checked it">🖨 Aisle sheet to fill in</button></div>
+          <div class="auto"><button class="fit" id="btnAisleSheetDocx">⬇ Word</button></div>
+          <div class="auto"><button class="fit" id="btnAisleSheetCsv">⬇ CSV</button></div>
+          <div class="auto"><label class="cb" title="Print the teams already queued in the team columns; the rest stay blank to write in"><input type="checkbox" id="fAisleSheetPlan"> With the plan as it is now</label></div>
         </div>
         <div class="hint" style="margin-top:4px">Columns: <b>Team</b>, <b>Aisle</b>, <b>Levels</b> (A-C, D-F, A-F), and <b>Start</b> (<i>001 end</i> or <i>far end</i>, optional). An exported plan comes back as it is — its <b>Status</b> column is for reading and is ignored. Every team on <a href="/teams" style="color:var(--accent)">Teams &amp; crew</a> has a column below, queued or not.</div>
         <div class="feedback" id="planFileMsg"></div>
