@@ -295,7 +295,7 @@ on the office pages and the scanners — and back on when the time comes.
    scanners' sign-on screen, for every login, admins included. The **Alerts** tab stays, because
    an SOS from the floor needs an answer, and so does the **Testing Suite**, because that is where
    the count is practiced; untick either in the list if it should go too.
-2. Or tick the parts one by one and press **Save**.
+2. Or tick the parts one by one; each tick saves by itself.
 3. **Everything on** brings it all back, exactly as it was.
 
 ![](images/settings-features.png)
@@ -885,7 +885,7 @@ own stylesheet, so it cannot drift from reality.
   **+** to change it, or type a number. **0** turns the clock off and waits for the
   counter. Typing or tapping a chip always stops the countdown, whatever it is set to.
 
-Press **Save**. Scanners pick the change up within about half a minute, between pallets
+A change saves by itself. Scanners pick it up within about half a minute, between pallets
 — nobody has to sign out.
 
 ![](images/settings-scanner-screen.png)

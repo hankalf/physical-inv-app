@@ -235,7 +235,7 @@
       <h2>This count on the scanners <span class="muted" id="countGunSub"></span></h2>
       <div class="hint" style="margin-top:0">
         Settings for the count picked in the header. A scanner already counting picks up a change
-        within about half a minute; the questions it asks change between pallets, never mid-line. Press <b>Save</b> at the foot of the card.
+        within about half a minute; the questions it asks change between pallets, never mid-line. A change saves by itself.
       </div>
       <div class="fieldsets">
         <div class="fieldset">
@@ -320,7 +320,7 @@
       </div>
       <div class="toolbar">
         <button class="primary" id="btnSaveSettings">Save</button>
-        <span class="muted">Saves every setting on this card for the count in the header.</span>
+        <span class="muted">Every setting on this card is for the count in the header.</span>
       </div>
       <div class="feedback" id="countGunMsg"></div>
     </div>
@@ -987,8 +987,8 @@
         Settings and the guide. A page already open sees the change when it next loads; a scanner the next time it is online.
       </div>
       <div class="inline" style="margin-top:10px">
-        <button class="primary fit" id="btnFeaturesCountOnly">Full counts and second counts only</button>
-        <button class="ghost fit" id="btnFeaturesAll">Everything on</button>
+        <button class="primary fit" id="btnFeaturesCountOnly" data-no-autosave>Full counts and second counts only</button>
+        <button class="ghost fit" id="btnFeaturesAll" data-no-autosave>Everything on</button>
         <span class="muted">— the first keeps <b>Alerts</b> (an SOS from the floor needs an answer) and the <b>Testing Suite</b> (where the count is practiced); untick them below if they should go too</span>
       </div>
       <div class="features" id="featuresList"></div>

@@ -187,7 +187,7 @@ await page.screenshot({ path: `${S}screenshots/scanner-prompts.png`, clip: { x: 
 const log = await j(await fetch(`${BASE}/api/admin/audit?limit=20`, { headers: A }));
 check('Changing them is recorded in the log', log.some((r) => r.action === 'changed the scanner reasons'));
 await page.click('#btnResetPrompts'); await page.waitForTimeout(400);
-check('Settings: the defaults can be restored', /press Save/.test(await page.textContent('#promptMsg')));
+check('Settings: the defaults can be restored, and saved by themselves', /Back to the defaults — saved/.test(await page.textContent('#promptMsg')) || /Saved/.test(await page.textContent('#offersMsg')), `prompt: ${await page.textContent('#promptMsg')} / offers: ${await page.textContent('#offersMsg')}`);
 
 /* ---------------- comments required, from the one Save ---------------- */
 await page.fill('#fNewComment', 'Frozen to the rack'); await page.click('#btnAddComment'); await page.waitForTimeout(200);

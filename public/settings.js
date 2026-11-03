@@ -159,6 +159,16 @@
     }
   }
   $('btnCountdayRecheck').onclick = () => refreshCountday().catch((err) => msg($('countdayMsg'), 'err', err.message));
+  /* the settings cards save themselves; the integrations (Teams channel, Google Drive, OneDrive,
+     the pallet system, Systems) keep their Save, since an address or a key is typed in full first */
+  api.autosave($('countGunCard'), $('btnSaveSettings'), { okToSave: () => !($('fRecountTeamOn').checked && !$('fRecountTeam').value.trim()) });
+  api.autosave($('offersCard'), $('btnSaveOffers'), { skip: ['fNewComment', 'fNewOverride', 'fNewSos', 'fNewIssue'] });
+  api.autosave($('layoutCard'), $('btnSaveGun'), { skip: ['fDevice', 'fPreviewStep'] });
+  api.autosave($('idleCard'), $('btnSaveIdle'));
+  api.autosave($('reasonsCard'), $('btnSaveReasons'), { skip: ['fNewReason'] });
+  api.autosave($('featuresCard'), $('btnFeaturesSave'));
+  api.autosave($('crewBoardCard'), $('btnCrewBoardSave'));
+  api.autosave($('siteNameCard'), $('btnSiteNameSave'));
   $('btnCountdayPrint').onclick = () => { if (!sessionId) return; const q = new URLSearchParams({ t: api.token }); window.open(`/api/admin/sessions/${sessionId}/print/countday?${q}`, '_blank'); };
 
   /* ------------------------------------------------------------ accounts */
@@ -978,7 +988,8 @@
     const d = promptState.defaults || promptDefaults || { comments: [], overrides: [] };
     promptState = { ...promptState, ...d };
     renderPrompts();
-    msg($('promptMsg'), 'warn', 'Defaults loaded — press Save to keep them.');
+    await $('btnSavePrompts').onclick();
+    msg($('promptMsg'), 'warn', 'Back to the defaults — saved.');
   };
 
   /* ------------------------------------------------- adjustment reasons

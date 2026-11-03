@@ -864,8 +864,10 @@
       ],
     };
     renderRules(); renderReachTable(); renderEquipPicker();
-    msg($('rulesMsg'), 'warn', 'Defaults loaded — press Save rules to keep them.');
+    $('btnSaveRules').click();
   };
+  // a rule just added, its levels not typed yet, is not saved away from under the typist
+  window.appApi.autosave($('rules').closest('.card'), $('btnSaveRules'), { okToSave: () => (state.config.levelRules || []).every((r) => String(r.levels || '').trim()) });
 
   /* ------------------------------------------------------------ boot */
   document.addEventListener('auth', (e) => {

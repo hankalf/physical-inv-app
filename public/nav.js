@@ -197,6 +197,52 @@
       for (const k of Object.keys(sessionStorage)) if (k.startsWith('sub:') || k === 'searchGoto' || k === 'guide:journey') sessionStorage.removeItem(k);
     } catch { /* private window */ }
   }
+  /*
+   * Auto-save: a card whose changes save themselves.
+   *
+   * A tick, a choice or a typed value saves after a moment (typing waits until
+   * it stops); a list edited with its own Add / Remove / up buttons saves after
+   * the click; the counting screen's drag-and-drop saves on the drop. The Save
+   * button stays, now a reassurance: it says Saving… then Saved ✓, and still
+   * works when pressed. The handler on the button is what saves, so what is
+   * saved, and what it says, is exactly what Save would have done.
+   */
+  api.autosave = (card, btn, { skip = [], okToSave = () => true, typingMs = 900 } = {}) => {
+    if (!card || !btn || btn.dataset.autosave) return;
+    btn.dataset.autosave = '1';
+    const skipSet = new Set(skip);
+    const label = btn.textContent;
+    let timer = 0, lastClick = 0, running = false, again = false;
+    const toggle = (t) => /^(checkbox|radio)$/.test(t.type) || t.tagName === 'SELECT';
+    const isField = (t) => t && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName) && !skipSet.has(t.id) && !/^(file|search|button|submit)$/.test(t.type) && !t.closest('[data-no-autosave]');
+    const run = async () => {
+      if (running) { again = true; return; }
+      if (!okToSave()) return;
+      running = true; lastClick = 0;
+      btn.textContent = 'Saving…';
+      try { await Promise.resolve(btn.onclick && btn.onclick(new Event('autosave'))); } catch { /* the handler shows its own message */ }
+      btn.textContent = 'Saved ✓';
+      setTimeout(() => { if (btn.textContent === 'Saved ✓') btn.textContent = label; }, 2500);
+      running = false;
+      if (again) { again = false; kick(300); }
+    };
+    const kick = (ms) => { clearTimeout(timer); timer = setTimeout(run, ms); };
+    card.addEventListener('change', (e) => { if (isField(e.target)) kick(toggle(e.target) ? 200 : 500); });
+    card.addEventListener('input', (e) => { if (isField(e.target) && !toggle(e.target)) kick(typingMs); });
+    card.addEventListener('dragend', () => kick(400));
+    // a list edited by its own buttons: the click, then the re-render it causes, is the change
+    card.addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b || b === btn || !card.contains(b) || b.closest('[data-no-autosave]')) return;
+      if (/Save|Reset|Print|Download|Copy|Export|Sample|Preview|Test|Check|Send|Upload|Connect|Qr|Cards/i.test(b.id || '')) return;
+      lastClick = Date.now();
+    }, true);
+    new MutationObserver(() => { if (Date.now() - lastClick < 1500) kick(500); }).observe(card, { childList: true, subtree: true });
+    const note = document.createElement('span');
+    note.className = 'muted autosave-note'; note.textContent = 'saves as you change it';
+    note.style.fontSize = '12px'; note.style.marginLeft = '8px';
+    btn.insertAdjacentElement('afterend', note);
+  };
   api.embed = EMBED;
   window.appApi = api;
 

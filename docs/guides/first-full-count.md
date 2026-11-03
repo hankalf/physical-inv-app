@@ -101,7 +101,7 @@ admin to press **Unlock** on your row under Settings → Logins.
 1. Press **Full counts and second counts only**.
 2. Cycle counts, Front bins, Not in Location, the Map, Adjustments and Reports leave the side panel,
    the dashboard and the scanners.
-3. **Tick Adjustments and Reports back on and press Save.** A full count needs both to finish
+3. **Tick Adjustments and Reports back on.** It saves by itself. A full count needs both to finish
    (steps 22 and 23).
 
 **How you know it worked:** the side panel no longer shows Cycle counts, Front bins or Not in
@@ -116,7 +116,7 @@ Nothing is deleted. **Everything on** brings every part back, exactly as it was.
 **Settings → Site & systems.** Optional, but it makes every screen look like yours.
 
 1. **Site name** — the app's name (*Full Harvest Inventory* to start) and the location under it.
-   **Save**. It shows at once on every office page, the sign-in, the scanners and the office board.
+   It saves as you type, and shows at once on every office page, the sign-in, the scanners and the office board.
 2. **Logo** — upload your company's mark. Tick the box to show it on the scanners too.
 3. **Appearance** — the colors and text size. This is kept per computer, so the office TV can be
    dark and a desk light.
@@ -295,7 +295,7 @@ preview on the right is drawn at the real screen size of the scanner.
    | **Keep the screen awake** | Stops the screen sleeping between bays | On |
    | **Update itself after a deploy** | The scanner takes a new version between pallets, never mid-line | On |
 
-3. Press **Save**. Scanners pick it up within about half a minute, between pallets.
+3. It saves as you change it. Scanners pick it up within about half a minute, between pallets.
 
 ![](../images/settings-scanner-screen.png)
 
@@ -417,7 +417,7 @@ put together, and this card for the count picked at the top. Each option on it s
 | **Show on the scanners** | Untick to keep the count off the scanners while you set it up | On, once the lists are in |
 | **Scanners start here** | Every scanner lands on this count at sign-on | On, on count day |
 
-Press **Save** at the foot of the card. A scanner already counting picks a change up between
+A change saves by itself — the Save button says *Saved ✓* — and a scanner already counting picks it up between
 pallets.
 
 > **Set the thresholds.** With them at 0, a one-unit difference sends someone back, and by
