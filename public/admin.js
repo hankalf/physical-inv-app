@@ -467,7 +467,7 @@
       const sub = document.createElement('span'); sub.className = 'sub';
       sub.textContent = ct ? [ct.reach ? `reaches ${ct.reachLabel}` : 'reach unknown', ct.people ? `${ct.people} ${ct.people === 1 ? 'person' : 'people'}` : 'nobody on it'].join(' · ') : 'not on Teams & crew';
       b.appendChild(sub);
-      b.onclick = () => { qa.team = qa.team === name ? '' : name; qa.levels = new Set(ct && ct.reach ? [...ct.reach] : [...'ABCDEF']); qaRender(); };
+      b.onclick = () => { if (qa.team === name) { qa.team = ''; qa.levels = new Set(); qaRender(); } else qaPickTeam(name); };
       teamsBox.appendChild(b);
     }
     if (!names.length) teamsBox.appendChild(Object.assign(document.createElement('span'), { className: 'muted', textContent: 'No teams yet — add them on Teams & crew.' }));
@@ -517,6 +517,57 @@
     go.textContent = !qa.team ? 'Pick a team and an aisle' : !qa.aisles.length ? `Pick the aisles for team ${qa.team}` : !qa.levels.size ? 'Tick at least one level'
       : `Queue ${qa.aisles.join(' → ')} for team ${qa.team} · ${levelsLabel([...'ABCDEF'].filter((c) => qa.levels.has(c)).join(''))}${qa.dir === 'down' ? ' · from the far end' : ''}`;
   }
+  /* a team picked - by its chip, its card scanned, or its number typed: its levels ticked, the aisles next */
+  function qaPickTeam(name) {
+    const ct = qa.teams.get(name);
+    qa.team = name; qa.levels = new Set(ct && ct.reach ? [...ct.reach] : [...'ABCDEF']);
+    qaRender();
+    const chip = document.querySelector(`#qaTeams .qa-team[data-team="${CSS.escape(name)}"]`);
+    if (chip) chip.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  /* The floor supervisor's way: hold the team's card up to a scanner on this computer (or
+     type the number) and that team comes up, ready for its aisles. The box keeps the focus,
+     so the next card scans straight after. */
+  const qaScanTake = (raw) => {
+    const v = String(raw || '').trim();
+    if (!v) return;
+    const want = v.toUpperCase();
+    const names = [...new Set([...qa.teams.keys(), ...qa.rows.map((r) => String(r.team))])];
+    const name = names.find((n) => n.toUpperCase() === want) || names.find((n) => n.toUpperCase() === want.replace(/^T(?=\d)/, '')) || names.find((n) => n.toUpperCase().replace(/[^A-Z0-9]/g, '') === want.replace(/[^A-Z0-9]/g, ''));
+    $('qaScan').value = '';
+    if (!name) { msg($('qaScanMsg'), 'err', `No team ${v}`, 'It is not on Teams & crew and has nothing queued. Add the team there first, or pick one below.'); return; }
+    clearMsg($('qaScanMsg'));
+    qaPickTeam(name);
+    msg($('qaScanMsg'), 'ok', `Team ${name}`, qa.aisles.length ? `Press Queue to give it ${qa.aisles.join(' → ')}, or change the aisles first.` : 'Now click its aisles in counting order, then Queue.');
+    setTimeout(() => clearMsg($('qaScanMsg')), 6000);
+  };
+  $('qaScan').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); qaScanTake($('qaScan').value); } });
+  /* a tablet or a laptop with a camera reads the card itself */
+  if ('BarcodeDetector' in window && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) $('btnQaCamera').hidden = false;
+  $('btnQaCamera').onclick = async () => {
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }); }
+    catch (err) { msg($('qaScanMsg'), 'err', 'The camera is blocked', err && err.name === 'NotAllowedError' ? 'Allow the camera for this site (the lock beside the address), then try again.' : 'No camera could be opened.'); return; }
+    const box = document.createElement('div');
+    box.className = 'cam-box';
+    box.innerHTML = '<video playsinline muted autoplay></video><div class="cam-aim"></div><div class="cam-msg">Point the camera at the team card</div><div class="cam-row"><button type="button" class="cam-cancel">Cancel</button></div>';
+    document.body.appendChild(box);
+    const video = box.querySelector('video'); video.srcObject = stream; try { await video.play(); } catch { /* autoplay */ }
+    let formats = ['code_128', 'qr_code', 'code_39'];
+    try { const have = await window.BarcodeDetector.getSupportedFormats(); if (have && have.length) formats = formats.filter((x) => have.includes(x)); } catch { /* the list */ }
+    const detector = new window.BarcodeDetector({ formats });
+    let done = false;
+    const stop = () => { done = true; try { for (const t of stream.getTracks()) t.stop(); } catch { /* ignore */ } box.remove(); };
+    box.querySelector('.cam-cancel').onclick = stop;
+    const tick = async () => {
+      if (done) return;
+      if (video.readyState >= 2) {
+        try { const codes = await detector.detect(video); const hit = codes.find((c) => c.rawValue && String(c.rawValue).trim()); if (hit) { stop(); qaScanTake(hit.rawValue); return; } } catch { /* a frame it could not read */ }
+      }
+      setTimeout(tick, 120);
+    };
+    tick();
+  };
   $('btnQaClear').onclick = () => { qa.team = ''; qa.aisles = []; qa.levels = new Set(); qa.dir = 'up'; qaRender(); };
   for (const b of $('qaFrom').querySelectorAll('button')) b.onclick = () => { qa.dir = b.dataset.dir; qaRender(); };
   $('btnQuickQueue').onclick = async () => {
@@ -708,7 +759,7 @@
       if (!items.length) {
         /* a team with nothing queued: one tap fills the form for it, levels from what it reaches */
         const go = button('Queue aisles for this team', 'sm', () => {
-          qa.team = team; qa.levels = new Set(ct && ct.reach ? [...ct.reach] : [...'ABCDEF']); qa.aisles = []; qaRender();
+          qa.aisles = []; qaPickTeam(team);
           $('quickAssign').scrollIntoView({ block: 'start', behavior: 'smooth' });
           $('fAssignTeam').value = team;
           if (ct && ct.reach) $('fAssignLevels').value = levelsBox(ct.reach);

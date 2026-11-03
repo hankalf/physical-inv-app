@@ -727,7 +727,7 @@ async function handleAdmin(req, res, url, m) {
       const locked = noteFailure(username, ip);
       if (locked) audit('sign-in', locked === 'login' ? 'locked a login for 15 minutes' : 'locked an address for 15 minutes',
         locked === 'login' ? `${String(username).toUpperCase()}: ${PER_LOGIN} wrong passwords from ${ip}` : `${PER_PLACE} wrong passwords from ${ip}`);
-      throw httpError(401, 'that username and password do not match');
+      throw httpError(401, 'that username and password do not match - capitals do not matter in the username, but they do in the password');
     }
     noteSuccess(username, ip);
     adminTokens.set(token, { name: user.name, username: user.username, role: user.role });

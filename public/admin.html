@@ -319,6 +319,11 @@
       <div class="qa" id="quickAssign">
         <div class="qa-step">
           <div class="qa-h"><span class="qa-n">1</span><b>Team</b><span class="muted" id="qaTeamNote">pick one</span></div>
+          <div class="qa-scan">
+            <input id="qaScan" class="sm" placeholder="Scan the team card here, or type the team number and press Enter" autocomplete="off" title="A scanner on this computer, a team card held up to it, or the number typed: the team comes up, its levels ticked, ready for its aisles">
+            <button type="button" class="sm" id="btnQaCamera" hidden title="Read the team card with this device's camera">📷</button>
+          </div>
+          <div class="feedback" id="qaScanMsg"></div>
           <div class="qa-chips" id="qaTeams"></div>
         </div>
         <div class="qa-step">

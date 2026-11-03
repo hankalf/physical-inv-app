@@ -450,6 +450,11 @@ onto the list to take it off the plan.
 **Or by hand:** press **Queue aisles for this team** on an empty team, or fill the row above the
 board (team, aisles in order, levels, start from), and press **Queue**.
 
+**On the floor, with the team's card:** under Quick assign, scan the team card into **Scan the team
+card here** (a scanner on the computer, or 📷 on a tablet) or type the team number and press Enter.
+That team comes up with its levels ticked; click its aisles in counting order and press **Queue**.
+The box keeps the focus, so the next card scans straight after.
+
 **On paper first:** press **🖨 Aisle sheet** once the bin list is up. It prints every aisle, a row
 each, with its zone, racking block, bins and levels. Beside each aisle are columns to write in: the
 1st shift and 2nd shift team, the levels counted, the start and finish times, and who checked it.

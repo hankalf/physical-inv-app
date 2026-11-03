@@ -73,6 +73,13 @@ check('Team plan: a team from Teams & crew with nothing queued has its own row',
 await box.locator('button[data-queue-for="34"]').click();
 check('…Queue aisles for this team fills the form with it, and puts the cursor on the aisles', (await page.inputValue('#fAssignTeam')) === '34' && await page.evaluate(() => document.activeElement && document.activeElement.id === 'fAssignAisles'));
 check('…and the Team box offers every team by name', (await page.$$eval('#planTeamNames option', (o) => o.map((x) => x.value))).join() === '31,32,33,34');
+/* the floor supervisor's way: the team card scanned (or its number typed) brings the team up */
+await page.fill('#qaScan', '33'); await page.press('#qaScan', 'Enter'); await page.waitForTimeout(300);
+check('Scan a team card into the box: that team is picked, its levels ticked, the aisles next', await page.$eval('#qaTeams .qa-team[data-team="33"]', (b) => b.classList.contains('selected')) && (await page.inputValue('#qaScan')) === '' && /Team 33/.test(clean(await page.textContent('#qaScanMsg'))) && /Now click its aisles/.test(clean(await page.textContent('#qaScanMsg'))), clean(await page.textContent('#qaScanMsg')));
+await page.fill('#qaScan', 't34'); await page.press('#qaScan', 'Tab'); await page.waitForTimeout(300);
+check('…a scanner that ends with Tab, and a T in front of the number, work too', await page.$eval('#qaTeams .qa-team[data-team="34"]', (b) => b.classList.contains('selected')));
+await page.fill('#qaScan', 'S9-ZZ99'); await page.press('#qaScan', 'Enter'); await page.waitForTimeout(300);
+check('…a card for a team that is not on the list says so', /No team S9-ZZ99/.test(clean(await page.textContent('#qaScanMsg'))) && await page.$eval('#qaTeams .qa-team[data-team="34"]', (b) => b.classList.contains('selected')));
 /* quick assign: the team chip is picked too, every level ticked (nobody on team 34 yet), and the aisles are clicked in order */
 check('Quick assign: Queue aisles for this team picks the team chip, with every level ticked', await page.$eval('#qaTeams .qa-team[data-team="34"]', (b) => b.classList.contains('selected')) && (await page.$$eval('#qaLevels .lv.selected', (b) => b.map((x) => x.dataset.level))).join('') === 'ABCDEF' && /Pick the aisles for team 34/.test(await page.textContent('#btnQuickQueue')), clean(await page.textContent('#btnQuickQueue')));
 check('…the aisle grid says who has each aisle', /team 31 counting/.test(clean(await page.textContent('#qaAisles .qa-aisle[data-aisle="P11"]'))) && /queued · team 31/.test(clean(await page.textContent('#qaAisles .qa-aisle[data-aisle="P15"]'))) && /2 bins/.test(clean(await page.textContent('#qaAisles .qa-aisle[data-aisle="P12"]'))), clean(await page.textContent('#qaAisles')));

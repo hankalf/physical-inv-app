@@ -1604,6 +1604,16 @@
       for (const id of ['fUser', 'fPassword']) {
         document.getElementById(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
       }
+      /* Caps Lock on while the password is typed is the usual reason a new login "does not
+         work": the username does not mind capitals, the password does. Said under the box. */
+      const pw = document.getElementById('fPassword');
+      let caps = null;
+      const watchCaps = (e) => {
+        const on = typeof e.getModifierState === 'function' && e.getModifierState('CapsLock');
+        if (on && !caps) { caps = document.createElement('div'); caps.id = 'capsHint'; caps.className = 'feedback show warn'; caps.textContent = 'Caps Lock is on — the password minds capitals, the username does not.'; pw.insertAdjacentElement('afterend', caps); }
+        if (!on && caps) { caps.remove(); caps = null; }
+      };
+      pw.addEventListener('keydown', watchCaps); pw.addEventListener('keyup', watchCaps);
     }
     if (inviteToken) mountInvite(inviteToken);
     mountSystemSignIn();

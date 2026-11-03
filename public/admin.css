@@ -1018,3 +1018,14 @@ html.side-collapsed #sidePeek:hover span { color: var(--text); }
 .cd-how li { margin: 2px 0; }
 .cd-how .cd-links { margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap; }
 .cd-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+
+/* quick assign: the team card scanned, or the number typed */
+.qa-scan { display: flex; gap: 6px; margin: 6px 0 4px; }
+.qa-scan input { flex: 1; min-width: 200px; }
+/* the camera box, as on the scanners */
+.cam-box { position: fixed; inset: 0; z-index: 9999; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.cam-box video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cam-aim { position: relative; width: 70%; max-width: 560px; height: 30%; max-height: 240px; border: 3px solid #facc15; border-radius: 12px; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .35); }
+.cam-msg { position: relative; margin-top: 18px; color: #fff; font-size: 1.1rem; font-weight: 700; text-shadow: 0 1px 3px #000; }
+.cam-row { position: absolute; bottom: 28px; left: 0; right: 0; display: flex; gap: 12px; justify-content: center; }
+.cam-row button { min-width: 140px; padding: 14px 18px; font-size: 1.1rem; font-weight: 800; border-radius: 10px; border: 0; background: #fff; color: #000; }
