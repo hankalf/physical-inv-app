@@ -476,6 +476,7 @@
     [/\bAisle\b/g, 'Pasillo'], [/\blevels\b/g, 'niveles'], [/\blevel\b/g, 'nivel'], [/\bLevel\b/g, 'Nivel'],
     [/\bPosition\b/g, 'Posición'], [/\bFRONT\b/g, 'FRENTE'], [/\bBACK\b/g, 'ATRÁS'],
     [/\ball levels\b/g, 'todos los niveles'], [/\bFreezer\b/g, 'Congelador'], [/\bCooler\b/g, 'Refrigerador'],
+    [/\bfloor pallets — count every pallet standing here\b/g, 'tarimas en el piso — cuenta cada tarima que esté aquí'], [/\bfloor pallets\b/g, 'tarimas en el piso'], [/\(floor\)/g, '(piso)'],
   ];
 
   let lang = 'en';

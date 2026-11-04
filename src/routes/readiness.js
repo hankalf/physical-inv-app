@@ -23,6 +23,7 @@ import { teamsBackupStatus } from './teams-backup.js';
 import { teamsConfig } from '../util/teams.js';
 import { passwordIs } from './users.js';
 import { selfSystem } from './systems.js';
+import { floorState } from './floor-bins.js';
 
 const DAY = 24 * 60 * 60 * 1000;
 const fix = (sub, card, label, page = '/settings') => ({ page, sub, card, label });
@@ -58,6 +59,15 @@ export function readiness(sessionId) {
     const pallets = db.prepare('SELECT COUNT(*) n FROM pallets WHERE session_id = ?').get(s.id).n;
     if (!bins) add('fail', 'No bin list on the count', 'Scanned bins cannot be checked, and there are no aisles to hand out.', fix('lists', 'binsCard', 'Bin list'));
     else add('ok', `${bins.toLocaleString()} bins on the count`, 'Every scanned bin is checked against them.');
+    /* the floor bins: REC and the staging spots hold pallets on count day, and the
+       bin list files them where no team can be sent - so they go on by hand, once */
+    if (bins && (s.mode || 'full') !== 'cycle') {
+      const fl = floorState(s.id);
+      const names = fl.areas.filter((a) => !a.error).map((a) => a.bins > 1 ? `${a.aisle} (${a.bins} spots)` : a.aisle).join(', ');
+      if (!fl.allOn) add('warn', `The floor bins are not on the count: ${fl.areas.filter((a) => !a.error && a.missing).map((a) => a.aisle).join(', ')}`, `Pallets standing on the floor in receiving and staging are counted like an aisle. Press Put them on this count under Lists & racking → Floor bins, then give each to a team on the Team plan.`, fix('lists', 'floorCard', 'Floor bins'));
+      else if (fl.unassigned.length) add('warn', `Nobody is counting the floor bins: ${fl.unassigned.join(', ')}`, `They are on the count (${names}) but no team has them. Queue them onto a team on the Team plan, like an aisle; any team reaches them.`, fix('', '', 'Team plan', '/admin'));
+      else add('ok', `The floor bins are on the count and with a team`, names);
+    }
     if (!pallets) add('warn', 'No inventory report on the count', 'The count still records what is there, but nothing is compared: no variances, no second counts.', fix('lists', 'reportCard', 'Inventory report'));
     else add('ok', `${pallets.toLocaleString()} pallets on the report`, 'What the count is compared against.');
   }

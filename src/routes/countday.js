@@ -4,6 +4,7 @@ import { listEmployees, listTeams } from './people.js';
 import { listBackups } from './admin-ops.js';
 import { trainingSession, trainingCycleSession } from './training.js';
 import { readiness } from './readiness.js';
+import { floorState } from './floor-bins.js';
 import { localDate } from '../util/localtime.js';
 
 /*
@@ -130,6 +131,11 @@ export function countdayChecklist(sessionId) {
   if (!cycle) item({ key: 'plan', title: 'Queue the aisles onto the teams', need: 'required', auto: plan > 0, detail: plan ? `${plan} aisle assignment${plan === 1 ? '' : 's'}` : 'nothing queued — the scanners would have nothing to hand out',
     how: ['Dashboard → Team plan. Auto-assign the aisles: pick the teams, press Preview, read the warnings, Queue this plan.', 'Or drag aisles onto teams, or Queue aisles for this team by hand.', 'A team gets only the levels it reaches; what it cannot reach goes to a team that can.'],
     guide: g('15--give-the-teams-their-aisles'), goto: to('/admin', 'teams'), label: 'Team plan' });
+  if (!cycle) { const fl = floorState(id); const names = fl.areas.filter((a) => !a.error).map((a) => a.bins > 1 ? `${a.aisle} (${a.first} to ${a.last})` : a.aisle).join(', ');
+    item({ key: 'floor', title: 'Put the floor bins on the count and give them to a team', auto: bins > 0 && fl.allOn && !fl.unassigned.length,
+      detail: !bins ? `after the bin list: ${names}` : !fl.allOn ? `not on the count yet: ${fl.areas.filter((a) => !a.error && a.missing).map((a) => a.aisle).join(', ')}` : fl.unassigned.length ? `on the count, but no team has ${fl.unassigned.join(', ')}` : `${names} · ${fl.areas.filter((a) => !a.error).map((a) => `${a.aisle}: team ${a.teams.join(', ')}`).join(' · ')}`,
+      how: ['Settings → Lists & racking → Floor bins: REC and the staging spots PRYSTG#1 to PRYSTG#16, one line each. Press Put them on this count.', 'Print the floor bin labels and hang each where its pallets stand; the scanners read the label as the bin.', 'Dashboard → Team plan: queue REC and PRYSTG onto a team like any aisle. They have no levels, so any team reaches them; the scanner walks the spots in order.'],
+      goto: to('/settings', 'lists', 'floorCard'), label: 'Floor bins' }); }
   if (!cycle) item({ key: 'aisleSheet', title: 'Print the aisle sheet', need: 'optional', auto: !!logged('printed the aisle sheet', id), detail: logged('printed the aisle sheet', id) ? `printed ${new Date(logged('printed the aisle sheet', id).at).toLocaleString()}` : 'the paper copy of who does which aisle',
     how: ['Dashboard → Team plan → 🖨 Aisle sheet.', 'Tick With the plan as it is now to print the teams in; the rest is blank to write.', 'Keep it on the clipboard on the day: team, levels, started, done, checked by.'],
     guide: g('15--give-the-teams-their-aisles'), goto: to('/admin', 'teams'), label: 'Team plan' });

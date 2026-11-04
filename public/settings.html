@@ -173,6 +173,21 @@
       <div class="feedback" id="uploadMsg-bins"></div>
     </div>
 
+    <div class="card" id="floorCard">
+      <h2>Floor bins <span class="muted">pallets on the floor that a team counts like an aisle</span></h2>
+      <div class="hint" style="margin-top:0">The receiving floor (<b>REC</b>) and the staging spots (<b>PRYSTG#1</b> to <b>PRYSTG#16</b>) are not racking, and the bin list files them where no team can be sent — but on count day they hold pallets, and somebody has to count them.
+        One line per floor bin or run of spots: <code>REC</code> is one bin; <code>PRYSTG#1-16</code> is sixteen spots in one aisle called PRYSTG; words after a colon are the description on the label.
+        Press <b>Put them on this count</b> and they are bins like any other — no levels, so any team reaches them; on the Team plan queue REC and PRYSTG onto a team and the scanner walks the spots in order. Once on a count, every bin-list upload keeps them there.</div>
+      <div class="inline" style="margin-top:12px; align-items:flex-start">
+        <div style="flex:1; min-width:280px"><label for="fFloorBins">Floor bins, one per line <span class="autosave-note muted">(saves as you change it)</span></label><textarea id="fFloorBins" rows="4" spellcheck="false" style="width:100%; font-family: ui-monospace, Menlo, Consolas, monospace"></textarea></div>
+        <div class="auto" style="padding-top:22px"><button class="primary fit" id="btnFloorApply" data-no-autosave>Put them on this count</button></div>
+        <div class="auto" style="padding-top:22px"><button class="fit" id="btnFloorLabels" data-no-autosave title="A big barcode for each floor bin, to hang where its pallets stand">🖨 Floor bin labels</button></div>
+        <div class="auto" style="padding-top:22px"><button class="fit" id="btnFloorSave" hidden>Save</button></div>
+      </div>
+      <div class="feedback" id="floorMsg"></div>
+      <div class="scroll" style="margin-top:10px"><table id="floorTable"></table></div>
+    </div>
+
     <div class="card" id="reportCard" data-kind="pallets">
       <h2>Inventory report <span class="muted">what the system thinks is on hand</span></h2>
       <div class="hint" style="margin-top:0">What the count is compared against — it is where variances, second counts and the ERP adjustments come from. Re-upload it whenever the ERP moves on.

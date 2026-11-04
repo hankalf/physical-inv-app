@@ -12,6 +12,7 @@ import {
   listDevices, getDevice, createDevice, updateDevice, deleteDevice, touchDevice,
   enrollDevice, deviceByToken, resetDevice, saveAdminToken, adminTokenInfo, dropAdminToken, dropAdminTokensFor, purgeAdminTokens } from './db.js';
 import { importMaster, pruneAreaAisles } from './routes/master.js';
+import { floorState, saveFloorBins, ensureFloorBins, floorLabels } from './routes/floor-bins.js';
 import { boardData } from './routes/board.js';
 import { crewBoard, crewBoardConfig, saveCrewBoardConfig } from './routes/crew-board.js';
 import { countClock } from './routes/count-clock.js';
@@ -84,6 +85,7 @@ import { countdayChecklist, tickCountday, countdayPrint } from './routes/countda
 import { ensureTraining, resetTraining, removeTraining, trainingStatus, wallLabels, pocketCard, crewTeamList, trainingRoster, markTrained, rosterCsv, rosterSheet, pocketCardDocx, wallDocx, rosterDocx, checkoffSheet, checkoffDocx, quizSheet, quizDocx, glossarySheet, glossaryDocx } from './routes/training.js';
 import { audit, listAudit, makeBackup, listBackups, backupPath, startBackupSchedule } from './routes/admin-ops.js';
 import { countSheet, scannerCards, barcodeBook, teamCodes } from './routes/printing.js';
+import { barcodeSvg } from './util/barcode.js';
 import {
   countUsers, countAdmins, listUsers, createUser, updateUser, deleteUser, authenticate, changeOwnPassword, getUser, ensureSuperadmin,
   makeInvite, inviteFor, acceptInvite,
@@ -1114,6 +1116,29 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/aisles$/)) && method === 'GET') {
     return sendJson(req, res, 200, aisleOverview(m[1]));
   }
+  // --- floor bins: REC and the staging spots, counted by a team like an aisle
+  if (p === '/api/admin/floor-bins' && method === 'GET') return sendJson(req, res, 200, floorState(url.searchParams.get('session')));
+  if (p === '/api/admin/floor-bins' && method === 'POST') {
+    const body = await readJson(req);
+    const text = saveFloorBins(body.text);
+    audit(actor, 'changed the floor bins', text.split('\n').map((l) => l.split(':')[0].trim()).join(', '));
+    return sendJson(req, res, 200, floorState(body.sessionId || url.searchParams.get('session')));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/floor-bins$/)) && method === 'POST') {
+    const sess = getSession(m[1]);
+    if (!sess) throw httpError(404, 'session not found');
+    if (sess.status !== 'open') throw httpError(409, 'session is closed');
+    const r = ensureFloorBins(m[1]);
+    audit(actor, 'put the floor bins on the count', `${r.aisles.join(', ')}: ${r.added} added, ${r.moved.length} moved, ${r.kept} already there`, m[1]);
+    return sendJson(req, res, 200, { ...r, state: floorState(m[1]) });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/print\/floor-labels$/)) && method === 'GET') {
+    const sess = getSession(m[1]);
+    if (!sess) throw httpError(404, 'session not found');
+    audit(actor, 'printed the floor bin labels', '', m[1]);
+    return send(req, res, 200, floorLabels(m[1], barcodeSvg, { countName: sess.name }), { 'content-type': 'text/html; charset=utf-8' });
+  }
+
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/aisles\/block$/)) && method === 'POST') {
     const body = await readJson(req);
     const updates = Array.isArray(body) ? body : [body];

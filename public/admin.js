@@ -499,7 +499,7 @@
         const idx = qa.aisles.indexOf(a.aisle);
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'qa-aisle' + (idx >= 0 ? ' picked' : '') + (active.length ? ' busy' : '') + (done.length && !active.length && !queued.length ? ' done' : ''); b.dataset.aisle = a.aisle; b.disabled = !can;
-        const st = active.length ? `team ${active.map((r) => r.team).join('+')} counting` : queued.length ? `queued · team ${queued.map((r) => r.team).join(', ')}` : done.length ? 'done' : `${a.bins} bins`;
+        const st = active.length ? `team ${active.map((r) => r.team).join('+')} counting` : queued.length ? `queued · team ${queued.map((r) => r.team).join(', ')}` : done.length ? 'done' : a.floor ? `${a.bins === 1 ? 'floor' : `${a.bins} floor spots`}` : `${a.bins} bins`;
         b.title = `${aisleLabel(a.aisle, a.zone)} · ${a.bins} bins${a.bins_counted ? `, ${a.bins_counted} counted` : ''}${active.length ? ` · ${active.map((r) => `team ${r.team} on ${levelsLabel(r.levels)}`).join(', ')}` : ''}${queued.length ? ` · queued for ${queued.map((r) => `team ${r.team} (${levelsLabel(r.levels)})`).join(', ')}` : ''}`;
         b.innerHTML = '<b></b><span class="st"></span>';
         b.querySelector('b').textContent = a.aisle; b.querySelector('.st').textContent = st;
@@ -512,10 +512,13 @@
     if (!qa.overview.length) box.appendChild(Object.assign(document.createElement('span'), { className: 'muted', textContent: 'No aisles yet — upload the bin list under Settings.' }));
     for (const b of $('qaFrom').querySelectorAll('button')) b.classList.toggle('selected', b.dataset.dir === qa.dir);
     const go = $('btnQuickQueue');
-    const ready = can && qa.team && qa.aisles.length && qa.levels.size;
+    // floor bins (REC, the staging spots) have no levels: a pick of those alone needs none ticked
+    const floorSet = new Set(qa.overview.filter((a) => a.floor).map((a) => a.aisle));
+    const needLevels = qa.aisles.some((a) => !floorSet.has(a));
+    const ready = can && qa.team && qa.aisles.length && (qa.levels.size || !needLevels);
     go.disabled = !ready;
-    go.textContent = !qa.team ? 'Pick a team and an aisle' : !qa.aisles.length ? `Pick the aisles for team ${qa.team}` : !qa.levels.size ? 'Tick at least one level'
-      : `Queue ${qa.aisles.join(' → ')} for team ${qa.team} · ${levelsLabel([...'ABCDEF'].filter((c) => qa.levels.has(c)).join(''))}${qa.dir === 'down' ? ' · from the far end' : ''}`;
+    go.textContent = !qa.team ? 'Pick a team and an aisle' : !qa.aisles.length ? `Pick the aisles for team ${qa.team}` : !qa.levels.size && needLevels ? 'Tick at least one level'
+      : `Queue ${qa.aisles.join(' → ')} for team ${qa.team}${needLevels ? ` · ${levelsLabel([...'ABCDEF'].filter((c) => qa.levels.has(c)).join(''))}` : ' · floor pallets, no levels'}${qa.dir === 'down' ? ' · from the far end' : ''}`;
   }
   /* a team picked - by its chip, its card scanned, or its number typed: its levels ticked, the aisles next */
   function qaPickTeam(name) {

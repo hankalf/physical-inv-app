@@ -1,6 +1,7 @@
 import { db, norm, resolveAisle } from '../db.js';
 import { aisleNumber, normLevels, levelsOverlap, levelsLabel } from '../util/bincode.js';
 import { reachShortfall, listTeams } from './people.js';
+import { isFloorAisle } from './floor-bins.js';
 
 /*
  * Guided counting.
@@ -31,6 +32,7 @@ export function aisleOverview(sessionId) {
                 WHERE l.session_id = a.session_id AND l.aisle = a.aisle AND COALESCE(l.zone, '') != ''
                 GROUP BY l.zone ORDER BY COUNT(*) DESC LIMIT 1) AS zone,
               COALESCE(b.bins, 0) AS bins,
+              CASE WHEN COALESCE(b.bins, 0) > 0 AND COALESCE(b.leveled, 0) = 0 THEN 1 ELSE 0 END AS floor,
               COALESCE(k.bins_counted, 0) AS bins_counted,
               COALESCE(k.pallets_counted, 0) AS pallets_counted,
               (SELECT GROUP_CONCAT(team, ',') FROM assignments s
@@ -44,7 +46,7 @@ export function aisleOverview(sessionId) {
          FROM aisles a
          /* Counted once per aisle in a single pass. Doing it per aisle inside the
             SELECT re-read the whole bin list twenty-eight times a refresh. */
-         LEFT JOIN (SELECT aisle, COUNT(*) AS bins FROM locations WHERE session_id = ? GROUP BY aisle) b
+         LEFT JOIN (SELECT aisle, COUNT(*) AS bins, SUM(CASE WHEN TRIM(COALESCE(level, '')) != '' THEN 1 ELSE 0 END) AS leveled FROM locations WHERE session_id = ? GROUP BY aisle) b
                 ON b.aisle = a.aisle
          LEFT JOIN (SELECT l.aisle,
                            COUNT(DISTINCT c.location_code) AS bins_counted,
@@ -151,14 +153,18 @@ export function queueAssignments(sessionId, team, aisles, levelsRaw = '', { forc
   const dir = cleanDirection(direction);
   const id = Number(sessionId);
   const t = norm(team);
-  const levels = normLevels(levelsRaw);
+  const wantLevels = normLevels(levelsRaw);
   if (!t) throw Object.assign(new Error('team required'), { status: 400 });
-  if (!levels) throw Object.assign(new Error('levels required - e.g. A-C, D-F, or A-F for every level'), { status: 400 });
+  /* Floor bins (REC, the staging spots) have no levels: any team reaches them,
+     and the levels picked do not apply. A rack aisle still needs its levels. */
+  const floor = (aisle) => isFloorAisle(id, aisle);
+  const needLevels = aisles.some((raw) => { const a = norm(raw) && resolveAisle(id, raw); return !a || !floor(a); });
+  if (!wantLevels && needLevels) throw Object.assign(new Error('levels required - e.g. A-C, D-F, or A-F for every level'), { status: 400 });
 
   // A team can only be sent where its equipment reaches. Teams with no roster
   // entry are not second-guessed; a supervisor can override with force.
-  if (!force) {
-    const short = reachShortfall(t, levels);
+  if (!force && wantLevels && needLevels) {
+    const short = reachShortfall(t, wantLevels);
     if (short) throw Object.assign(new Error(short.message), { status: 409, code: 'reach' });
   }
   const maxPos = db
@@ -179,6 +185,8 @@ export function queueAssignments(sessionId, team, aisles, levelsRaw = '', { forc
         skipped.push({ aisle: norm(raw), reason: same.length > 1 ? `ambiguous - did you mean ${same.join(' or ')}?` : 'no such aisle in this session' });
         continue;
       }
+      const isFloor = floor(aisle);
+      const levels = isFloor ? '' : wantLevels;
       const existing = db
         .prepare('SELECT status FROM assignments WHERE session_id = ? AND team = ? AND aisle = ? AND levels = ?')
         .get(id, t, aisle, levels);
@@ -188,7 +196,7 @@ export function queueAssignments(sessionId, team, aisles, levelsRaw = '', { forc
         `INSERT INTO assignments (session_id, team, aisle, levels, position, status, created_at, direction)
          VALUES (?, ?, ?, ?, ?, 'queued', ?, ?)`
       ).run(id, t, aisle, levels, pos, now(), dir);
-      added.push(`${levels ? `${aisle} (${levels})` : aisle}${dir === 'down' ? ' from the far end' : ''}`);
+      added.push(`${isFloor ? `${aisle} (floor)` : levels ? `${aisle} (${levels})` : aisle}${dir === 'down' ? ' from the far end' : ''}`);
     }
     db.exec('COMMIT');
   } catch (err) {
@@ -323,9 +331,11 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
   let progress = null;
   if (active) {
     const inLevels = (l) => !active.levels || active.levels.includes(l || '');
+    // in walking order: PRYSTG#2 before PRYSTG#10, as the numbers read
     bins = db
       .prepare('SELECT code, level FROM locations WHERE session_id = ? AND aisle = ? ORDER BY code')
-      .all(id, active.aisle).filter((r) => inLevels(r.level)).map((r) => r.code);
+      .all(id, active.aisle).filter((r) => inLevels(r.level)).map((r) => r.code)
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
     // from the far end: the walk starts at the last bin
     if (cleanDirection(active.direction) === 'down') bins.reverse();
     /* How many pallet tags each bin already has, from any scanner, so a second
@@ -376,13 +386,15 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
     active: active ? {
       id: active.id, aisle: active.aisle, levels: active.levels, zone: zoneOf(active.aisle), startedAt: active.started_at,
       direction: cleanDirection(active.direction),
+      // floor bins: pallets on the floor, no levels, any team
+      floor: isFloorAisle(id, active.aisle),
       // the team coming the other way, when two share the aisle
       partner: (() => { const p = partnerOf(id, active); return p ? { team: p.team, direction: cleanDirection(p.direction) } : null; })(),
     } : null,
     bins,
     progress,
     queued: queued.map((q) => q.aisle),
-    queuedDetail: queued.map((q) => ({ aisle: q.aisle, levels: q.levels, direction: cleanDirection(q.direction) })),
+    queuedDetail: queued.map((q) => ({ aisle: q.aisle, levels: q.levels, direction: cleanDirection(q.direction), floor: isFloorAisle(id, q.aisle) })),
     done,
     waitingOn,
   };

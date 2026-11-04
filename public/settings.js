@@ -1250,6 +1250,7 @@
         (stats.costFilled ? ` · ${stats.costFilled.toLocaleString()} row${stats.costFilled === 1 ? '' : 's'} had no cost on the report and took the item's cost from its other rows` : '') +
         (stats.unpriced ? ` · ${stats.unpriced.toLocaleString()} row${stats.unpriced === 1 ? '' : 's'} have no cost anywhere on the report (${stats.unpricedItems.join(', ')}${stats.unpricedItems.length < 12 ? '' : ' …'}) - judged by cases alone` : ''));
       await refreshAisles();
+    refreshFloor().catch(() => {});
       await refreshSetup().catch(() => {});
     } catch (err) { msg(out, 'err', 'Upload failed', err.message); }
   }
@@ -1277,6 +1278,54 @@
       } catch (err) { msg($('uploadMsg-' + kind), 'err', 'Upload failed', err.message); }
     };
   }
+
+  /* ------------------------------------------------------------ floor bins */
+  let floorSaved = null;      // the text as last saved: a blur that changes nothing saves nothing
+  function renderFloor(f) {
+    $('fFloorBins').value = f.text;
+    floorSaved = f.text;
+    const rows = f.areas;
+    table($('floorTable'),
+      [{ label: 'Aisle' }, { label: 'Bins' }, { label: 'On this count' }, { label: 'Team' }, { label: 'Counted', num: true }],
+      rows,
+      (a) => {
+        const tr = document.createElement('tr');
+        if (a.error) { const td = cell(`line ${a.line}: ${a.error}`); td.colSpan = 5; td.style.color = 'var(--bad)'; tr.appendChild(td); return tr; }
+        tr.append(cell(a.aisle), cell(a.bins === 1 ? a.first : `${a.bins} · ${a.first} to ${a.last}`));
+        const on = document.createElement('td');
+        const tag = document.createElement('span');
+        tag.className = 'tag ' + (!f.sessionId ? '' : a.missing === 0 ? 'MATCH' : a.onCount ? 'queued' : 'off');
+        tag.textContent = !f.sessionId ? 'no count picked' : a.missing === 0 ? 'yes' : a.onCount ? `${a.onCount} of ${a.bins}` : 'not yet';
+        on.appendChild(tag); tr.appendChild(on);
+        tr.append(cell(a.teams.length ? a.teams.map((t) => `team ${t}`).join(', ') + (a.done ? ' ✓' : a.active.length ? ' · counting' : '') : (a.onCount ? 'nobody yet — queue it on the Team plan' : '')), cell(a.onCount ? `${a.counted} of ${a.onCount}` : '', 'num'));
+        return tr;
+      });
+  }
+  async function refreshFloor() {
+    renderFloor(await api.json(`/api/admin/floor-bins${sessionId ? `?session=${sessionId}` : ''}`));
+  }
+  $('btnFloorSave').onclick = async () => {
+    if (floorSaved !== null && $('fFloorBins').value.trim() === floorSaved.trim()) return;
+    try {
+      floorSaved = $('fFloorBins').value;
+      const f = await api.post(`/api/admin/floor-bins${sessionId ? `?session=${sessionId}` : ''}`, { text: $('fFloorBins').value });
+      const typing = document.activeElement === $('fFloorBins');
+      if (!typing) renderFloor(f); else { /* keep the caret: redraw the table only */ const t = $('fFloorBins').value; renderFloor(f); $('fFloorBins').value = t; }
+      msg($('floorMsg'), 'ok', 'Saved', sessionId && f.countHasBins && !f.allOn ? 'Press Put them on this count to add them to the count picked above.' : '');
+    } catch (err) { msg($('floorMsg'), 'err', err.message); }
+  };
+  api.autosave($('floorCard'), $('btnFloorSave'), { typingMs: 1200 });
+  $('btnFloorApply').onclick = async () => {
+    if (!needSession($('floorMsg'))) return;
+    try {
+      const r = await api.post(`/api/admin/sessions/${sessionId}/floor-bins`, {});
+      renderFloor(r.state);
+      const bits = [r.added ? `${r.added} added` : '', r.moved.length ? `${r.moved.length} moved to their floor aisle (${r.moved.slice(0, 3).join(', ')}${r.moved.length > 3 ? '…' : ''})` : '', r.kept ? `${r.kept} already there` : ''].filter(Boolean);
+      msg($('floorMsg'), 'ok', `On the count: ${r.aisles.join(', ')}`, `${bits.join(' · ')}. Now queue ${r.aisles.join(' and ')} onto a team on the Team plan, and hang the labels.`);
+      refreshAisles().catch(() => {}); refreshSetup().catch(() => {});
+    } catch (err) { msg($('floorMsg'), 'err', err.message); }
+  };
+  $('btnFloorLabels').onclick = () => { if (!needSession($('floorMsg'))) return; const q = new URLSearchParams({ t: api.token }); window.open(`/api/admin/sessions/${sessionId}/print/floor-labels?${q}`, '_blank'); };
 
   /* ------------------------------------------------------------ aisles & blocks */
   function renderAisles(aisles) {
@@ -2423,6 +2472,7 @@
     applyScope();
     applySessionCard();
     await refreshAisles();
+    refreshFloor().catch(() => {});
   }
 
   /* ---------------------------------------------------------- the count itself
@@ -2672,6 +2722,7 @@
     applyScope();
     applySessionCard();
     refreshAisles().catch(() => {});
+    refreshFloor().catch(() => {});
     refreshSetup().catch(() => {});
     refreshCountday().catch(() => {});
     refreshReady().catch(() => {});

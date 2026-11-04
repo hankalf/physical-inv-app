@@ -3,6 +3,7 @@ import { parseBinCode, normLevels } from '../util/bincode.js';
 import { autoActivate } from './assignments.js';
 import { loadLayout, classifyByRules } from '../util/layouts.js';
 import { parseRecords, pick } from '../util/csv.js';
+import { ensureFloorBins, floorOn, isFloorAisle } from './floor-bins.js';
 
 const LOCATION_ALIASES = ['location', 'loc', 'bin', 'bincode', 'binlocation', 'locationcode', 'slot', 'code', 'warehouselocation', 'binlocationcode'];
 const AISLE_ALIASES = ['aisle', 'row', 'aisleno', 'aislenumber'];
@@ -217,8 +218,9 @@ export function importMaster(sessionId, kind, text, { replace = false, source = 
         const team = norm(pick(rec, TEAM_ALIASES));
         const aisle = resolveAisle(id, pick(rec, AISLE_ALIASES));
         if (!team || !aisle) { stats.skipped++; continue; }
+        // floor bins have no levels, so a plan row for them needs none
         const levels = normLevels(pick(rec, LEVEL_ALIASES));
-        if (!levels) { stats.skipped++; stats.skippedNoLevels = (stats.skippedNoLevels || 0) + 1; continue; }
+        if (!levels && !isFloorAisle(id, aisle)) { stats.skipped++; stats.skippedNoLevels = (stats.skippedNoLevels || 0) + 1; continue; }
         const pos = db
           .prepare('SELECT COALESCE(MAX(position), -1) + 1 AS p FROM assignments WHERE session_id = ? AND team = ?')
           .get(id, team).p;
@@ -262,6 +264,8 @@ export function importMaster(sessionId, kind, text, { replace = false, source = 
 
   stats.aisles = newAisles.size;
   if (kind === 'bins') pruneAreaAisles(id, layout);
+  // a count that has the floor bins keeps them through every upload, Replace included
+  if (kind === 'bins' && floorOn(id)) stats.floor = ensureFloorBins(id);
   if (kind === 'plan') stats.activated = autoActivate(id);
   bumpMasterVersion(id);
   stats.totals = {

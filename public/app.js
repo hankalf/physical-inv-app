@@ -175,6 +175,8 @@
     return bits.join(' · ');
   }
   const levelsFor = (aisle) => { const q = (state.assignment?.queuedDetail || []).find((x) => x.aisle === aisle); return q ? q.levels : ''; };
+  // floor bins (REC, the staging spots): pallets on the floor, no levels
+  const isFloorQueued = (aisle) => !!(state.assignment?.queuedDetail || []).find((x) => x.aisle === aisle && x.floor);
   const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
     : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
         const r = (Math.random() * 16) | 0; return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
@@ -1048,11 +1050,11 @@
       box.className = 'assign';
       box.innerHTML = `<div class="sub">Team ${a.team} — your aisle</div><div class="aisle"></div><div class="sub zone-sub"></div><div class="sub bins-sub"></div><div class="bins"></div>`;
       box.querySelector('.aisle').textContent = a.active.aisle;
-      box.querySelector('.zone-sub').textContent = `${aisleLabel(a.active.aisle, a.active.zone)} · ${levelsLabel(a.active.levels)}`
+      box.querySelector('.zone-sub').textContent = (a.active.floor ? `${a.active.aisle} · floor pallets — count every pallet standing here` : `${aisleLabel(a.active.aisle, a.active.zone)} · ${levelsLabel(a.active.levels)}`)
         + (a.active.direction === 'down' ? ' · start at the far end' : '')
         + (a.active.partner ? ` · team ${a.active.partner.team} from the other end` : '');
       box.querySelector('.bins-sub').textContent = `${counted.size} of ${total} bins have a count` +
-        (a.queued.length ? ` · next: ${a.queued.map((q) => aisleLabel(q, zoneFor(q)) + (levelsFor(q) ? ' ' + levelsFor(q) : '')).join(', ')}` : ' · last aisle in your plan');
+        (a.queued.length ? ` · next: ${a.queued.map((q) => (isFloorQueued(q) ? `${q} (floor)` : aisleLabel(q, zoneFor(q)) + (levelsFor(q) ? ' ' + levelsFor(q) : ''))).join(', ')}` : ' · last aisle in your plan');
       const grid = box.querySelector('.bins');
       for (const b of a.bins) {
         const s = document.createElement('span');
@@ -1061,7 +1063,7 @@
         grid.appendChild(s);
       }
       card.appendChild(box);
-      $('btnCount').textContent = `Count ${aisleLabel(a.active.aisle, a.active.zone)} (${levelsLabel(a.active.levels)})`;
+      $('btnCount').textContent = a.active.floor ? `Count ${a.active.aisle} (floor pallets)` : `Count ${aisleLabel(a.active.aisle, a.active.zone)} (${levelsLabel(a.active.levels)})`;
       return;
     }
     if (a.waitingOn) {
@@ -1071,7 +1073,7 @@
       box.className = 'assign waiting';
       box.innerHTML = `<div class="sub">Team ${a.team} — next aisle</div><div class="aisle"></div><div class="sub zone-sub"></div><div class="sub why"></div>`;
       box.querySelector('.aisle').textContent = w.aisle;
-      box.querySelector('.zone-sub').textContent = `${aisleLabel(w.aisle, zoneFor(w.aisle))} · ${levelsLabel(w.levels)}`;
+      box.querySelector('.zone-sub').textContent = isFloorQueued(w.aisle) ? `${w.aisle} · floor pallets` : `${aisleLabel(w.aisle, zoneFor(w.aisle))} · ${levelsLabel(w.levels)}`;
       box.querySelector('.why').textContent = w.blockedByTeam
         ? `Waiting: team ${w.blockedByTeam} is still in ${aisleLabel(w.blockedByAisle, zoneFor(w.blockedByAisle))}${w.blockedByLevels ? ' (' + levelsLabel(w.blockedByLevels) + ')' : ''}` +
           `${w.blockedByAisle === w.aisle ? '' : ', which shares racking with ' + w.aisle}. Refresh when they finish.`
@@ -1708,7 +1710,7 @@
   function renderContext() {
     const d = state.draft;
     const rows = [];
-    if (state.session?.guided && state.assignment?.active) rows.push(['Your aisle', `${aisleLabel(state.assignment.active.aisle, state.assignment.active.zone)} · ${levelsLabel(state.assignment.active.levels)}`]);
+    if (state.session?.guided && state.assignment?.active) rows.push(['Your aisle', state.assignment.active.floor ? `${state.assignment.active.aisle} · floor pallets` : `${aisleLabel(state.assignment.active.aisle, state.assignment.active.zone)} · ${levelsLabel(state.assignment.active.levels)}`]);
     if (state.multi && state.multi.labels.length) rows.push(['On this pallet', state.multi.labels.join(' · ')]);
     if (d.palletId) rows.push([state.multi ? `Label ${state.multi.labels.length + 1}` : 'Pallet', d.palletId]);
     if (d.qty != null) rows.push(['Qty', String(d.qty)]);
