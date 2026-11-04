@@ -142,8 +142,8 @@ await page.waitForTimeout(200);
 check('Settings: it cannot be nudged below zero, which is the setting that waits for the counter',
   (await page.$eval('#fCommentTimeout', (el) => el.value)) === '0');
 
-check('Taking the whole screen is off unless a site asks for it — the browser announces it with a banner carrying the site address',
-  def.fullScreen === false && def.keepAwake === true, `fullScreen ${def.fullScreen}, keepAwake ${def.keepAwake}`);
+check('Taking the whole screen is on by default, as is keeping it awake — so the browser bar is not over the counting screen',
+  def.fullScreen === true && def.keepAwake === true, `fullScreen ${def.fullScreen}, keepAwake ${def.keepAwake}`);
 check('Changing it is recorded in the log',
   (await j(await fetch(`${BASE}/api/admin/audit?limit=20`, { headers: A }))).some((r) => r.action === 'changed the scanner screen layout'));
 await page.click('#btnResetGun'); await page.waitForTimeout(500);

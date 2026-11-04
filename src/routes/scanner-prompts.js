@@ -121,11 +121,11 @@ const LAYOUT_DEFAULTS = {
   confirmOver: 1000,       // re-key a quantity at least this big
   vibrate: true,
   device: 'mc9090',        // which screen the admin preview draws
-  /* Off by default: Chrome announces a page taking the screen with a banner
-     carrying the site's address, which on a handheld lands over the counting
-     screen. Installing the app from its own link is the quiet way to get the
-     same thing, so this is opt-in for sites that want it anyway. */
-  fullScreen: false,       // take the whole screen at sign-on
+  /* On by default: the gun takes the whole screen at sign-on and again when
+     Count is pressed, so the browser bar is not over the counting screen.
+     Chrome says so once with a short notice carrying the site's address;
+     installing the app from its own link is the quiet way to the same thing. */
+  fullScreen: true,        // take the whole screen at sign-on
   portrait: true,          // hold the app upright even when the device rotates
   /* On: a scanner that has fallen behind a deploy reloads itself between
      pallets. Off: it keeps running whatever it started with until somebody

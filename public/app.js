@@ -811,6 +811,7 @@
 
   async function signon() {
     clearFeedback($('signonMsg'));
+    goFullScreen().catch(() => {});       // on the tap itself, before anything is awaited: the browser only allows it then
     if (state.sysGoTo) { feedback($('signonMsg'), 'warn', `The scanners are counting on ${state.sysGoTo}`, `Tap ${state.sysGoTo} above, or wait: the gun goes there by itself.`); return; }
     if (norm($('fEmployee').value)) addEmployee();
     const solo = state.mode === 'cycle' || state.mode === 'move' || state.mode === 'missing';
@@ -1223,10 +1224,9 @@
    * says no - the app just carries on in a window.
    */
   async function goFullScreen() {
-    // opt-in only: the browser announces this with a banner carrying the site
-    // address, and on a handheld that lands right over the counting screen
-    if (layoutCfg().fullScreen !== true || EMBEDDED) return;
-    if (document.fullscreenElement) return;
+    // on unless the site switched it off; the browser says so once, briefly
+    if (layoutCfg().fullScreen === false || EMBEDDED || standalone()) return;
+    if (document.fullscreenElement || !document.documentElement.requestFullscreen) return;
     try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch { /* the device decides */ }
   }
 
@@ -3229,6 +3229,7 @@
   $('fTeam').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); $('fEmployee').focus(); } });
 
   $('btnCount').onclick = async () => {
+    goFullScreen().catch(() => {});       // back to the whole screen if the bar came back
     state.recount = null;
     showScreen('scrScan');
     renderStep();
