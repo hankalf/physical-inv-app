@@ -35,6 +35,18 @@
     $('sessionPick').hidden = which !== 'main';
   }
 
+  if ($('btnCloseCount')) $('btnCloseCount').onclick = async () => {
+    const s = sessions.find((x) => x.id === sessionId);
+    if (!s) return;
+    const next = s.status === 'closed' ? 'open' : 'closed';
+    if (next === 'closed' && !confirm(`Close "${s.name}"?\n\nThe scanners can no longer send counts to it, and a team still signed on is turned away. Lines a scanner still holds are kept and sent when the count is reopened for a minute. Close it when the last aisle is done.`)) return;
+    try {
+      await api.post(`/api/admin/sessions/${sessionId}/status`, { status: next });
+      await loadSessions();
+      api.toast && api.toast(next === 'closed' ? `${s.name} is closed` : `${s.name} is open again`);
+    } catch (err) { alert(err.message); }
+  };
+
   // the header picker: which count the whole page is about
   const picker = api.sessionPicker('sessionPick', (id) => {
     sessionId = Number(id) || null;
@@ -83,6 +95,13 @@
   function applySessionSettings() {
     const s = sessions.find((x) => x.id === sessionId);
     renderTrial(s);
+    /* closing the count at the end of the day, for the logins given it (the count supervisor among them) */
+    const closeBtn = $('btnCloseCount');
+    if (closeBtn) {
+      closeBtn.hidden = !s || !api.can('close');
+      closeBtn.textContent = s && s.status === 'closed' ? 'Reopen this count' : 'Close this count';
+      closeBtn.classList.toggle('danger', !!s && s.status !== 'closed');
+    }
     if (!s) return;
     // a cycle session has no aisle plan, so its whole sub-tab goes
     const cycle = s.mode === 'cycle';

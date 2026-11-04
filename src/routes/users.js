@@ -92,6 +92,24 @@ export const starterPassword = () =>
   `${WORDS[randomBytes(1)[0] % WORDS.length]}-${[...randomBytes(4)].map((b) => 'ACDEFGHJKLMNPQRTUVWXY23456789'[b % 29]).join('')}`;
 
 export const listUsers = () => db.prepare('SELECT * FROM users ORDER BY role, username').all().map(shape);
+
+/* One-time: closing a count used to be Settings' alone. The Count supervisor
+   and Inventory control roles now carry it, so a login made on either role
+   before gets it too, and stays on its role rather than reading as Custom. */
+(() => {
+  try {
+    if (db.prepare("SELECT 1 FROM settings WHERE key = 'migr:closeCount'").get()) return;
+    const was = { floor: ['dashboard', 'full', 'teams', 'testing', 'messages', 'alerts', 'assign', 'export'], inventory: ['dashboard', 'full', 'testing', 'approve', 'export'] };
+    for (const u of db.prepare("SELECT username, access FROM users WHERE role != 'admin' AND access IS NOT NULL").all()) {
+      const list = parseAccess(u.access);
+      if (!list || list.includes('close')) continue;
+      if (Object.values(was).some((old) => old.length === list.length && old.every((k) => list.includes(k)))) {
+        db.prepare('UPDATE users SET access = ? WHERE username = ?').run(JSON.stringify([...list, 'close']), u.username);
+      }
+    }
+    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('migr:closeCount', ?)").run(new Date().toISOString());
+  } catch { /* an older database without the tables yet: next start */ }
+})();
 export const getUser = (username) => db.prepare('SELECT * FROM users WHERE username = ?').get(norm(username));
 
 /**

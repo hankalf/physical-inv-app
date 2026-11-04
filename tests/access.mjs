@@ -48,7 +48,7 @@ check('Allowed: reading the site settings the dashboard needs', await st('/api/a
 
 /* the roles: presets of the list */
 const ivy = await j(await fetch(`${BASE}/api/admin/users`, { method: 'POST', headers: A, body: JSON.stringify({ username: 'IVY', name: 'Ivy Chen', password: 'count-desk-11', mustChange: false, profile: 'inventory' }) }));
-check('A login can be made with a role: Inventory control is the count, adjustments and downloads', ivy.profile === 'inventory' && ivy.role === 'supervisor' && ivy.access.join() === 'dashboard,full,testing,approve,export', JSON.stringify([ivy.profile, ivy.access]));
+check('A login can be made with a role: Inventory control is the count, adjustments and downloads', ivy.profile === 'inventory' && ivy.role === 'supervisor' && ivy.access.join() === 'dashboard,full,testing,approve,export,close', JSON.stringify([ivy.profile, ivy.access]));
 const ivyIn = await login({ username: 'IVY', password: 'count-desk-11' });
 const I = { ...hdr, authorization: 'Bearer ' + ivyIn.token };
 const stI = async (path, init = {}) => (await fetch(BASE + path, { ...init, headers: { ...I, ...(init.headers || {}) } })).status;
@@ -56,7 +56,7 @@ check('…so Inventory control may read the count and approve', await stI(`/api/
 check('…but nothing on teams, warehouse jobs or cycle counts', await stI('/api/admin/people') === 403 && await stI('/api/admin/missing') === 403 && await stI(`/api/admin/sessions/${sess.id}/cycle/batches`) === 403 && await stI(`/api/admin/sessions/${sess.id}/moves`) === 403);
 check('Who am I lists the roles on offer', ((await j(await fetch(`${BASE}/api/admin/me`, { headers: A }))).profiles || []).some((pr) => pr.key === 'inventory'));
 check('A list ticked by hand reads as Custom', (await j(await fetch(`${BASE}/api/admin/users/IVY`, { method: 'POST', headers: A, body: JSON.stringify({ access: ['dashboard'] }) }))).profile === 'custom');
-check('…and picking the role again puts the preset back', (await j(await fetch(`${BASE}/api/admin/users/IVY`, { method: 'POST', headers: A, body: JSON.stringify({ profile: 'inventory' }) }))).access.join() === 'dashboard,full,testing,approve,export');
+check('…and picking the role again puts the preset back', (await j(await fetch(`${BASE}/api/admin/users/IVY`, { method: 'POST', headers: A, body: JSON.stringify({ profile: 'inventory' }) }))).access.join() === 'dashboard,full,testing,approve,export,close');
 check('A role that is not on offer is refused', (await fetch(`${BASE}/api/admin/users/IVY`, { method: 'POST', headers: A, body: JSON.stringify({ profile: 'overlord' }) })).status === 400);
 
 /* down to the tab: a page, or just some of its tabs */
@@ -109,15 +109,15 @@ await adm.goto(BASE + '/settings#logins');
 await adm.fill('#fUser', 'DANA'); await adm.fill('#fPassword', 'freezer-2026'); await adm.click('#btnLogin');
 await adm.waitForSelector('#scrMain.active'); await adm.waitForTimeout(1800);
 const sueRow = adm.locator('#userTable tr', { hasText: 'SUE' });
-check('Logins: each supervisor row sums up what they may use, in one line', /2 of 8 pages · 1 of 5 functions/.test(await sueRow.locator('details.accpick summary').textContent()), clean(await sueRow.locator('details.accpick summary').textContent()));
+check('Logins: each supervisor row sums up what they may use, in one line', /2 of 8 pages · 1 of 6 functions/.test(await sueRow.locator('details.accpick summary').textContent()), clean(await sueRow.locator('details.accpick summary').textContent()));
 check('…an admin row says everything', /everything/i.test(await adm.locator('#userTable tr', { hasText: 'DANA-WHITFIELD' }).textContent()));
 await sueRow.locator('details.accpick summary').click(); await adm.waitForTimeout(300);
-check('…and opens into a checklist', await sueRow.locator('.accpanel').isVisible() && (await sueRow.locator('input[type=checkbox][data-access]').count()) === 13);
+check('…and opens into a checklist', await sueRow.locator('.accpanel').isVisible() && (await sueRow.locator('input[type=checkbox][data-access]').count()) === 14);
 await sueRow.locator('input[data-access="testing"]').check(); await adm.waitForTimeout(900);
 check('…whose summary follows the ticks', /3 of 8 pages/.test(await sueRow.locator('details.accpick summary').textContent()), clean(await sueRow.locator('details.accpick summary').textContent()));
 check('Logins: the Role column is a picker with the presets', (await sueRow.locator('select.rolepick option').allTextContents()).some((t) => /Inventory control/.test(t)) && await sueRow.locator('select.rolepick').inputValue() === 'custom');
 await sueRow.locator('select.rolepick').selectOption('inventory'); await adm.waitForTimeout(900);
-check('…and picking Inventory control sets the list to the count, adjustments and downloads', (await j(await fetch(`${BASE}/api/admin/users`, { headers: A }))).users.find((u) => u.username === 'SUE').access.join() === 'dashboard,full,testing,approve,export');
+check('…and picking Inventory control sets the list to the count, adjustments and downloads', (await j(await fetch(`${BASE}/api/admin/users`, { headers: A }))).users.find((u) => u.username === 'SUE').access.join() === 'dashboard,full,testing,approve,export,close');
 await fetch(`${BASE}/api/admin/users/SUE`, { method: 'POST', headers: A, body: JSON.stringify({ access: ['testing', 'dashboard'] }) });
 check('Ticking a box saves it', (await j(await fetch(`${BASE}/api/admin/users`, { headers: A }))).users.find((u) => u.username === 'SUE').access.includes('testing'));
 check('…and the page itself has the Logins tab, being an admin', (await adm.$$eval('#subTabs button', (b) => b.map((x) => x.textContent.trim()))).some((t) => t === 'Logins'));
@@ -168,6 +168,39 @@ const other = await fetch(`${BASE}/api/admin/users/IVY`, { method: 'POST', heade
 check('…while any other account is theirs to manage', other.status === 200, String(other.status));
 const self = await fetch(`${BASE}/api/admin/users/DANA-WHITFIELD`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'Dana Whitfield' }) });
 check('…and the site admin can still change its own', self.status === 200, String(self.status));
+
+/* the Count supervisor: runs the floor - queues the aisles, marks them done, and closes the count at the end of the day */
+const fs = await j(await fetch(`${BASE}/api/admin/users`, { method: 'POST', headers: A, body: JSON.stringify({ username: 'FLOOR-SUP', name: 'Flo Reyes', password: 'dock-side-77', mustChange: false, profile: 'floor' }) }));
+check('The Count supervisor role carries queueing aisles and closing the count', fs.profile === 'floor' && fs.access.includes('assign') && fs.access.includes('close'), JSON.stringify(fs.access));
+const F = { ...hdr, authorization: 'Bearer ' + (await login({ username: 'FLOOR-SUP', password: 'dock-side-77' })).token };
+const stF = async (path, init = {}) => fetch(BASE + path, { ...init, headers: { ...F, ...(init.headers || {}) } });
+await fetch(`${BASE}/api/admin/sessions/${sess.id}/status`, { method: 'POST', headers: A, body: JSON.stringify({ status: 'open' }) });
+const q = await stF(`/api/admin/sessions/${sess.id}/assignments`, { method: 'POST', body: JSON.stringify({ team: '41', aisles: 'F01', levels: 'A', force: true }) });
+check('Count supervisor: queues an aisle onto a team', q.status === 200 && (await j(q)).added.length === 1, String(q.status));
+const asg = (await j(await stF(`/api/admin/sessions/${sess.id}/assignments`))).find((a) => a.team === '41');
+check('…marks it done', asg && (await stF(`/api/admin/sessions/${sess.id}/assignments/${asg.id}`, { method: 'POST', body: JSON.stringify({ status: 'done' }) })).status === 200);
+check('…uploads a plan and previews an auto plan', (await stF(`/api/admin/sessions/${sess.id}/plan`, { method: 'POST', headers: { 'content-type': 'text/csv' }, body: 'Team,Aisle,Levels\n42,F01,A\n' })).status === 200 && (await stF(`/api/admin/sessions/${sess.id}/assignments/auto`, { method: 'POST', body: JSON.stringify({ teams: '43', preview: true }) })).status !== 403);
+const closed = await stF(`/api/admin/sessions/${sess.id}/status`, { method: 'POST', body: JSON.stringify({ status: 'closed' }) });
+check('…closes the count at the end of the day', closed.status === 200 && (await j(closed)).status === 'closed', String(closed.status));
+check('…and reopens it', (await j(await stF(`/api/admin/sessions/${sess.id}/status`, { method: 'POST', body: JSON.stringify({ status: 'open' }) }))).status === 'open');
+check('…but Settings stays shut: the count\'s options, a list upload', (await stF(`/api/admin/sessions/${sess.id}/settings`, { method: 'POST', body: JSON.stringify({ guided: false }) })).status === 403 && (await stF(`/api/admin/sessions/${sess.id}/master?kind=bins`, { method: 'POST', headers: { 'content-type': 'text/csv' }, body: 'Bin Location\nX\n' })).status === 403);
+check('A login without "close" cannot close a count', (await fetch(`${BASE}/api/admin/sessions/${sess.id}/status`, { method: 'POST', headers: S, body: JSON.stringify({ status: 'closed' }) })).status === 403);
+check('Inventory control closes it too', (await j(await fetch(`${BASE}/api/admin/users/IVY`, { method: 'POST', headers: A, body: JSON.stringify({ profile: 'inventory' }) }))).access.includes('close'));
+/* a login made on the role before closing was part of it is brought up to it on the next start - the shape it would have been stored in */
+const fp = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+fp.on('pageerror', (e) => errors.push(e.message));
+await fp.goto(BASE + '/admin');
+await fp.fill('#fUser', 'FLOOR-SUP'); await fp.fill('#fPassword', 'dock-side-77'); await fp.click('#btnLogin');
+await fp.waitForSelector('#scrMain.active'); await fp.waitForTimeout(1500);
+check('Dashboard, Count supervisor: a Close this count button by the count picker', await fp.isVisible('#btnCloseCount') && clean(await fp.textContent('#btnCloseCount')) === 'Close this count');
+fp.on('dialog', (d) => d.accept());
+await fp.click('#btnCloseCount'); await fp.waitForTimeout(1200);
+check('…press it, confirm: the count is closed and the button offers to reopen', (await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}`, { headers: A }))).status === 'closed' && clean(await fp.textContent('#btnCloseCount')) === 'Reopen this count', clean(await fp.textContent('#btnCloseCount')));
+await fp.click('#btnCloseCount'); await fp.waitForTimeout(1200);
+check('…and reopens it', (await j(await fetch(`${BASE}/api/admin/sessions/${sess.id}`, { headers: A }))).status === 'open');
+await fetch(`${BASE}/api/admin/users/SUE`, { method: 'POST', headers: A, body: JSON.stringify({ access: ['dashboard', 'assign'] }) });
+await page.goto(BASE + '/admin'); await page.waitForSelector('#scrMain.active'); await page.waitForTimeout(1500);
+check('Sue, with the Dashboard and queueing but not "close", sees no such button', !!(await page.$('#btnCloseCount')) && !(await page.isVisible('#btnCloseCount')));
 
 check('No script errors', errors.length === 0, errors.join(' | '));
 await browser.close();

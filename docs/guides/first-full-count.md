@@ -136,8 +136,8 @@ their clock-in number.
    |---|---|
    | **Admin** | Everything, Settings included |
    | **Supervisor** | Every page and button except Settings |
-   | **Count supervisor** | Runs the floor: Dashboard, Teams & crew, messages, SOS, queueing aisles, downloads |
-   | **Inventory control** | The count's numbers: Dashboard, second counts, approving adjustments, downloads |
+   | **Count supervisor** | Runs the floor: Dashboard, Teams & crew, messages, SOS, queueing aisles, closing the count at the end of the day, downloads |
+   | **Inventory control** | The count's numbers: Dashboard, second counts, approving adjustments, closing the count, downloads |
 
 3. Give them a way in, one of two:
    - **Invite by email.** Type their **Email** and press **Add login**. Press **Email the invite**

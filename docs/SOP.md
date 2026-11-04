@@ -194,9 +194,10 @@ the page's name and a **Menu** button that opens the pages, the search box and *
    - **Admin** — everything, Settings and logins included.
    - **Supervisor** — everything a supervisor can: every page and function except Settings.
    - **Inventory control** — the count only: Dashboard, Testing Suite, approving adjustments,
-     downloads. Nothing on teams, warehouse jobs or cycle counts.
+     closing the count, downloads. Nothing on teams, warehouse jobs or cycle counts.
    - **Count supervisor** — runs the floor: Dashboard, Teams & crew, messages, SOS, queueing
-     aisles, downloads, Testing Suite.
+     aisles, closing the count at the end of the day (the button by the count picker on the
+     Dashboard), downloads, Testing Suite.
    - **Warehouse jobs** — Front bins, Not in Location, Cycle counts, downloads, Testing Suite.
    - **Cycle counter** — Cycle counts and the Testing Suite only.
    The role can be changed on the person's row at any time, and **May use** fine-tunes it

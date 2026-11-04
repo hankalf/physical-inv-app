@@ -21,6 +21,7 @@ export const ACCESS = [
   ['alerts', 'Answer an SOS, quiet a stopped-scanning alert', 'function'],
   ['assign', 'Queue aisles, raise second counts, the board note', 'function'],
   ['export', 'Downloads and printouts', 'function'],
+  ['close', 'Close a count when the day is done, reopen it', 'function'],
 ];
 /* The tabs on each page. A page key grants the whole page; a tab key grants
    that tab alone. Settings has no entry here: it stays for admins. */
@@ -128,7 +129,8 @@ export function routeNeed(p, method) {
   if (w && /^\/api\/admin\/(floor-bins|devices|scanner-layout|scanner-prompts|default-session|sos-reasons|teams-webhook|idle-config|issue-menu|logo|pallet-system|erp\/formats|backups|adjustment-reasons|users|login-locks|onedrive|gdrive|teams-backup|crew-board|features|access-map|training)(\/|$)/.test(p)) return 'admin';
   if (w && p === '/api/admin/sessions') return 'admin';
   if (method === 'DELETE' && /^\/api\/admin\/sessions\/\d+$/.test(p)) return 'admin';
-  if (w && /^\/api\/admin\/sessions\/\d+\/(master|floor-bins|status|trial|aisles\/block|aisles\/auto-block)$/.test(p)) return 'admin';
+  if (w && /^\/api\/admin\/sessions\/\d+\/(master|floor-bins|trial|aisles\/block|aisles\/auto-block)$/.test(p)) return 'admin';
+  if (w && /^\/api\/admin\/sessions\/\d+\/status$/.test(p)) return 'close';            // closing the count at the end of the day, and reopening it
   if (/^\/api\/admin\/sessions\/\d+\/erp\//.test(p) || /^\/api\/admin\/(audit|backups)/.test(p)) return 'admin';
   // the functions
   if (/\/adjustments\/decide$/.test(p)) return 'approve';
@@ -154,8 +156,8 @@ export function routeNeed(p, method) {
 export const PROFILES = [
   ['admin', 'Admin — everything, Settings included', null],
   ['supervisor', 'Supervisor — everything a supervisor can', null],
-  ['inventory', 'Inventory control — the count, adjustments, downloads', ['dashboard', 'full', 'testing', 'approve', 'export']],
-  ['floor', 'Count supervisor — runs the floor', ['dashboard', 'full', 'teams', 'testing', 'messages', 'alerts', 'assign', 'export']],
+  ['inventory', 'Inventory control — the count, adjustments, downloads', ['dashboard', 'full', 'testing', 'approve', 'export', 'close']],
+  ['floor', 'Count supervisor — runs the floor', ['dashboard', 'full', 'teams', 'testing', 'messages', 'alerts', 'assign', 'export', 'close']],
   ['jobs', 'Warehouse jobs — front bins, Not in Location, cycle counts', ['front', 'missing', 'cycle', 'testing', 'export']],
   ['cycle', 'Cycle counter — cycle counts only', ['cycle', 'testing']],
   ['custom', 'Custom — ticked by hand', undefined],
