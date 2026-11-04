@@ -163,6 +163,14 @@ await s2('STG-010'); await s2('12'); await s2('PRYSTG#10');
 check('…counting spot 10 out of order is fine, the guide still says 2 next', !(await g2.$('#scrOverride.active')) && (await nextCode(g2)) === 'PRYSTG#2' && /2 of 16/.test(clean(await g2.textContent('#nextBin'))), clean(await g2.textContent('#nextBin')).slice(0, 80));
 await g2.click('#btnEmpty').catch(() => {}); await g2.waitForTimeout(250); await s2('PRYSTG#2');
 check('…an empty staging spot is checked off as empty, and the guide goes on to 3', /PRYSTG#2 recorded as EMPTY/.test(clean(await g2.textContent('#scanMsg'))) && (await nextCode(g2)) === 'PRYSTG#3' && /3 of 16/.test(clean(await g2.textContent('#nextBin'))), clean(await g2.textContent('#scanMsg')).slice(0, 60) + ' | ' + clean(await g2.textContent('#nextBin')).slice(0, 50));
+/* a run of empty staging spots: from #3 to #16, the numbers in order, not a dictionary slice */
+await g2.click('#btnEmptyRun'); await g2.waitForTimeout(300);
+const er = async (v) => { await g2.fill('#fEmptyScan', v); await g2.press('#fEmptyScan', 'Enter'); await g2.waitForTimeout(350); };
+await er('PRYSTG#3'); await er('PRYSTG#16');
+const erRows = await g2.$$eval('#erList .errow', (rs) => rs.map((r) => ({ code: r.querySelector('b').textContent, on: r.querySelector('input').checked, done: r.querySelector('input').disabled })));
+check('Several empty bins in a row, PRYSTG#3 to PRYSTG#16: the fourteen spots between, in number order, #10 already counted', erRows.map((r) => r.code).join(',') === Array.from({ length: 14 }, (_, i) => `PRYSTG#${i + 3}`).join(',') && erRows.find((r) => r.code === 'PRYSTG#10').done && erRows.filter((r) => r.on).length === 13, erRows.map((r) => r.code).join(','));
+await g2.click('#btnEmptyRunSave'); await g2.waitForTimeout(800);
+check('…one tap marks the 13 empty', /13 bins recorded as EMPTY/.test(clean(await g2.textContent('#scanMsg'))), clean(await g2.textContent('#scanMsg')).slice(0, 60));
 await s2('P-RACK'); await s2('4'); await s2('F01A001');
 check('Gun 2: a rack bin scanned on the staging team is "Not your aisle"', !!(await g2.$('#scrOverride.active')) && /Not your aisle/.test(clean(await g2.textContent('#ovTitle'))) && /aisle F01.*assigned to aisle PRYSTG/.test(clean(await g2.textContent('#ovWhy'))), clean(await g2.textContent('#ovWhy')).slice(0, 100));
 await g2.click('#btnOverrideCancel'); await g2.waitForTimeout(400);
@@ -173,7 +181,7 @@ await g1.waitForTimeout(1500); await g2.waitForTimeout(500);
 const counts = await (await fetch(`${BASE}/api/admin/sessions/${S1}/export/counts.csv`, { headers: A })).text();
 check('The count lines are in the office under REC and PRYSTG#1 / PRYSTG#10', /FLR-001/.test(counts) && /FLR-EXTRA/.test(counts) && /PRYSTG#1\b/.test(counts) && /PRYSTG#10/.test(counts), counts.split('\n').filter((l) => /FLR|STG/.test(l)).length + ' lines');
 const ov = await get(`/api/admin/sessions/${S1}/aisles`);
-check('The aisle overview: REC 1 of 1 bins counted, 3 pallets; PRYSTG 3 of 16', ov.find((a) => a.aisle === 'REC').bins_counted === 1 && ov.find((a) => a.aisle === 'REC').pallets_counted === 3 && ov.find((a) => a.aisle === 'PRYSTG').bins_counted === 3, JSON.stringify(ov.filter((a) => a.floor).map((a) => [a.aisle, a.bins_counted, a.pallets_counted])));
+check('The aisle overview: REC 1 of 1 bins counted, 3 pallets; PRYSTG 16 of 16 (3 counted, 13 empty)', ov.find((a) => a.aisle === 'REC').bins_counted === 1 && ov.find((a) => a.aisle === 'REC').pallets_counted === 3 && ov.find((a) => a.aisle === 'PRYSTG').bins_counted === 16, JSON.stringify(ov.filter((a) => a.floor).map((a) => [a.aisle, a.bins_counted, a.pallets_counted])));
 
 /* ---------------- the pages ---------------- */
 const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
@@ -184,7 +192,7 @@ await signIn(page);
 await pickSession(page, S1);
 await page.waitForSelector('#floorTable tr', { timeout: 10000 }); await page.waitForTimeout(400);
 const card = clean(await page.textContent('#floorCard'));
-check('Settings → Lists & racking → Floor bins: the list, and a row per aisle saying on the count, team, counted', /REC/.test(card) && /PRYSTG\s*16 · PRYSTG#1 to PRYSTG#16/.test(card) && /team S1-DS07/.test(card) && /team 8/.test(card) && /3 of 16/.test(card), card.slice(0, 200));
+check('Settings → Lists & racking → Floor bins: the list, and a row per aisle saying on the count, team, counted', /REC/.test(card) && /PRYSTG\s*16 · PRYSTG#1 to PRYSTG#16/.test(card) && /team S1-DS07/.test(card) && /team 8/.test(card) && /16 of 16/.test(card), card.slice(0, 200));
 await page.fill('#fFloorBins', 'REC: Receiving floor\nPRYSTG#1-16: Staged orders\nRETWRK 1-4: Rework');
 await page.waitForTimeout(2200);
 fl = await get(`/api/admin/floor-bins?session=${S1}`);

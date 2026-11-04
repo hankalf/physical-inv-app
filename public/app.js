@@ -2341,14 +2341,20 @@
 
   /** Every bin between two codes in one aisle, in the order a team walks them. */
   async function binsBetween(a, b) {
-    const [lo, hi] = [a.c, b.c].sort((x, y) => x.localeCompare(y, undefined, { numeric: true }));
-    const rows = await wrap(tx('loc', 'readonly').getAll(IDBKeyRange.bound(lo, hi)));
-    const mine = state.session?.guided && state.assignment?.active && Array.isArray(state.assignment.bins)
-      ? new Set(state.assignment.bins) : null;
-    return rows
-      .filter((r) => r.aisle === a.aisle && (!mine || mine.has(r.c)))
-      .map((r) => r.c)
-      .sort((x, y) => x.localeCompare(y, undefined, { numeric: true }));
+    const nat = (x, y) => x.localeCompare(y, undefined, { numeric: true });
+    /* The walk the team was given, when there is one: its levels, in its order.
+       Otherwise the aisle's bins as the numbers read - PRYSTG#2 before #10, so a
+       run from #2 to #16 is the fourteen spots between, not a dictionary slice. */
+    const walk = state.session?.guided && state.assignment?.active && Array.isArray(state.assignment.bins) ? state.assignment.bins : null;
+    let codes = walk && walk.includes(a.c) && walk.includes(b.c) ? [...walk] : null;
+    if (!codes) {
+      const rows = await wrap(tx('loc', 'readonly').getAll());
+      codes = rows.filter((r) => r.aisle === a.aisle).map((r) => r.c).sort(nat);
+    }
+    let i = codes.indexOf(a.c), k = codes.indexOf(b.c);
+    if (i < 0 || k < 0) return [];
+    if (i > k) [i, k] = [k, i];
+    return codes.slice(i, k + 1).sort(nat);
   }
 
   async function emptyRunScan(raw) {
