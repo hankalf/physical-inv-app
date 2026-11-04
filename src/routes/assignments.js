@@ -1,7 +1,7 @@
 import { db, norm, resolveAisle } from '../db.js';
 import { aisleNumber, normLevels, levelsOverlap, levelsLabel } from '../util/bincode.js';
 import { reachShortfall, listTeams } from './people.js';
-import { isFloorAisle } from './floor-bins.js';
+import { isFloorAisle, floorAisleNames } from './floor-bins.js';
 
 /*
  * Guided counting.
@@ -24,6 +24,7 @@ export const cleanDirection = (d) => (String(d || '').toLowerCase() === 'down' ?
 
 export function aisleOverview(sessionId) {
   const id = Number(sessionId);
+  const floorNames = floorAisleNames();
   return db
     .prepare(
       `SELECT a.aisle,
@@ -32,7 +33,7 @@ export function aisleOverview(sessionId) {
                 WHERE l.session_id = a.session_id AND l.aisle = a.aisle AND COALESCE(l.zone, '') != ''
                 GROUP BY l.zone ORDER BY COUNT(*) DESC LIMIT 1) AS zone,
               COALESCE(b.bins, 0) AS bins,
-              CASE WHEN COALESCE(b.bins, 0) > 0 AND COALESCE(b.leveled, 0) = 0 THEN 1 ELSE 0 END AS floor,
+              CASE WHEN COALESCE(b.bins, 0) > 0 AND COALESCE(b.leveled, 0) = 0 THEN 1 ELSE 0 END AS unleveled,
               COALESCE(k.bins_counted, 0) AS bins_counted,
               COALESCE(k.pallets_counted, 0) AS pallets_counted,
               (SELECT GROUP_CONCAT(team, ',') FROM assignments s
@@ -59,7 +60,9 @@ export function aisleOverview(sessionId) {
         WHERE a.session_id = ?
         ORDER BY a.block, a.aisle`
     )
-    .all(id, id, id);
+    .all(id, id, id)
+    // floor bins: named on the floor list, no levels
+    .map(({ unleveled, ...r }) => ({ ...r, floor: unleveled && floorNames.has(r.aisle) ? 1 : 0 }));
 }
 
 export const listAssignments = (sessionId) =>

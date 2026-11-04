@@ -154,10 +154,19 @@ export function floorState(sessionId) {
   };
 }
 
-/** Is this aisle floor bins - bins with no level - on this count? */
+/** The aisles the floor list names: REC, PRYSTG … */
+export const floorAisleNames = () => new Set(parseFloorBins(floorBinsText()).filter((p) => !p.error).map((p) => p.aisle));
+
+/**
+ * Is this aisle floor bins on this count: named on the floor list, with its
+ * bins carrying no level? (A site whose rack bins have no level letters at all
+ * is not floor: its aisles are still planned by level, as one level.)
+ */
 export function isFloorAisle(sessionId, aisle) {
+  const a = norm(aisle);
+  if (!floorAisleNames().has(a)) return false;
   const r = db.prepare(`SELECT COUNT(*) AS bins, SUM(CASE WHEN TRIM(COALESCE(level, '')) != '' THEN 1 ELSE 0 END) AS leveled
-                          FROM locations WHERE session_id = ? AND aisle = ?`).get(Number(sessionId), norm(aisle));
+                          FROM locations WHERE session_id = ? AND aisle = ?`).get(Number(sessionId), a);
   return !!(r && r.bins > 0 && !r.leveled);
 }
 

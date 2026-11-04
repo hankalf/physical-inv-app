@@ -191,7 +191,6 @@ fl = await get(`/api/admin/floor-bins?session=${S1}`);
 check('Type a third line and it saves itself, parsed: RETWRK with 4 spots, not on the count yet', fl.areas.length === 3 && fl.areas[2].aisle === 'RETWRK' && fl.areas[2].bins === 4 && fl.areas[2].onCount === 0 && /Saved/.test(clean(await page.textContent('#floorMsg'))), JSON.stringify(fl.areas.map((a) => [a.aisle, a.bins, a.onCount])));
 await page.click('#btnFloorApply'); await page.waitForTimeout(1200);
 check('Put them on this count: RETWRK 1 to 4 join, the rest already there', /On the count: REC, PRYSTG, RETWRK/.test(clean(await page.textContent('#floorMsg'))) && /4 added/.test(clean(await page.textContent('#floorMsg'))) && (await get(`/api/admin/sessions/${S1}/aisles`)).some((a) => a.aisle === 'RETWRK' && a.bins === 4), clean(await page.textContent('#floorMsg')).slice(0, 120));
-await page.fill('#fFloorBins', 'REC: Receiving floor\nPRYSTG#1-16: Staged orders'); await page.waitForTimeout(2000);
 
 /* the Team plan: quick assign */
 await page.goto(`${BASE}/admin#teams`); await page.waitForTimeout(800);
@@ -205,6 +204,11 @@ await page.click('#qaAisles .qa-aisle[data-aisle="RETWRK"]'); await page.waitFor
 check('Pick a team and RETWRK with no level ticked: Queue is ready, "floor pallets, no levels"', !(await page.$eval('#btnQuickQueue', (b) => b.disabled)) && /Queue RETWRK for team S1-DS07 · floor pallets, no levels/.test(clean(await page.textContent('#btnQuickQueue'))), clean(await page.textContent('#btnQuickQueue')));
 await page.click('#btnQuickQueue'); await page.waitForTimeout(900);
 check('…queued as floor', /queued RETWRK \(floor\) for team S1-DS07/.test(clean(await page.textContent('#assignMsg'))), clean(await page.textContent('#assignMsg')).slice(0, 100));
+/* taken off the floor list, RETWRK is an ordinary aisle again: its bins stay, levels are asked for */
+await post('/api/admin/floor-bins', { text: 'REC: Receiving floor\nPRYSTG#1-16: Staged orders' });
+const after = await get(`/api/admin/sessions/${S1}/aisles`);
+check('Take RETWRK off the list: its bins stay on the count, but it is no longer floor', after.some((a) => a.aisle === 'RETWRK' && a.bins === 4 && a.floor === 0) && after.find((a) => a.aisle === 'REC').floor === 1);
+check('…and the auto plan leaves the floor bins to be handed out by hand', (await pj(`/api/admin/sessions/${S1}/assignments/auto`, { teams: 'S1-DS07', preview: true }).catch(() => ({ skipped: [] }))).skipped?.some((x) => x.aisle === 'PRYSTG' && /floor bins/.test(x.why)) ?? false);
 check('No page errors', !errors.length, errors.join(' | '));
 await browser.close();
 

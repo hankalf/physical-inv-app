@@ -61,8 +61,8 @@ export function readiness(sessionId) {
     else add('ok', `${bins.toLocaleString()} bins on the count`, 'Every scanned bin is checked against them.');
     /* the floor bins: REC and the staging spots hold pallets on count day, and the
        bin list files them where no team can be sent - so they go on by hand, once */
-    if (bins && (s.mode || 'full') !== 'cycle') {
-      const fl = floorState(s.id);
+    const fl = bins && (s.mode || 'full') !== 'cycle' ? floorState(s.id) : null;
+    if (fl && fl.areas.some((a) => !a.error)) {
       const names = fl.areas.filter((a) => !a.error).map((a) => a.bins > 1 ? `${a.aisle} (${a.bins} spots)` : a.aisle).join(', ');
       if (!fl.allOn) add('warn', `The floor bins are not on the count: ${fl.areas.filter((a) => !a.error && a.missing).map((a) => a.aisle).join(', ')}`, `Pallets standing on the floor in receiving and staging are counted like an aisle. Press Put them on this count under Lists & racking → Floor bins, then give each to a team on the Team plan.`, fix('lists', 'floorCard', 'Floor bins'));
       else if (fl.unassigned.length) add('warn', `Nobody is counting the floor bins: ${fl.unassigned.join(', ')}`, `They are on the count (${names}) but no team has them. Queue them onto a team on the Team plan, like an aisle; any team reaches them.`, fix('', '', 'Team plan', '/admin'));

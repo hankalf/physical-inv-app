@@ -1,5 +1,6 @@
 import { db, norm } from '../db.js';
 import { listTeams } from './people.js';
+import { floorAisleNames } from './floor-bins.js';
 import { queueAssignments, autoActivate } from './assignments.js';
 import { normLevels, levelsLabel } from '../util/bincode.js';
 
@@ -57,6 +58,7 @@ export function autoPlan(sessionId, opts = {}) {
             (SELECT COUNT(*) FROM assignments s WHERE s.session_id = a.session_id AND s.aisle = a.aisle AND s.status = 'queued') AS queued
        FROM aisles a WHERE a.session_id = ?`).all(id);
   const skipped = [];
+  const floorNames = floorAisleNames();
   let aisles = rows.map((r) => ({
     aisle: r.aisle, block: r.block, bins: r.bins,
     levels: sortLevels(String(r.levels || '').replace(/,/g, '')),
@@ -65,6 +67,8 @@ export function autoPlan(sessionId, opts = {}) {
   if (desc) aisles.reverse();
   aisles = aisles.filter((a) => {
     if (!a.bins) { skipped.push({ aisle: a.aisle, why: 'no bins' }); return false; }
+    // floor bins (REC, the staging spots) are nowhere near a team's stretch of racking: handed out by hand
+    if (!a.levels && floorNames.has(a.aisle)) { skipped.push({ aisle: a.aisle, why: 'floor bins - queue them onto a team by hand' }); return false; }
     if (a.busy) { skipped.push({ aisle: a.aisle, why: 'already being counted, or done' }); return false; }
     if (a.queued && !opts.replace) { skipped.push({ aisle: a.aisle, why: 'already queued - tick Replace to re-plan it' }); return false; }
     return true;
