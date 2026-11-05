@@ -23,6 +23,7 @@ and the button that answers it. Keep the Dashboard open with the count picked at
 | **SOS** on a scanner | **Alerts**: a loud alert with team, aisle and last bin | **I am on it** — the scanner says who has seen it — and go |
 | A scanner has gone quiet | **Alerts**: the team, and how long | **On break**, **Lunch**, or **Seen — I am on it** |
 | You need a team somewhere | **Alerts → Message the floor** | Pick a team or everybody, type it, send. You see when they tap *Got it* |
+| The floor bins — REC, the staging spots — need a team | **Team plan → Quick assign**, under *Floor* | Pick a team, click REC and PRYSTG, **Queue**. No levels to tick: any team reaches them |
 | A first count disagrees with the report | **Second counts**: raised by itself, for another team | Nothing: teams pick them up from **Start second counts** |
 | You want a spot counted again | **Second counts**: type the bin | **Request second count**, with a team if you want one |
 | A torn label, no label, a rack label that will not scan | **Reports → Fix list**: *Labels to replace* | Print one, put it on, then **Label printed & on the pallet** (or **on the rack**) |
@@ -38,10 +39,15 @@ and the button that answers it. Keep the Dashboard open with the count picked at
 - **Second counts**: the open number. Hand what is left to the next shift's second-count team.
 - **Reports → Fix list**: labels still to replace, so the next shift's counters are not stopped by
   the same torn label.
+- **The last aisle done, the second counts worked**: **Close this count**, beside the count picker
+  at the top of the Dashboard. The scanners can no longer send to it; **Reopen this count** undoes
+  it if a gun still holds lines.
 
 ## Do not
 
 - Do not mark an aisle **done** before the team says every bin has a count: the expected pallets
   nobody saw become second counts.
 - Do not tell a counter what the first count was on a second count. It is blind on purpose.
+- Do not let a second-count team scan one pallet and tap **Bin done**. The second count stands for
+  the whole bin: the pallets not scanned drop to *Not found*, and only a third count puts it right.
 - Do not let a crew carry on as another team's number. The next crew signs on with its own card.

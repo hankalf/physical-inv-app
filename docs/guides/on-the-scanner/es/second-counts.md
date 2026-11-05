@@ -18,7 +18,7 @@ Cuando un primer conteo no coincide con el reporte, la oficina manda a otro equi
 
 1. En **Mi pasillo**, toca **Empezar segundos conteos**.
 2. El aviso de arriba dice a qué ubicación ir.
-3. Cuenta todo en ese lugar: rack, tarima, cantidad, para cada tarima.
+3. Cuenta todo en ese lugar: rack, tarima, cantidad, para cada tarima. **Tu conteo reemplaza el primer conteo de todo el lugar**: una tarima que no escaneas se toma como que ya no está.
 4. Cuando cada tarima que espera el reporte en ese lugar está contada, el escáner termina el segundo conteo solo y sale el siguiente.
 5. Hay menos tarimas de las esperadas, o ninguna: toca **Ubicación terminada — no hay más aquí** cuando contaste lo que hay. Un lugar vacío: **Ubicación VACÍA**.
 6. No puedes llegar ahora: toca **Dejarla para otro equipo**.
@@ -31,4 +31,4 @@ Tu segundo conteo junto al primero en **Second counts**. Cuando el tuyo no coinc
 ## No hagas esto
 
 - No preguntes cuál fue el primer conteo.
-- No cuentes solo la tarima que salió mal: cuenta todo en el lugar.
+- No cuentes solo la tarima que salió mal: cuenta todo en el lugar. Una sola tarima escaneada y *Ubicación terminada* le dice a la oficina que las demás no están.

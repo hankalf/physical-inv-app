@@ -24,6 +24,7 @@ the end, to print and carry on count day.
 - [10 — The buttons the scanners offer](#10--the-buttons-the-scanners-offer)
 - [11 — Create the count](#11--create-the-count)
 - [12 — Upload the bin list and the inventory report](#12--upload-the-bin-list-and-the-inventory-report)
+- [12a — Floor bins: REC and the staging spots](#12a--floor-bins-rec-and-the-staging-spots)
 - [13 — Pair the aisles into racking blocks](#13--pair-the-aisles-into-racking-blocks)
 - [14 — The count's options](#14--the-counts-options)
 - [15 — Give the teams their aisles](#15--give-the-teams-their-aisles)
@@ -138,6 +139,10 @@ their clock-in number.
    | **Supervisor** | Every page and button except Settings |
    | **Count supervisor** | Runs the floor: Dashboard, Teams & crew, messages, SOS, queueing aisles, closing the count at the end of the day, downloads |
    | **Inventory control** | The count's numbers: Dashboard, second counts, approving adjustments, closing the count, downloads |
+
+   A Count supervisor or Inventory control login closes the count at the end of the day from
+   **Close this count**, beside the count picker on the Dashboard (step 25); Settings stays for
+   admins.
 
 3. Give them a way in, one of two:
    - **Invite by email.** Type their **Email** and press **Add login**. Press **Email the invite**
@@ -275,6 +280,11 @@ A scanner's **Type** can be changed on its row. The device takes the change the 
 If Camera says the device cannot read barcodes, use Chrome on Android. Otherwise, pair a Bluetooth
 scanner, which types like a Zebra.
 
+**The whole screen.** A gun takes the whole screen on the sign-on tap, and again when **Count** is
+pressed, so the browser bar is never over the counting screen (*Settings → Scanners → Counting
+screen → Take the whole screen*, on by default). Chrome says so once with a short notice. A gun with
+the app **installed** from its link (step 1 above) has no bar and no notice at all.
+
 ## 9 — What the counting screen asks
 
 **Settings → Scanners → How the counting screen is put together.** This is what a counter sees. The
@@ -381,6 +391,31 @@ and carry on. **Override** — throwing the loaded report away first — is the 
 login the site started with); other admins do not see the box. **⬇ Download the loaded report**
 gives the report back as a file, every column it came with.
 
+## 12a — Floor bins: REC and the staging spots
+
+The receiving floor (**REC**) and the staging spots (**PRYSTG#1** to **PRYSTG#16**) are not racking.
+The bin list files REC under *AREAS*, where no team can be sent, and the layout leaves staging out
+of the count altogether — but on count day they hold pallets, and somebody has to count them.
+
+1. Under **Floor bins** (the card under the bin list), check the list: one line per floor bin or run
+   of spots. It ships as `REC` and `PRYSTG#1-16` — sixteen spots in one aisle called PRYSTG. Words
+   after a colon are the description printed on the label. It saves as you type.
+2. Press **Put them on this count**. REC moves out of AREAS into its own aisle, the sixteen spots
+   are added, and none of them has a level, so any team reaches them. Counts already taken against
+   a bin stay with it.
+3. Press **🖨 Floor bin labels** and hang each label where its pallets stand. The scanners read the
+   label as the bin.
+
+**How you know it worked:** the table under the list says *yes* against each aisle, and the Aisles
+card below lists REC and PRYSTG.
+
+Once on a count, every later bin-list upload puts them back, **Replace what is there** included. In
+step 15 queue REC and PRYSTG onto a team like any aisle; **Auto-assign** leaves them out on purpose,
+so hand them out yourself. **Ready for count day** and the count-day checklist keep saying so until
+they are on the count and with a team.
+
+![](../images/settings-floor-bins.png)
+
 ## 13 — Pair the aisles into racking blocks
 
 **Settings → Lists & racking → Aisles & racking blocks.** Aisles that back onto each other share a
@@ -464,6 +499,10 @@ is now** to print the teams already queued in their columns, leaving the rest bl
 **Or from a file:** press **⇅ Plan file**. **⬇ Sample plan** gives you the layout (Team, Aisle, Levels,
 Start). Fill it in and use **Upload a plan**. **⬇ Export the plan (CSV)** downloads the current plan
 to rework in Excel.
+
+**The floor bins** (REC and PRYSTG, step 12a) sit under *Floor* in Quick assign and on the aisle
+list. They have no levels and need no equipment: pick a team, click REC and PRYSTG, press **Queue**.
+Auto-assign leaves them out, so hand them out this way. On the gun the walk goes PRYSTG#1, #2 … #16.
 
 **How you know it worked:** each team's column lists its aisles in order, the first one *Counting now* and
 the rest *queued*.
@@ -622,6 +661,17 @@ thresholds in step 14.
    - **it agrees with neither** — with the third-count option on, a third team counts it and its
      number stands.
 
+**The second count is the whole bin.** It stands for every pallet in the bin, not only the one
+named. A team that scans one pallet and taps *Bin done — nothing more here* has told the app the
+rest are gone: they drop to 0 and show *Not found* on the pallet report, *2nd count 0* in the
+side-by-side sheet. If that happens, press **3rd count** on that bin's row and have a third team scan
+every pallet in it — a third count stands over both. Requesting another second count would add to
+the short one, not replace it. Say it at the briefing: on a second count, scan everything in the bin.
+
+**Who is offered what.** A team's gun shows the second counts handed to it first, then every one
+nobody has yet. Handing some to a team narrows what the *other* teams see, not what that team sees.
+**Send them all to team** (step 14) gives every one to one team, and the other guns show none.
+
 ![](../images/dashboard-second-counts.png)
 
 **Work every second count before you close the count.** A count closed with second counts open has
@@ -705,8 +755,10 @@ uploaded**. The guide **The ERP upload, an aisle at a time** has the whole routi
 1. **Settings → Backups & log → Back up now.**
 2. On **Inventory Control → Reports**, press **Final report** once it is on.
 3. Press **Export everything (Excel)** and keep the workbook on the shared drive.
-4. **Settings → Count setup → Count session → Close session.** A closed count is read-only: the
-   scanners can no longer send lines to it, and its reports stay for good.
+4. **Settings → Count setup → Count session → Close session** — or **Close this count** beside the
+   count picker on the Dashboard, which the Count supervisor and Inventory control roles have
+   without Settings. A closed count is read-only: the scanners can no longer send lines to it, and
+   its reports stay for good. **Reopen this count** on the same button undoes it.
 5. Untick **Scanners start here** if another count is coming, and set it on that count instead.
 
 **Delete** is separate and deliberately hard: the count must be closed, you type its name, and a

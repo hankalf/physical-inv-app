@@ -461,6 +461,38 @@ be looked at or sent on.
 
 *Settings &rarr; Lists &amp; racking. Each list has its own card, and each reports exactly what it read.*
 
+### Step 6a — Floor bins: REC and the staging spots
+
+**Settings → Lists & racking → Floor bins** (the card under the bin list).
+
+The receiving floor (**REC**) and the staging spots (**PRYSTG#1** to **PRYSTG#16**) are not
+racking. The bin list files REC under *AREAS*, where no team can be sent, and the site's layout
+leaves staging out of the count — but on count day they hold pallets, and somebody has to count
+them.
+
+- The list is one line per floor bin or run of spots. It ships as `REC` and `PRYSTG#1-16`:
+  sixteen spots in one aisle called PRYSTG. Words after a colon are the description printed on
+  the label. It saves as you type; a line that cannot be read is refused with its line number.
+- **Put them on this count** makes each run an aisle of its own, every bin with no level: REC
+  moves out of AREAS, the sixteen spots are added, counts already taken against a bin stay with
+  it. The table under the list says *yes* against each aisle, which team has it and how many of
+  its bins have a count. Pressing it again changes nothing.
+- **🖨 Floor bin labels** prints a big Code 128 for each bin, two to a page, to hang where the
+  pallets stand. The scanners read it as the bin.
+- Once on a count, every later bin-list upload puts them back — **Replace what is there**
+  included — so the night-before upload cannot lose them. A count that never had them put on is
+  left alone.
+- On the Team plan (Step 14) they sit under *Floor* in Quick assign, need no levels and no
+  equipment, and the auto plan leaves them out on purpose. On the gun the assignment says *floor
+  pallets — count every pallet standing here* and the walk goes PRYSTG#1, #2 … #16. Taking an
+  aisle off the list makes it an ordinary aisle again; its bins stay.
+- **Ready for count day** and the count-day checklist say when the floor bins are not on the count,
+  and when nobody has them.
+
+![](images/settings-floor-bins.png)
+
+*Settings &rarr; Lists &amp; racking &rarr; Floor bins. REC and PRYSTG on the count, each with its team.*
+
 ### Step 7 — Pair the aisles into racking blocks
 
 **Settings → Lists & racking → Aisles & racking blocks.**
@@ -870,10 +902,11 @@ own stylesheet, so it cannot drift from reality.
   and the gun is left however the device turned it, with a yellow **Hold the scanner
   upright** strip across the top. Turning auto-rotate off on the handheld (an Android
   setting, not an app one) is still the tidiest fix of all.
-- **Take the whole screen** — off unless you turn it on. It makes the app fill the display
-  at sign-on, but the browser announces that with a bar carrying the site's address, right
-  over the counting screen. **Installing the app** on the handheld (step 8) is the quiet
-  way to lose the browser, and the one to prefer.
+- **Take the whole screen** — on by default. The gun asks for the whole screen on the sign-on
+  tap and again when **Count** is pressed, so the browser bar is not over the counting screen.
+  The browser says so once with a short notice carrying the site's address. **Installing the
+  app** on the handheld (step 8) does the same with no notice at all, and is still the one to
+  prefer. Untick it for a site that would rather keep the browser bar.
 - **Keep the screen awake** — holds the display on while a team is counting, instead of
   it sleeping between bays.
 - **Buzz on a good or bad scan** — useful with ear defenders.
@@ -1661,7 +1694,8 @@ owner can make a plain frame work by setting its cookies to `SameSite=None; Secu
 
 ### Step 16 — The supervisor's procedure (on the dashboard)
 
-**Dashboard**, with the count picked in the header. It refreshes itself every 30
+**Dashboard**, with the count picked in the header. Beside the picker, a login allowed to close
+the count has **Close this count** (Step 22). It refreshes itself every 30
 seconds, fetching only the tab on screen (plus the progress figures and the alerts, which are
 light), so three dashboards left open on a big count do not keep rebuilding the pallet report.
 
@@ -1917,6 +1951,16 @@ supervisor.
     The line goes to Adjustments as counted;
   - **it agrees with the report** — the first count was wrong, and the line now matches;
   - **it agrees with neither** — nobody knows which number is right. That is what a third count is for.
+- **The second count is the whole bin.** It stands for every pallet in the bin, not only the one
+  named. A team that scans one pallet and taps *Bin done — nothing more here* has told the app the
+  rest are gone: they drop to 0, show *Not found* on the pallet report and *2nd count 0* in the
+  side-by-side sheet. Put it right with **3rd count** on that bin's row: a third team scans every
+  pallet in the bin and its count stands over both. Requesting another second count would add to
+  the short one, not replace it. Say it at every briefing: on a second count, scan everything in
+  the bin.
+- **Who is offered what.** A team's gun shows the second counts handed to it first, then every one
+  nobody has yet. Handing some to a team narrows what the *other* teams see, not what that team
+  sees; *Send them all to team* (below) is the way to give every one to one team.
 - **One team for the second counts.** If one team does them all — inventory control's, say —
   tick **Send them all to team** in the count's settings (*Settings → Scanners → This count on the scanners →
   Second counts*) and type its team number. Every new second count is given to that team, and the
@@ -2150,8 +2194,11 @@ the file the ERP gets is the same story the log tells.
 
 ### Step 22 — Close the count
 
-**Settings → Count setup → Count session → Close session.** A closed count is read-only:
-scanners can no longer post lines to it, and its reports stay available for ever.
+**Settings → Count setup → Count session → Close session** — or, on the Dashboard, **Close this
+count** beside the count picker, which the *Count supervisor* and *Inventory control* roles have
+(Settings is admin-only; the login list calls it *Close a count when the day is done, reopen it*).
+A closed count is read-only: scanners can no longer post lines to it, and its reports stay
+available for ever. **Reopen this count** on the same button undoes it.
 
 **Delete…** is separate and deliberately harder: the count must be closed first, you have
 to type its name, and a backup is taken before anything is removed. Everything counted

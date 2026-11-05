@@ -321,6 +321,7 @@ try {
   await saveCard(desk, '#sosList', 'settings-sos');
   await sub('lists');
   await saveCard(desk, '#fFile-bins', 'settings-bin-list');
+  await saveCard(desk, '#fFloorBins', 'settings-floor-bins');
   await saveCard(desk, '#aisleTable', 'settings-racking-blocks', 10);
   await sub('erp');
   await saveCard(desk, '#fErpFormat', 'settings-erp');

@@ -51,7 +51,8 @@ A supervisor can also send any bin back by hand.
 2. The gun gives you the **nearest** first — in the aisle you are in, then nearby. The banner
    says **SECOND COUNT · bin …** or **THIRD COUNT · bin …**, and why.
 3. Go to that bin and **scan every pallet in it**, the normal way: pallet, quantity, bin. Count
-   everything in the bin, not only the pallet that brought you there.
+   everything in the bin, not only the pallet that brought you there. **One pallet scanned and Bin
+   done tells the office the rest are gone.**
 4. Nothing in the bin: **Bin is EMPTY**.
 5. Once every pallet the report expects in the bin is counted, the gun finishes the second count by itself and moves to the next one. Fewer pallets there than that: tap **Bin done — nothing more here** when the bin is finished.
 6. **My aisle** takes you back to your own aisle at any time; the second counts wait for you.
@@ -71,6 +72,10 @@ report. Then:
 | **neither** | Nobody knows which number is right | A **third count** (section 5) |
 
 *Agrees* means the same pallets in the bin, with the same quantities.
+
+**The second count is the whole bin.** If a team scanned one pallet and tapped *Bin done*, the other
+pallets in that bin now read *Not found*. The fix is a **third count** of the bin (section 5), every
+pallet scanned; it stands over both earlier counts.
 
 ## 5 — Third counts
 
@@ -118,6 +123,10 @@ On many counts one team does all the second counts — inventory control's, say.
 - The Second counts card says **new second counts go to team …**.
 - A bin that team counted **first** never goes to it — another team does that one. A third count
   goes to it only if it did neither earlier count.
+
+**Without that option**, a gun is offered the second counts handed to its team first, then every
+one nobody has yet — so *Second counts available* still shows the open pool, even after a few were
+handed to that team.
 
 **When that team is swamped**, a supervisor hands some to another team with the bar above the
 table: **Hand open second counts from** *team 90* **to team** *4*, **How many** (blank for all), **In

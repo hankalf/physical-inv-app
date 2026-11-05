@@ -85,7 +85,8 @@ A bin has one open second count at a time; asking again says so.
    aisles nearest by number. The banner says **SECOND COUNT · bin F04A012** (or **THIRD COUNT**)
    and the reason.
 3. Go to that bin and **scan every pallet in it** as normal: pallet, quantity, bin. Count everything
-   in the bin, not only the pallet named — the whole bin is counted again.
+   in the bin, not only the pallet named — the whole bin is counted again. **One pallet scanned and
+   Bin done tells the office the rest are gone**: they drop to *Not found* (section 5).
 4. A bin with nothing in it: **Bin is EMPTY**.
 5. Once every pallet the report expects in the bin is counted, the gun finishes the second count by itself and moves to the next one. Fewer pallets there than that: tap **Bin done — nothing more here** when the bin is finished.
 6. **My aisle** goes back to the team's own aisle at any time; the second counts wait.
@@ -105,6 +106,13 @@ report. What happens next depends on what the second count agrees with:
 | **neither** | Nobody knows which number is right | With **Third count** on, the bin goes back a third time. Without it, the second count stands — raise a third by hand if it matters |
 
 *Agrees* means the same pallets in the bin with the same quantities.
+
+**The second count is the whole bin.** It stands for every pallet in the bin, not only the one that
+raised it. A team that scanned one pallet and tapped *Bin done* has told the app the others are
+gone: the pallet report shows them *Not found*, the side-by-side sheet *2nd count 0*. Put it right
+with **3rd count** on that bin's row (section 6) and have a third team scan every pallet in it; the
+third count stands over both. Requesting another second count would add to the short one, not
+replace it.
 
 ## 6 — Third counts
 
@@ -158,6 +166,11 @@ When one team does all the second counts — inventory control's, say:
    type the team number (*90*). **Save settings**.
 2. Every new second count is given to that team, and the open ones nobody had yet go to it at once.
    Its guns have them all; the other teams' guns are offered none.
+
+**Without that option**, a team's gun is offered the second counts handed to it first, then every
+one nobody has yet. So handing a few to team 4 narrows what the *other* teams see, not what team 4
+sees — its *Second counts available* still counts the open pool. Only *Send them all to team* takes
+the pool away from the other guns.
 3. The Second counts card says **new second counts go to team 90**.
 
 It stays blind. A bin team 90 counted **first** is never its own second count: that one stays open
