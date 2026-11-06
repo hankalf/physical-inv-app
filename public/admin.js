@@ -2032,7 +2032,7 @@
   function shown(name) { const pane = document.querySelector(`[data-sub="${name}"]`); return !!pane && (pane.classList.contains('active') || pane.getClientRects().length > 0); }
   function paneJobs() {
     return {
-      progress: [refreshNotes, refreshProgress, refreshCloseout], teams: [refreshAssignments], reports: [refreshPallets, refreshLabels, refreshMoved, refreshFlagged, refreshCrew, refreshArchives], map: [refreshMap],
+      progress: [refreshNotes, refreshProgress, refreshCloseout], teams: [refreshAssignments], reports: [refreshPallets, refreshLabels, refreshMoved, refreshValue, refreshFlagged, refreshCrew, refreshArchives], map: [refreshMap],
       overview: [refreshOverview], second: [refreshRecounts], alerts: [refreshMessages, refreshAlerts], adjust: [refreshAdjustments, () => refreshErpAisles().catch(() => {})],
     };
   }
@@ -2528,6 +2528,41 @@
     catch (err) { msg($('fixMsg'), 'err', err.message); }
   }
   for (const b of document.querySelectorAll('#fixFilter button')) b.onclick = () => { fixStatus = b.dataset.status; refreshLabels().catch(() => {}); };
+  /* the count reconciled in money: by aisle, by system or by item, the biggest first */
+  let valueBy = (() => { try { return sessionStorage.getItem('valueBy') || 'aisle'; } catch { return 'aisle'; } })();
+  async function refreshValue() {
+    if (!sessionId || !$('valueTable')) return;
+    const d = await apiJson(`/api/admin/sessions/${sessionId}/value?by=${valueBy}`);
+    for (const b of document.querySelectorAll('#valueBy button')) b.classList.toggle('selected', b.dataset.by === valueBy);
+    const t = d.totals;
+    $('valueSub').textContent = !d.priced ? 'the report carries no costs — load one with a Cost or Amount column to read the count in money'
+      : t.pallets ? `${money(t.net, { sign: true })} net over ${t.pallets.toLocaleString()} pallet${t.pallets === 1 ? '' : 's'} that differ${t.unpriced ? ` · ${t.unpriced} of them unpriced` : ''}` : 'nothing differs from the report yet';
+    $('valueStats').innerHTML = '';
+    if (d.priced) {
+      for (const [n, l] of [[money(t.net, { sign: true }), 'net difference'], [money(t.over, { sign: true }), 'over the report'], [money(t.under, { sign: true }), 'under the report'],
+        [money(t.expected), 'the report is worth'], [`${t.secondCounted} / ${t.pallets}`, `second-counted · ${t.recountsOpen} still open`]]) {
+        const el = document.createElement('div'); el.className = 'stat';
+        el.innerHTML = '<div class="n"></div><div class="l"></div>';
+        el.querySelector('.n').textContent = n; el.querySelector('.l').textContent = l;
+        $('valueStats').appendChild(el);
+      }
+    }
+    const head = { aisle: 'Aisle', system: 'System', sku: 'Item' }[valueBy] || 'Group';
+    table($('valueTable'),
+      [{ label: head }, { label: 'Pallets', num: true }, { label: 'Over', num: true }, { label: 'Under', num: true }, { label: 'Net', num: true }, { label: 'Of', num: true }, { label: 'Second counts' }],
+      d.rows,
+      (r) => {
+        const tr = document.createElement('tr'); tr.dataset.value = r.group;
+        const net = cell(money(r.net, { sign: true }), 'num'); if (r.net < 0) net.classList.add('neg');
+        const sc = cell(r.recounts_open ? `${r.second_counted} done · ${r.recounts_open} open` : r.second_counted === r.pallets ? 'all second-counted' : r.second_counted ? `${r.second_counted} of ${r.pallets}` : 'first count only');
+        if (r.recounts_open) sc.appendChild(tag('OPEN')); else if (r.second_counted === r.pallets) sc.appendChild(tag('DONE', 'ok'));
+        tr.append(cell(r.label + (r.unpriced ? ` · ${r.unpriced} unpriced` : '')), cell(String(r.pallets), 'num'), cell(money(r.over, { sign: true }), 'num'), cell(money(r.under, { sign: true }), 'num'), net, cell(money(r.expected), 'num'), sc);
+        return tr;
+      }, d.priced ? 'Nothing differs from the report.' : 'No costs on the report.');
+  }
+  for (const b of document.querySelectorAll('#valueBy button')) b.onclick = () => { valueBy = b.dataset.by; try { sessionStorage.setItem('valueBy', valueBy); } catch {} refreshValue().catch(() => {}); };
+  $('btnExportValue').onclick = () => api.download(`/api/admin/sessions/${sessionId}/export/value.csv?by=${valueBy}`, `value-by-${valueBy}-session-${sessionId}.csv`);
+
   /* the flagged lines, each with why; a chip a reason narrows the list */
   let flaggedWhy = '';
   let flaggedData = null;

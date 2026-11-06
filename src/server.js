@@ -46,7 +46,7 @@ import { withEntries, markEntered, markFromFile, worksheetRows, WORKSHEET_COLUMN
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, reorderAssignments, teamStatus, applyLayoutBlocks, partnerOf, planRows, planTeams, PLAN_COLUMNS, planNext, markLevelDone } from './routes/assignments.js';
-import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot, labelsToReplace, fixLabel, movedPallets, movedRows, MOVED_COLUMNS, flaggedLines } from './routes/reports.js';
+import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot, labelsToReplace, fixLabel, movedPallets, movedRows, MOVED_COLUMNS, flaggedLines, valueReconciliation, VALUE_COLUMNS } from './routes/reports.js';
 import {
   listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
   tasksForTeam, takeRecount, finishRecount, updateRecount, deleteRecount, raiseThirdCount, thirdCountsForBins,
@@ -2489,6 +2489,16 @@ async function handleAdmin(req, res, url, m) {
     const out = crewWorkbook(m[1]);
     audit(actor, 'exported the crew metrics workbook', `${out.teams} teams, ${out.people} people`, m[1]);
     return send(req, res, 200, out.buffer, { 'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'content-disposition': `attachment; filename="${out.filename}"`, 'cache-control': 'no-store' });
+  }
+  // the count reconciled in money: by aisle, by system or by item
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/value$/)) && method === 'GET') {
+    return sendJson(req, res, 200, valueReconciliation(m[1], { by: url.searchParams.get('by') || 'aisle' }));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/value\.csv$/)) && method === 'GET') {
+    const by = url.searchParams.get('by') || 'aisle';
+    const out = valueReconciliation(m[1], { by });
+    res.writeHead(200, { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="value-by-${by}-session-${m[1]}.csv"` });
+    return res.end(toCsv([...out.rows, { group: 'TOTAL', label: '', pallets: out.totals.pallets, over: out.totals.over, under: out.totals.under, net: out.totals.net, abs: '', expected: out.totals.expected, unpriced: out.totals.unpriced, first_only: out.totals.firstOnly, second_counted: out.totals.secondCounted, recounts_open: out.totals.recountsOpen }], VALUE_COLUMNS));
   }
   // the flagged lines, each with why
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/flagged$/)) && method === 'GET') {

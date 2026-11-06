@@ -2138,6 +2138,15 @@ when — and it is left out of the second counts (Settings → Scanners can also
 report's bin). Key the moves from this list or from its CSV; it has its own sheet in *Export everything*.
 The pallet report still shows these as WRONG BIN.
 
+**Reconciliation by value** — when the report carries costs, every pallet whose count differs from
+the report, priced at the report's cost and added up **by aisle**, **by system** or **by item**, the
+biggest difference first: pallets that differ, over, under and net, what that group of the report is
+worth, and how far its second counts have got (*first count only*, *3 of 5*, *all second-counted*, or
+how many are still open). The five figures above the table are the whole count: net, over, under, the
+report's worth, and second-counted of the pallets that differ. It says where to look first and what
+the count is worth to the books; **Reconciliation CSV** downloads the view shown with a TOTAL row. A
+report with no Cost or Amount column shows the card with a note instead.
+
 **Flagged lines** — every line a counter accepted past a warning, newest first, each saying why:
 a pallet not on the report, a bin not on the list, a bin outside the team's plan (aisle, level or
 side), a pallet already counted elsewhere, an override with its reason; lines whose label would

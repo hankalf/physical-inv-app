@@ -688,6 +688,26 @@
       <div class="scroll" style="margin-top:10px"><table id="movedTable"></table></div>
     </div>
 
+    <div class="card" id="valueCard">
+      <h2>Reconciliation by value <span class="muted" id="valueSub">the differences in money, the biggest first</span></h2>
+      <div class="hint" style="margin-top:0">
+        Every pallet whose count differs from the report, priced at the report's cost, added up by <b>aisle</b>, by
+        <b>system</b> or by <b>item</b> — over, under and net — with how far each group's second counts have got. Where to
+        look first, and what the count is worth to the books; the pallet report has the lines.
+      </div>
+      <div class="grid" id="valueStats" style="margin-top:12px"></div>
+      <div class="toolbar" style="margin-top:12px">
+        <div class="seg" id="valueBy">
+          <button type="button" data-by="aisle">By aisle</button>
+          <button type="button" data-by="system">By system</button>
+          <button type="button" data-by="sku">By item</button>
+        </div>
+        <span class="spacer"></span>
+        <button id="btnExportValue">Reconciliation CSV</button>
+      </div>
+      <div class="scroll" style="margin-top:10px"><table id="valueTable"></table></div>
+    </div>
+
     <div class="card" id="flaggedCard">
       <h2>Flagged lines <span class="muted" id="flaggedSub">the lines a counter accepted past a warning</span></h2>
       <div class="hint" style="margin-top:0">

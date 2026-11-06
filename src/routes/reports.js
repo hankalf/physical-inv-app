@@ -493,3 +493,50 @@ export function flaggedLines(sessionId) {
   for (const r of rows) for (const k of r.why) byWhy[k] = (byWhy[k] || 0) + 1;
   return { rows, total: rows.length, byWhy, labels: FLAG_WHY };
 }
+
+
+/**
+ * The count reconciled in money: every pallet whose count differs from the
+ * report, priced at the report's cost, grouped by aisle, by system or by
+ * item, the biggest difference first - with how far each group's second
+ * counts have got. Needs the report to carry costs; says so when it does not.
+ */
+export const VALUE_COLUMNS = ['group', 'label', 'pallets', 'over', 'under', 'net', 'abs', 'expected', 'unpriced', 'first_only', 'second_counted', 'recounts_open'];
+export function valueReconciliation(sessionId, { by = 'aisle' } = {}) {
+  const id = Number(sessionId);
+  const priced = !!db.prepare('SELECT 1 FROM pallets WHERE session_id = ? AND (cost IS NOT NULL OR amount IS NOT NULL) LIMIT 1').get(id);
+  const aisleOf = new Map(db.prepare('SELECT code, aisle FROM locations WHERE session_id = ?').all(id).map((r) => [r.code, r.aisle || '']));
+  const cents = (n) => Math.round(n * 100) / 100;
+  const groups = new Map();
+  const totals = { pallets: 0, over: 0, under: 0, net: 0, expected: 0, unpriced: 0, firstOnly: 0, secondCounted: 0, recountsOpen: 0 };
+  const keyOf = (r) => {
+    if (by === 'system') return [r.source || '', r.source || 'no system'];
+    if (by === 'sku') return [r.sku || r.pallet_id, r.sku ? `${r.sku}${r.description ? ' — ' + r.description : ''}` : `${r.pallet_id} (no item)`];
+    const bin = r.expected_location || String(r.found_location || '').split(/[,;]\s*/)[0] || '';
+    const aisle = aisleOf.get(bin) || (bin ? bin.replace(/[A-Z]\d{3}$/, '') : '');
+    return [aisle || '—', aisle || 'no aisle'];
+  };
+  for (const r of palletReport(id)) {
+    /* the group's worth is the whole group on the report, matches included */
+    const [key, label] = keyOf(r);
+    if (!groups.has(key)) groups.set(key, { group: key, label, pallets: 0, over: 0, under: 0, net: 0, abs: 0, expected: 0, unpriced: 0, first_only: 0, second_counted: 0, recounts_open: 0 });
+    const g = groups.get(key);
+    if (r.expected_amount !== '') { totals.expected += Number(r.expected_amount); g.expected += Number(r.expected_amount); }
+    const hasVar = r.variance_qty !== '' && Number(r.variance_qty) !== 0;
+    if (!hasVar) continue;
+    g.pallets++; totals.pallets++;
+    if (r.variance_amount === '') { g.unpriced++; totals.unpriced++; }
+    else {
+      const v = Number(r.variance_amount);
+      g.net += v; totals.net += v; g.abs += Math.abs(v);
+      if (v > 0) { g.over += v; totals.over += v; } else { g.under += v; totals.under += v; }
+    }
+    if (r.open_recounts) { g.recounts_open++; totals.recountsOpen++; }
+    else if (r.recounted) { g.second_counted++; totals.secondCounted++; }
+    else { g.first_only++; totals.firstOnly++; }
+  }
+  const rows = [...groups.values()].filter((g) => g.pallets > 0).map((g) => ({ ...g, over: cents(g.over), under: cents(g.under), net: cents(g.net), abs: cents(g.abs), expected: cents(g.expected) }))
+    .sort((a, b) => b.abs - a.abs || b.pallets - a.pallets || String(a.group).localeCompare(String(b.group), undefined, { numeric: true }));
+  for (const k of ['over', 'under', 'net', 'expected']) totals[k] = cents(totals[k]);
+  return { by, priced, rows, totals };
+}
