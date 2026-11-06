@@ -81,6 +81,29 @@
       </div>
     </div>
 
+    <div class="card" id="clockCard">
+      <h2>The hours the count is worked <span class="muted">so "done about" steps over the breaks and stops at the bell</span></h2>
+      <div class="hint" style="margin-top:0">The clock on the Dashboard reads the pace from the time the crews were actually counting and says when the bins left
+        will be done. Without hours it counts every minute from now as a counting minute, so at 11:50 it promises 12:20 and lunch makes a liar of it.
+        Give it the shift and the breaks and the finish time skips them; what is left at the end of the shift is said to wait for the next one.
+        A quiet spell that falls in a break is named as the break. <span class="autosave-note muted">Saves as you change it.</span></div>
+      <div class="inline" style="margin-top:12px">
+        <div class="auto"><label class="cb"><input type="checkbox" id="fClockOn"> Use these hours</label></div>
+        <div class="auto"><label for="fClockStart">Shift starts</label><input id="fClockStart" class="sm" type="time" style="width:120px"></div>
+        <div class="auto"><label for="fClockEnd">Shift ends</label><input id="fClockEnd" class="sm" type="time" style="width:120px"></div>
+        <div class="auto"><span class="muted" style="font-size:12.5px">An end before the start is the next morning — a night shift.</span></div>
+      </div>
+      <div class="chips" id="clockBreaks" style="margin-top:10px"></div>
+      <div class="inline" style="margin-top:8px">
+        <div class="auto"><label for="fBreakFrom">Break from</label><input id="fBreakFrom" class="sm" type="time" style="width:120px"></div>
+        <div class="auto"><label for="fBreakTo">to</label><input id="fBreakTo" class="sm" type="time" style="width:120px"></div>
+        <div class="auto"><label for="fBreakLabel">Called</label><input id="fBreakLabel" class="sm" placeholder="Lunch" maxlength="40" style="width:140px"></div>
+        <div class="auto"><button class="fit" id="btnAddBreak">Add break</button></div>
+        <div class="auto"><button class="fit" id="btnSaveClock" hidden>Save</button></div>
+      </div>
+      <div class="feedback" id="clockMsg"></div>
+    </div>
+
     <div class="card" id="readyCard">
       <h2>Ready for count day <span class="tag" id="readyState">checking…</span>
         <span class="muted">the site's settings checked against what a count day needs, worked out fresh every time this page opens</span></h2>

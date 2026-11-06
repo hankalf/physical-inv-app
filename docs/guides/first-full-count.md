@@ -639,6 +639,12 @@ always reads English.
 - **Team plan** — queue more aisles, hand an aisle back, or **Message the floor**: a line on one
   team's scanners or everyone's. The table shows who has read it.
 
+**The clock on the count**, under the progress bar: on the clock, downtime (quiet spells over the
+stopped-scanning limit), counting time, the pace of the last half hour, and **Done about**. Give
+it the shift's hours and breaks under **Settings → Count setup → The hours the count is worked**
+and *Done about* steps over lunch and stops at the bell, saying how many bins would be left at it
+and that they wait for the next shift.
+
 ![](../images/dashboard-progress.png)
 
 **Watch for** exceptions climbing on one team (usually a training problem), a team stopped a long

@@ -1749,6 +1749,12 @@ light), so three dashboards left open on a big count do not keep rebuilding the 
   anybody did on it, not at the click that closed it the next morning, and reads *Took*. All of
   it is in **Export everything**: the Summary sheet, a *Downtime* sheet of the spells, and the
   Teams sheet with each team's downtime, counting time and pace.
+  **The hours the count is worked** (Settings → Count setup, the card under the checklist): tick
+  *Use these hours*, give the shift's start and end and add the breaks, and *Done about* steps
+  over the breaks and stops at the bell — *after lunch 12:00–12:30*, or *not by 14:30: about 310
+  bins would be left at the bell, done the next shift*. A quiet spell that falls in a break is
+  named as the break. An end before the start is a night shift. Saved as you change it; the
+  strip on the Dashboard shows the hours it is reading from.
 
 ![](images/dashboard-systems.png)
 

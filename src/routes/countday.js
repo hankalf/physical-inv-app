@@ -5,6 +5,7 @@ import { listBackups } from './admin-ops.js';
 import { trainingSession, trainingCycleSession } from './training.js';
 import { readiness } from './readiness.js';
 import { floorState } from './floor-bins.js';
+import { clockSchedule, scheduleWords } from './clock-schedule.js';
 import { localDate } from '../util/localtime.js';
 
 /*
@@ -136,6 +137,11 @@ export function countdayChecklist(sessionId) {
       detail: !bins ? `after the bin list: ${names}` : !fl.allOn ? `not on the count yet: ${fl.areas.filter((a) => !a.error && a.missing).map((a) => a.aisle).join(', ')}` : fl.unassigned.length ? `on the count, but no team has ${fl.unassigned.join(', ')}` : `${names} · ${fl.areas.filter((a) => !a.error).map((a) => `${a.aisle}: team ${a.teams.join(', ')}`).join(' · ')}`,
       how: ['Settings → Lists & racking → Floor bins: REC and the staging spots PRYSTG#1 to PRYSTG#16, one line each. Press Put them on this count.', 'Print the floor bin labels and hang each where its pallets stand; the scanners read the label as the bin.', 'Dashboard → Team plan: queue REC and PRYSTG onto a team like any aisle. They have no levels, so any team reaches them; the scanner walks the spots in order.'],
       guide: g('12a--floor-bins-rec-and-the-staging-spots'), goto: to('/settings', 'lists', 'floorCard'), label: 'Floor bins' }); }
+  { const sc = clockSchedule(id);
+    item({ key: 'hours', title: 'Give the clock the shift hours and the breaks', need: 'optional', auto: sc.on && !!(sc.start || sc.end || sc.breaks.length),
+      detail: sc.on && (sc.start || sc.end || sc.breaks.length) ? scheduleWords(sc) : 'no hours set — "done about" counts every minute from now, lunch included',
+      how: ['Settings → Count setup → The hours the count is worked: tick Use these hours.', 'Type the shift start and end; add each break with its times and a name (Lunch).', 'The Dashboard\'s Done about then steps over the breaks and stops at the bell, and says what would be left.'],
+      guide: g('20--count-day-what-the-supervisor-watches'), goto: to('/settings', 'start', 'clockCard'), label: 'Hours' }); }
   if (!cycle) item({ key: 'aisleSheet', title: 'Print the aisle sheet', need: 'optional', auto: !!logged('printed the aisle sheet', id), detail: logged('printed the aisle sheet', id) ? `printed ${new Date(logged('printed the aisle sheet', id).at).toLocaleString()}` : 'the paper copy of who does which aisle',
     how: ['Dashboard → Team plan → 🖨 Aisle sheet.', 'Tick With the plan as it is now to print the teams in; the rest is blank to write.', 'Keep it on the clipboard on the day: team, levels, started, done, checked by.'],
     guide: g('15--give-the-teams-their-aisles'), goto: to('/admin', 'teams'), label: 'Team plan' });

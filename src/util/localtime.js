@@ -44,3 +44,26 @@ export function localTime(date = new Date()) {
 export function localWeekday(date = new Date()) {
   return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts(date).weekday);
 }
+
+/**
+ * The other way: a day at the site and minutes past its midnight, as a
+ * timestamp. Two passes, so a day the clocks change still lands right.
+ */
+export function localToMs(dateStr, minutesPastMidnight = 0) {
+  const [y, mo, d] = String(dateStr).split('-').map(Number);
+  let guess = Date.UTC(y, mo - 1, d, 0, 0) + minutesPastMidnight * 60000;
+  for (let i = 0; i < 2; i++) {
+    const p = parts(new Date(guess));
+    const got = Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day), Number(p.hour) % 24, Number(p.minute));
+    const want = Date.UTC(y, mo - 1, d, 0, 0) + minutesPastMidnight * 60000;
+    guess += want - got;
+  }
+  return guess;
+}
+
+/** The site's date `days` days after a given one: "2026-11-06" + 1 -> "2026-11-07". */
+export function addDays(dateStr, days) {
+  const [y, mo, d] = String(dateStr).split('-').map(Number);
+  const t = new Date(Date.UTC(y, mo - 1, d + days));
+  return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`;
+}

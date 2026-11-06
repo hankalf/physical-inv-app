@@ -276,8 +276,13 @@
     else if (!c.binsLeft) { $('ccEta').textContent = 'now'; $('ccEtaL').textContent = 'Done about · every bin has a count'; }
     else if (c.finishAt) {
       $('ccEta').textContent = clockTime(c.finishAt);
-      $('ccEtaL').textContent = `Done about · ${c.binsLeft.toLocaleString()} bins left at the ${c.finishBasis === 'recent' ? 'last half hour\'s' : 'average'} pace`;
+      $('ccEtaL').textContent = `Done about · ${c.binsLeft.toLocaleString()} bins left at the ${c.finishBasis === 'recent' ? 'last half hour\'s' : 'average'} pace${c.finishNote ? ' · ' + c.finishNote : ''}`;
     } else { $('ccEta').textContent = '—'; $('ccEtaL').textContent = `Done about · ${c.binsLeft.toLocaleString()} bins left, no pace to read it from yet`; }
+    if (c.schedule && c.schedule.on) {
+      const sc = document.createElement('div'); sc.className = 'muted sched'; sc.id = 'ccSchedule';
+      sc.textContent = `${c.schedule.words}${c.schedule.offNow ? ` · ${c.schedule.offNow} now` : ''} · set under Settings → Count setup`;
+      box.appendChild(sc);
+    }
     tickCountClock();
   }
   function tickCountClock() {
@@ -301,7 +306,7 @@
     if (!c.running) parts.push(`ended <b>${clockTime(c.ended)}</b>`);
     const over = c.spells.filter((x) => !x.open);
     parts.push(over.length
-      ? `quiet spells: ${over.map((x) => `${clockTime(x.from)}–${clockTime(x.to)} (${span(x.minutes * 60000)})`).join(', ')}`
+      ? `quiet spells: ${over.map((x) => `${clockTime(x.from)}–${clockTime(x.to)} (${span(x.minutes * 60000)}${x.scheduled ? ', ' + x.scheduled.toLowerCase() : ''})`).join(', ')}`
       : 'no quiet spells over the limit');
     if (quietMs != null) parts.push(`<span class="now">quiet now for ${span(quietMs)}</span>`);
     $('ccSpells').innerHTML = parts.join(' · ');

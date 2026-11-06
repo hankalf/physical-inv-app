@@ -17,10 +17,13 @@
  */
 import { db, getSession } from '../db.js';
 import { idleConfig, teamClocks } from './idle.js';
+import { clockSchedule, offAt, offPeriods, scheduledOffMs, projectFinish, scheduleWords } from './clock-schedule.js';
+import { localMinutes } from '../util/localtime.js';
 
 const HOUR = 3600000;
 const RECENT_MINUTES = 30;
 const iso = (ms) => (ms == null ? null : new Date(ms).toISOString());
+const hmOf = (ms) => { const m = localMinutes(new Date(ms)); return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
 
 /** Everything anybody did on the count, in time order: a scan, a sign-on, a sign-off. */
 function activity(id, at) {
@@ -96,12 +99,42 @@ export function countClock(sessionId, at = Date.now()) {
     const r = db.prepare('SELECT COUNT(*) AS lines, COUNT(DISTINCT location_code) AS bins FROM counts WHERE session_id = ? AND voided = 0 AND scanned_at >= ?').get(id, since);
     recent = { minutes: minutes(windowMs), lines: r.lines, bins: r.bins, linesPerHour: perHour(r.lines, windowMs), binsPerHour: perHour(r.bins, windowMs) };
   }
+  /* the hours the count is worked: the finish time steps over the breaks and
+     stops at the end of the shift, and a quiet spell that is a break says so */
+  const sched = clockSchedule(id);
   let finishAt = null;
   let finishBasis = null;
+  let finishNote = '';
+  let binsLeftAtBell = null;
+  let shiftEndsAt = null;
   if (running && binsLeft > 0) {
-    if (recent && recent.binsPerHour > 0) { finishBasis = 'recent'; finishAt = at + (binsLeft / recent.binsPerHour) * HOUR; }
-    else if (binsPerHour > 0) { finishBasis = 'average'; finishAt = at + (binsLeft / binsPerHour) * HOUR; }
+    const pace = recent && recent.binsPerHour > 0 ? recent.binsPerHour : binsPerHour > 0 ? binsPerHour : 0;
+    if (pace > 0) {
+      finishBasis = recent && recent.binsPerHour > 0 ? 'recent' : 'average';
+      const workMs = (binsLeft / pace) * HOUR;
+      const pr = projectFinish(sched, at, workMs);
+      finishAt = pr.finishAt;
+      const breaks = pr.skipped.filter((o) => o.kind === 'break');
+      const bell = pr.skipped.find((o) => o.kind === 'shift');
+      if (bell) {
+        binsLeftAtBell = Math.max(0, Math.round(binsLeft - (pr.workByShiftEnd / HOUR) * pace));
+        shiftEndsAt = bell.from;
+        finishNote = `not by ${sched.end}: about ${binsLeftAtBell.toLocaleString()} bins would be left at the bell, done the next shift`;
+      } else if (breaks.length) finishNote = `after ${breaks.map((b) => `${b.label.toLowerCase()} ${hmOf(b.from)}–${hmOf(b.to)}`).join(' and ')}`;
+    }
   }
+  const scheduledOff = sched.on && started != null ? scheduledOffMs(sched, started, end) : 0;
+  /* a quiet spell is "lunch" when lunch takes up most of it, or most of lunch is in it */
+  const offLabel = (from, to) => {
+    if (!sched.on) return '';
+    const z = to == null ? end : to;
+    let best = null, most = 0;
+    for (const o of offPeriods(sched, from, z)) {
+      const overlap = Math.min(o.to, z) - Math.max(o.from, from);
+      if (overlap > most) { most = overlap; best = o; }
+    }
+    return best && most >= Math.min(best.to - best.from, z - from) * 0.5 ? best.label : '';
+  };
 
   /* each team, by the same reckoning */
   const byTeam = new Map(db.prepare('SELECT team, COUNT(*) AS lines, COUNT(DISTINCT location_code) AS bins FROM counts WHERE session_id = ? AND voided = 0 GROUP BY team').all(id).map((r) => [r.team, r]));
@@ -129,9 +162,11 @@ export function countClock(sessionId, at = Date.now()) {
     elapsedMs, downtimeMs, countingMs,
     downtimeClosedMs: closedMs,                   // the spells that are over; the open one grows on the screen
     quietMinutes: openSpell ? minutes(openSpell.ms) : null,
-    spells: spells.map((x) => ({ from: iso(x.from), to: iso(x.to), minutes: minutes(x.ms), open: x.open })),
+    spells: spells.map((x) => ({ from: iso(x.from), to: iso(x.to), minutes: minutes(x.ms), open: x.open, scheduled: offLabel(x.from, x.to) })),
     lines: tot.lines, bins: tot.bins, binsTotal, binsLeft, linesPerHour, binsPerHour,
-    recent, finishAt: iso(finishAt), finishBasis,
+    recent, finishAt: iso(finishAt), finishBasis, finishNote,
+    binsLeftAtBell, shiftEndsAt: iso(shiftEndsAt),
+    schedule: { ...sched, words: scheduleWords(sched), scheduledOffMs: scheduledOff, offNow: sched.on && running ? (offAt(sched, at)?.label || '') : '' },
     teams,
   };
 }

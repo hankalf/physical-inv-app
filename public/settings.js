@@ -1251,6 +1251,7 @@
         (stats.unpriced ? ` · ${stats.unpriced.toLocaleString()} row${stats.unpriced === 1 ? '' : 's'} have no cost anywhere on the report (${stats.unpricedItems.join(', ')}${stats.unpricedItems.length < 12 ? '' : ' …'}) - judged by cases alone` : ''));
       await refreshAisles();
     refreshFloor().catch(() => {});
+    refreshClock().catch(() => {});
       await refreshSetup().catch(() => {});
     } catch (err) { msg(out, 'err', 'Upload failed', err.message); }
   }
@@ -1281,6 +1282,42 @@
 
   /* who built it, faint in the corner: the name comes with the branding, from one place in the code */
   document.addEventListener('branding', (e) => { const el = $('builtBy'); if (el && e.detail && e.detail.builtBy) el.textContent = `Built by ${e.detail.builtBy}`; });
+
+  /* ------------------------------------------------------------ the hours the count is worked */
+  const clockState = { on: false, start: '', end: '', breaks: [] };
+  function renderClock() {
+    $('fClockOn').checked = clockState.on; $('fClockStart').value = clockState.start; $('fClockEnd').value = clockState.end;
+    const box = $('clockBreaks');
+    box.innerHTML = '';
+    if (!clockState.breaks.length) box.appendChild(Object.assign(document.createElement('span'), { className: 'muted', textContent: 'no breaks yet — add the ones the crews take' }));
+    for (const b of clockState.breaks) {
+      const chip = button(`${b.from}–${b.to} ${b.label}`, 'chip-btn remove', () => { clockState.breaks = clockState.breaks.filter((x) => x !== b); renderClock(); });
+      chip.title = 'Remove it'; chip.dataset.break = `${b.from}-${b.to}`;
+      box.appendChild(chip);
+    }
+  }
+  async function refreshClock() {
+    if (!sessionId) { Object.assign(clockState, { on: false, start: '', end: '', breaks: [] }); renderClock(); return; }
+    const c = await api.json(`/api/admin/sessions/${sessionId}/clock-schedule`);
+    Object.assign(clockState, { on: c.on, start: c.start, end: c.end, breaks: c.breaks });
+    renderClock();
+  }
+  $('btnAddBreak').onclick = () => {
+    const from = $('fBreakFrom').value, to = $('fBreakTo').value;
+    if (!from || !to) return msg($('clockMsg'), 'warn', 'Both times, please', 'When the break starts and when it ends.');
+    clockState.breaks = [...clockState.breaks, { from, to, label: $('fBreakLabel').value.trim() || 'Break' }].sort((a, b) => a.from.localeCompare(b.from));
+    $('fBreakFrom').value = ''; $('fBreakTo').value = ''; $('fBreakLabel').value = '';
+    renderClock();
+  };
+  $('btnSaveClock').onclick = async () => {
+    if (!sessionId) return;
+    try {
+      const c = await api.post(`/api/admin/sessions/${sessionId}/clock-schedule`, { on: $('fClockOn').checked, start: $('fClockStart').value, end: $('fClockEnd').value, breaks: clockState.breaks });
+      Object.assign(clockState, { on: c.on, start: c.start, end: c.end, breaks: c.breaks }); renderClock();
+      msg($('clockMsg'), 'ok', c.on ? c.words : 'Hours off — every minute from now counts as a counting minute', c.on && !c.start && !c.end && !c.breaks.length ? 'Nothing set yet: a shift start and end, or a break.' : '');
+    } catch (err) { msg($('clockMsg'), 'err', err.message); }
+  };
+  api.autosave($('clockCard'), $('btnSaveClock'), { skip: ['fBreakFrom', 'fBreakTo', 'fBreakLabel'] });
 
   /* ------------------------------------------------------------ floor bins */
   let floorSaved = null;      // the text as last saved: a blur that changes nothing saves nothing
@@ -2476,6 +2513,7 @@
     applySessionCard();
     await refreshAisles();
     refreshFloor().catch(() => {});
+    refreshClock().catch(() => {});
   }
 
   /* ---------------------------------------------------------- the count itself
@@ -2726,6 +2764,7 @@
     applySessionCard();
     refreshAisles().catch(() => {});
     refreshFloor().catch(() => {});
+    refreshClock().catch(() => {});
     refreshSetup().catch(() => {});
     refreshCountday().catch(() => {});
     refreshReady().catch(() => {});

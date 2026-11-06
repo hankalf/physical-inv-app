@@ -13,6 +13,7 @@ import {
   enrollDevice, deviceByToken, resetDevice, saveAdminToken, adminTokenInfo, dropAdminToken, dropAdminTokensFor, purgeAdminTokens } from './db.js';
 import { importMaster, pruneAreaAisles } from './routes/master.js';
 import { floorState, saveFloorBins, ensureFloorBins, floorLabels } from './routes/floor-bins.js';
+import { clockSchedule, saveClockSchedule, scheduleWords } from './routes/clock-schedule.js';
 import { boardData } from './routes/board.js';
 import { crewBoard, crewBoardConfig, saveCrewBoardConfig } from './routes/crew-board.js';
 import { countClock } from './routes/count-clock.js';
@@ -1106,6 +1107,18 @@ async function handleAdmin(req, res, url, m) {
     db.prepare('UPDATE sessions SET status = ?, closed_at = ? WHERE id = ?')
       .run(status, status === 'closed' ? new Date().toISOString() : null, Number(m[1]));
     return sendJson(req, res, 200, getSession(m[1]));
+  }
+
+  // the hours the count is worked: the shift and its breaks, for the clock's finish time
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/clock-schedule$/)) && method === 'GET') {
+    if (!getSession(m[1])) throw httpError(404, 'session not found');
+    const sc = clockSchedule(m[1]);
+    return sendJson(req, res, 200, { ...sc, words: scheduleWords(sc) });
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/clock-schedule$/)) && method === 'POST') {
+    const sc = saveClockSchedule(m[1], await readJson(req));
+    audit(actor, 'changed the hours the count is worked', sc.on ? scheduleWords(sc) : 'off - every minute counts', m[1]);
+    return sendJson(req, res, 200, { ...sc, words: scheduleWords(sc) });
   }
 
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/progress$/)) && method === 'GET') {

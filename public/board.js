@@ -44,7 +44,7 @@
     }
     if (!c.running) { $('bcEta').textContent = at(c.ended); $('bcEtaL').textContent = 'Finished'; }
     else if (!c.binsLeft) { $('bcEta').textContent = 'now'; $('bcEtaL').textContent = 'Done about · every bin has a count'; }
-    else if (c.finishAt) { $('bcEta').textContent = at(c.finishAt); $('bcEtaL').textContent = `Done about · ${n(c.binsLeft)} bins left at ${c.finishBasis === 'recent' ? 'the pace of the last half hour' : 'the average pace'}`; }
+    else if (c.finishAt) { $('bcEta').textContent = at(c.finishAt); $('bcEtaL').textContent = `Done about · ${n(c.binsLeft)} bins left at ${c.finishBasis === 'recent' ? 'the pace of the last half hour' : 'the average pace'}${c.finishNote ? ' · ' + c.finishNote : ''}`; }
     else { $('bcEta').textContent = '—'; $('bcEtaL').textContent = `Done about · ${n(c.binsLeft)} bins left, no pace yet`; }
     tickClock();
   }
