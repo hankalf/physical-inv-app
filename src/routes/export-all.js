@@ -1,5 +1,6 @@
 import { db, getSession } from '../db.js';
 import { progress, palletReport, rawCounts, sourcesOf, movedPallets, movedRows, MOVED_COLUMNS } from './reports.js';
+import { crewMetrics, teamRowsOut, personRowsOut, TEAM_COLUMNS, PERSON_COLUMNS } from './crew-metrics.js';
 import { adjustmentView } from './adjustments.js';
 import { withEntries } from './erp-entries.js';
 import { teamClocks } from './idle.js';
@@ -62,6 +63,7 @@ export function exportEverything(sessionId, { by = '' } = {}) {
   const clocks = teamClocks(id);
   const clock = countClock(id);
   const clockTeams = new Map(clock.teams.map((t) => [t.team, t]));
+  const crew = crewMetrics(id);
 
   const summary = sheet('Summary', ['What', 'Value'], [
     ['Count', s.name],
@@ -235,7 +237,8 @@ export function exportEverything(sessionId, { by = '' } = {}) {
 
   return {
     filename: `${String(s.name).replace(/[^A-Za-z0-9 _-]+/g, '').trim().replace(/\s+/g, '-') || 'count'}-${new Date().toISOString().slice(0, 10)}.xlsx`,
-    sheets: [summary, lines, report, adjustments, notOnReport, sheet('Found in a different bin', MOVED_COLUMNS, movedRows(movedPallets(id).rows)), bins, notCounted, teams, downtime, signons, sos, quiet, second,
+    sheets: [summary, lines, report, adjustments, notOnReport, sheet('Found in a different bin', MOVED_COLUMNS, movedRows(movedPallets(id).rows)), bins, notCounted, teams,
+      sheet('Crew - teams', TEAM_COLUMNS, teamRowsOut(crew.teams)), sheet('Crew - people', PERSON_COLUMNS, personRowsOut(crew.people)), downtime, signons, sos, quiet, second,
       sheet('Counts side by side', sideBySide.columns, sideBySide.rows), fixes, log],
   };
 }

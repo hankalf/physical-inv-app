@@ -2060,6 +2060,23 @@ a label row is ticked off with **Label printed & on the pallet** (or *on the rac
 is on — it records who and when, drops out of *Labels to replace*, and **Reopen** puts it back;
 *Still open* is the walk-round list. It downloads as a CSV and has its own sheet in the export.
 
+**Found in a different bin** — every pallet counted in a bin other than the one the report has it in.
+That is a move, not a miscount: the pallet was found, with its quantity, so it is listed here, aisle by
+aisle, with where the report had it, where it is, both quantities and the difference, who found it and
+when — and it is left out of the second counts (Settings → Scanners can also raise a second count of the
+report's bin). Key the moves from this list or from its CSV; it has its own sheet in *Export everything*.
+The pallet report still shows these as WRONG BIN.
+
+**Crew metrics** — how each team and each person worked the count: time on the count and counting
+time, the **quiet spells** over the stopped-scanning limit and how much of that was **off-task** (a spell
+inside a scheduled break is a break — set the hours under Settings → Count setup), the longest spell, pace
+in bins and lines an hour, the typical seconds between scans, and the habits a count sees: overrides,
+pallets and bins off the list, bins counted outside the plan, duplicates, voids, labels that would not
+scan, second counts worked, stopped-scanning alerts and SOS calls, summed up in a word (*clean*, or what
+was seen). **Teams / People** switches the table; a person is credited with every line of the gun they
+were signed on to, with their hours from the sign-ons. Downloads as an Excel workbook (both sheets,
+off-task shaded) or as two CSVs, and *Export everything* carries *Crew - teams* and *Crew - people*.
+
 **Filed as the count goes.** The moment a team hands an aisle back, the app writes that aisle to
 disk — its count lines, the pallets expected or found in it, its bins, its second counts and
 fix-list items — as CSV files in an `exports` folder beside the backups, one folder per hand-back.

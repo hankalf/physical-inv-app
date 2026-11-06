@@ -1986,7 +1986,7 @@
   function shown(name) { const pane = document.querySelector(`[data-sub="${name}"]`); return !!pane && (pane.classList.contains('active') || pane.getClientRects().length > 0); }
   function paneJobs() {
     return {
-      progress: [refreshNotes, refreshProgress], teams: [refreshAssignments], reports: [refreshPallets, refreshLabels, refreshMoved, refreshArchives], map: [refreshMap],
+      progress: [refreshNotes, refreshProgress], teams: [refreshAssignments], reports: [refreshPallets, refreshLabels, refreshMoved, refreshCrew, refreshArchives], map: [refreshMap],
       overview: [refreshOverview], second: [refreshRecounts], alerts: [refreshMessages, refreshAlerts], adjust: [refreshAdjustments, () => refreshErpAisles().catch(() => {})],
     };
   }
@@ -2448,6 +2448,59 @@
     catch (err) { msg($('fixMsg'), 'err', err.message); }
   }
   for (const b of document.querySelectorAll('#fixFilter button')) b.onclick = () => { fixStatus = b.dataset.status; refreshLabels().catch(() => {}); };
+  /* crew metrics: teams or people, one table */
+  let crewWho = 'teams';
+  let crewData = null;
+  const spanW = (ms) => { if (!(ms > 0)) return ms === 0 ? '0 min' : ''; const m = Math.round(ms / 60000); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min`; };
+  function renderCrew() {
+    const d = crewData;
+    if (!d) return;
+    for (const b of document.querySelectorAll('#crewWho button')) b.classList.toggle('selected', b.dataset.who === crewWho);
+    const t = d.totals;
+    $('crewSub').textContent = t.teams ? `${t.teams} team${t.teams === 1 ? '' : 's'} · ${t.people} ${t.people === 1 ? 'person' : 'people'} · quiet spells over ${d.gapMinutes} min count as off-task${d.schedule.on ? ', breaks taken out' : ''}` : 'nothing counted yet';
+    $('crewStats').innerHTML = '';
+    for (const [n, l] of [[spanW(t.offTaskMs) || '0 min', 'Off-task, all teams'], [d.schedule.on ? (spanW(t.scheduledOffMs) || '0 min') : 'no hours set', 'In scheduled breaks'], [t.overrides, 'Overrides'], [t.voided, 'Voided lines'], [`${t.cleanTeams} of ${t.teams}`, 'Teams with clean habits']]) {
+      const el = document.createElement('div'); el.className = 'stat'; el.innerHTML = '<div class="n"></div><div class="l"></div>';
+      el.querySelector('.n').textContent = n; el.querySelector('.l').textContent = l; $('crewStats').appendChild(el);
+    }
+    const num = (v) => cell(v == null || v === '' ? '—' : String(v));
+    const off = (ms, pct) => { const td = cell(ms > 0 ? `${spanW(ms)} · ${pct}%` : '—'); if (pct >= 25) td.appendChild(tag('high')); else if (pct >= 10) td.appendChild(tag('some')); return td; };
+    const habitsCell = (h) => { const td = cell(h, 'wrap'); if (h === 'clean') td.appendChild(tag('clean')); if (h.length > 28) td.dataset.full = h; return td; };
+    if (crewWho === 'teams') {
+      table($('crewTable'),
+        [{ label: 'Team' }, { label: 'People' }, { label: 'State' }, { label: 'Time on count' }, { label: 'Counting' }, { label: 'Quiet spells' }, { label: 'Off-task' }, { label: 'Longest spell' }, { label: 'Lines' }, { label: 'Bins' }, { label: 'Bins / h' }, { label: 'Sec. between scans' }, { label: '2nd counts' }, { label: 'Alerts · SOS' }, { label: 'Habits' }],
+        d.teams,
+        (r) => {
+          const tr = document.createElement('tr'); tr.dataset.crewTeam = r.team;
+          const people = cell(r.people.map((p) => p.name || p.badge).join(', ') || '—', 'wrap'); if (people.textContent.length > 28) people.dataset.full = people.textContent;
+          const st = document.createElement('td'); st.appendChild(tag(r.state)); if (r.quietNow) st.append(' quiet now');
+          tr.append(cell(r.team), people, st, num(spanW(r.elapsedMs)), num(spanW(r.countingMs)), num(r.spells), off(r.offTaskMs, r.offTaskPct), num(r.longestSpellMs ? spanW(r.longestSpellMs) : ''),
+            num(r.lines), num(r.bins), num(r.binsPerHour), num(r.secondsBetweenScans), num(r.secondCounts), num(`${r.idleAlerts} · ${r.sos}`), habitsCell(r.habits));
+          return tr;
+        }, 'No team has counted yet.');
+    } else {
+      table($('crewTable'),
+        [{ label: 'Person' }, { label: 'Teams' }, { label: 'Signed on' }, { label: 'Counting' }, { label: 'Quiet spells' }, { label: 'Off-task' }, { label: 'Longest spell' }, { label: 'Lines' }, { label: 'Bins' }, { label: 'Bins / h' }, { label: 'Sec. between scans' }, { label: '2nd counts' }, { label: 'Habits' }],
+        d.people,
+        (r) => {
+          const tr = document.createElement('tr'); tr.dataset.crewBadge = r.badge;
+          const who = cell(r.name || r.badge); if (r.name) who.appendChild(Object.assign(document.createElement('div'), { className: 'muted', textContent: `${r.badge}${r.dept ? ' · ' + r.dept : ''}` }));
+          tr.append(who, cell(r.teams.join(', ')), num(`${spanW(r.signedOnMs) || '0 min'}${r.onNow ? ' · on now' : ''}`), num(spanW(r.countingMs)), num(r.spells), off(r.offTaskMs, r.offTaskPct), num(r.longestSpellMs ? spanW(r.longestSpellMs) : ''),
+            num(r.lines), num(r.bins), num(r.binsPerHour), num(r.secondsBetweenScans), num(r.secondCounts), habitsCell(r.habits));
+          return tr;
+        }, 'Nobody has signed on yet.');
+    }
+  }
+  async function refreshCrew() {
+    if (!sessionId || !$('crewTable')) return;
+    crewData = await apiJson(`/api/admin/sessions/${sessionId}/crew-metrics`);
+    renderCrew();
+  }
+  for (const b of document.querySelectorAll('#crewWho button')) b.onclick = () => { crewWho = b.dataset.who; renderCrew(); };
+  $('btnExportCrewXlsx').onclick = () => api.download(`/api/admin/sessions/${sessionId}/export/crew-metrics.xlsx`, `crew-metrics-session-${sessionId}.xlsx`).catch((err) => msg($('crewMsg'), 'err', err.message));
+  $('btnExportCrewTeams').onclick = () => api.download(`/api/admin/sessions/${sessionId}/export/crew-teams.csv`, `crew-teams-session-${sessionId}.csv`);
+  $('btnExportCrewPeople').onclick = () => api.download(`/api/admin/sessions/${sessionId}/export/crew-people.csv`, `crew-people-session-${sessionId}.csv`);
+
   /* found in a different bin: the moves, aisle by aisle */
   async function refreshMoved() {
     const d = await apiJson(`/api/admin/sessions/${sessionId}/moved`);

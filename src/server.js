@@ -37,6 +37,7 @@ import { branding, saveLogo, clearLogo, saveName } from './routes/branding.js';
 import { raiseAlert, tellTeams, listAlerts, seeAlert, closeAlert, alertsForDevice, sosReasons, saveSosReasons, DEFAULT_REASONS } from './routes/alerts.js';
 import { teamsConfig, saveTeamsConfig, postToTeams, testCard, alertCard } from './util/teams.js';
 import { labelLayouts, saveLabelLayouts, suggestLayouts } from './routes/label-layouts.js';
+import { crewMetrics, crewWorkbook, teamRowsOut, personRowsOut, TEAM_COLUMNS, PERSON_COLUMNS } from './routes/crew-metrics.js';
 import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout, scannerJobs, saveScannerJobs, jobsOffered, JOBS } from './routes/scanner-prompts.js';
 import { features, saveFeatures, FEATURES, PRESETS, offNames } from './routes/features.js';
 import { inventoryOverview } from './routes/inventory-control.js';
@@ -2419,6 +2420,23 @@ async function handleAdmin(req, res, url, m) {
     ]));
   }
 
+  // crew metrics: how each team and each person worked the count
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/crew-metrics$/)) && method === 'GET') {
+    const out = crewMetrics(m[1]);
+    if (!out) throw httpError(404, 'session not found');
+    return sendJson(req, res, 200, out);
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/crew-(teams|people)\.csv$/))) {
+    const out = crewMetrics(m[1]);
+    if (!out) throw httpError(404, 'session not found');
+    audit(actor, `exported the crew metrics (${m[2]})`, `${out.teams.length} teams, ${out.people.length} people`, m[1]);
+    return sendCsv(req, res, `crew-${m[2]}-session-${m[1]}.csv`, m[2] === 'teams' ? toCsv(teamRowsOut(out.teams), TEAM_COLUMNS) : toCsv(personRowsOut(out.people), PERSON_COLUMNS));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/crew-metrics\.xlsx$/)) && method === 'GET') {
+    const out = crewWorkbook(m[1]);
+    audit(actor, 'exported the crew metrics workbook', `${out.teams} teams, ${out.people} people`, m[1]);
+    return send(req, res, 200, out.buffer, { 'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'content-disposition': `attachment; filename="${out.filename}"`, 'cache-control': 'no-store' });
+  }
   // found in a different bin: the moves, as their own list and file
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/moved$/)) && method === 'GET') {
     return sendJson(req, res, 200, movedPallets(m[1]));

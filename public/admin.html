@@ -664,6 +664,31 @@
       <div class="scroll" style="margin-top:10px"><table id="movedTable"></table></div>
     </div>
 
+    <div class="card" id="crewCard">
+      <h2>Crew metrics <span class="muted" id="crewSub">how each team and each person worked the count</span></h2>
+      <div class="hint" style="margin-top:0">
+        The record, team by team and person by person: time on the count and counting time, the <b>quiet spells</b> over the
+        stopped-scanning limit and how much of that was <b>off-task</b> (a spell that falls in a scheduled break is a break, not
+        off-task — set the hours under Settings → Count setup), the longest spell, the pace and the rhythm between scans, and the
+        habits a count sees: overrides, pallets and bins off the list, bins counted outside the plan, duplicates, voids, labels that
+        would not scan, second counts worked, stopped-scanning alerts and SOS calls. A person is credited with every line of the
+        gun they were signed on to.
+      </div>
+      <div class="grid" id="crewStats" style="margin-top:12px"></div>
+      <div class="toolbar" style="margin-top:12px">
+        <div class="seg" id="crewWho">
+          <button type="button" data-who="teams" class="selected">Teams</button>
+          <button type="button" data-who="people">People</button>
+        </div>
+        <span class="spacer"></span>
+        <button id="btnExportCrewXlsx" class="primary">Excel (teams &amp; people)</button>
+        <button id="btnExportCrewTeams">Teams CSV</button>
+        <button id="btnExportCrewPeople">People CSV</button>
+      </div>
+      <div class="feedback" id="crewMsg"></div>
+      <div class="scroll" style="margin-top:10px"><table id="crewTable"></table></div>
+    </div>
+
     <div class="card" id="archiveCard" data-fold>
       <h2>Filed as the count goes <span class="muted">every aisle handed back is written to disk at once; the final report when the count is whole</span></h2>
       <div class="hint" style="margin-top:0">
