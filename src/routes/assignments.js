@@ -67,7 +67,7 @@ export function aisleOverview(sessionId) {
               COALESCE(k.pallets_counted, 0) AS pallets_counted,
               (SELECT GROUP_CONCAT(team, ',') FROM assignments s
                 WHERE s.session_id = a.session_id AND s.aisle = a.aisle AND s.status = 'active') AS active_team,
-              (SELECT GROUP_CONCAT(team || CASE WHEN levels = '' AND face = '' THEN '' ELSE ' (' || levels || CASE WHEN face = '' THEN '' ELSE ' ' || face END || ')' END, ', ') FROM assignments s
+              (SELECT GROUP_CONCAT(team || CASE WHEN levels = '' AND face = '' THEN '' ELSE ' (' || levels || CASE WHEN face = '' THEN '' ELSE ' ' || face END || ')' END || CASE WHEN levels_done = '' THEN '' ELSE ' · ' || levels_done || ' done' END, ', ') FROM assignments s
                 WHERE s.session_id = a.session_id AND s.aisle = a.aisle AND s.status = 'active') AS active_detail,
               (SELECT GROUP_CONCAT(team || CASE WHEN levels = '' AND face = '' THEN '' ELSE ' (' || levels || CASE WHEN face = '' THEN '' ELSE ' ' || face END || ')' END, ', ') FROM assignments s
                 WHERE s.session_id = a.session_id AND s.aisle = a.aisle AND s.status = 'queued') AS queued_teams,
@@ -97,13 +97,49 @@ export function aisleOverview(sessionId) {
 export const listAssignments = (sessionId) =>
   db
     .prepare(
-      `SELECT s.*, a.block
+      `SELECT s.*, a.block,
+              (SELECT GROUP_CONCAT(lv, '') FROM (SELECT DISTINCT UPPER(TRIM(level)) AS lv FROM locations l
+                 WHERE l.session_id = s.session_id AND l.aisle = s.aisle AND TRIM(COALESCE(l.level, '')) != '' ORDER BY lv)) AS aisle_levels
          FROM assignments s
          LEFT JOIN aisles a ON a.session_id = s.session_id AND a.aisle = s.aisle
         WHERE s.session_id = ?
         ORDER BY s.team, s.position, s.id`
     )
     .all(Number(sessionId));
+
+/** The levels an assignment covers: its own, or every level the aisle has. */
+export function assignmentLevels(sessionId, row) {
+  if (row.levels) return row.levels;
+  return db.prepare("SELECT DISTINCT UPPER(TRIM(level)) AS lv FROM locations WHERE session_id = ? AND aisle = ? AND TRIM(COALESCE(level, '')) != '' ORDER BY lv")
+    .all(Number(sessionId), row.aisle).map((r) => r.lv).join('');
+}
+
+/**
+ * An aisle handed back one level at a time. A level marked done comes off
+ * the gun's walk and its pallets nobody saw become second counts; when the
+ * last level is in, the aisle is done the usual way. A level can be opened
+ * again while the aisle is still being counted.
+ */
+export function markLevelDone(sessionId, assignmentId, level, { reopen = false } = {}) {
+  const id = Number(sessionId);
+  const row = db.prepare('SELECT * FROM assignments WHERE id = ? AND session_id = ?').get(Number(assignmentId), id);
+  if (!row) throw Object.assign(new Error('assignment not found'), { status: 404 });
+  if (row.status === 'done') throw Object.assign(new Error(`${row.aisle} is already done for team ${row.team}`), { status: 409 });
+  const lv = String(level || '').trim().toUpperCase().slice(0, 1);
+  const all = assignmentLevels(id, row);
+  if (!lv || !all.includes(lv)) throw Object.assign(new Error(`level ${lv || '?'} is not one of ${row.aisle}'s levels for team ${row.team} (${all.split('').join(', ') || 'none'})`), { status: 400 });
+  const have = new Set((row.levels_done || '').split(''));
+  if (reopen) have.delete(lv); else have.add(lv);
+  const done = [...have].filter((c) => all.includes(c)).sort().join('');
+  db.prepare('UPDATE assignments SET levels_done = ? WHERE id = ?').run(done, row.id);
+  const finished = !reopen && all.split('').every((c) => done.includes(c));
+  const left = all.split('').filter((c) => !done.includes(c)).join('');
+  if (finished) {
+    const out = setAssignmentStatus(id, row.id, 'done');
+    return { ...out, level: lv, levelsDone: done, levelsLeft: '', finished: true };
+  }
+  return { assignment: db.prepare('SELECT * FROM assignments WHERE id = ?').get(row.id), activated: [], note: '', level: lv, levelsDone: done, levelsLeft: left, finished: false };
+}
 
 export const blockOf = (sessionId, aisle) =>
   db.prepare('SELECT block FROM aisles WHERE session_id = ? AND aisle = ?').get(Number(sessionId), norm(aisle))
@@ -367,7 +403,8 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
   let bins = [];
   let progress = null;
   if (active) {
-    const inLevels = (l) => !active.levels || active.levels.includes(l || '');
+    // the levels the team was given, less the ones already handed back
+    const inLevels = (l) => (!active.levels || active.levels.includes(l || '')) && !(l && (active.levels_done || '').includes(l));   // a floor spot has no level, and is never 'done'
     // one face of the racking only, when the aisle is split between two teams
     const inFace = (code) => !active.face || faceOfCode(code) === active.face;
     // in walking order: PRYSTG#2 before PRYSTG#10, as the numbers read
@@ -427,6 +464,8 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
       direction: cleanDirection(active.direction),
       // one side of the racking only ('' = both), and what the site calls it
       face: active.face || '', faceLabel: faceLabel(id, active.face),
+      // the levels already handed back, and the ones still to count
+      levelsDone: active.levels_done || '', levelsLeft: assignmentLevels(id, active).split('').filter((c) => !(active.levels_done || '').includes(c)).join(''),
       // floor bins: pallets on the floor, no levels, any team
       floor: isFloorAisle(id, active.aisle),
       // the team coming the other way, when two share the aisle

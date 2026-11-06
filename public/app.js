@@ -1066,6 +1066,7 @@
       box.querySelector('.aisle').textContent = a.active.aisle;
       box.querySelector('.zone-sub').textContent = (a.active.floor ? `${a.active.aisle} · floor pallets — count every pallet standing here` : `${aisleLabel(a.active.aisle, a.active.zone)} · ${levelsLabel(a.active.levels)}`)
         + (a.active.face ? ` · ${a.active.faceLabel || a.active.face} side only` : '')
+        + (a.active.levelsDone ? ` · ${levelsLabel(a.active.levelsDone)} handed back, ${levelsLabel(a.active.levelsLeft)} to count` : '')
         + (a.active.direction === 'down' ? ' · start at the far end' : '')
         + (a.active.partner ? ` · team ${a.active.partner.team} from the other end` : '');
       box.querySelector('.bins-sub').textContent = `${counted.size} of ${total} bins have a count` +

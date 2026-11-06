@@ -1099,3 +1099,8 @@ td[data-full] { cursor: help; }
 .rt-card .rt-bar i { position: absolute; left: 0; top: 0; }
 .rt-card .rt-bar u { position: absolute; top: 0; height: 100%; display: block; background: #e0a93a; opacity: .7; }
 .rt-card.pool { border-style: dashed; }
+
+/* an aisle handed back a level at a time */
+.lvdone { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 4px 0 2px; font-size: 12px; }
+.lvdone .chip-btn.lv { padding: 2px 9px; font-size: 12px; min-width: 32px; }
+.lvdone .chip-btn.lv.selected { background: var(--ok, #1d572a); border-color: var(--ok, #1d572a); color: #fff; }

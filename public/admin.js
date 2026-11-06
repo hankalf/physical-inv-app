@@ -881,6 +881,29 @@
           return b;
         };
         if (it.status === 'queued') { acts.appendChild(act('start', 'active')); acts.appendChild(act('✕', 'delete')); }
+        /* an aisle handed back a level at a time: a chip a level, ticked as each is finished; the last one finishes the aisle */
+        const lvAll = (it.levels || it.aisle_levels || '').split('').filter(Boolean);
+        if (it.status === 'active' && lvAll.length > 1) {
+          const lvs = document.createElement('div'); lvs.className = 'lvdone';
+          lvs.appendChild(Object.assign(document.createElement('span'), { className: 'muted', textContent: 'Done by level:' }));
+          for (const L of lvAll) {
+            const isDone = (it.levels_done || '').includes(L);
+            const b = document.createElement('button');
+            b.type = 'button'; b.className = 'chip-btn lv' + (isDone ? ' selected' : ''); b.textContent = isDone ? `${L} ✓` : L; b.dataset.levelDone = L; b.dataset.assignment = it.id; b.disabled = !can;
+            b.title = isDone ? `Level ${L} is handed back - click to open it again` : `Level ${L} finished: its pallets nobody saw become second counts and the gun walks the other levels; the last level finishes the aisle`;
+            b.onclick = async () => {
+              if (!isDone && !confirm(`Level ${L} of ${it.aisle} finished for team ${team}?`)) return;
+              await planAct(() => postJson(`/api/admin/sessions/${sessionId}/assignments/${it.id}`, isDone ? { levelOpen: L } : { levelDone: L }), (out) => {
+                const next = (out.activated || []).find((x) => x.team === team);
+                if (isDone) msg($('assignMsg'), 'ok', `Level ${L} of ${it.aisle} is open again.`);
+                else if (out.finished) msg($('assignMsg'), 'ok', `${it.aisle} is done for team ${team} - every level handed back.`, next ? `${next.aisle} started.` : '');
+                else msg($('assignMsg'), 'ok', `Level ${L} of ${it.aisle} is done.`, `${out.levelsLeft.split('').join(', ')} still to count.`);
+              });
+            };
+            lvs.appendChild(b);
+          }
+          a.appendChild(lvs);
+        }
         if (it.status === 'active') { acts.appendChild(act('done', 'done')); acts.appendChild(act('release', 'queued')); acts.appendChild(act('✕', 'delete')); }
         if (it.status === 'done') { acts.appendChild(act('reopen', 'queued')); acts.appendChild(act('✕', 'delete')); }
         a.appendChild(acts);

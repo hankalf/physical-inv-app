@@ -1200,6 +1200,13 @@ the next one starts — with nothing else queued it simply starts again, and the
 state — the aisle's counts stay, and if the team was counting it, their next aisle starts. On an
 aisle being counted or finished, ✕ asks first.
 
+**Done by level.** A team that finishes one level at a time hands the aisle back the same way:
+the card of the aisle being counted carries a chip a level — **A B C** — and clicking one marks
+that level done. It comes off the gun's walk (the aisle card on the scanner says *level A handed
+back, levels B–C to count*), its pallets nobody saw become MISSING second counts at once, and the
+log records it. Click a ticked chip to open the level again. The last level finishes the aisle
+exactly as **done** does: the aisle is filed and the team's next aisle starts.
+
 **Auto-assign the aisles.** The card above the board does the whole plan at once, staggered:
 
 1. Pick the **teams** (blank is every team on Teams & crew, or one **shift**), the **levels**

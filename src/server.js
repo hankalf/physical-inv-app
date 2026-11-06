@@ -44,7 +44,7 @@ import { inventoryOverview } from './routes/inventory-control.js';
 import { withEntries, markEntered, markFromFile, worksheetRows, WORKSHEET_COLUMNS, withErpMarks } from './routes/erp-entries.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
-  setAssignmentStatus, deleteAssignment, reorderAssignments, teamStatus, applyLayoutBlocks, partnerOf, planRows, planTeams, PLAN_COLUMNS, planNext } from './routes/assignments.js';
+  setAssignmentStatus, deleteAssignment, reorderAssignments, teamStatus, applyLayoutBlocks, partnerOf, planRows, planTeams, PLAN_COLUMNS, planNext, markLevelDone } from './routes/assignments.js';
 import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot, labelsToReplace, fixLabel, movedPallets, movedRows, MOVED_COLUMNS } from './routes/reports.js';
 import {
   listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
@@ -1280,6 +1280,23 @@ async function handleAdmin(req, res, url, m) {
        second one is marked done, and only then are the pallets nobody saw
        raised as MISSING second counts and the aisle filed. */
     const before = db.prepare('SELECT * FROM assignments WHERE id = ? AND session_id = ?').get(Number(m[2]), Number(m[1]));
+    /* one level at a time: a level handed back comes off the gun's walk and its
+       pallets nobody saw become second counts; the last level finishes the aisle */
+    if (body.levelDone || body.levelOpen) {
+      const reopen = !body.levelDone;
+      const out = markLevelDone(m[1], m[2], body.levelDone || body.levelOpen, { reopen });
+      const a = out.assignment;
+      audit(actor, reopen ? 'opened a level again' : out.finished ? 'marked an aisle done, level by level' : 'marked a level done',
+        `team ${a.team}: ${a.aisle} level ${out.level}${out.finished ? ' - every level in' : out.levelsLeft ? ` (${out.levelsLeft.split('').join(', ')} still to count)` : ''}`, m[1]);
+      if (!reopen && !partnerOf(m[1], before)) {
+        autoAfterAisle(m[1], a.aisle, out.level, a.team);
+        if (out.finished) {
+          const filed = archiveAisle(m[1], a.aisle, { team: a.team, by: actor });
+          if (filed) audit(actor, 'aisle filed', `${filed.aisle}: ${filed.lines} lines → ${filed.name}`, m[1]);
+        }
+      }
+      return sendJson(req, res, 200, out);
+    }
     const partner = before && body.status === 'done' && before.status !== 'done' ? partnerOf(m[1], before) : null;
     const out = setAssignmentStatus(m[1], m[2], body.status);
     const a = out.assignment;

@@ -552,6 +552,8 @@ if (!hasCol('assignments', 'levels')) {
   // a team is assigned an aisle AND the levels it has the equipment for
   db.exec("ALTER TABLE assignments ADD COLUMN levels TEXT NOT NULL DEFAULT ''");
 }
+// the levels of an assignment already handed back, one at a time: 'A', then 'AB' ... done when they are all in
+if (!hasCol('assignments', 'levels_done')) db.exec("ALTER TABLE assignments ADD COLUMN levels_done TEXT NOT NULL DEFAULT ''");
 if (!hasCol('assignments', 'face')) {
   // ...and, when two teams split an aisle, which face of the racking: the odd positions or the even ('' = both)
   db.exec("ALTER TABLE assignments ADD COLUMN face TEXT NOT NULL DEFAULT ''");

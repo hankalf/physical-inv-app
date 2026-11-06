@@ -456,6 +456,7 @@
     [/^(\S+) skipped$/, (m) => `${m[1]} saltada`],
     [/^(.+)\. It is on the fix list for a supervisor; count it later and it comes off\.$/, (m) => `${T(m[1])}. Está en la lista de pendientes para un supervisor; cuéntala después y se quita.`],
     [/^passed earlier · (\d+) to go back to$/, (m) => `pasada antes · ${m[1]} por regresar`],
+    [/^(levels? .+?) handed back, (levels? .+?) to count$/, (m) => `${T(m[1])} entregados, ${T(m[2])} por contar`],
     [/^(\d+) of (\d+) · (\d+) passed$/, (m) => `${m[1]} de ${m[2]} · ${m[3]} pasadas`],
     [/^Every bin in (\S+) has a count — tell your supervisor\. Your next aisle shows here once they mark this one done\.$/, (m) => `Todas las ubicaciones de ${m[1]} tienen conteo — avisa a tu supervisor. Tu siguiente pasillo aparece aquí cuando lo marque terminado.`],
     [/^App build (\S+) on the server — this scanner is (up to date|behind it; an update is waiting)\.$/,

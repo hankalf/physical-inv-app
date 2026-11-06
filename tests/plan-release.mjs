@@ -73,7 +73,7 @@ await pickSession(page, S);
 await _planMore();
 await page.waitForSelector('.seq .a.active', { timeout: 8000 });
 const row = (aisle) => page.locator('.seq .a', { hasText: aisle }).first();
-check('The board: the active aisle has done, release and ✕; the queued one start and ✕', clean(await row('P03').locator('button').allTextContents().then((t) => t.join(' '))) === 'done release ✕' && clean(await row('P01').locator('button').allTextContents().then((t) => t.join(' '))) === 'start ✕',
+check('The board: the active aisle has done, release and ✕; the queued one start and ✕', clean(await row('P03').locator('.acts button').allTextContents().then((t) => t.join(' '))) === 'done release ✕' && clean(await row('P01').locator('.acts button').allTextContents().then((t) => t.join(' '))) === 'start ✕',
   clean(await row('P03').locator('button').allTextContents().then((t) => t.join(' '))));
 await row('P03').locator('button', { hasText: 'release' }).click();
 await page.waitForTimeout(900);
