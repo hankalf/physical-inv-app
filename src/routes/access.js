@@ -94,7 +94,7 @@ function tabOf(p, method) {
     if (rest === 'inventory-control') return 'inventory.overview';
     if (/^recounts(\/|$)/.test(rest) || rest === 'export/recounts.csv') return 'dashboard.second';
     if (/^adjustments(\/|$)/.test(rest) || rest === 'export/adjustments.csv') return 'dashboard.adjust';
-    if (/^(pallets|labels|fixlist|moved|crew-metrics|lot|uncounted|issues|archives)(\/|$)/.test(rest) || /^export\//.test(rest) || /^print\//.test(rest)) return rest === 'export/coverage.csv' ? 'cycle.coverage' : 'dashboard.reports';
+    if (/^(pallets|labels|fixlist|moved|flagged|crew-metrics|lot|uncounted|issues|archives)(\/|$)/.test(rest) || /^export\//.test(rest) || /^print\//.test(rest)) return rest === 'export/coverage.csv' ? 'cycle.coverage' : 'dashboard.reports';
     if (rest === 'cycle/open') return 'cycle.open';
     if (rest === 'cycle/batches' && !w) return 'cycle.today';
     if (/^cycle\//.test(rest)) return w ? 'cycle.setup' : 'cycle.today';

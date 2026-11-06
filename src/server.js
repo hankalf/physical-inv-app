@@ -45,7 +45,7 @@ import { withEntries, markEntered, markFromFile, worksheetRows, WORKSHEET_COLUMN
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, reorderAssignments, teamStatus, applyLayoutBlocks, partnerOf, planRows, planTeams, PLAN_COLUMNS, planNext, markLevelDone } from './routes/assignments.js';
-import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot, labelsToReplace, fixLabel, movedPallets, movedRows, MOVED_COLUMNS } from './routes/reports.js';
+import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot, labelsToReplace, fixLabel, movedPallets, movedRows, MOVED_COLUMNS, flaggedLines } from './routes/reports.js';
 import {
   listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
   tasksForTeam, takeRecount, finishRecount, updateRecount, deleteRecount, raiseThirdCount, thirdCountsForBins,
@@ -2488,6 +2488,10 @@ async function handleAdmin(req, res, url, m) {
     const out = crewWorkbook(m[1]);
     audit(actor, 'exported the crew metrics workbook', `${out.teams} teams, ${out.people} people`, m[1]);
     return send(req, res, 200, out.buffer, { 'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'content-disposition': `attachment; filename="${out.filename}"`, 'cache-control': 'no-store' });
+  }
+  // the flagged lines, each with why
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/flagged$/)) && method === 'GET') {
+    return sendJson(req, res, 200, flaggedLines(m[1]));
   }
   // found in a different bin: the moves, as their own list and file
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/moved$/)) && method === 'GET') {

@@ -680,6 +680,22 @@
       <div class="scroll" style="margin-top:10px"><table id="movedTable"></table></div>
     </div>
 
+    <div class="card" id="flaggedCard">
+      <h2>Flagged lines <span class="muted" id="flaggedSub">the lines a counter accepted past a warning</span></h2>
+      <div class="hint" style="margin-top:0">
+        A count line is <b>flagged</b> when the gun stopped and the counter went on anyway: a pallet not on the report, a bin
+        not on the list, a bin outside the team's plan (aisle, level or side), a pallet already counted elsewhere, or any line
+        saved with an override reason. Lines whose label would not scan are listed here too. The Progress tile counts the
+        first kind; every line is still a real count — this is the list the office looks through.
+      </div>
+      <div class="toolbar" style="margin-top:12px">
+        <div class="chips" id="flaggedWhy"></div>
+        <span class="spacer"></span>
+        <button id="btnExportFlagged">Flagged lines CSV</button>
+      </div>
+      <div class="scroll" style="margin-top:10px"><table id="flaggedTable"></table></div>
+    </div>
+
     <div class="card" id="crewCard">
       <h2>Crew metrics <span class="muted" id="crewSub">how each team and each person worked the count</span></h2>
       <div class="hint" style="margin-top:0">

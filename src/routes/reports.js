@@ -466,3 +466,30 @@ export function movedPallets(sessionId) {
 export const MOVED_COLUMNS = ['Pallet', 'System', 'Item', 'Description', 'Variant', 'Report bin', 'Report aisle', 'Found in', 'Found aisle', 'Report qty', 'Counted qty', 'Difference', 'Counted by', 'Last scan', 'Comments'];
 export const movedRows = (rows) => rows.map((r) => ({ 'Pallet': r.pallet_id, 'System': r.source, 'Item': r.sku, 'Description': r.description, 'Variant': r.variant, 'Report bin': r.expected_location, 'Report aisle': r.expected_aisle,
   'Found in': r.found_location, 'Found aisle': r.found_aisle, 'Report qty': r.expected_qty, 'Counted qty': r.counted_qty, 'Difference': r.variance_qty, 'Counted by': r.teams, 'Last scan': r.last_scan, 'Comments': r.comments }));
+
+
+/**
+ * The flagged lines, each with why it is flagged: the lines a counter had to
+ * accept past a warning, or that carry a label that would not scan. The
+ * Progress tile counts the first kind; this lists both and says which.
+ */
+export const FLAG_WHY = {
+  unknown_pallet: 'Pallet not on the report', unknown_location: 'Bin not on the list', off_assignment: "Outside the team's plan",
+  duplicate_pallet: 'Counted twice', override: 'Override', label_issue: 'Pallet label would not scan', bin_label_issue: 'Bin label would not scan',
+};
+export function flaggedLines(sessionId) {
+  const rows = exceptions(sessionId).map((r) => {
+    const why = [];
+    if (r.unknown_pallet) why.push('unknown_pallet');
+    if (r.unknown_location) why.push('unknown_location');
+    if (r.off_assignment) why.push('off_assignment');
+    if (r.duplicate_pallet) why.push('duplicate_pallet');
+    if (r.override_reason) why.push('override');
+    if (r.label_issue) why.push('label_issue');
+    if (r.bin_label_issue) why.push('bin_label_issue');
+    return { ...r, why, whyWords: why.map((k) => (k === 'override' ? `Override: ${r.override_reason}` : k === 'label_issue' ? `${FLAG_WHY[k]} (${r.label_issue})` : k === 'bin_label_issue' ? `${FLAG_WHY[k]} (${r.bin_label_issue})` : FLAG_WHY[k])).join(' · ') };
+  }).sort((a, b) => String(b.scanned_at).localeCompare(String(a.scanned_at)));
+  const byWhy = {};
+  for (const r of rows) for (const k of r.why) byWhy[k] = (byWhy[k] || 0) + 1;
+  return { rows, total: rows.length, byWhy, labels: FLAG_WHY };
+}

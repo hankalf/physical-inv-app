@@ -2124,6 +2124,12 @@ when — and it is left out of the second counts (Settings → Scanners can also
 report's bin). Key the moves from this list or from its CSV; it has its own sheet in *Export everything*.
 The pallet report still shows these as WRONG BIN.
 
+**Flagged lines** — every line a counter accepted past a warning, newest first, each saying why:
+a pallet not on the report, a bin not on the list, a bin outside the team's plan (aisle, level or
+side), a pallet already counted elsewhere, an override with its reason; lines whose label would
+not scan are listed too. A chip a reason narrows the list; **Flagged lines CSV** downloads it. The
+Progress tile's number is the first kind only.
+
 **Crew metrics** — how each team and each person worked the count: time on the count and counting
 time, the **quiet spells** over the stopped-scanning limit and how much of that was **off-task** (a spell
 inside a scheduled break is a break — set the hours under Settings → Count setup), the longest spell, pace

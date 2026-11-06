@@ -2032,7 +2032,7 @@
   function shown(name) { const pane = document.querySelector(`[data-sub="${name}"]`); return !!pane && (pane.classList.contains('active') || pane.getClientRects().length > 0); }
   function paneJobs() {
     return {
-      progress: [refreshNotes, refreshProgress], teams: [refreshAssignments], reports: [refreshPallets, refreshLabels, refreshMoved, refreshCrew, refreshArchives], map: [refreshMap],
+      progress: [refreshNotes, refreshProgress], teams: [refreshAssignments], reports: [refreshPallets, refreshLabels, refreshMoved, refreshFlagged, refreshCrew, refreshArchives], map: [refreshMap],
       overview: [refreshOverview], second: [refreshRecounts], alerts: [refreshMessages, refreshAlerts], adjust: [refreshAdjustments, () => refreshErpAisles().catch(() => {})],
     };
   }
@@ -2494,6 +2494,43 @@
     catch (err) { msg($('fixMsg'), 'err', err.message); }
   }
   for (const b of document.querySelectorAll('#fixFilter button')) b.onclick = () => { fixStatus = b.dataset.status; refreshLabels().catch(() => {}); };
+  /* the flagged lines, each with why; a chip a reason narrows the list */
+  let flaggedWhy = '';
+  let flaggedData = null;
+  function renderFlagged() {
+    const d = flaggedData;
+    if (!d) return;
+    $('flaggedSub').textContent = d.total ? `${d.total} line${d.total === 1 ? '' : 's'}` : 'none — nothing was accepted past a warning';
+    const chips = $('flaggedWhy');
+    chips.innerHTML = '';
+    const all = document.createElement('button'); all.type = 'button'; all.className = 'chip-btn' + (!flaggedWhy ? ' selected' : ''); all.textContent = `All (${d.total})`; all.dataset.why = '';
+    all.onclick = () => { flaggedWhy = ''; renderFlagged(); };
+    chips.appendChild(all);
+    for (const [k, n] of Object.entries(d.byWhy).sort((a, b) => b[1] - a[1])) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'chip-btn' + (flaggedWhy === k ? ' selected' : ''); b.dataset.why = k;
+      b.textContent = `${d.labels[k] || k} (${n})`;
+      b.onclick = () => { flaggedWhy = flaggedWhy === k ? '' : k; renderFlagged(); };
+      chips.appendChild(b);
+    }
+    const rows = flaggedWhy ? d.rows.filter((r) => r.why.includes(flaggedWhy)) : d.rows;
+    table($('flaggedTable'),
+      [{ label: 'When' }, { label: 'Team' }, { label: 'Scanner' }, { label: 'Bin' }, { label: 'Pallet' }, { label: 'Qty' }, { label: 'Why' }, { label: 'Comments' }],
+      rows,
+      (r) => {
+        const tr = document.createElement('tr'); tr.dataset.flagged = r.id;
+        const why = cell(r.whyWords, 'wrap'); if (r.whyWords.length > 28) why.dataset.full = r.whyWords;
+        for (const k of r.why) why.appendChild(tag(k === 'override' ? 'OVERRIDE' : k.replace(/_/g, ' ').toUpperCase()));
+        tr.append(cell(r.scanned_at ? new Date(r.scanned_at).toLocaleString() : ''), cell(r.team || ''), cell(r.device_id || ''), cell(r.location_code || ''), cell(r.empty_bin ? '(empty)' : r.pallet_id || ''), cell(String(r.qty ?? '')), why, cell(r.comments || '', 'wrap'));
+        return tr;
+      }, 'No flagged lines.');
+  }
+  async function refreshFlagged() {
+    if (!sessionId || !$('flaggedTable')) return;
+    flaggedData = await apiJson(`/api/admin/sessions/${sessionId}/flagged`);
+    renderFlagged();
+  }
+  $('btnExportFlagged').onclick = () => api.download(`/api/admin/sessions/${sessionId}/export/exceptions.csv`, `flagged-lines-session-${sessionId}.csv`);
+
   /* crew metrics: teams or people, one table */
   let crewWho = 'teams';
   let crewData = null;
