@@ -1070,3 +1070,11 @@ html.side-collapsed #sidePeek:hover span { color: var(--text); }
 .plan-more { display: none; }
 body.plan-more-open .plan-more { display: block; }
 #planMore.plan-more { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+
+/* a table row under the pointer, and the full text of a cramped cell */
+#recountTable tbody tr:hover td { background: color-mix(in srgb, var(--accent) 9%, var(--surface)); }
+#recountTable tbody tr.picked:hover td { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); }
+td[data-full] { cursor: help; }
+.cellpop { position: fixed; z-index: 1200; background: var(--surface-2); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(0,0,0,.35); display: flex; gap: 10px; align-items: flex-start; }
+.cellpop .cp-text { flex: 1; font-size: 13px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; user-select: text; }
+.cellpop button { flex: none; }

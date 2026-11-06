@@ -145,6 +145,27 @@ const [dl] = await Promise.all([page.waitForEvent('download'), (async () => { aw
 check('Shown as CSV: a file of the rows on screen', /second-counts-shown/.test(dl.suggestedFilename()));
 check('The 3rd count button still sits on a finished second count with none', (await page.locator(`#recountTable button[data-third="${r2}"]`).count()) === 1);
 
+/* ---------------- the team box, the hover, the popover ---------------- */
+await page.click('#btnRecClear'); await page.waitForTimeout(200);
+const box = `#recountTable tr[data-recount="${r5}"] input[data-team-for]`;
+await page.click(box); await page.fill(box, '12');
+await page.waitForTimeout(31000);   // the dashboard redraws every 30 seconds: the box must come through it
+check('A team half typed survives the 30-second redraw of the table: still 12, still in the box', (await page.inputValue(box)) === '12' && (await page.evaluate(() => document.activeElement && document.activeElement.dataset.teamFor)) === String(r5), await page.inputValue(box));
+rows = await get(`/api/admin/sessions/${S}/recounts`);
+check('…and nothing is saved until the box is left', by(r5).team === '8', by(r5).team);
+await page.keyboard.press('Tab'); await page.waitForTimeout(700);
+rows = await get(`/api/admin/sessions/${S}/recounts`);
+check('Click away (Tab): saved to team 12, said so', by(r5).team === '12' && /F02A001 handed to team 12/.test(clean(await page.textContent('#recountMsg'))), clean(await page.textContent('#recountMsg')));
+await page.click('#recRound button[data-round="all"]'); await page.waitForTimeout(300);
+check('…and a later redraw shows 12, not the old value', (await page.inputValue(box)) === '12', await page.inputValue(box));
+await page.hover(`#recountTable tr[data-recount="${r5}"] td[data-full]`); await page.waitForTimeout(300);
+check('Hover a cramped cell: a popover with the whole text and a Copy button', await page.isVisible('#cellPop') && /SKU-C — Mango chunks/.test(clean(await page.textContent('#cellPop .cp-text'))) && await page.isVisible('#cellPop button'), clean(await page.textContent('#cellPop')));
+await page.click('#cellPop button'); await page.waitForTimeout(200);
+check('…Copy says what it did', /Copied|Select and copy/.test(clean(await page.textContent('#cellPop button'))), clean(await page.textContent('#cellPop button')));
+await page.mouse.move(5, 5); await page.waitForTimeout(500);
+check('…and it goes when the pointer leaves', await page.isHidden('#cellPop'));
+check('The row under the pointer is highlighted (a hover rule on the table rows)', await page.evaluate(() => [...document.styleSheets].some((s) => { try { return [...s.cssRules].some((r) => /#recountTable tbody tr:hover/.test(r.selectorText || '')); } catch { return false; } })));
+
 /* ---------------- the workbook by aisle, with the heat map ---------------- */
 const xr = await fetch(`${BASE}/api/admin/sessions/${S}/export/second-counts.xlsx`, { headers: A });
 const xbuf = Buffer.from(await xr.arrayBuffer());

@@ -1039,6 +1039,9 @@
     for (const b of $('recFace').querySelectorAll('button')) b.classList.toggle('selected', (b.dataset.face || '') === rec.face);
     for (const b of $('recReasons').querySelectorAll('button')) b.classList.toggle('selected', rec.reasons.has(b.dataset.reason));
     const shown = recSorted(recFiltered());
+    /* a team number half typed when the table redraws (it redraws every 30 s) is kept, and the box keeps the cursor */
+    const typing = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.teamFor
+      ? { id: Number(document.activeElement.dataset.teamFor), value: document.activeElement.value, at: document.activeElement.selectionStart } : null;
     const filtered = shown.length !== rec.rows.length || rec.q;
     $('recShown').textContent = rec.rows.length ? (filtered ? `${shown.length} of ${rec.rows.length}` : `${rec.rows.length}`) : '';
     const thirdCol = rec.thirdCol;
@@ -1051,6 +1054,7 @@
       { label: 'Reason', key: 'reason' }, { label: 'Detail', key: 'detail' }, { label: 'Source', key: 'source' }, { label: '1st team', key: 'first' },
       { label: 'Team', key: 'team' }, { label: 'Status', key: 'status' }, { label: '1st count' }, { label: '2nd count' }, ...(thirdCol ? [{ label: '3rd count' }] : []), { label: '' },
     ];
+    rec.redrawing = true;   // see saveTeam: a box the redraw takes out of the page blurs, and that must not save
     table($('recountTable'), cols, shown, (r) => {
       const tr = document.createElement('tr');
       tr.dataset.recount = r.id;
@@ -1065,14 +1069,29 @@
       tr.append(cell(r.bin), cell(r.aisle || ''), cell(r.level || ''), cell(r.face || '', 'face'), cell(r.pallet_id || '—'), item);
       if (hasVariant) tr.appendChild(cell(r.variant || ''));
       tr.append(cell(third ? `3rd count · ${r.reason}` : r.reason), cell(r.detail || '', 'wrap'), cell(r.source), cell(third && r.second_team ? `${r.first_team || '—'} · 2nd ${r.second_team}` : (r.first_team || '—')));
+      for (const td of tr.querySelectorAll('td.wrap')) if (td.textContent.length > 28) td.dataset.full = td.textContent;
       const tdTeam = document.createElement('td');
       const inp = document.createElement('input'); inp.className = 'sm'; inp.style.width = '60px'; inp.value = r.team || ''; inp.placeholder = 'any';
-      inp.title = 'Assign to a team and press Enter; blank = any team (except the first-count team)';
-      inp.onkeydown = async (e) => { if (e.key !== 'Enter') return; try { await postJson(`/api/admin/sessions/${sessionId}/recounts/${r.id}`, { team: inp.value }); await refreshRecounts(); } catch (err) { msg($('recountMsg'), 'err', err.message); } };
+      inp.dataset.teamFor = r.id; inp.dataset.saved = r.team || '';
+      inp.title = 'Type a team and press Enter, or just click away: it saves. Blank = any team (except the first-count team)';
+      /* saved on Enter and on leaving the box, once, only when it changed - so a redraw never loses it and never saves it twice */
+      const saveTeam = async () => {
+        if (rec.redrawing) return;   // the browser blurs a box the redraw takes out: that is not the user leaving it
+        const want = inp.value.trim().toUpperCase();
+        if (want === inp.dataset.saved) return;
+        inp.dataset.saved = want;
+        try { await postJson(`/api/admin/sessions/${sessionId}/recounts/${r.id}`, { team: want }); msg($('recountMsg'), 'ok', want ? `${r.bin} handed to team ${want}.` : `${r.bin} is for any team now.`); setTimeout(() => clearMsg($('recountMsg')), 4000); await refreshRecounts(); }
+        catch (err) { inp.dataset.saved = r.team || ''; msg($('recountMsg'), 'err', err.message); }
+      };
+      inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); saveTeam(); } };
+      inp.onblur = saveTeam;   // leaving the box saves - a value the redraw put back fires no change event, so blur it is
+      if (typing && typing.id === r.id) { inp.value = typing.value; setTimeout(() => { inp.focus({ preventScroll: true }); try { inp.setSelectionRange(typing.at, typing.at); } catch { /* fine */ } }, 0); }
       tdTeam.appendChild(inp); tr.appendChild(tdTeam);
       const tdSt = document.createElement('td'); tdSt.appendChild(tag(r.status)); tr.appendChild(tdSt);
       tr.append(cell(r.first_result || (r.first_lines ? '' : 'nothing'), 'wrap'), cell(r.second_result || '', 'wrap'));
       if (thirdCol) tr.append(cell(r.third_result || '', 'wrap'));
+      for (const td of [...tr.querySelectorAll('td.wrap')].slice(1)) if (td.textContent.length > 28) td.dataset.full = td.textContent;
+      if (r.description) { item.dataset.full = `${r.sku || ''} — ${r.description}`; }
       const tdBtn = document.createElement('td');
       const act = (label, body, method = 'POST') => {
         const b = document.createElement('button'); b.className = 'sm ghost'; b.textContent = label; b.style.marginRight = '4px';
@@ -1117,6 +1136,7 @@
       th.title = (c.title ? c.title + ' — ' : '') + 'click to sort';
       th.onclick = () => { if (rec.sort.key === c.key) { if (rec.sort.dir === 'asc') rec.sort.dir = 'desc'; else rec.sort = { key: '', dir: 'asc' }; } else rec.sort = { key: c.key, dir: 'asc' }; renderRecounts(); };
     });
+    rec.redrawing = false;
     renderBulk();
   }
   function renderBulk() {
@@ -1151,6 +1171,38 @@
     recFillFilters();
     renderRecounts();
   }
+  /* Cramped text: hover a cell and the whole of it floats beside the pointer,
+     with a Copy button, until the pointer leaves both. Any cell that carries
+     its full text in data-full gets it. */
+  (() => {
+    const pop = document.createElement('div'); pop.className = 'cellpop'; pop.hidden = true; pop.id = 'cellPop';
+    const text = document.createElement('div'); text.className = 'cp-text';
+    const copy = document.createElement('button'); copy.type = 'button'; copy.className = 'sm'; copy.textContent = 'Copy';
+    copy.onclick = async () => { try { await navigator.clipboard.writeText(text.textContent); copy.textContent = 'Copied ✓'; } catch { copy.textContent = 'Select and copy'; } setTimeout(() => { copy.textContent = 'Copy'; }, 1500); };
+    pop.append(text, copy); document.body.appendChild(pop);
+    let over = null, timer = 0;
+    const hide = () => { timer = setTimeout(() => { if (!over) { pop.hidden = true; } }, 220); };
+    const show = (td) => {
+      clearTimeout(timer); over = td;
+      text.textContent = td.dataset.full; pop.hidden = false;
+      const r = td.getBoundingClientRect();
+      const w = Math.min(460, window.innerWidth - 24);
+      pop.style.width = w + 'px';
+      pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + 'px';
+      const below = r.bottom + 8 + pop.offsetHeight < window.innerHeight;
+      pop.style.top = (below ? r.bottom + 6 : Math.max(8, r.top - pop.offsetHeight - 6)) + 'px';
+    };
+    document.addEventListener('mouseover', (e) => {
+      const td = e.target.closest && e.target.closest('td[data-full]');
+      if (td) { if (over !== td) show(td); return; }
+      if (e.target === pop || pop.contains(e.target)) { clearTimeout(timer); return; }
+      if (over) { over = null; hide(); }
+    });
+    pop.addEventListener('mouseleave', () => { over = null; hide(); });
+    // the table scrolls under it: follow the cell rather than vanish
+    document.addEventListener('scroll', () => { if (over && !pop.hidden) show(over); }, true);
+  })();
+
   /* the filters */
   for (const b of $('recState').querySelectorAll('button')) b.onclick = () => { rec.state = b.dataset.state; renderRecounts(); };
   for (const b of $('recRound').querySelectorAll('button')) b.onclick = () => { rec.round = b.dataset.round; renderRecounts(); };
@@ -1227,6 +1279,7 @@
       const skipped = [];
       if (r.skippedUnworked) skipped.push(`${r.skippedUnworked.toLocaleString()} pallet(s) in aisles nobody has counted yet — not missing, just not reached`);
       if (r.skippedSmall) skipped.push(`${r.skippedSmall.toLocaleString()} under the recount threshold`);
+      if (r.skippedMoved) skipped.push(`${r.skippedMoved.toLocaleString()} found in a different bin — on the Reports tab, not a second count`);
       if (r.cappedAt) skipped.push(`stopped at the cap of ${r.cappedAt} open`);
       msg($('recountMsg'), 'ok', `Raised ${r.created} second count(s) from ${r.considered} pallet(s) that disagree with the report.`,
         skipped.length ? 'Left alone: ' + skipped.join(' · ') + '.' : '');
@@ -1927,7 +1980,7 @@
   function shown(name) { const pane = document.querySelector(`[data-sub="${name}"]`); return !!pane && (pane.classList.contains('active') || pane.getClientRects().length > 0); }
   function paneJobs() {
     return {
-      progress: [refreshNotes, refreshProgress], teams: [refreshAssignments], reports: [refreshPallets, refreshLabels, refreshArchives], map: [refreshMap],
+      progress: [refreshNotes, refreshProgress], teams: [refreshAssignments], reports: [refreshPallets, refreshLabels, refreshMoved, refreshArchives], map: [refreshMap],
       overview: [refreshOverview], second: [refreshRecounts], alerts: [refreshMessages, refreshAlerts], adjust: [refreshAdjustments, () => refreshErpAisles().catch(() => {})],
     };
   }
@@ -2389,6 +2442,36 @@
     catch (err) { msg($('fixMsg'), 'err', err.message); }
   }
   for (const b of document.querySelectorAll('#fixFilter button')) b.onclick = () => { fixStatus = b.dataset.status; refreshLabels().catch(() => {}); };
+  /* found in a different bin: the moves, aisle by aisle */
+  async function refreshMoved() {
+    const d = await apiJson(`/api/admin/sessions/${sessionId}/moved`);
+    $('movedSub').textContent = d.total ? `${d.total} pallet${d.total === 1 ? '' : 's'} the report had somewhere else` : 'every pallet counted was where the report had it';
+    $('movedStats').innerHTML = '';
+    for (const [n, l] of [[d.total, 'Found in a different bin'], [d.sameQty, 'Same quantity as the report'], [d.total - d.sameQty, 'Quantity differs too']]) {
+      const el = document.createElement('div');
+      el.className = 'stat';
+      el.innerHTML = '<div class="n"></div><div class="l"></div>';
+      el.querySelector('.n').textContent = n;
+      el.querySelector('.l').textContent = l;
+      $('movedStats').appendChild(el);
+    }
+    $('movedAisles').textContent = d.byAisle.length ? 'Found in: ' + d.byAisle.map((a) => `${a.aisle} (${a.n})`).join(' · ') : '';
+    table($('movedTable'),
+      [{ label: 'Pallet' }, { label: 'Item' }, { label: 'Report bin' }, { label: 'Found in' }, { label: 'Report qty' }, { label: 'Counted' }, { label: 'Counted by' }, { label: 'Last scan' }, { label: 'Comments' }],
+      d.rows,
+      (r) => {
+        const tr = document.createElement('tr');
+        const item = cell(r.sku || '—');
+        if (r.description) item.appendChild(Object.assign(document.createElement('div'), { className: 'muted', textContent: r.description }));
+        const from = cell(r.expected_location || '—'); if (r.expected_aisle) from.appendChild(Object.assign(document.createElement('div'), { className: 'muted', textContent: 'aisle ' + r.expected_aisle }));
+        const to = cell(r.found_location || '—'); if (r.found_aisle) to.appendChild(Object.assign(document.createElement('div'), { className: 'muted', textContent: 'aisle ' + r.found_aisle }));
+        const counted = cell(String(r.counted_qty ?? ''));
+        if (Number(r.variance_qty || 0) !== 0) counted.appendChild(tag(`${r.variance_qty > 0 ? '+' : ''}${r.variance_qty}`));
+        tr.append(cell(r.pallet_id), item, from, to, cell(String(r.expected_qty ?? '')), counted, cell(r.teams || ''), cell(r.last_scan ? new Date(r.last_scan).toLocaleString() : ''), cell(r.comments || ''));
+        return tr;
+      }, 'No pallet was counted anywhere but where the report had it.');
+  }
+  $('btnExportMoved').onclick = () => api.download(`/api/admin/sessions/${sessionId}/export/moved.csv`, `found-in-a-different-bin-session-${sessionId}.csv`);
   $('btnExportFix').onclick = () => api.download(`/api/admin/sessions/${sessionId}/export/fixlist.csv`, `fix-list-session-${sessionId}.csv`);
   $('btnExportLabels').onclick = () =>
     api.download(`/api/admin/sessions/${sessionId}/export/labels.csv`, `labels-to-replace-session-${sessionId}.csv`);
