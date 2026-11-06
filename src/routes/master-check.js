@@ -12,7 +12,7 @@ import { parseBinCode } from '../util/bincode.js';
 import { ALIASES, deriveAisle } from './master.js';
 
 const RACK = /^[A-Z]+\d+[A-Z]\d+$/;
-const ODD = /[^A-Z0-9#\-_./]/;            // after norm(): anything but letters, digits and the usual punctuation
+const ODD = /[^A-Z0-9#&+()\-_./]/;        // after norm(): anything but letters, digits and the punctuation a site uses (R&DSAMP, WIP-2, DOCK.3)
 const few = (list, n = 10) => list.slice(0, n);
 
 export function checkMaster(sessionId, kind, text, { source = '', replace = false } = {}) {

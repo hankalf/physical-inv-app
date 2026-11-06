@@ -79,6 +79,9 @@ check('API: removed scanner link no longer resolves (404)', gone.status === 404)
 check('Settings: no bin list ships with the app — a new site uploads its own', (await admin.$('#btnLoadSiteBins')) === null);
 await admin.setInputFiles('#fFile-bins', new URL('./fixtures/front-royal-bins.csv', import.meta.url).pathname);
 await admin.click('#btnUpload-bins'); await admin.waitForTimeout(6000);
+/* the file is checked before it is loaded: the site's report puts pallets in bins the list has not got, which is right to flag - load it anyway */
+const loadAnyway = async (kind, wait) => { const b = await admin.$(`#uploadMsg-${kind} button[data-load-anyway]`); if (b) { await b.click(); await admin.waitForTimeout(wait); } };
+await loadAnyway('bins', 6000);
 {
   const m = clean(await admin.textContent('#uploadMsg-bins'));
   check('Settings: the site\'s own bin list uploads: 13,673 bins in 28 aisles, 61 staging/door bins left out', /Imported 13,734 rows/.test(m) && /13,673 bins in 28 aisles/.test(m) && /61 bins left out \(counted manually: STAGING, DOORS\)/.test(m), m.slice(0, 200));
@@ -89,6 +92,7 @@ check('Settings: each list gets its own card, not a dropdown (the counting plan 
 for (const [kind, file] of [['pallets', 'pallets.csv']]) {
   await admin.setInputFiles(`#fFile-${kind}`, `${S}fixtures/${file}`);
   await admin.click(`#btnUpload-${kind}`); await admin.waitForTimeout(kind === 'bins' ? 2500 : 900);
+  await loadAnyway(kind, kind === 'bins' ? 2500 : 900);
   const m = clean(await admin.textContent(`#uploadMsg-${kind}`));
   check(`Settings: upload ${kind}`, /Imported \d/.test(m), m.slice(0, 120));
   if (kind === 'pallets') await (await card(`#fFile-${kind}`)).asElement().screenshot({ path: `${S}screenshots/${String(++shotN).padStart(2, '0')}-admin-upload.png` });
