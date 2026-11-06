@@ -253,6 +253,7 @@ export function generateFromVariances(sessionId, { onlyPallets = null, includeMi
   const rows = palletReport(id, { only: onlyPallets }).filter((r) => r.status !== 'MATCH');
   let created = 0;
   let skippedSmall = 0;
+  let skippedMoved = 0;
   let skippedUnworked = 0;
   let cappedAt = 0;
   const room = () => {
@@ -291,6 +292,9 @@ export function generateFromVariances(sessionId, { onlyPallets = null, includeMi
       continue;
     }
     if (r.status === 'QTY VARIANCE' && !materialQty(session, r.expected_qty, r.counted_qty, r.cost)) { skippedSmall++; continue; }
+    /* found in a bin other than the report's: the Found in a different bin report
+       has it; a second count of that bin only when the count asks for one */
+    if (r.status === 'WRONG BIN' && !session.recount_wrong_bin) { skippedMoved++; continue; }
     const firstTeam = db.prepare(
       `SELECT team FROM counts WHERE session_id = ? AND pallet_id = ? AND voided = 0 AND pass = 1 ORDER BY id DESC LIMIT 1`).get(id, r.pallet_id)?.team || null;
     const bins = String(r.found_location || '').split(',').filter(Boolean);
@@ -313,7 +317,7 @@ export function generateFromVariances(sessionId, { onlyPallets = null, includeMi
       if (labelCheck(id, r).created) created++;
     }
   }
-  return { created, considered: rows.length, skippedSmall, skippedUnworked, cappedAt };
+  return { created, considered: rows.length, skippedSmall, skippedMoved, skippedUnworked, cappedAt };
 }
 
 /* The report's bin, counted again: a blind count, by a team other than the one that first counted it. */
@@ -349,7 +353,7 @@ export function autoAfterCounts(sessionId, palletIds, bins = []) {
   if (!s || !s.auto_recount || (!palletIds.length && !bins.length)) return { created: 0 };
   const out = palletIds.length ? generateFromVariances(sessionId, { onlyPallets: new Set(palletIds.map(norm)), includeMissing: false }) : { created: 0 };
   // a bin just counted may be the report's bin of a pallet already found elsewhere
-  out.created += labelChecksForBins(Number(sessionId), bins);
+  if (s.recount_wrong_bin) out.created += labelChecksForBins(Number(sessionId), bins);
   return out;
 }
 
@@ -373,9 +377,11 @@ export function autoAfterAisle(sessionId, aisle, levels, team) {
       detail: `expected ${r.expected_qty ?? '?'} in ${r.expected_location}, not seen when aisle ${aisle} was completed`, source: 'auto', firstTeam: team }).created) created++;
   }
   // the aisle handed back: its bins are looked in, so pallets found elsewhere get their label check here
-  const binsHere = db.prepare('SELECT code FROM locations WHERE session_id = ? AND aisle = ?').all(id, norm(aisle)).map((x) => x.code)
-    .filter((b) => !levels || levels.includes(b.replace(/^[A-Z]+\d+/, '')[0] || ''));
-  created += labelChecksForBins(id, binsHere);
+  if (s.recount_wrong_bin) {
+    const binsHere = db.prepare('SELECT code FROM locations WHERE session_id = ? AND aisle = ?').all(id, norm(aisle)).map((x) => x.code)
+      .filter((b) => !levels || levels.includes(b.replace(/^[A-Z]+\d+/, '')[0] || ''));
+    created += labelChecksForBins(id, binsHere);
+  }
   return { created };
 }
 

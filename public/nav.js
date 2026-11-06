@@ -1154,6 +1154,8 @@
     ['ERP upload, an aisle at a time (Excel)', '/admin', 'adjust', 'erp upload aisle excel uploaded to erp mark keyed entered inventory control sheet per aisle re-upload', 'erpAislesCard'],
     ['Export 2nd & 3rd counts with the 1st', '/admin', 'second', 'second third count recount export excel side by side first count compare final', 'btnExportSideBySide'],
     ['Third count', '/settings', 'start', 'third count 3rd count recount tie break second count disagrees neither', 'fThirdCount'],
+    ['Bin check', '/settings', 'start', 'bin check validate bins unknown bin not on the list refuse strict', 'fBinMode'],
+    ['Found in a different bin', '/settings', 'start', 'wrong bin moved pallet found somewhere else second count report bin', 'fRecountWrongBin'],
     ['Find a lot', '/admin', 'reports', 'lot batch recall find trace expiry', 'lotCard'],
     ['Labels to replace', '/admin', 'reports', 'label barcode unreadable relabel print rack tag damaged'],
     ['Printable count sheets', '/admin', 'reports', 'print paper count sheet blind auditor pen', 'sheetsCard'],

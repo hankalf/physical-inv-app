@@ -637,6 +637,24 @@
       <div class="scroll" style="margin-top:10px"><table id="fixTable"></table></div>
     </div>
 
+    <div class="card" id="movedCard">
+      <h2>Found in a different bin <span class="muted" id="movedSub">pallets the report had somewhere else</span></h2>
+      <div class="hint" style="margin-top:0">
+        A pallet counted in a bin other than the one the report has it in. That is a <b>move</b>, not a miscount: the pallet
+        was found, with its quantity, so it is listed here with where the report had it and where it is, and left out of the
+        second counts (Settings → Scanners can also raise a second count of the report's bin). Key the moves from this
+        list, or from the file.
+      </div>
+      <div class="grid" id="movedStats" style="margin-top:12px"></div>
+      <div class="toolbar" style="margin-top:12px">
+        <span class="muted" id="movedAisles"></span>
+        <span class="spacer"></span>
+        <button id="btnExportMoved">Found in a different bin (CSV)</button>
+      </div>
+      <div class="feedback" id="movedMsg"></div>
+      <div class="scroll" style="margin-top:10px"><table id="movedTable"></table></div>
+    </div>
+
     <div class="card" id="archiveCard" data-fold>
       <h2>Filed as the count goes <span class="muted">every aisle handed back is written to disk at once; the final report when the count is whole</span></h2>
       <div class="hint" style="margin-top:0">

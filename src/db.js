@@ -525,6 +525,10 @@ CREATE INDEX IF NOT EXISTS idx_idle_team ON idle_alerts(session_id, team, id);
 `);
 // the Testing tab's own count: never offered to a gun on the floor, never on the board
 if (!hasCol('sessions', 'practice')) db.exec('ALTER TABLE sessions ADD COLUMN practice INTEGER NOT NULL DEFAULT 0');
+// a pallet found in a bin other than the report's: a second count of that bin (on), or the Found in a different bin report alone (off)
+if (!hasCol('sessions', 'recount_wrong_bin')) db.exec('ALTER TABLE sessions ADD COLUMN recount_wrong_bin INTEGER NOT NULL DEFAULT 0');
+// a bin not on the bin list: counted anyway with a reason (warn), or refused outright (strict)
+if (!hasCol('sessions', 'bin_mode')) db.exec("ALTER TABLE sessions ADD COLUMN bin_mode TEXT NOT NULL DEFAULT 'warn'");
 if (!hasCol('pallets', 'abc')) db.exec('ALTER TABLE pallets ADD COLUMN abc TEXT');
 /* The report's unit cost and amount (quantity × cost): a difference is read in
    money as well as cases, and the thresholds below can be set in money. */
@@ -685,6 +689,7 @@ export const publicSession = (s) => ({
   askComments: !!s.ask_comments,
   askLot: !!s.ask_lot,
   askExpiry: !!s.ask_expiry,
+  binMode: s.bin_mode === 'strict' ? 'strict' : 'warn',
   autoRecount: !!s.auto_recount,
   thirdCount: !!s.third_count,
   masterVersion: s.master_version,

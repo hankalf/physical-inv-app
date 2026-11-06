@@ -43,7 +43,7 @@ import { withEntries, markEntered, markFromFile, worksheetRows, WORKSHEET_COLUMN
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, reorderAssignments, teamStatus, applyLayoutBlocks, partnerOf, planRows, planTeams, PLAN_COLUMNS, planNext } from './routes/assignments.js';
-import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot, labelsToReplace, fixLabel } from './routes/reports.js';
+import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot, labelsToReplace, fixLabel, movedPallets, movedRows, MOVED_COLUMNS } from './routes/reports.js';
 import {
   listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
   tasksForTeam, takeRecount, finishRecount, updateRecount, deleteRecount, raiseThirdCount, thirdCountsForBins,
@@ -1023,7 +1023,10 @@ async function handleAdmin(req, res, url, m) {
     const s = getSession(m[1]);
     if (!s) throw httpError(404, 'session not found');
     const mode = ['off', 'warn', 'strict'].includes(body.palletMode) ? body.palletMode : s.pallet_mode;
+    const binMode = ['warn', 'strict'].includes(body.binMode) ? body.binMode : s.bin_mode;
     const layout = body.layout === undefined ? s.layout : (body.layout && loadLayout(body.layout) ? body.layout : null);
+    if (body.recountWrongBin != null) db.prepare('UPDATE sessions SET recount_wrong_bin = ? WHERE id = ?').run(body.recountWrongBin ? 1 : 0, s.id);
+    db.prepare('UPDATE sessions SET bin_mode = ? WHERE id = ?').run(binMode, s.id);
     // how big a difference has to be before somebody walks back to the bin
     const num = (v, fallback, max) => (v == null || v === '' ? fallback : Math.max(0, Math.min(max, Number(v) || 0)));
     const minQty = num(body.recountMinQty, s.recount_min_qty, 1e6);
@@ -2403,6 +2406,15 @@ async function handleAdmin(req, res, url, m) {
     ]));
   }
 
+  // found in a different bin: the moves, as their own list and file
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/moved$/)) && method === 'GET') {
+    return sendJson(req, res, 200, movedPallets(m[1]));
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/moved\.csv$/))) {
+    const out = movedPallets(m[1]);
+    audit(actor, 'exported the pallets found in a different bin', `${out.total} pallets`, m[1]);
+    return sendCsv(req, res, `found-in-a-different-bin-session-${m[1]}.csv`, toCsv(movedRows(out.rows), MOVED_COLUMNS));
+  }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/fixlist$/)) && method === 'GET') {
     return sendJson(req, res, 200, fixList(m[1], { status: url.searchParams.get('status') || '' }));
   }

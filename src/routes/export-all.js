@@ -1,5 +1,5 @@
 import { db, getSession } from '../db.js';
-import { progress, palletReport, rawCounts, sourcesOf } from './reports.js';
+import { progress, palletReport, rawCounts, sourcesOf, movedPallets, movedRows, MOVED_COLUMNS } from './reports.js';
 import { adjustmentView } from './adjustments.js';
 import { withEntries } from './erp-entries.js';
 import { teamClocks } from './idle.js';
@@ -235,7 +235,7 @@ export function exportEverything(sessionId, { by = '' } = {}) {
 
   return {
     filename: `${String(s.name).replace(/[^A-Za-z0-9 _-]+/g, '').trim().replace(/\s+/g, '-') || 'count'}-${new Date().toISOString().slice(0, 10)}.xlsx`,
-    sheets: [summary, lines, report, adjustments, notOnReport, bins, notCounted, teams, downtime, signons, sos, quiet, second,
+    sheets: [summary, lines, report, adjustments, notOnReport, sheet('Found in a different bin', MOVED_COLUMNS, movedRows(movedPallets(id).rows)), bins, notCounted, teams, downtime, signons, sos, quiet, second,
       sheet('Counts side by side', sideBySide.columns, sideBySide.rows), fixes, log],
   };
 }

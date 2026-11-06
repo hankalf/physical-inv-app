@@ -436,3 +436,33 @@ export function findLot(sessionId, lot) {
         ORDER BY expected_location LIMIT 500`).all(id, like),
   };
 }
+
+
+/**
+ * Found in a different bin: every pallet counted somewhere other than where
+ * the report has it. Its own list, aisle by aisle, so the moves can be keyed
+ * as moves - with the quantity found, who found it and when - instead of
+ * walking somebody back for a second count of a bin that was simply wrong on
+ * paper. The pallet report still shows them as WRONG BIN.
+ */
+export function movedPallets(sessionId) {
+  const id = Number(sessionId);
+  const aisleOf = new Map(db.prepare('SELECT code, aisle FROM locations WHERE session_id = ?').all(id).map((l) => [l.code, l.aisle]));
+  const rows = palletReport(id).filter((r) => r.status === 'WRONG BIN').map((r) => {
+    const found = String(r.found_location || '').split(',').filter(Boolean);
+    return {
+      pallet_id: r.pallet_id, source: r.source, sku: r.sku, description: r.description, variant: r.variant,
+      expected_location: r.expected_location, expected_aisle: aisleOf.get(r.expected_location) || '',
+      found_location: found.join(', '), found_aisle: [...new Set(found.map((b) => aisleOf.get(b) || ''))].filter(Boolean).join(', '),
+      expected_qty: r.expected_qty, counted_qty: r.counted_qty, variance_qty: r.variance_qty,
+      teams: r.teams, last_scan: r.last_scan, times_counted: r.times_counted, recounted: r.recounted, open_recounts: r.open_recounts,
+      comments: r.comments,
+    };
+  }).sort((a, b) => String(a.found_aisle).localeCompare(String(b.found_aisle), undefined, { numeric: true }) || String(a.found_location).localeCompare(String(b.found_location), undefined, { numeric: true }) || String(a.pallet_id).localeCompare(String(b.pallet_id)));
+  const byAisle = new Map();
+  for (const r of rows) byAisle.set(r.found_aisle || '(no aisle)', (byAisle.get(r.found_aisle || '(no aisle)') || 0) + 1);
+  return { rows, total: rows.length, sameQty: rows.filter((r) => Number(r.variance_qty || 0) === 0).length, byAisle: [...byAisle.entries()].map(([aisle, n]) => ({ aisle, n })) };
+}
+export const MOVED_COLUMNS = ['Pallet', 'System', 'Item', 'Description', 'Variant', 'Report bin', 'Report aisle', 'Found in', 'Found aisle', 'Report qty', 'Counted qty', 'Difference', 'Counted by', 'Last scan', 'Comments'];
+export const movedRows = (rows) => rows.map((r) => ({ 'Pallet': r.pallet_id, 'System': r.source, 'Item': r.sku, 'Description': r.description, 'Variant': r.variant, 'Report bin': r.expected_location, 'Report aisle': r.expected_aisle,
+  'Found in': r.found_location, 'Found aisle': r.found_aisle, 'Report qty': r.expected_qty, 'Counted qty': r.counted_qty, 'Difference': r.variance_qty, 'Counted by': r.teams, 'Last scan': r.last_scan, 'Comments': r.comments }));

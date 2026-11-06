@@ -2552,6 +2552,8 @@
     $('sessionCardSub').textContent = `#${s.id} · ${s.mode === 'cycle' ? 'cycle count' : 'full count'} · ${s.status}`;
     $('countGunSub').textContent = `${s.name} · #${s.id} · ${s.status}`;
     $('fPalletMode').value = s.pallet_mode;
+    $('fBinMode').value = s.bin_mode || 'warn';
+    $('fRecountWrongBin').checked = !!s.recount_wrong_bin;
     $('fGuided').checked = !!s.guided;
     $('fAskComments').checked = !!s.ask_comments;
     $('fAutoRecount').checked = !!s.auto_recount;
@@ -2682,6 +2684,7 @@
       const saved = await api.post(`/api/admin/sessions/${sessionId}/settings`, {
         palletMode: $('fPalletMode').value, guided: $('fGuided').checked, askComments: $('fAskComments').checked,
         autoRecount: $('fAutoRecount').checked, thirdCount: $('fThirdCount').checked, layout: $('fLayout').value,
+        binMode: $('fBinMode').value, recountWrongBin: $('fRecountWrongBin').checked,
         recountTeamOn: $('fRecountTeamOn').checked, recountTeam: $('fRecountTeam').value,
         recountMinQty: $('fRecMinQty').value, recountMinPct: $('fRecMinPct').value, recountCap: $('fRecCap').value,
         recountMinValue: $('fRecMinValue').value, thirdMinValue: $('fThirdMinValue').value, approvalMinValue: $('fApprMinValue').value,

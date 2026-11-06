@@ -287,6 +287,14 @@
             </select>
             <div class="opt-desc">What happens when a pallet scanned is not on the inventory report. <b>Allow override with reason</b>: the gun stops, and the counter can count it anyway by picking a reason; the line is flagged for the office. <b>No overrides</b>: it cannot be counted on the gun until a supervisor sorts it out. <b>Accept any ID</b>: any pallet number is taken. In every case a pallet already counted in another bin is stopped.</div>
           </div>
+          <div class="opt">
+            <label for="fBinMode">Bin check</label>
+            <select id="fBinMode">
+              <option value="warn">Validate — allow override with reason</option>
+              <option value="strict">Validate — no overrides: a bin not on the list cannot be counted</option>
+            </select>
+            <div class="opt-desc">What happens when a bin scanned is not on the bin list. <b>Allow override with reason</b>: the gun stops, and the counter can count it anyway as a bin not on the list; the line is flagged for the office. <b>No overrides</b>: the gun refuses the bin and says so, and nothing is added to the count under it — the bin list is fixed under Settings → Lists & racking first.</div>
+          </div>
           <div class="opt"><label class="cb"><input type="checkbox" id="fAskComments"> Ask for comments</label>
             <div class="opt-desc">After the quantity, the gun offers a comment step: one-tap reasons such as <i>Damaged</i> or <i>Partial pallet</i>, or a typed note. It can be skipped.</div></div>
           <div class="opt"><label class="cb" title="Adds a LOT CODE question on the gun, checked against the inventory report. Off by default."><input type="checkbox" id="fAskLot"> Ask for the lot code</label>
@@ -314,6 +322,8 @@
           <div class="legend">Second counts</div>
           <div class="opt"><label class="cb"><input type="checkbox" id="fAutoRecount"> Raise them automatically</label>
             <div class="opt-desc">When a first count disagrees with the report by more than the thresholds below, a second count of that bin is raised straight away and offered on the scanners to a team that did not count it. Off: supervisors raise them by hand under Dashboard → Second counts.</div></div>
+          <div class="opt"><label class="cb" title="A pallet counted in a bin other than the one the report has it in. Off: it goes on the Found in a different bin report only. On: a second count of the report's bin is raised too."><input type="checkbox" id="fRecountWrongBin"> Second count the report's bin when a pallet is found somewhere else</label>
+            <div class="opt-desc">A pallet counted in a bin other than the report's is a move, not a miscount: it is listed under Dashboard → Reports → <b>Found in a different bin</b>, with where it was and where it is, and is left out of the second counts. Tick this to also raise a second count of the bin the report had it in, to make sure nothing is still there.</div></div>
           <div class="opt"><label class="cb" title="A bin whose second count agrees with neither the first count nor the report is counted a third time, by a team that did neither"><input type="checkbox" id="fThirdCount"> Third count when the second settles nothing</label>
             <div class="opt-desc">A bin whose second count agrees with neither the first count nor the report is counted a third time, by a team that did neither.</div></div>
           <div class="opt">
