@@ -561,7 +561,8 @@ async function handleHandheld(req, res, url, m) {
        signs the scanner off from the dashboard. The same team signing on again
        (a crew change) is fine - the earlier sign-on ends. */
     const devName = device ? device.name : body.deviceId;
-    const held = openSignon(m[1], devName);
+    // on a cycle count each person is their own team and a gun is handed along: no hold there
+    const held = sess && (sess.mode || 'full') !== 'cycle' ? openSignon(m[1], devName) : null;
     if (held && held.team !== norm(body.team)) {
       const since = new Date(held.started_at).toLocaleTimeString('en-US', { timeZone: siteTimezone(), hour: 'numeric', minute: '2-digit' });
       audit(devName, 'refused a sign-on: the scanner is signed on as another team', `team ${norm(body.team)} tried; team ${held.team} has it since ${since}`, m[1]);
