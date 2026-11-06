@@ -22,8 +22,8 @@ const dev = await j(await fetch(`${BASE}/api/admin/devices`, { method: 'POST', h
 
 /* ---------------- the settings ---------------- */
 const def = await j(await fetch(`${BASE}/api/admin/scanner-layout`, { headers: A }));
-check('It ships asking pallet, quantity, bin — with lot and expiry in place for the counts that use them',
-  def.order.join(',') === 'pallet,qty,lot,expiry,bin' && def.isDefault === true, def.order.join(','));
+check('It ships asking bin, pallet, quantity — location-first - with lot and expiry in place for the counts that use them',
+  def.order.join(',') === 'bin,pallet,qty,lot,expiry' && def.isDefault === true, def.order.join(','));
 const rev = await j(await fetch(`${BASE}/api/admin/scanner-layout`, { method: 'POST', headers: A, body: JSON.stringify({ order: ['bin', 'pallet', 'qty'], textSize: 'large', confirmOver: 500 }) }));
 check('The order can be changed to location-first', rev.order.slice(0, 3).join(',') === 'bin,pallet,qty', rev.order.join(','));
 const half = await j(await fetch(`${BASE}/api/admin/scanner-layout`, { method: 'POST', headers: A, body: JSON.stringify({ order: ['bin'] }) }));
@@ -147,7 +147,7 @@ check('Taking the whole screen is on by default, as is keeping it awake — so t
 check('Changing it is recorded in the log',
   (await j(await fetch(`${BASE}/api/admin/audit?limit=20`, { headers: A }))).some((r) => r.action === 'changed the scanner screen layout'));
 await page.click('#btnResetGun'); await page.waitForTimeout(500);
-check('Settings: the defaults can be put back', (await page.$$eval('#stepOrder li', (l) => l.map((x) => x.dataset.step))).join(',') === 'pallet,qty,lot,expiry,bin',
+check('Settings: the defaults can be put back', (await page.$$eval('#stepOrder li', (l) => l.map((x) => x.dataset.step))).join(',') === 'bin,pallet,qty,lot,expiry',
   (await page.$$eval('#stepOrder li', (l) => l.map((x) => x.dataset.step))).join(','));
 await page.close();
 

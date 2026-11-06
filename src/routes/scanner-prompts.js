@@ -115,7 +115,8 @@ export const defaultScannerPrompts = () => ({ ...DEFAULTS, commentTimeout: DEFAU
  */
 const STEPS = ['pallet', 'qty', 'bin', 'lot', 'expiry'];
 const LAYOUT_DEFAULTS = {
-  order: ['pallet', 'qty', 'lot', 'expiry', 'bin'],
+  // location-first: the bin, then the pallet in it, then the quantity typed
+  order: ['bin', 'pallet', 'qty', 'lot', 'expiry'],
   textSize: 'normal',      // normal | large
   showNextBin: true,       // the next bin in the aisle
   confirmOver: 1000,       // re-key a quantity at least this big

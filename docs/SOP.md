@@ -691,7 +691,7 @@ directly.
 1. **Sign on.** Click team **99** and a clock-in number, then **Sign on & load list** on the gun.
    Team 99 already has F01, then F02. Your own clock-in number works; **T1001** and **T1002** are
    made up, so the gun flags them as not on the crew list — which is what it does with a typo.
-2. **Start counting**, and work down the sheet. For each pallet: pallet, quantity, bin.
+2. **Start counting**, and work down the sheet. For each pallet: bin, pallet, quantity (the site's order).
 3. **Things to try** ticks itself off from what actually reached the server. The shelves are
    wrong in places on purpose, each with a **Try this** line saying what to do:
 
@@ -868,11 +868,15 @@ This is what a counter actually sees. The preview on the right is drawn at the r
 pixel size of the device (MC9090 is 240 × 320; MC9200 is 480 × 640) using the scanner's
 own stylesheet, so it cannot drift from reality.
 
-- **The questions, in order.** Drag to reorder. The default asks for the pallet, then
-  the quantity, then the bin. Counting **location-first** — bin, then what is in it —
-  suits a team working a bay at a time. Lot code and expiry sit in the order too, and
-  only appear on counts that ask for them (Part 3). A question can never be dragged off
-  the list entirely.
+- **The questions, in order.** Drag to reorder. The default is **location-first**: scan the
+  bin, scan the pallet, type the quantity — a team working a bay at a time. Pallet-first (pallet,
+  quantity, bin) is a drag away. Lot code and expiry sit in the order too, and only appear on
+  counts that ask for them (Part 3). A question can never be dragged off the list entirely.
+- **The quantity is typed, never scanned.** The gun times the keys: a barcode arrives in a few
+  milliseconds, a person on the keypad does not, so a scan into the quantity box is refused as
+  *That is a scan, not a quantity* whatever digits it carried — as is anything that is a bin on the
+  list, a pallet on the file, or fits a system's label layout. Only a number typed on the keypad
+  and entered goes in.
 - **Show contents after a pallet scan** — shows the SKU and description the ERP has for
   that pallet, so the counter can see they are at the right one.
 - **Show the next bin in the aisle** — once a team starts a section, the gun tells them

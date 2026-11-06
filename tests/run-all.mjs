@@ -13,7 +13,7 @@ const HERE = new URL('.', import.meta.url).pathname;
 const BASE_PORT = Number(process.env.PORT || 3111);
 const SUITES = process.argv.slice(2).length
   ? process.argv.slice(2).map((n) => (n.endsWith('.mjs') ? n : `${n}.mjs`))
-  : ['full-count.mjs', 'cycle-count.mjs', 'roster.mjs', 'ops.mjs', 'scanner-auth.mjs', 'settings.mjs', 'board.mjs', 'search.mjs', 'barcodes.mjs', 'superadmin.mjs', 'setup-guide.mjs', 'recount-threshold.mjs', 'scanner-prompts.mjs', 'gun-guidance.mjs', 'gun-layout.mjs', 'gun-portrait.mjs', 'self-update.mjs', 'durability.mjs', 'delete-session.mjs', 'lot-expiry.mjs', 'multi-tag-bins.mjs', 'messages.mjs', 'sos.mjs', 'approvals.mjs', 'labels-notes.mjs', 'testing-tab.mjs', 'clocks-shifts.mjs', 'gun-floor.mjs', 'office-batch.mjs', 'auto-plan.mjs', 'moves.mjs', 'fix-list.mjs', 'missing.mjs', 'comment-timeout-upgrade.mjs', 'load-15-teams.mjs', 'access.mjs', 'sources.mjs', 'desk.mjs', 'practice-modes.mjs', 'site-report.mjs', 'guide.mjs', 'branding.mjs', 'scanner-jobs.mjs', 'archive.mjs', 'wrong-field.mjs', 'full-counts.mjs', 'login-limit.mjs', 'phone-app.mjs', 'onedrive.mjs', 'readiness.mjs', 'invites.mjs', 'features.mjs', 'practice-second.mjs', 'picker.mjs', 'erp-entries.mjs', 'tips-order.mjs', 'count-clock.mjs', 'practice-data.mjs', 'report-problem.mjs', 'team-sheet.mjs', 'gdrive.mjs', 'systems.mjs', 'count-rules.mjs','gear-sizes.mjs','fold-cards.mjs','employees.mjs','sign-in-flash.mjs','third-count.mjs','erp-aisles.mjs','howto-guides.mjs','recount-team.mjs','inventory-control.mjs','plan-release.mjs','crew-board.mjs','plan-file.mjs','multi-label.mjs','pallet-report.mjs','side-collapse.mjs','team-codes.mjs','teams-backup.mjs','crew-workbook.mjs', 'master-override.mjs', 'access-map.mjs', 'cost-value.mjs', 'training.mjs', 'history-void.mjs', 'queue-stuck.mjs', 'badge-labels.mjs', 'training-reset-gun.mjs', 'training-real-teams.mjs', 'readiness-countday.mjs', 'tablet-scanner.mjs', 'aisle-sheet.mjs', 'countday.mjs', 'autosave.mjs', 'login-case.mjs', 'floor-bins.mjs', 'second-counts-tab.mjs', 'clock-schedule.mjs', 'next-up.mjs', 'moved-pallets.mjs', 'assign-face.mjs', 'label-layouts.mjs', 'crew-metrics.mjs', 'one-team-per-gun.mjs', 'guide-forward.mjs'];
+  : ['full-count.mjs', 'cycle-count.mjs', 'roster.mjs', 'ops.mjs', 'scanner-auth.mjs', 'settings.mjs', 'board.mjs', 'search.mjs', 'barcodes.mjs', 'superadmin.mjs', 'setup-guide.mjs', 'recount-threshold.mjs', 'scanner-prompts.mjs', 'gun-guidance.mjs', 'gun-layout.mjs', 'gun-portrait.mjs', 'self-update.mjs', 'durability.mjs', 'delete-session.mjs', 'lot-expiry.mjs', 'multi-tag-bins.mjs', 'messages.mjs', 'sos.mjs', 'approvals.mjs', 'labels-notes.mjs', 'testing-tab.mjs', 'clocks-shifts.mjs', 'gun-floor.mjs', 'office-batch.mjs', 'auto-plan.mjs', 'moves.mjs', 'fix-list.mjs', 'missing.mjs', 'comment-timeout-upgrade.mjs', 'load-15-teams.mjs', 'access.mjs', 'sources.mjs', 'desk.mjs', 'practice-modes.mjs', 'site-report.mjs', 'guide.mjs', 'branding.mjs', 'scanner-jobs.mjs', 'archive.mjs', 'wrong-field.mjs', 'full-counts.mjs', 'login-limit.mjs', 'phone-app.mjs', 'onedrive.mjs', 'readiness.mjs', 'invites.mjs', 'features.mjs', 'practice-second.mjs', 'picker.mjs', 'erp-entries.mjs', 'tips-order.mjs', 'count-clock.mjs', 'practice-data.mjs', 'report-problem.mjs', 'team-sheet.mjs', 'gdrive.mjs', 'systems.mjs', 'count-rules.mjs','gear-sizes.mjs','fold-cards.mjs','employees.mjs','sign-in-flash.mjs','third-count.mjs','erp-aisles.mjs','howto-guides.mjs','recount-team.mjs','inventory-control.mjs','plan-release.mjs','crew-board.mjs','plan-file.mjs','multi-label.mjs','pallet-report.mjs','side-collapse.mjs','team-codes.mjs','teams-backup.mjs','crew-workbook.mjs', 'master-override.mjs', 'access-map.mjs', 'cost-value.mjs', 'training.mjs', 'history-void.mjs', 'queue-stuck.mjs', 'badge-labels.mjs', 'training-reset-gun.mjs', 'training-real-teams.mjs', 'readiness-countday.mjs', 'tablet-scanner.mjs', 'aisle-sheet.mjs', 'countday.mjs', 'autosave.mjs', 'login-case.mjs', 'floor-bins.mjs', 'second-counts-tab.mjs', 'clock-schedule.mjs', 'next-up.mjs', 'moved-pallets.mjs', 'assign-face.mjs', 'label-layouts.mjs', 'crew-metrics.mjs', 'one-team-per-gun.mjs', 'guide-forward.mjs', 'qty-typed.mjs'];
 
 mkdirSync(join(HERE, 'screenshots'), { recursive: true });
 
@@ -23,6 +23,9 @@ const ONEDRIVE_MOCK = Number(process.env.ONEDRIVE_MOCK_PORT || 3989);
 const GDRIVE_MOCK = Number(process.env.GDRIVE_MOCK_PORT || 3988);
 const GEO_MOCK = Number(process.env.GEOIP_MOCK_PORT || 3987);
 const SUITE_ENV = {
+  // these want the shipped step order (bin first), not the pallet-first one the other suites were written for
+  'gun-layout.mjs': { KEEP_DEFAULT_ORDER: '1' },
+  'qty-typed.mjs': { KEEP_DEFAULT_ORDER: '1' },
   'access-map.mjs': {
     GEOIP_BASE: `http://127.0.0.1:${GEO_MOCK}`,      // the stand-in for the address lookup
     GEOIP_MOCK_PORT: String(GEO_MOCK),
@@ -60,6 +63,13 @@ async function withServer(port, fn, extra = {}) {
       if (!up) await new Promise((r) => setTimeout(r, 200));
     }
     if (!up) throw new Error(`the server never answered on ${base}\n${log}`);
+    /* The shipped step order is bin → pallet → quantity. Most suites here were
+       written pallet-first (pallet, quantity, bin) and count that way, so each
+       starts with that order saved - unless it says it wants the shipped one. */
+    if (!extra.KEEP_DEFAULT_ORDER) {
+      const tok = (await (await fetch(`${base}/api/admin/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: 'changeme' }) })).json()).token;
+      await fetch(`${base}/api/admin/scanner-layout`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + tok }, body: JSON.stringify({ order: ['pallet', 'qty', 'bin', 'lot', 'expiry'] }) });
+    }
     return await fn(base);
   } finally {
     server.kill();

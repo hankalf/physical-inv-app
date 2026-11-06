@@ -109,7 +109,7 @@
     // comments: the count asks for them, and the site has not switched them off for every scanner
     const comments = session.askComments && (session.prompts || {}).commentsAsk !== false;
     return [
-      ...(cfg.order || ['pallet', 'qty', 'bin']).filter((k) => wanted.has(k)),
+      ...(cfg.order || ['bin', 'pallet', 'qty']).filter((k) => wanted.has(k)),
       ...(comments ? ['comments'] : []),
     ];
   }
@@ -1921,11 +1921,14 @@
     if (step === 'qty') {
       // Strict: a stray scan into the quantity field must never become a count.
       const cleaned = value.replace(/[\s,]/g, '');
-      if (!/^\d+(\.\d+)?$/.test(cleaned)) {
+      const fromScanner = !!state.qtyFromScanner; state.qtyFromScanner = false;
+      const layoutsHere = Array.isArray(state.session.labelLayouts) ? state.session.labelLayouts : [];
+      const looksLikeLabel = layoutsHere.some((l) => (l.masks || []).some((mk) => maskRe(mk).test(value.trim().toUpperCase())));
+      if (!/^\d+(\.\d+)?$/.test(cleaned) || fromScanner || looksLikeLabel || (await lookupPallet(value)) || value === state.draft.palletId || (await lookupLocation(value))) {
         // say what was scanned, so the counter knows which label went where
-        const kind = (await lookupLocation(value)) ? 'a bin' : (await lookupPallet(value)) || value === state.draft.palletId ? 'a pallet label' : '';
+        const kind = (await lookupLocation(value)) ? 'a bin' : (await lookupPallet(value)) || value === state.draft.palletId || looksLikeLabel ? 'a pallet label' : fromScanner ? 'a scan' : '';
         beep('err');
-        feedback($('scanMsg'), 'err', kind ? `That is ${kind}, not a quantity` : `"${value}" is not a quantity`, 'The quantity is typed, not scanned: type the number of cases and press Enter.');
+        feedback($('scanMsg'), 'err', kind ? `That is ${kind}, not a quantity` : `"${value}" is not a quantity`, 'The quantity is typed, not scanned: type the number of cases on the keypad and press Enter.');
         $('fScan').value = '';
         focusScan();
         return;
@@ -3662,11 +3665,20 @@
      Android straight into the browser's address bar, where the rest of the scan
      is typed. Both end a scan here, and neither moves the focus. */
   const SCAN_ENTER = new Set(['Enter', 'Tab', 'NumpadEnter']);
+  /* The quantity is typed, never scanned. A scanner delivers a whole barcode
+     in a few milliseconds; a person on the keypad takes far longer between
+     keys. The keystrokes on the quantity step are timed, and a burst is
+     refused as a scan whatever digits it carried. */
+  let qtyKeys = [];
+  const qtyBurst = () => qtyKeys.length >= 2 && (qtyKeys[qtyKeys.length - 1] - qtyKeys[0]) < qtyKeys.length * 20;
   $('fScan').addEventListener('keydown', (e) => {
+    if (e.key && e.key.length === 1 && state.steps[state.stepIndex] === 'qty') qtyKeys.push(performance.now());
     if (SCAN_ENTER.has(e.key)) {
       e.preventDefault();
       const v = $('fScan').value;
       $('fScan').value = '';
+      state.qtyFromScanner = qtyBurst();
+      qtyKeys = [];
       handleEntry(v);
     }
   });
