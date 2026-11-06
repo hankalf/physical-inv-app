@@ -96,7 +96,17 @@ await board.waitForTimeout(1800);
 check('The office board names the site under its heading', /Full Harvest Cold Storage · Winchester, VA/.test(await board.textContent('#bSite')), await board.textContent('#bSite'));
 
 await post('/api/admin/site-name', { name: '', place: 'Front Royal' });   // leave it as found
+/* who built it: one line in the code, shown faintly in the corner of Settings */
+{
+  const b = await j(await fetch(`${BASE}/api/branding`));
+  check('The branding carries who built it', typeof b.builtBy === 'string' && b.builtBy.length > 0, JSON.stringify(b.builtBy));
+  const pg = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+  await pg.goto(`${BASE}/settings`); await pg.waitForTimeout(1500);
+  check('Settings shows it faintly in the corner', (await pg.textContent('#builtBy')) === `Built by ${b.builtBy}` && (await pg.$eval('#builtBy', (el) => { const cs = getComputedStyle(el); return cs.position === 'fixed' && Number(cs.opacity) < 0.6 && cs.pointerEvents === 'none'; })), await pg.textContent('#builtBy'));
+  await pg.close();
+}
 await browser.close();
+
 const passed = results.filter(Boolean).length;
 console.log(`\n${passed}/${results.length} checks passed`);
 process.exit(passed === results.length ? 0 : 1);

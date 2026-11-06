@@ -1029,3 +1029,7 @@ html.side-collapsed #sidePeek:hover span { color: var(--text); }
 .cam-msg { position: relative; margin-top: 18px; color: #fff; font-size: 1.1rem; font-weight: 700; text-shadow: 0 1px 3px #000; }
 .cam-row { position: absolute; bottom: 28px; left: 0; right: 0; display: flex; gap: 12px; justify-content: center; }
 .cam-row button { min-width: 140px; padding: 14px 18px; font-size: 1.1rem; font-weight: 800; border-radius: 10px; border: 0; background: #fff; color: #000; }
+
+/* who built it: faint, in the corner of Settings, out of everything's way */
+.built-by { position: fixed; right: 14px; bottom: 10px; font-size: 11px; color: var(--muted); opacity: .45; pointer-events: none; user-select: none; letter-spacing: .02em; z-index: 1; }
+@media print { .built-by { display: none; } }

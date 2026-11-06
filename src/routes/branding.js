@@ -5,6 +5,7 @@
    every page, the scanner app, the board and the installed app's manifest
    read them from here, so a change lands everywhere. */
 import { db } from '../db.js';
+import { BUILT_BY } from '../built-by.js';
 
 const MAX_CHARS = 600_000;   // ~450 KB of image: plenty for a header mark, small enough to send to every gun
 const KIND = /^data:image\/(png|jpeg|webp|gif|svg\+xml);base64,[A-Za-z0-9+/=\s]+$/;
@@ -26,6 +27,7 @@ const clean = (v, fallback) => {
 export function branding() {
   const logo = get('siteLogo');
   return {
+    builtBy: BUILT_BY,
     name: clean(get('siteName'), DEFAULT_NAME),
     place: get('sitePlace') == null ? DEFAULT_PLACE : clean(get('sitePlace'), ''),
     logo: logo || null, onGuns: logo ? get('siteLogoOnGuns') !== '0' : false, updatedAt: logo ? get('siteLogoAt') : null,

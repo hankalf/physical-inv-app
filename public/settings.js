@@ -1279,6 +1279,9 @@
     };
   }
 
+  /* who built it, faint in the corner: the name comes with the branding, from one place in the code */
+  document.addEventListener('branding', (e) => { const el = $('builtBy'); if (el && e.detail && e.detail.builtBy) el.textContent = `Built by ${e.detail.builtBy}`; });
+
   /* ------------------------------------------------------------ floor bins */
   let floorSaved = null;      // the text as last saved: a blur that changes nothing saves nothing
   function renderFloor(f) {
