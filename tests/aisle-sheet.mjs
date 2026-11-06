@@ -6,7 +6,7 @@
  * is now printed in, or blank.
  */
 import { chromium } from 'playwright-core';
-import { signIn, pickSession } from './helpers.mjs';
+import { signIn, pickSession, openPlanMore } from './helpers.mjs';
 
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
 const results = [];
@@ -79,6 +79,7 @@ await page.waitForTimeout(800);
 const [pop] = await Promise.all([page.waitForEvent('popup', { timeout: 10000 }).catch(() => null), page.click('#btnAisleSheetTop')]);
 if (pop) await pop.waitForLoadState().catch(() => {});
 check('🖨 Aisle sheet on the team plan opens the sheet to print', pop && /Aisle sheet — Aisle sheet count/.test(await pop.title()) && (await pop.$$('td.a')).length === 4, pop ? await pop.title() : 'no window');
+await openPlanMore(page);
 await page.click('#btnPlanFileTools');
 const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 10000 }).catch(() => null), page.click('#btnAisleSheetDocx')]);
 check('…⬇ Word under ⇅ Plan file downloads it, named for the count', dl && dl.suggestedFilename() === 'aisle-sheet-Aisle-sheet-count.docx', dl ? dl.suggestedFilename() : 'none');

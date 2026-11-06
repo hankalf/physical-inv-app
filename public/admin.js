@@ -491,11 +491,11 @@
       const sub = document.createElement('span'); sub.className = 'sub';
       sub.textContent = ct ? [ct.reach ? `reaches ${ct.reachLabel}` : 'reach unknown', ct.people ? `${ct.people} ${ct.people === 1 ? 'person' : 'people'}` : 'nobody on it'].join(' · ') : 'not on Teams & crew';
       b.appendChild(sub);
-      b.onclick = () => { if (qa.team === name) { qa.team = ''; qa.levels = new Set(); qaRender(); } else qaPickTeam(name); };
+      b.onclick = () => { if (qa.team === name) { qa.team = ''; qa.levels = new Set(); qaRender(); refreshNextUp().catch(() => {}); } else qaPickTeam(name); };
       teamsBox.appendChild(b);
     }
     if (!names.length) teamsBox.appendChild(Object.assign(document.createElement('span'), { className: 'muted', textContent: 'No teams yet — add them on Teams & crew.' }));
-    $('qaTeamNote').textContent = qa.team ? `team ${qa.team}` : 'pick one';
+    $('qaTeamNote').textContent = qa.team ? `team ${qa.team}` : 'scan its card, or pick it';
     const ct = qa.teams.get(qa.team);
     const lv = $('qaLevels');
     lv.innerHTML = '';
@@ -551,7 +551,97 @@
     qaRender();
     const chip = document.querySelector(`#qaTeams .qa-team[data-team="${CSS.escape(name)}"]`);
     if (chip) chip.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    refreshNextUp().catch(() => {});
   }
+
+  /* ---- next up: what is left, ranked for the team picked ----
+     Every aisle with bins still to count that no team has on its plan, the
+     levels this team reaches first, nearest to where it just was, biggest
+     first - and held back while another team is in that racking. One press
+     queues it. With no team picked it is simply what is left, so the office
+     sees what still needs handing out. */
+  const nu = { data: null, loading: false };
+  async function refreshNextUp() {
+    if (!sessionId || !$('nuList')) return;
+    nu.loading = true;
+    try { nu.data = await apiJson(`/api/admin/sessions/${sessionId}/plan/next?team=${encodeURIComponent(qa.team || '')}&limit=10`); }
+    catch (err) { nu.data = null; msg($('nuMsg'), 'err', err.message); }
+    nu.loading = false;
+    renderNextUp();
+  }
+  function renderNextUp() {
+    const d = nu.data;
+    const list = $('nuList');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!d) { $('nuLeft').textContent = ''; return; }
+    const can = api.can('assign');
+    const team = d.team;
+    $('nuLeft').textContent = d.aisles
+      ? `${d.unplanned} aisle${d.unplanned === 1 ? '' : 's'} with bins left and nobody on them · ${d.binsLeft.toLocaleString()} bins still to count${team ? ` · for team ${team}${d.reachLabel ? `, ${d.reachLabel}` : ''}${d.here ? `, now at ${d.here}` : ''}` : ' · pick a team to see its order'}`
+      : 'no aisles yet — upload the bin list under Settings';
+    if (!d.suggestions.length) {
+      list.appendChild(Object.assign(document.createElement('div'), { className: 'muted', textContent: d.aisles ? (team ? `Nothing left that team ${team} can reach is unplanned. Every aisle is on a team's plan, or being counted.` : 'Every aisle with bins left is on a team\'s plan.') : '' }));
+      return;
+    }
+    for (const a of d.suggestions) {
+      const row = document.createElement('div');
+      row.className = 'nu-row' + (a.held ? ' held' : '');
+      row.dataset.aisle = a.aisle;
+      const name = document.createElement('b'); name.textContent = a.aisle;
+      const zone = document.createElement('span'); zone.className = 'nu-zone'; zone.textContent = a.zone ? titleCase(a.zone) : (a.floor ? 'floor' : '');
+      name.appendChild(zone);
+      const mid = document.createElement('div');
+      const left = document.createElement('span'); left.className = 'nu-left'; left.textContent = `${a.binsLeft.toLocaleString()} bins left`;
+      const why = document.createElement('span'); why.className = 'nu-why'; why.textContent = a.why ? ` · ${a.why}` : '';
+      mid.append(left, why);
+      const btns = document.createElement('div'); btns.className = 'nu-btns';
+      if (team) {
+        const go = button(a.held ? 'Queue anyway' : 'Queue', 'sm' + (a.held ? ' ghost' : ' primary'), () => nuQueue([a.aisle]));
+        go.disabled = !can; go.dataset.queue = a.aisle;
+        go.title = a.held ? 'Another team is in that racking now; queued, it starts when they are out' : `Queue ${a.aisle} for team ${team}${a.levelsReachable ? ' on levels ' + a.levelsReachable : ''}`;
+        btns.appendChild(go);
+      } else {
+        const pick = button('Pick a team first', 'sm ghost', () => $('qaScan').focus()); pick.disabled = !can; btns.appendChild(pick);
+      }
+      row.append(name, mid, btns);
+      list.appendChild(row);
+    }
+    const foot = document.createElement('div'); foot.className = 'nu-foot';
+    if (team && d.suggestions.filter((a) => !a.held).length > 1) {
+      const n = Math.min(3, d.suggestions.filter((a) => !a.held).length);
+      const b = button(`Queue the next ${n} in this order`, 'sm', () => nuQueue(d.suggestions.filter((a) => !a.held).slice(0, n).map((a) => a.aisle)));
+      b.disabled = !can; b.id = 'btnNuQueueNext'; foot.appendChild(b);
+    }
+    if (d.more) foot.appendChild(Object.assign(document.createElement('span'), { className: 'muted', textContent: `and ${d.more} more under More ways to plan` }));
+    if (foot.childNodes.length) list.appendChild(foot);
+  }
+  async function nuQueue(aisles) {
+    if (!needSession($('nuMsg')) || !qa.team) return;
+    const team = qa.team;
+    const levels = [...'ABCDEF'].filter((c) => qa.levels.has(c)).join('') || 'A-F';
+    const go = (force) => postJson(`/api/admin/sessions/${sessionId}/assignments`, { team, aisles: aisles.join(', '), levels, direction: qa.dir, force });
+    try {
+      let r;
+      try { r = await go(false); }
+      catch (err) { if (!/cannot reach level/.test(err.message) || !confirm(`${err.message}\n\nAssign it anyway?`)) throw err; r = await go(true); }
+      const started = r.activated.find((a) => a.team === team);
+      msg($('nuMsg'), r.skipped.length && !r.added.length ? 'warn' : 'ok',
+        r.added.length ? `Queued ${r.added.join(', ')} for team ${team}.${started ? ` It starts now in ${started.aisle}.` : ''}` : 'Nothing queued',
+        r.skipped.map((x) => `${x.aisle}: ${x.reason}`).join(' · '));
+      setTimeout(() => clearMsg($('nuMsg')), 8000);
+      await refreshAll();
+    } catch (err) { msg($('nuMsg'), 'err', err.message); }
+  }
+  /* the rest of the planning, shown when asked and remembered on this computer */
+  const planMore = (on) => {
+    document.body.classList.toggle('plan-more-open', on);
+    $('btnPlanMore').textContent = on ? 'Fewer ways to plan ▴' : 'More ways to plan ▾';
+    $('btnPlanMore').classList.toggle('selected', on);
+    try { localStorage.setItem('planMore', on ? '1' : '0'); } catch { /* private window */ }
+  };
+  $('btnPlanMore').onclick = () => planMore(!document.body.classList.contains('plan-more-open'));
+  try { planMore(localStorage.getItem('planMore') === '1'); } catch { planMore(false); }
   /* The floor supervisor's way: hold the team's card up to a scanner on this computer (or
      type the number) and that team comes up, ready for its aisles. The box keeps the focus,
      so the next card scans straight after. */
@@ -565,7 +655,7 @@
     if (!name) { msg($('qaScanMsg'), 'err', `No team ${v}`, 'It is not on Teams & crew and has nothing queued. Add the team there first, or pick one below.'); return; }
     clearMsg($('qaScanMsg'));
     qaPickTeam(name);
-    msg($('qaScanMsg'), 'ok', `Team ${name}`, qa.aisles.length ? `Press Queue to give it ${qa.aisles.join(' → ')}, or change the aisles first.` : 'Now click its aisles in counting order, then Queue.');
+    msg($('qaScanMsg'), 'ok', `Team ${name}`, qa.aisles.length ? `Press Queue to give it ${qa.aisles.join(' → ')}, or change the aisles first.` : 'Its next aisles are listed below: press Queue on one, or Queue the next 3.');
     setTimeout(() => clearMsg($('qaScanMsg')), 6000);
   };
   $('qaScan').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); qaScanTake($('qaScan').value); } });
@@ -595,7 +685,7 @@
     };
     tick();
   };
-  $('btnQaClear').onclick = () => { qa.team = ''; qa.aisles = []; qa.levels = new Set(); qa.dir = 'up'; qaRender(); };
+  $('btnQaClear').onclick = () => { qa.team = ''; qa.aisles = []; qa.levels = new Set(); qa.dir = 'up'; qaRender(); refreshNextUp().catch(() => {}); };
   for (const b of $('qaFrom').querySelectorAll('button')) b.onclick = () => { qa.dir = b.dataset.dir; qaRender(); };
   $('btnQuickQueue').onclick = async () => {
     if (!needSession($('assignMsg'))) return;
@@ -650,6 +740,7 @@
     $('planTeamNames').replaceChildren(...[...crewTeams.keys()].map((n) => Object.assign(document.createElement('option'), { value: n })));
     qa.teams = crewTeams; qa.overview = aisles; qa.rows = rows;
     qaRender();
+    refreshNextUp().catch(() => {});
     const byAisle = new Map(aisles.map((a) => [a.aisle, a]));
     const blockOf = new Map(aisles.map((a) => [a.aisle, a.block]));
     const activeInBlock = new Map(); // block -> [{team, levels}]

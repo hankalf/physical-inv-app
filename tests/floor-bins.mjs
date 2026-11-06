@@ -10,7 +10,7 @@
  */
 import { chromium } from 'playwright-core';
 import { readFileSync } from 'node:fs';
-import { signIn, pickSession, expandSubTabs } from './helpers.mjs';
+import { signIn, pickSession, expandSubTabs, openPlanMore } from './helpers.mjs';
 
 const S = new URL('.', import.meta.url).pathname;
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
@@ -203,6 +203,7 @@ check('Put them on this count: RETWRK 1 to 4 join, the rest already there', /On 
 /* the Team plan: quick assign */
 await page.goto(`${BASE}/admin#teams`); await page.waitForTimeout(800);
 if (await page.isVisible('#fPassword')) await signIn(page); else { await page.waitForSelector('#scrMain.active'); await expandSubTabs(page); }
+await openPlanMore(page);
 await page.waitForSelector('#qaAisles .qa-aisle', { timeout: 10000 }); await page.waitForTimeout(500);
 const floorZone = await page.$$eval('#qaAisles .qa-zone', (zs) => zs.map((z) => z.textContent.replace(/\s+/g, ' ').trim()).find((t) => /^Floor/.test(t)) || '');
 check('Quick assign groups PRYSTG, REC and RETWRK under Floor, saying who has them and how many spots', /^Floor\s*PRYSTG\s*team 8 counting\s*REC\s*team S1-DS07 counting\s*RETWRK\s*4 floor spots/.test(floorZone), floorZone);

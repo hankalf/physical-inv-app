@@ -42,7 +42,7 @@ import { inventoryOverview } from './routes/inventory-control.js';
 import { withEntries, markEntered, markFromFile, worksheetRows, WORKSHEET_COLUMNS, withErpMarks } from './routes/erp-entries.js';
 import {
   aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
-  setAssignmentStatus, deleteAssignment, reorderAssignments, teamStatus, applyLayoutBlocks, partnerOf, planRows, planTeams, PLAN_COLUMNS } from './routes/assignments.js';
+  setAssignmentStatus, deleteAssignment, reorderAssignments, teamStatus, applyLayoutBlocks, partnerOf, planRows, planTeams, PLAN_COLUMNS, planNext } from './routes/assignments.js';
 import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot, labelsToReplace, fixLabel } from './routes/reports.js';
 import {
   listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
@@ -1172,6 +1172,11 @@ async function handleAdmin(req, res, url, m) {
   }
   // a staggered plan for every team at once: preview, then apply
   // Team plan: the teams on Teams & crew, the plan out as a file, and a plan file in
+  // what to hand out next: what is left, ranked for a team
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/plan\/next$/)) && method === 'GET') {
+    if (!getSession(m[1])) throw httpError(404, 'session not found');
+    return sendJson(req, res, 200, planNext(m[1], url.searchParams.get('team') || '', { limit: Number(url.searchParams.get('limit')) || 12 }));
+  }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/plan$/)) && method === 'GET') {
     return sendJson(req, res, 200, { teams: planTeams() });
   }

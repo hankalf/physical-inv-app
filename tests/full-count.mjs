@@ -1,5 +1,5 @@
 import { chromium } from 'playwright-core';
-import { expandSubTabs, pickSession } from './helpers.mjs';
+import { expandSubTabs, pickSession, openPlanMore } from './helpers.mjs';
 import { readFileSync } from 'node:fs';
 const S = new URL('.', import.meta.url).pathname;
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
@@ -112,7 +112,7 @@ const blocks = await admin.$$eval('#aisleTable tbody tr', (trs) => trs.map((tr) 
 check('Settings: blocks A01 | A02+A03 | A04 | F01 | F02+F03 ... and no area groups', blocks.slice(0, 6).join(',') === 'A01,A02+A03,A02+A03,A04,F01,F02+F03' && blocks.length === 28, blocks.slice(0, 7).join(', ') + ` (${blocks.length})`);
 
 /* ---- back to the dashboard for the counting plan ---- */
-const toDashboard = async () => { await admin.goto(BASE + '/admin'); await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(1200); };
+const toDashboard = async () => { await admin.goto(BASE + '/admin'); await admin.waitForSelector('#scrMain.active'); await expandSubTabs(admin); await admin.waitForTimeout(1200); await openPlanMore(admin); };
 await toDashboard();
 await admin.fill('#fAssignTeam', '5'); await admin.fill('#fAssignAisles', '1'); await admin.fill('#fAssignLevels', ''); await admin.click('#btnAssign'); await admin.waitForTimeout(300);
 check('Admin: queueing without levels is refused', /Levels are required/.test(clean(await admin.textContent('#assignMsg'))), clean(await admin.textContent('#assignMsg')));

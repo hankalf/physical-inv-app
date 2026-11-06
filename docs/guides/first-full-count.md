@@ -462,10 +462,31 @@ pallets.
 
 ## 15 — Give the teams their aisles
 
-**Dashboard → Team plan**, with the count in the picker. The board has **Aisles not planned** on the
-left and a column for every team on Teams & crew on the right. Each team gets a queue of aisles,
-worked in order, as cards: **Counting now** with a progress bar, **Next**, **Queued**, **Held** while
-another team has that racking, **Done**.
+**Dashboard → Team plan**, with the count in the picker. It opens on **Next up**: what is left,
+ranked for the team in front of you.
+
+**On the floor, in three taps.**
+
+1. Scan the team's card into the box (a scanner on the computer, or 📷 on a tablet), or type its
+   number and press Enter, or press its chip. The line under *Next up* says what the team reaches
+   and where it is now.
+2. The list is what is left — every aisle with bins still to count that no team has — in the order
+   that suits this team: the levels it reaches, nearest to where it just was, most bins left first.
+   Each row says why: *same racking as F01*, *levels A–B of A–C*, *24 of 72 bins counted already*.
+   An aisle whose racking another team is in right now is greyed and *held*, at the end of the list.
+3. Press **Queue** on the aisle, or **Queue the next 3 in this order**. The team's scanner shows it
+   at once, and the aisle leaves the list.
+
+With no team picked the list is simply what is left, biggest first, so you can see what still
+needs handing out.
+
+![](../images/team-plan-next-up.png)
+
+**More ways to plan** (the button at the top right) brings up the rest, and the choice is kept on
+that computer: auto-assign, the by-hand steps, the plan as a file, and the board. The board has
+**Aisles not planned** on the left and a column for every team on Teams & crew on the right. Each
+team gets a queue of aisles, worked in order, as cards: **Counting now** with a progress bar,
+**Next**, **Queued**, **Held** while another team has that racking, **Done**.
 
 **The easy way: Auto-assign the aisles.**
 

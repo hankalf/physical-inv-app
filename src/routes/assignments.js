@@ -458,3 +458,67 @@ export function planRows(sessionId) {
 export function planTeams() {
   return listTeams().map((t) => ({ name: t.name, shift: t.shift || '', reach: t.reach || '', reachLabel: t.reachLabel, people: t.members.length }));
 }
+
+/*
+ * What to hand out next.
+ *
+ * The floor supervisor with a team in front of them wants one answer: which
+ * aisle. This ranks what is left - every aisle with bins still to count that
+ * no team has on its plan - for that team: the levels it reaches first, the
+ * aisles nearest where it just was, the most bins left first among those, and
+ * never an aisle whose racking block another team is in right now. With no
+ * team named it is simply what is left, biggest first, so the office can see
+ * what still needs assigning.
+ */
+export function planNext(sessionId, team = '', { limit = 12 } = {}) {
+  const id = Number(sessionId);
+  const t = norm(team);
+  const overview = aisleOverview(id);
+  const rows = db.prepare('SELECT team, aisle, levels, status FROM assignments WHERE session_id = ?').all(id);
+  const levelsIn = new Map(db.prepare("SELECT aisle, GROUP_CONCAT(DISTINCT UPPER(TRIM(level))) AS lv FROM locations WHERE session_id = ? AND TRIM(COALESCE(level, '')) != '' GROUP BY aisle").all(id).map((r) => [r.aisle, [...new Set(String(r.lv || '').split(','))].filter(Boolean).sort().join('')]));
+  const leftByLevel = new Map(db.prepare(`SELECT l.aisle, UPPER(TRIM(COALESCE(l.level, ''))) AS lv, COUNT(*) AS n FROM locations l
+      WHERE l.session_id = ? AND NOT EXISTS (SELECT 1 FROM counts c WHERE c.session_id = l.session_id AND c.location_code = l.code AND c.voided = 0) GROUP BY l.aisle, lv`).all(id).map((r) => [`${r.aisle}|${r.lv}`, r.n]));
+  const crew = listTeams().find((x) => x.name === t) || null;
+  const reach = crew && crew.members.length ? sortedLevels(crew.reach) : '';
+  /* where the team is or was last: its active aisle, else the last it finished, else its last line */
+  const mineRows = rows.filter((r) => r.team === t);
+  const here = (mineRows.find((r) => r.status === 'active') || [...mineRows].reverse().find((r) => r.status === 'done') || {}).aisle
+    || (t ? db.prepare('SELECT aisle FROM counts WHERE session_id = ? AND team = ? AND voided = 0 ORDER BY id DESC LIMIT 1').get(id, t)?.aisle : '') || '';
+  const num = (a) => Number(String(a || '').replace(/\D/g, '')) || 0;
+  const prefix = (a) => String(a || '').replace(/\d.*$/, '');
+  const blockOfA = new Map(overview.map((a) => [a.aisle, a.block || a.aisle]));
+  const busyBlocks = new Set(rows.filter((r) => r.status === 'active' && r.team !== t).map((r) => blockOfA.get(r.aisle)));
+  const planned = new Set(rows.filter((r) => r.status !== 'done').map((r) => r.aisle));
+  const doneAisles = new Set(rows.filter((r) => r.status === 'done').map((r) => r.aisle));
+  const out = [];
+  for (const a of overview) {
+    const left = Math.max(0, a.bins - a.bins_counted);
+    if (!left || planned.has(a.aisle)) continue;
+    const levels = levelsIn.get(a.aisle) || '';
+    const floor = !!a.floor;
+    const reachable = floor || !reach || !levels ? (floor || !levels ? '' : levels) : [...levels].filter((c) => reach.includes(c)).join('');
+    const leftReachable = floor || !levels ? left : [...(reachable || '')].reduce((n, lv) => n + (leftByLevel.get(`${a.aisle}|${lv}`) || 0), 0);
+    if (t && reach && levels && !floor && !reachable) continue;        // nothing there this team can reach
+    const held = busyBlocks.has(blockOfA.get(a.aisle));
+    const dist = !here ? 0 : a.aisle === here ? 0 : (blockOfA.get(a.aisle) === blockOfA.get(here) ? 1 : (prefix(a.aisle) === prefix(here) ? 2 + Math.abs(num(a.aisle) - num(here)) : 60 + Math.abs(num(a.aisle) - num(here))));
+    const why = [];
+    if (floor) why.push('floor pallets, no levels');
+    else if (t && reach && levels) why.push(reachable === levels ? `every level (${levelsCell(levels)})` : `levels ${levelsCell(reachable)} of ${levelsCell(levels)}`);
+    else if (levels) why.push(`levels ${levelsCell(levels)}`);
+    if (here && a.aisle !== here) why.push(dist === 1 ? `same racking as ${here}` : dist <= 4 ? `next to ${here}` : '');
+    if (a.bins_counted) why.push(`${a.bins_counted} of ${a.bins} bins counted already`);
+    if (doneAisles.has(a.aisle)) why.push('handed back once already');
+    if (held) why.push(`held: team ${rows.filter((r) => r.status === 'active' && blockOfA.get(r.aisle) === blockOfA.get(a.aisle)).map((r) => r.team).join(', ')} is in that racking`);
+    out.push({ aisle: a.aisle, zone: a.zone || '', block: a.block, bins: a.bins, binsLeft: left, binsLeftReachable: leftReachable, levels, levelsReachable: floor ? '' : (reachable || levels), floor, held, distance: dist, why: why.filter(Boolean).join(' · ') });
+  }
+  out.sort((x, y) => Number(x.held) - Number(y.held) || (t && here ? x.distance - y.distance : 0) || y.binsLeftReachable - x.binsLeftReachable || x.aisle.localeCompare(y.aisle, undefined, { numeric: true }));
+  const all = overview.length;
+  const totalLeft = overview.reduce((n, a) => n + Math.max(0, a.bins - a.bins_counted), 0);
+  return {
+    team: t, reach, reachLabel: reach ? levelsCell(reach) : '', here,
+    unplanned: out.length, binsLeft: totalLeft, aisles: all,
+    suggestions: out.slice(0, Math.max(1, Number(limit) || 12)),
+    more: Math.max(0, out.length - Math.max(1, Number(limit) || 12)),
+  };
+}
+const sortedLevels = (s) => [...new Set(String(s || ''))].sort().join('');

@@ -400,6 +400,8 @@ try {
   await wait(1200);
   await saveCard(desk, '#mapSub', 'dashboard-map-aisle');
   await sub('teams');
+  await saveCard(desk, '#teamPlanCard', 'team-plan-next-up');
+  await desk.click('#btnPlanMore').catch(() => {}); await wait(400);
   await saveCard(desk, '#teamPlanCard', 'dashboard-team-plan');
   await sub('alerts');
   await saveCard(desk, '#msgTable', 'dashboard-message-floor', 6);

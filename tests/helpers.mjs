@@ -95,3 +95,9 @@ export async function fakeAspx() {
   await new Promise((ok) => srv.listen(0, '127.0.0.1', ok));
   return { origin: `http://127.0.0.1:${srv.address().port}`, close: () => srv.close() };
 }
+
+/** Team plan: the auto-assign card, the by-hand steps and the board sit behind "More ways to plan"; open them. */
+export async function openPlanMore(page) {
+  const open = await page.evaluate(() => document.body.classList.contains('plan-more-open'));
+  if (!open) { await page.click('#btnPlanMore'); await page.waitForTimeout(250); }
+}

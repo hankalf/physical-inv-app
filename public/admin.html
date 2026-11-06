@@ -289,44 +289,29 @@
       </div>
 
       <div data-sub="teams" data-sub-label="Team plan">
-    <div class="card" id="autoPlanCard">
-      <h2>Auto-assign the aisles <span class="muted">a staggered plan for every team, in one go</span></h2>
-      <div class="hint" style="margin-top:0">
-        The aisles are walked in order and split into one continuous stretch per team, about the same racking each,
-        so the teams start spread across the building and never bunch up. A team gets only the levels its equipment
-        reaches; what it cannot reach goes to the nearest team that can, after its own stretch. <b>Preview</b> shows the
-        plan before anything is queued.
-      </div>
-      <div class="rules" id="planRules"></div>
-      <div class="inline" style="margin-top:10px">
-        <div><label for="fPlanTeams">Teams</label><input id="fPlanTeams" placeholder="blank = every team on Teams &amp; crew — or 1, 2, 3"></div>
-        <div class="auto"><label for="fPlanShift">Shift</label>
-          <select id="fPlanShift" class="sm"><option value="">All</option><option value="1">1st shift</option><option value="2">2nd shift</option></select></div>
-        <div class="auto"><label for="fPlanLevels">Levels</label><input id="fPlanLevels" class="sm" style="width:90px" placeholder="all"></div>
-        <div class="auto"><label for="fPlanOrder">Walk the aisles</label>
-          <select id="fPlanOrder" class="sm"><option value="asc">Low to high</option><option value="desc">High to low</option></select></div>
-        <div class="auto"><label class="cb" title="Teams go in pairs: both count every aisle of the pair's stretch, the first from the 001 end and the second from the far end, and they meet in the middle."><input type="checkbox" id="fPlanPairs"> Two teams per aisle, from opposite ends</label></div>
-        <div class="auto"><label class="cb" title="Drop every aisle still queued and plan again. Aisles being counted, or done, are left alone."><input type="checkbox" id="fPlanReplace"> Replace what is queued</label></div>
-        <div class="auto"><button id="btnPlanPreview">Preview</button></div>
-        <div class="auto"><button class="primary fit" id="btnPlanApply" disabled>Queue this plan</button></div>
-      </div>
-      <div class="feedback" id="planMsg"></div>
-      <div class="plan" id="planOut" hidden></div>
-    </div>
-
     <div class="card" id="teamPlanCard">
       <h2>Team assignments <span class="muted" id="planSummary"></span></h2>
-      <!-- quick assign: pick a team, tick the levels, click the aisles in counting order, Queue -->
-      <div class="qa" id="quickAssign">
-        <div class="qa-step">
-          <div class="qa-h"><span class="qa-n">1</span><b>Team</b><span class="muted" id="qaTeamNote">pick one</span></div>
-          <div class="qa-scan">
+      <!-- next up: what is left, ranked for the team in front of you - scan its card, press Queue -->
+      <div class="nextup" id="nextUp">
+        <div class="nu-head">
+          <div class="qa-h"><span class="qa-n">1</span><b>Team</b><span class="muted" id="qaTeamNote">scan its card, or pick it</span></div>
+          <span class="spacer"></span>
+          <button type="button" class="fit" id="btnAisleSheetTop" title="Print every aisle on the bin list, a row each, with room to write which team does it on each shift - Word and CSV under ⇅ Plan file">🖨 Aisle sheet</button>
+          <button type="button" class="sm ghost" id="btnPlanMore" title="Auto-assign every aisle at once, pick levels and aisles by hand, the plan as a file, and the full board">More ways to plan ▾</button>
+        </div>
+        <div class="qa-scan">
             <input id="qaScan" class="sm" placeholder="Scan the team card here, or type the team number and press Enter" autocomplete="off" title="A scanner on this computer, a team card held up to it, or the number typed: the team comes up, its levels ticked, ready for its aisles">
             <button type="button" class="sm" id="btnQaCamera" hidden title="Read the team card with this device's camera">📷</button>
           </div>
           <div class="feedback" id="qaScanMsg"></div>
           <div class="qa-chips" id="qaTeams"></div>
-        </div>
+        <div class="qa-h" style="margin-top:10px"><span class="qa-n">2</span><b>Next up</b><span class="muted" id="nuLeft"></span></div>
+        <div class="feedback" id="nuMsg"></div>
+        <div class="nu-list" id="nuList"></div>
+      </div>
+      <div class="plan-more" id="planMore">
+      <!-- by hand: tick the levels, click the aisles in counting order, Queue -->
+      <div class="qa" id="quickAssign">
         <div class="qa-step">
           <div class="qa-h"><span class="qa-n">2</span><b>Levels</b><span class="muted" id="qaReach">what the team reaches is ticked for you</span></div>
           <div class="qa-chips" id="qaLevels"></div>
@@ -342,7 +327,6 @@
           <button type="button" class="primary" id="btnQuickQueue" disabled>Pick a team and an aisle</button>
           <button type="button" class="ghost" id="btnQaClear">Clear</button>
           <span class="spacer"></span>
-          <button type="button" class="fit" id="btnAisleSheetTop" title="Print every aisle on the bin list, a row each, with room to write which team does it on each shift - Word and CSV under ⇅ Plan file">🖨 Aisle sheet</button>
           <button type="button" class="fit" id="btnPlanFileTools" title="The plan as a file: export it, upload one, or start from the sample">⇅ Plan file</button>
           <button type="button" class="fit ghost" id="btnPlanHelp" title="How the plan works" aria-label="How the plan works">?</button>
         </div>
@@ -387,7 +371,34 @@
         </aside>
         <div class="team-list" id="teamList"></div>
       </div>
+      </div>
     </div>
+
+    <div class="card plan-more" id="autoPlanCard">
+      <h2>Auto-assign the aisles <span class="muted">a staggered plan for every team, in one go</span></h2>
+      <div class="hint" style="margin-top:0">
+        The aisles are walked in order and split into one continuous stretch per team, about the same racking each,
+        so the teams start spread across the building and never bunch up. A team gets only the levels its equipment
+        reaches; what it cannot reach goes to the nearest team that can, after its own stretch. <b>Preview</b> shows the
+        plan before anything is queued.
+      </div>
+      <div class="rules" id="planRules"></div>
+      <div class="inline" style="margin-top:10px">
+        <div><label for="fPlanTeams">Teams</label><input id="fPlanTeams" placeholder="blank = every team on Teams &amp; crew — or 1, 2, 3"></div>
+        <div class="auto"><label for="fPlanShift">Shift</label>
+          <select id="fPlanShift" class="sm"><option value="">All</option><option value="1">1st shift</option><option value="2">2nd shift</option></select></div>
+        <div class="auto"><label for="fPlanLevels">Levels</label><input id="fPlanLevels" class="sm" style="width:90px" placeholder="all"></div>
+        <div class="auto"><label for="fPlanOrder">Walk the aisles</label>
+          <select id="fPlanOrder" class="sm"><option value="asc">Low to high</option><option value="desc">High to low</option></select></div>
+        <div class="auto"><label class="cb" title="Teams go in pairs: both count every aisle of the pair's stretch, the first from the 001 end and the second from the far end, and they meet in the middle."><input type="checkbox" id="fPlanPairs"> Two teams per aisle, from opposite ends</label></div>
+        <div class="auto"><label class="cb" title="Drop every aisle still queued and plan again. Aisles being counted, or done, are left alone."><input type="checkbox" id="fPlanReplace"> Replace what is queued</label></div>
+        <div class="auto"><button id="btnPlanPreview">Preview</button></div>
+        <div class="auto"><button class="primary fit" id="btnPlanApply" disabled>Queue this plan</button></div>
+      </div>
+      <div class="feedback" id="planMsg"></div>
+      <div class="plan" id="planOut" hidden></div>
+    </div>
+
       </div>
 
       <div data-sub="alerts" data-sub-label="Alerts">

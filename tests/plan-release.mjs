@@ -5,7 +5,7 @@
  * the plan whatever its state, the aisle's counts staying.
  */
 import { chromium } from 'playwright-core';
-import { signIn, pickSession } from './helpers.mjs';
+import { signIn, pickSession, openPlanMore } from './helpers.mjs';
 
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
 const results = [];
@@ -67,8 +67,10 @@ page.on('pageerror', (e) => errors.push(e.message));
 page.on('dialog', (d) => { asked.push(d.message()); d.accept(); });
 await post(`/api/admin/sessions/${S}/assignments`, { team: '4', aisles: 'P01', levels: 'A-F' });   // team 4 now: P03 active, P01 queued
 await page.goto(`${BASE}/admin#teams`);
+const _planMore = async () => { await page.waitForSelector('#btnPlanMore'); await openPlanMore(page); };
 await signIn(page);
 await pickSession(page, S);
+await _planMore();
 await page.waitForSelector('.seq .a.active', { timeout: 8000 });
 const row = (aisle) => page.locator('.seq .a', { hasText: aisle }).first();
 check('The board: the active aisle has done, release and ✕; the queued one start and ✕', clean(await row('P03').locator('button').allTextContents().then((t) => t.join(' '))) === 'done release ✕' && clean(await row('P01').locator('button').allTextContents().then((t) => t.join(' '))) === 'start ✕',

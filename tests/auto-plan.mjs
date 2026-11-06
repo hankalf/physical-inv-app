@@ -6,7 +6,7 @@
  * that can; the racking blocks still decide who is released into a block.
  */
 import { chromium } from 'playwright-core';
-import { signIn, pickSession } from './helpers.mjs';
+import { signIn, pickSession, openPlanMore } from './helpers.mjs';
 
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
 const results = [];
@@ -93,6 +93,7 @@ await page.goto(BASE + '/admin');
 await signIn(page);
 await pickSession(page, s2.id);
 await page.waitForTimeout(800);
+await openPlanMore(page);
 check('The Team plan tab has the auto-assign card, with its rules', await page.isVisible('#autoPlanCard') && /Racking blocks: 0 of 6/.test(clean(await page.textContent('#planRules'))), clean(await page.textContent('#planRules')).slice(0, 120));
 check('…which say what to fix when a rule is missing', /Pair the aisles/.test(await page.textContent('#planRules')));
 await page.click('#btnPlanPreview');

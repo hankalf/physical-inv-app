@@ -1113,7 +1113,17 @@ comes back as "already counted", and a trial line a gun sends late is dropped.
 
 **Dashboard → Team plan.**
 
-**The planning board.** On the left, **Aisles not planned** — every aisle no team has yet, with its
+**Next up.** The tab opens on what is left, ranked for the team in front of you. Scan the team's
+card into the box (or type its number, or press its chip) and the list is every aisle with bins
+still to count that no team has, in the order that suits this team: the levels it reaches first,
+nearest to where it just was, the most bins left first; an aisle whose racking another team is
+in right now is greyed and *held*, at the end. Each row says why — *same racking as F01*, *levels
+A–B of A–C*, *24 of 72 bins counted already* — and **Queue** on the row, or **Queue the next 3 in
+this order**, hands it over on the spot. With no team picked it is simply what is left, biggest
+first. **More ways to plan**, top right, brings up everything below (auto-assign, the by-hand
+steps, the plan as a file, the board) and remembers the choice on that computer.
+
+**The planning board** (under *More ways to plan*). On the left, **Aisles not planned** — every aisle no team has yet, with its
 zone and bins, and a box to find one. On the right, **a column per team** from Teams & crew, with
 the team's shift, what it reaches and how many are on it, and its aisles as cards in counting
 order: the one being counted in green with **Counting now**, a progress bar and *36 / 72 bins have

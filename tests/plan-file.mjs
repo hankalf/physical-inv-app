@@ -4,7 +4,7 @@
  * columns the upload reads, and comes back in - with a sample to start from.
  */
 import { chromium } from 'playwright-core';
-import { signIn, pickSession } from './helpers.mjs';
+import { signIn, pickSession, openPlanMore } from './helpers.mjs';
 
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
 const results = [];
@@ -65,8 +65,10 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('dialog', (dlg) => dlg.accept());
 await page.goto(`${BASE}/admin#teams`);
+const _planMore = async () => { await page.waitForSelector('#btnPlanMore'); await openPlanMore(page); };
 await signIn(page);
 await pickSession(page, S);
+await _planMore();
 await page.waitForSelector('#teamList .team[data-team="34"]', { timeout: 8000 }).catch(() => {});
 const box = page.locator('#teamList .team[data-team="34"]');
 check('Team plan: a team from Teams & crew with nothing queued has its own row', (await box.count()) === 1 && /nothing queued/.test(clean(await box.textContent())), clean(await box.textContent().catch(() => '')));

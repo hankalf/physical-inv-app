@@ -89,7 +89,7 @@ function tabOf(p, method) {
     const rest = p.replace(/^\/api\/admin\/sessions\/\d+\//, '');
     if (/^(progress|clocks|notes?)(\/|$)/.test(rest)) return 'dashboard.progress';
     if (/^map$/.test(rest) || rest === 'aisles/apply-layout') return 'dashboard.map';
-    if (/^assignments(\/|$)/.test(rest) || rest === 'plan' || rest === 'export/plan.csv') return 'dashboard.teams';
+    if (/^assignments(\/|$)/.test(rest) || /^plan(\/|$)/.test(rest) || rest === 'export/plan.csv') return 'dashboard.teams';
     if (/^(alerts|messages)(\/|$)/.test(rest)) return 'dashboard.alerts';
     if (rest === 'inventory-control') return 'inventory.overview';
     if (/^recounts(\/|$)/.test(rest) || rest === 'export/recounts.csv') return 'dashboard.second';
