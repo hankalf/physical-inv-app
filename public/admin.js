@@ -863,6 +863,171 @@
   }
 
   /* ------------------------------------------------------------ second counts */
+  /* ---- Second counts: the list, found and sorted, and the ones ticked ----
+     Every row comes from the server with where it is (aisle, level, which
+     face of the racking) and what the pallet is (item, variant). The page
+     does the finding: a search box over everything a person would type, a
+     filter for each thing worth filtering by, a sort on any column, and a
+     tick on each row so one change goes to many. */
+  const REC_STATE = { todo: (r) => r.status !== 'done', open: (r) => r.status === 'open', taken: (r) => r.status === 'taken', done: (r) => r.status === 'done', all: () => true };
+  const rec = { rows: [], state: 'all', round: 'all', face: '', reasons: new Set(), aisle: '', level: '', team: '', variant: '', q: '', sort: { key: '', dir: 'asc' }, picked: new Set(), thirdCol: false };
+  const nat = (a, b) => String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+  const recText = (r) => [r.bin, r.pallet_id, r.sku, r.description, r.variant, r.team, r.reason, r.detail, r.first_team, r.aisle, r.level, r.face, r.source, r.status].map((x) => String(x ?? '').toLowerCase()).join(' | ');
+  function recFiltered() {
+    const q = rec.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    return rec.rows.filter((r) =>
+      REC_STATE[rec.state](r)
+      && (rec.round === 'all' || String(Number(r.round) === 3 ? 3 : 2) === rec.round)
+      && (!rec.face || r.face === rec.face)
+      && (!rec.reasons.size || rec.reasons.has(r.reason))
+      && (!rec.aisle || r.aisle === rec.aisle)
+      && (!rec.level || r.level === rec.level)
+      && (!rec.team || (rec.team === '~none' ? !r.team : r.team === rec.team))
+      && (!rec.variant || (r.variant || '') === rec.variant)
+      && (!q.length || q.every((w) => recText(r).includes(w))));
+  }
+  const REC_SORT = {
+    bin: (r) => r.bin, aisle: (r) => `${r.aisle} ${r.bin}`, level: (r) => `${r.level} ${r.bin}`, face: (r) => `${r.face} ${r.bin}`, pallet: (r) => r.pallet_id || '',
+    item: (r) => `${r.sku || ''} ${r.description || ''}`, variant: (r) => r.variant || '', reason: (r) => `${Number(r.round) === 3 ? '3' : '2'} ${r.reason}`, detail: (r) => r.detail || '',
+    source: (r) => r.source, first: (r) => r.first_team || '', team: (r) => r.team || '', status: (r) => ({ open: 0, taken: 1, done: 2 }[r.status] ?? 3), raised: (r) => r.created_at,
+  };
+  function recSorted(rows) {
+    const k = REC_SORT[rec.sort.key];
+    if (!k) return rows;
+    const out = [...rows].sort((a, b) => { const x = k(a), y = k(b); return typeof x === 'number' && typeof y === 'number' ? x - y : nat(x, y); });
+    return rec.sort.dir === 'desc' ? out.reverse() : out;
+  }
+  /* the filter boxes: everything the rows hold, each with how many */
+  function recFillFilters() {
+    const rows = rec.rows;
+    const count = (f) => { const m = new Map(); for (const r of rows) { const v = f(r); if (v == null || v === '') continue; m.set(v, (m.get(v) || 0) + 1); } return m; };
+    const fill = (sel, map, first, labelOf = (v) => v) => {
+      const was = sel.value;
+      sel.replaceChildren(Object.assign(document.createElement('option'), { value: '', textContent: first }), ...[...map.entries()].sort((a, b) => nat(a[0], b[0])).map(([v, n]) => Object.assign(document.createElement('option'), { value: v, textContent: `${labelOf(v)} (${n})` })));
+      if ([...sel.options].some((o) => o.value === was)) sel.value = was; else sel.value = '';
+    };
+    fill($('fRecAisleFilter'), count((r) => r.aisle), 'Every aisle');
+    fill($('fRecLevelFilter'), count((r) => r.level), 'Every level', (v) => `Level ${v}`);
+    const teams = count((r) => r.team);
+    const none = rows.filter((r) => !r.team).length;
+    const tsel = $('fRecTeamFilter'); const twas = tsel.value;
+    tsel.replaceChildren(Object.assign(document.createElement('option'), { value: '', textContent: 'Any team or none' }),
+      Object.assign(document.createElement('option'), { value: '~none', textContent: `Nobody yet (${none})` }),
+      ...[...teams.entries()].sort((a, b) => nat(a[0], b[0])).map(([v, n]) => Object.assign(document.createElement('option'), { value: v, textContent: `Team ${v} (${n})` })));
+    if ([...tsel.options].some((o) => o.value === twas)) tsel.value = twas; else tsel.value = '';
+    const variants = count((r) => r.variant);
+    $('fRecVariantFilter').hidden = !variants.size;
+    fill($('fRecVariantFilter'), variants, 'Every variant');
+    rec.aisle = $('fRecAisleFilter').value; rec.level = $('fRecLevelFilter').value; rec.team = tsel.value; rec.variant = $('fRecVariantFilter').value;
+    /* the faces of the racking: as the site names them, when the bins have positions */
+    const faces = [...count((r) => r.face).keys()].sort();
+    const fseg = $('recFace');
+    fseg.hidden = !faces.length;
+    if (!faces.includes(rec.face)) rec.face = '';
+    fseg.replaceChildren(...faces.map((f) => { const b = document.createElement('button'); b.type = 'button'; b.dataset.face = f; b.textContent = f; b.className = rec.face === f ? 'selected' : ''; b.onclick = () => { rec.face = rec.face === f ? '' : f; renderRecounts(); }; return b; }),
+      (() => { const b = document.createElement('button'); b.type = 'button'; b.dataset.face = ''; b.textContent = 'Both'; b.className = rec.face ? '' : 'selected'; b.onclick = () => { rec.face = ''; renderRecounts(); }; return b; })());
+    /* the reasons, as chips that add up: none ticked is every reason */
+    const reasons = count((r) => r.reason);
+    for (const k of [...rec.reasons]) if (!reasons.has(k)) rec.reasons.delete(k);
+    $('recReasons').replaceChildren(...[...reasons.entries()].sort((a, b) => b[1] - a[1]).map(([k, n]) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'chip-btn' + (rec.reasons.has(k) ? ' selected' : ''); b.dataset.reason = k;
+      b.title = { 'QTY VARIANCE': 'Quantity differs from the inventory report', 'WRONG BIN': 'Pallet found in an unexpected bin', 'LABEL CHECK': 'Check for a pallet with a duplicate label', 'NOT IN MASTER': 'Pallet not on the inventory report', 'COUNTED TWICE': 'Pallet counted in more than one bin', MISSING: 'Expected pallet not found here', MANUAL: 'Requested by a supervisor', CYCLE: 'Cycle count' }[k] || k;
+      b.append(k); const sp = document.createElement('span'); sp.className = 'n'; sp.textContent = n; b.appendChild(sp);
+      b.onclick = () => { if (rec.reasons.has(k)) rec.reasons.delete(k); else rec.reasons.add(k); renderRecounts(); };
+      return b;
+    }));
+  }
+  function renderRecounts() {
+    for (const b of $('recState').querySelectorAll('button')) b.classList.toggle('selected', b.dataset.state === rec.state);
+    for (const b of $('recRound').querySelectorAll('button')) b.classList.toggle('selected', b.dataset.round === rec.round);
+    for (const b of $('recFace').querySelectorAll('button')) b.classList.toggle('selected', (b.dataset.face || '') === rec.face);
+    for (const b of $('recReasons').querySelectorAll('button')) b.classList.toggle('selected', rec.reasons.has(b.dataset.reason));
+    const shown = recSorted(recFiltered());
+    const filtered = shown.length !== rec.rows.length || rec.q;
+    $('recShown').textContent = rec.rows.length ? (filtered ? `${shown.length} of ${rec.rows.length}` : `${rec.rows.length}`) : '';
+    const thirdCol = rec.thirdCol;
+    const hasVariant = rec.rows.some((r) => r.variant);
+    const ids = new Set(rec.rows.map((r) => r.id));
+    for (const id of [...rec.picked]) if (!ids.has(id)) rec.picked.delete(id);
+    const cols = [
+      { label: '', key: 'pick' }, { label: 'Bin', key: 'bin' }, { label: 'Aisle', key: 'aisle' }, { label: 'Lvl', key: 'level', title: 'Level' }, { label: 'Face', key: 'face', title: 'Which side of the aisle: odd positions one face, even the other' },
+      { label: 'Pallet', key: 'pallet' }, { label: 'Item', key: 'item' }, ...(hasVariant ? [{ label: 'Variant', key: 'variant' }] : []),
+      { label: 'Reason', key: 'reason' }, { label: 'Detail', key: 'detail' }, { label: 'Source', key: 'source' }, { label: '1st team', key: 'first' },
+      { label: 'Team', key: 'team' }, { label: 'Status', key: 'status' }, { label: '1st count' }, { label: '2nd count' }, ...(thirdCol ? [{ label: '3rd count' }] : []), { label: '' },
+    ];
+    table($('recountTable'), cols, shown, (r) => {
+      const tr = document.createElement('tr');
+      tr.dataset.recount = r.id;
+      const third = Number(r.round) === 3;
+      if (third) tr.classList.add('third');
+      if (rec.picked.has(r.id)) tr.classList.add('picked');
+      const tdPick = document.createElement('td'); tdPick.className = 'pick';
+      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = rec.picked.has(r.id); cb.dataset.pick = r.id; cb.title = 'Tick it, then act on every ticked row at once';
+      cb.onchange = () => { if (cb.checked) rec.picked.add(r.id); else rec.picked.delete(r.id); tr.classList.toggle('picked', cb.checked); renderBulk(); };
+      tdPick.appendChild(cb); tr.appendChild(tdPick);
+      const item = document.createElement('td'); item.textContent = r.sku || ''; if (r.description) item.title = r.description; item.className = 'wrap';
+      tr.append(cell(r.bin), cell(r.aisle || ''), cell(r.level || ''), cell(r.face || '', 'face'), cell(r.pallet_id || '—'), item);
+      if (hasVariant) tr.appendChild(cell(r.variant || ''));
+      tr.append(cell(third ? `3rd count · ${r.reason}` : r.reason), cell(r.detail || '', 'wrap'), cell(r.source), cell(third && r.second_team ? `${r.first_team || '—'} · 2nd ${r.second_team}` : (r.first_team || '—')));
+      const tdTeam = document.createElement('td');
+      const inp = document.createElement('input'); inp.className = 'sm'; inp.style.width = '60px'; inp.value = r.team || ''; inp.placeholder = 'any';
+      inp.title = 'Assign to a team and press Enter; blank = any team (except the first-count team)';
+      inp.onkeydown = async (e) => { if (e.key !== 'Enter') return; try { await postJson(`/api/admin/sessions/${sessionId}/recounts/${r.id}`, { team: inp.value }); await refreshRecounts(); } catch (err) { msg($('recountMsg'), 'err', err.message); } };
+      tdTeam.appendChild(inp); tr.appendChild(tdTeam);
+      const tdSt = document.createElement('td'); tdSt.appendChild(tag(r.status)); tr.appendChild(tdSt);
+      tr.append(cell(r.first_result || (r.first_lines ? '' : 'nothing'), 'wrap'), cell(r.second_result || '', 'wrap'));
+      if (thirdCol) tr.append(cell(r.third_result || '', 'wrap'));
+      const tdBtn = document.createElement('td');
+      const act = (label, body, method = 'POST') => {
+        const b = document.createElement('button'); b.className = 'sm ghost'; b.textContent = label; b.style.marginRight = '4px';
+        b.onclick = async () => { try { await apiJson(`/api/admin/sessions/${sessionId}/recounts/${r.id}`, { method, headers: { 'content-type': 'application/json' }, body: body && JSON.stringify(body) }); await refreshAll(); } catch (err) { msg($('recountMsg'), 'err', err.message); } };
+        return b;
+      };
+      if (r.status !== 'done') tdBtn.appendChild(act('done', { status: 'done' }));
+      else tdBtn.appendChild(act('reopen', { status: 'open' }));
+      /* a finished second count that has not settled things: a third, by a team that did neither */
+      if (r.status === 'done' && !third && r.reason !== 'CYCLE' && !r.third_id) {
+        const b = document.createElement('button'); b.className = 'sm'; b.textContent = '3rd count'; b.style.marginRight = '4px';
+        b.dataset.third = r.id;
+        b.title = 'Count this bin a third time, by a team that did neither the first nor the second count';
+        b.onclick = async () => {
+          try {
+            const out = await postJson(`/api/admin/sessions/${sessionId}/recounts/${r.id}/third`, {});
+            msg($('recountMsg'), out.created ? 'ok' : 'warn', out.created ? `Third count raised for ${out.bin}.` : `${out.bin} already has an open count.`, out.created ? `${out.why[0].toUpperCase()}${out.why.slice(1)}.` : '');
+            await refreshAll();
+          } catch (err) { msg($('recountMsg'), 'err', err.message); }
+        };
+        tdBtn.appendChild(b);
+      }
+      tdBtn.appendChild(act('✕', null, 'DELETE'));
+      tr.appendChild(tdBtn);
+      return tr;
+    }, rec.rows.length ? 'Nothing matches — clear a filter.' : 'No second counts yet.');
+    /* the headings sort; the first one ticks every row shown */
+    const ths = $('recountTable').querySelectorAll('thead th');
+    cols.forEach((c, i) => {
+      const th = ths[i]; if (!th) return;
+      if (c.key === 'pick') {
+        th.className = 'pick';
+        const all = document.createElement('input'); all.type = 'checkbox'; all.id = 'recPickAll'; all.title = 'Tick every row shown';
+        all.checked = shown.length > 0 && shown.every((r) => rec.picked.has(r.id));
+        all.onchange = () => { for (const r of shown) { if (all.checked) rec.picked.add(r.id); else rec.picked.delete(r.id); } renderRecounts(); };
+        th.replaceChildren(all);
+        return;
+      }
+      if (!c.key || !REC_SORT[c.key]) return;
+      th.classList.add('sortable'); th.dataset.sort = c.key;
+      if (rec.sort.key === c.key) th.classList.add('sorted', rec.sort.dir === 'desc' ? 'desc' : 'asc');
+      th.title = (c.title ? c.title + ' — ' : '') + 'click to sort';
+      th.onclick = () => { if (rec.sort.key === c.key) { if (rec.sort.dir === 'asc') rec.sort.dir = 'desc'; else rec.sort = { key: '', dir: 'asc' }; } else rec.sort = { key: c.key, dir: 'asc' }; renderRecounts(); };
+    });
+    renderBulk();
+  }
+  function renderBulk() {
+    const n = rec.picked.size;
+    $('recBulk').hidden = !n;
+    $('recBulkN').textContent = `${n} selected`;
+  }
   async function refreshRecounts() {
     const rows = await apiJson(`/api/admin/sessions/${sessionId}/recounts`);
     const thirdOn = !!(currentSession() && currentSession().third_count);
@@ -882,54 +1047,58 @@
     if ([...fromSel.options].some((o) => o.value === was)) fromSel.value = was;
     $('recMoveBar').hidden = !byTeam.size;
     const open = rows.filter((r) => r.status !== 'done').length;
-    $('recountSub').textContent = rows.length ? `${open} open · ${rows.length - open} done` : '';
+    const taken = rows.filter((r) => r.status === 'taken').length;
+    $('recountSub').textContent = rows.length ? `${open} open${taken ? ` (${taken} started)` : ''} · ${rows.length - open} done` : '';
     api.subCount('second', open);   // so an open second count is visible from any tab
-    table($('recountTable'),
-      [{ label: 'Bin' }, { label: 'Pallet' }, { label: 'Reason' }, { label: 'Detail' }, { label: 'Source' }, { label: '1st team' },
-       { label: 'Team' }, { label: 'Status' }, { label: '1st count' }, { label: '2nd count' }, ...(thirdOn || rows.some((x) => Number(x.round) === 3) ? [{ label: '3rd count' }] : []), { label: '' }],
-      rows,
-      (r) => {
-        const tr = document.createElement('tr');
-        tr.dataset.recount = r.id;
-        const third = Number(r.round) === 3;
-        if (third) tr.classList.add('third');
-        const reason = cell(third ? `3rd count · ${r.reason}` : r.reason);
-        tr.append(cell(r.bin), cell(r.pallet_id || '—'), reason, cell(r.detail || '', 'wrap'), cell(r.source), cell(third && r.second_team ? `${r.first_team || '—'} · 2nd ${r.second_team}` : (r.first_team || '—')));
-        const tdTeam = document.createElement('td');
-        const inp = document.createElement('input'); inp.className = 'sm'; inp.style.width = '60px'; inp.value = r.team || ''; inp.placeholder = 'any';
-        inp.title = 'Assign to a team and press Enter; blank = any team (except the first-count team)';
-        inp.onkeydown = async (e) => { if (e.key !== 'Enter') return; try { await postJson(`/api/admin/sessions/${sessionId}/recounts/${r.id}`, { team: inp.value }); await refreshRecounts(); } catch (err) { msg($('recountMsg'), 'err', err.message); } };
-        tdTeam.appendChild(inp); tr.appendChild(tdTeam);
-        const tdSt = document.createElement('td'); tdSt.appendChild(tag(r.status)); tr.appendChild(tdSt);
-        tr.append(cell(r.first_result || (r.first_lines ? '' : 'nothing'), 'wrap'), cell(r.second_result || '', 'wrap'));
-        if (thirdOn || rows.some((x) => Number(x.round) === 3)) tr.append(cell(r.third_result || '', 'wrap'));
-        const tdBtn = document.createElement('td');
-        const act = (label, body, method = 'POST') => {
-          const b = document.createElement('button'); b.className = 'sm ghost'; b.textContent = label; b.style.marginRight = '4px';
-          b.onclick = async () => { try { await apiJson(`/api/admin/sessions/${sessionId}/recounts/${r.id}`, { method, headers: { 'content-type': 'application/json' }, body: body && JSON.stringify(body) }); await refreshAll(); } catch (err) { msg($('recountMsg'), 'err', err.message); } };
-          return b;
-        };
-        if (r.status !== 'done') tdBtn.appendChild(act('done', { status: 'done' }));
-        else tdBtn.appendChild(act('reopen', { status: 'open' }));
-        /* a finished second count that has not settled things: a third, by a team that did neither */
-        if (r.status === 'done' && !third && r.reason !== 'CYCLE' && !r.third_id) {
-          const b = document.createElement('button'); b.className = 'sm'; b.textContent = '3rd count'; b.style.marginRight = '4px';
-          b.dataset.third = r.id;
-          b.title = 'Count this bin a third time, by a team that did neither the first nor the second count';
-          b.onclick = async () => {
-            try {
-              const out = await postJson(`/api/admin/sessions/${sessionId}/recounts/${r.id}/third`, {});
-              msg($('recountMsg'), out.created ? 'ok' : 'warn', out.created ? `Third count raised for ${out.bin}.` : `${out.bin} already has an open count.`, out.created ? `${out.why[0].toUpperCase()}${out.why.slice(1)}.` : '');
-              await refreshAll();
-            } catch (err) { msg($('recountMsg'), 'err', err.message); }
-          };
-          tdBtn.appendChild(b);
-        }
-        tdBtn.appendChild(act('✕', null, 'DELETE'));
-        tr.appendChild(tdBtn);
-        return tr;
-      }, 'No second counts yet.');
+    rec.rows = rows;
+    rec.thirdCol = thirdOn || rows.some((x) => Number(x.round) === 3);
+    recFillFilters();
+    renderRecounts();
   }
+  /* the filters */
+  for (const b of $('recState').querySelectorAll('button')) b.onclick = () => { rec.state = b.dataset.state; renderRecounts(); };
+  for (const b of $('recRound').querySelectorAll('button')) b.onclick = () => { rec.round = b.dataset.round; renderRecounts(); };
+  $('fRecSearch').addEventListener('input', () => { rec.q = $('fRecSearch').value; renderRecounts(); });
+  $('fRecAisleFilter').onchange = () => { rec.aisle = $('fRecAisleFilter').value; renderRecounts(); };
+  $('fRecLevelFilter').onchange = () => { rec.level = $('fRecLevelFilter').value; renderRecounts(); };
+  $('fRecTeamFilter').onchange = () => { rec.team = $('fRecTeamFilter').value; renderRecounts(); };
+  $('fRecVariantFilter').onchange = () => { rec.variant = $('fRecVariantFilter').value; renderRecounts(); };
+  $('btnRecClear').onclick = () => {
+    Object.assign(rec, { state: 'all', round: 'all', face: '', aisle: '', level: '', team: '', variant: '', q: '', sort: { key: '', dir: 'asc' } }); rec.reasons.clear();
+    $('fRecSearch').value = ''; for (const id of ['fRecAisleFilter', 'fRecLevelFilter', 'fRecTeamFilter', 'fRecVariantFilter']) $(id).value = '';
+    renderRecounts();
+  };
+  /* the ones ticked: one change for all of them */
+  async function recBulk(action, team) {
+    if (!needSession($('recountMsg'))) return;
+    const ids = [...rec.picked];
+    if (!ids.length) return;
+    const WORD = { assign: team ? `hand ${ids.length} to team ${team}` : `hand ${ids.length} back to any team`, done: `mark ${ids.length} done`, reopen: `reopen ${ids.length}`, third: `raise a third count on ${ids.length}`, delete: `remove ${ids.length}` };
+    if ((action === 'delete' || action === 'done') && !confirm(`${WORD[action][0].toUpperCase()}${WORD[action].slice(1)} second count${ids.length === 1 ? '' : 's'}?${action === 'done' ? '\n\nNobody is sent: the first count stands as it is.' : ''}`)) return;
+    try {
+      const out = await postJson(`/api/admin/sessions/${sessionId}/recounts/bulk`, { ids, action, team });
+      const did = { assign: `handed ${team ? 'to team ' + team : 'back to any team'}`, done: 'marked done', reopen: 'reopened', third: 'third counts raised', delete: 'removed' }[action];
+      msg($('recountMsg'), out.skipped.length && !out.changed ? 'warn' : 'ok', `${out.changed} second count${out.changed === 1 ? '' : 's'} ${did}.`,
+        out.skipped.length ? `Left as they were: ${out.skipped.slice(0, 6).map((x) => `${x.bin} (${x.why})`).join(', ')}${out.skipped.length > 6 ? ` and ${out.skipped.length - 6} more` : ''}.` : '');
+      rec.picked.clear();
+      await refreshAll();
+    } catch (err) { msg($('recountMsg'), 'err', err.message); }
+  }
+  $('btnBulkAssign').onclick = () => recBulk('assign', $('fBulkTeam').value.trim());
+  $('btnBulkDone').onclick = () => recBulk('done');
+  $('btnBulkReopen').onclick = () => recBulk('reopen');
+  $('btnBulkThird').onclick = () => recBulk('third', $('fBulkTeam').value.trim());
+  $('btnBulkDelete').onclick = () => recBulk('delete');
+  $('btnBulkNone').onclick = () => { rec.picked.clear(); renderRecounts(); };
+  $('fBulkTeam').addEventListener('keydown', (e) => { if (e.key === 'Enter') recBulk('assign', $('fBulkTeam').value.trim()); });
+  /* the rows shown, as a file: what the filters found, in the order on screen */
+  $('btnBulkExport').onclick = () => {
+    const shown = recSorted(recFiltered());
+    const head = ['Bin', 'Aisle', 'Level', 'Face', 'Pallet', 'Item', 'Description', 'Variant', 'Round', 'Reason', 'Detail', 'Source', '1st team', 'Team', 'Status', 'Raised', 'Done', '1st count', '2nd count', '3rd count'];
+    const q = (v) => { const t = String(v ?? ''); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+    const lines = [head.join(','), ...shown.map((r) => [r.bin, r.aisle, r.level, r.face, r.pallet_id, r.sku, r.description, r.variant, Number(r.round) === 3 ? '3rd' : '2nd', r.reason, r.detail, r.source, r.first_team, r.team, r.status, r.created_at, r.done_at, r.first_result, r.second_result, r.third_result].map(q).join(','))];
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' })); a.download = `second-counts-shown-${sessionId}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  };
 
   $('btnMove').onclick = async () => {
     if (!needSession($('recountMsg'))) return;

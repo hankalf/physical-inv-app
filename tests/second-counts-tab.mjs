@@ -1,0 +1,151 @@
+/*
+ * Dashboard → Second counts, found and worked in bulk. Every row says where
+ * the bin is (aisle, level, which face of the racking) and what the pallet
+ * is (item, variant). The page searches over all of it, filters by state,
+ * round, face, reason, aisle, level, team and variant, sorts on any column,
+ * and ticks rows so one change - hand to a team, mark done, reopen, third
+ * count, remove - goes to all of them at once.
+ */
+import { chromium } from 'playwright-core';
+import { signIn, pickSession, expandSubTabs } from './helpers.mjs';
+
+const BASE = process.env.BASE_URL || 'http://localhost:3000';
+const results = [];
+const check = (s, ok, d = '') => { results.push(!!ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${s}${d ? ' — ' + d : ''}`); };
+const clean = (t) => (t || '').replace(/\s+/g, ' ').trim();
+const hdr = { 'content-type': 'application/json' };
+const j = (r) => r.json();
+const tok = (await j(await fetch(`${BASE}/api/admin/login`, { method: 'POST', headers: hdr, body: JSON.stringify({ password: 'changeme' }) }))).token;
+const A = { ...hdr, authorization: 'Bearer ' + tok };
+const csv = { authorization: 'Bearer ' + tok, 'content-type': 'text/csv' };
+const get = async (p) => j(await fetch(BASE + p, { headers: A }));
+const post = async (p, b = {}) => fetch(BASE + p, { method: 'POST', headers: A, body: JSON.stringify(b) });
+const pj = async (p, b = {}) => j(await post(p, b));
+
+const S = (await pj('/api/admin/sessions', { name: 'Second counts tab' })).id;
+await fetch(`${BASE}/api/admin/sessions/${S}/master?kind=bins`, { method: 'POST', headers: csv, body: 'Bin Location,Zone,Aisle\nF01A001,Freezer,F01\nF01A002,Freezer,F01\nF01A003,Freezer,F01\nF01B004,Freezer,F01\nF02A001,Freezer,F02\nREC,Floor,REC\n' });
+await fetch(`${BASE}/api/admin/sessions/${S}/master?kind=pallets`, { method: 'POST', headers: csv, body: 'Pallet ID,SKU,Description,Variant,Qty,Location\nP1,SKU-A,Chicken breast,DIST,40,F01A001\nP2,SKU-B,Peas,REWORK,96,F01A002\nP3,SKU-A,Chicken breast,DIST,40,F01A003\nP5,SKU-C,Mango chunks,,8,F02A001\n' });
+const mk = async (bin, palletId, note, team) => (await pj(`/api/admin/sessions/${S}/recounts`, { bin, palletId, note, team })).id;
+const r1 = await mk('F01A001', 'P1', 'spot check one', '');
+const r2 = await mk('F01A002', 'P2', 'spot check two', '');
+const r3 = await mk('F01A003', 'P3', 'spot check three', '5');
+const r4 = await mk('F01B004', '', 'empty spot', '5');
+const r5 = await mk('F02A001', 'P5', 'the mango', '');
+const r6 = await mk('REC', '', 'floor', '');
+
+/* ---------------- what each row carries ---------------- */
+let rows = await get(`/api/admin/sessions/${S}/recounts`);
+const by = (id) => rows.find((r) => r.id === id);
+check('Each row says where the bin is: aisle, level, position and which face of the racking', by(r1).aisle === 'F01' && by(r1).level === 'A' && by(r1).position === 1 && by(r1).face === 'Front' && by(r2).face === 'Back' && by(r4).level === 'B' && by(r4).face === 'Back' && by(r5).aisle === 'F02', JSON.stringify([by(r1).face, by(r2).face, by(r4).level]));
+check('…a floor bin has no level, no position and no face', by(r6).aisle === 'REC' && by(r6).level === '' && by(r6).position === null && by(r6).face === '');
+check('…and what the pallet is: item, description, the report\'s variant and quantity', by(r1).sku === 'SKU-A' && by(r1).description === 'Chicken breast' && by(r1).variant === 'DIST' && by(r2).variant === 'REWORK' && by(r5).variant === '' && Number(by(r2).expected_qty) === 96, JSON.stringify([by(r1).sku, by(r1).variant, by(r2).expected_qty]));
+
+/* ---------------- one change for many ---------------- */
+let out = await pj(`/api/admin/sessions/${S}/recounts/bulk`, { ids: [r1, r2, r5], action: 'assign', team: '7' });
+rows = await get(`/api/admin/sessions/${S}/recounts`);
+check('Bulk: hand three to team 7', out.changed === 3 && !out.skipped.length && [r1, r2, r5].every((id) => by(id).team === '7'), JSON.stringify(out));
+out = await pj(`/api/admin/sessions/${S}/recounts/bulk`, { ids: [r1, r2], action: 'assign', team: '' });
+rows = await get(`/api/admin/sessions/${S}/recounts`);
+check('…and two of them back to any team', out.changed === 2 && !by(r1).team && !by(r2).team && by(r5).team === '7');
+out = await pj(`/api/admin/sessions/${S}/recounts/bulk`, { ids: [r3, r4], action: 'done' });
+rows = await get(`/api/admin/sessions/${S}/recounts`);
+check('Bulk: mark two done', out.changed === 2 && by(r3).status === 'done' && by(r4).status === 'done');
+out = await pj(`/api/admin/sessions/${S}/recounts/bulk`, { ids: [r3, r1], action: 'assign', team: '9' });
+check('…a done one is left alone and says so, the open one is handed', out.changed === 1 && out.skipped.length === 1 && out.skipped[0].id === r3 && /already done/.test(out.skipped[0].why), JSON.stringify(out.skipped));
+out = await pj(`/api/admin/sessions/${S}/recounts/bulk`, { ids: [r4], action: 'reopen' });
+rows = await get(`/api/admin/sessions/${S}/recounts`);
+check('Bulk: reopen', out.changed === 1 && by(r4).status === 'open');
+out = await pj(`/api/admin/sessions/${S}/recounts/bulk`, { ids: [r3, r4], action: 'third' });
+rows = await get(`/api/admin/sessions/${S}/recounts`);
+check('Bulk: a third count on the finished one, the open one refused with why', out.changed === 1 && out.skipped.length === 1 && /not finished/.test(out.skipped[0].why) && rows.some((r) => r.parent_id === r3 && Number(r.round) === 3), JSON.stringify(out));
+out = await pj(`/api/admin/sessions/${S}/recounts/bulk`, { ids: [r6], action: 'delete' });
+rows = await get(`/api/admin/sessions/${S}/recounts`);
+check('Bulk: remove', out.changed === 1 && !by(r6));
+const bad = await post(`/api/admin/sessions/${S}/recounts/bulk`, { ids: [], action: 'done' });
+check('Nothing ticked is refused', bad.status === 400);
+check('A nonsense action is refused', (await post(`/api/admin/sessions/${S}/recounts/bulk`, { ids: [r1], action: 'launch' })).status === 400);
+
+/* ---------------- the page ---------------- */
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+const page = await browser.newPage({ viewport: { width: 1500, height: 1000 } });
+const errors = [];
+page.on('pageerror', (e) => errors.push(e.message));
+page.on('dialog', (d) => d.accept());
+await page.goto(`${BASE}/admin#second`);
+await signIn(page);
+await page.addStyleTag({ content: '[data-sub] { display: block !important; }' });
+await pickSession(page, S);
+await page.waitForSelector('#recountTable tr[data-recount]', { timeout: 10000 }); await page.waitForTimeout(400);
+const shownBins = () => page.$$eval('#recountTable tbody tr[data-recount]', (trs) => trs.map((tr) => tr.children[1].textContent.trim()));
+const count = async () => (await shownBins()).length;
+check('Every second count shows, with its aisle, level, face, item and variant columns', (await count()) === 6 && (await page.$$eval('#recountTable thead th', (t) => t.map((x) => x.textContent.trim()))).join('|').includes('Bin|Aisle|Lvl|Face|Pallet|Item|Variant|Reason'), (await page.$$eval('#recountTable thead th', (t) => t.map((x) => x.textContent.trim()))).join('|'));
+check('…the reasons as chips with how many, the aisles, levels, teams and variants as boxes', /MANUAL\s*6/.test(clean(await page.textContent('#recReasons'))) && /F01 \(5\)/.test(clean(await page.textContent('#fRecAisleFilter'))) && /Level B \(1\)/.test(clean(await page.textContent('#fRecLevelFilter'))) && /Team 7 \(1\)/.test(clean(await page.textContent('#fRecTeamFilter'))) && /DIST \(3\)/.test(clean(await page.textContent('#fRecVariantFilter'))), [clean(await page.textContent('#fRecAisleFilter')), clean(await page.textContent('#fRecVariantFilter'))].join(' | '));
+check('…and the two faces of the racking as a switch', (await page.$$eval('#recFace button', (b) => b.map((x) => x.textContent))).join() === 'Back,Front,Both');
+
+/* search */
+await page.fill('#fRecSearch', 'mango'); await page.waitForTimeout(250);
+check('Search by description: one row', (await shownBins()).join() === 'F02A001' && /1 of 6/.test(clean(await page.textContent('#recShown'))), (await shownBins()).join());
+await page.fill('#fRecSearch', 'P2'); await page.waitForTimeout(250);
+check('Search by pallet', (await shownBins()).join() === 'F01A002');
+await page.fill('#fRecSearch', 'spot check'); await page.waitForTimeout(250);
+check('Search by the note: the three spot checks', (await count()) === 3);
+await page.fill('#fRecSearch', ''); await page.waitForTimeout(250);
+
+/* filters */
+await page.click('#recFace button[data-face="Back"]'); await page.waitForTimeout(200);
+check('Back face only: the even positions', (await shownBins()).sort().join() === 'F01A002,F01B004', (await shownBins()).join());
+await page.click('#recFace button[data-face=""]'); await page.waitForTimeout(200);
+await page.click('#recState button[data-state="done"]'); await page.waitForTimeout(200);
+check('Done only', (await shownBins()).join() === 'F01A003');
+await page.click('#recState button[data-state="all"]'); await page.waitForTimeout(200);
+await page.click('#recRound button[data-round="3"]'); await page.waitForTimeout(200);
+check('Third counts only: the one raised, marked 3rd count', (await count()) === 1 && /3rd count · MANUAL/.test(clean(await page.textContent('#recountTable tbody'))));
+await page.click('#recRound button[data-round="all"]'); await page.waitForTimeout(200);
+await page.selectOption('#fRecLevelFilter', 'B'); await page.waitForTimeout(200);
+check('Level B only', (await shownBins()).join() === 'F01B004');
+await page.selectOption('#fRecLevelFilter', ''); await page.waitForTimeout(200);
+await page.selectOption('#fRecTeamFilter', '~none'); await page.waitForTimeout(200);
+check('Nobody yet: the ones no team has - F01A002 and the third count of F01A003', (await shownBins()).sort().join() === 'F01A002,F01A003', (await shownBins()).join());
+await page.selectOption('#fRecTeamFilter', '7'); await page.waitForTimeout(200);
+check('Team 7: the one handed to it', (await shownBins()).join() === 'F02A001');
+await page.selectOption('#fRecTeamFilter', ''); await page.waitForTimeout(200);
+await page.selectOption('#fRecVariantFilter', 'REWORK'); await page.waitForTimeout(200);
+check('Variant REWORK only', (await shownBins()).join() === 'F01A002');
+await page.selectOption('#fRecVariantFilter', ''); await page.waitForTimeout(200);
+await page.click('#recReasons button[data-reason="MANUAL"]'); await page.waitForTimeout(200);
+check('A reason chip: the manual ones (the third count has the same reason, so 6)', (await count()) === 6);
+await page.click('#btnRecClear'); await page.waitForTimeout(200);
+check('Clear: every filter off', (await count()) === 6 && !(await page.$('#recReasons .chip-btn.selected')) && /^6$/.test(clean(await page.textContent('#recShown'))));
+
+/* sort */
+await page.click('#recountTable thead th[data-sort="bin"]'); await page.waitForTimeout(200);
+check('Click Bin: sorted by bin', (await shownBins()).join() === 'F01A001,F01A002,F01A003,F01A003,F01B004,F02A001', (await shownBins()).join());
+await page.click('#recountTable thead th[data-sort="bin"]'); await page.waitForTimeout(200);
+check('…again: reversed, marked ▼', (await shownBins())[0] === 'F02A001' && (await page.$eval('#recountTable thead th[data-sort="bin"]', (th) => th.classList.contains('desc'))));
+await page.click('#recountTable thead th[data-sort="team"]'); await page.waitForTimeout(200);
+check('Sort by team: the ones with nobody first, team 9 last', (await page.$$eval('#recountTable tbody tr[data-recount] td:nth-child(13) input', (i) => i.map((x) => x.value))).join() === ',,5,5,7,9', (await page.$$eval('#recountTable tbody tr[data-recount] td:nth-child(13) input', (i) => i.map((x) => x.value))).join());
+
+/* tick and act */
+check('Nothing ticked: no bulk bar', await page.isHidden('#recBulk'));
+await page.click('#recFace button[data-face="Front"]'); await page.waitForTimeout(200);
+await page.click('#recPickAll'); await page.waitForTimeout(200);
+check('Tick every row shown (the Front face, four rows): the bar says 4 selected', await page.isVisible('#recBulk') && /4 selected/.test(clean(await page.textContent('#recBulkN'))), clean(await page.textContent('#recBulkN')));
+await page.fill('#fBulkTeam', '8'); await page.click('#btnBulkAssign'); await page.waitForTimeout(900);
+rows = await get(`/api/admin/sessions/${S}/recounts`);
+check('Hand over: the three open Front-face ones go to team 8, the done one is left and said so', /3 second counts handed to team 8/.test(clean(await page.textContent('#recountMsg'))) && /F01A003 \(already done\)/.test(clean(await page.textContent('#recountMsg'))) && by(r1).team === '8' && by(r5).team === '8' && by(r3).team === '5', clean(await page.textContent('#recountMsg')).slice(0, 140));
+check('…the bar goes once nothing is ticked', await page.isHidden('#recBulk'));
+await page.click('#btnRecClear'); await page.waitForTimeout(200);
+await page.click(`#recountTable tr[data-recount="${r2}"] input[data-pick]`); await page.click(`#recountTable tr[data-recount="${r4}"] input[data-pick]`); await page.waitForTimeout(200);
+check('Tick two by hand: 2 selected, the rows lit', /2 selected/.test(clean(await page.textContent('#recBulkN'))) && (await page.$$eval('#recountTable tr.picked', (t) => t.length)) === 2);
+await page.click('#btnBulkDone'); await page.waitForTimeout(900);
+rows = await get(`/api/admin/sessions/${S}/recounts`);
+check('Mark done: both done, with a confirm first', /2 second counts marked done/.test(clean(await page.textContent('#recountMsg'))) && by(r2).status === 'done' && by(r4).status === 'done');
+const [dl] = await Promise.all([page.waitForEvent('download'), (async () => { await page.click('#recState button[data-state="done"]'); await page.waitForTimeout(200); await page.click(`#recountTable tr[data-recount="${r2}"] input[data-pick]`); await page.click('#btnBulkExport'); })()]);
+check('Shown as CSV: a file of the rows on screen', /second-counts-shown/.test(dl.suggestedFilename()));
+check('The 3rd count button still sits on a finished second count with none', (await page.locator(`#recountTable button[data-third="${r2}"]`).count()) === 1);
+check('No page errors', !errors.length, errors.join(' | '));
+await browser.close();
+
+const passed = results.filter(Boolean).length;
+console.log(`\n${passed}/${results.length} passed`);
+process.exit(passed === results.length ? 0 : 1);

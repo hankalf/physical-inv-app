@@ -141,9 +141,27 @@ dashboard. The same tab is under **Inventory Control** in the sidebar, beside Ad
 Reports, with an **Overview** in front — how many are still open, and whether the final report
 can be filed yet.
 
+**Finding them.** Above the table: a **search** box over everything a row holds (bin, pallet, item,
+description, team, reason, note), a switch for **To do / Open / Started / Done / All**, **2nd / 3rd**,
+and — on racking with positions — **Front / Back**, the face of the aisle (odd positions one side,
+even the other). Boxes for one **aisle**, one **level**, who has it (**Nobody yet**, or a team) and
+the report's **variant**; a chip for each **reason** with how many it holds, ticked together.
+Every heading sorts, click again to reverse; the line beside the filters says *12 of 48*. **Clear**
+takes every filter off.
+
+**Many at once.** Tick rows (the box at the top ticks every row shown) and a bar appears: **Hand to
+team** (blank is back to any team), **Mark done** (nobody is sent; the first count stands),
+**Reopen**, **3rd count** (on finished second counts), **Shown as CSV** (the rows on screen, as a
+file), **Remove**. A row that cannot take the change is left and named — *already done*, *team 5
+has started it*, *team 4 counted this bin itself*. So the Back-face second counts of one aisle go
+to the reach-truck team in three clicks: aisle, Back, tick all, hand over.
+
+![](../images/second-counts-tab.png)
+
 | Column | What it is |
 |---|---|
-| Bin, Pallet | Where to go back to, and the pallet that raised it |
+| Bin, Aisle, Lvl, Face | Where to go back to, and which side of the aisle |
+| Pallet, Item, Variant | The pallet that raised it, what it is, and its variant on the report |
 | Reason | Why — *3rd count · …* for a third count |
 | Detail | The numbers, for the supervisor only: *expected 40, first count 33* |
 | Source | *auto* or *manual* |

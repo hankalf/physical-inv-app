@@ -1982,6 +1982,14 @@ supervisor.
   *3rd count*, with both earlier teams, and a **3rd count** column shows what it found. **3rd count**
   on any finished second count asks for one by hand, option or not. A supervisor who assigns a third
   count to a team by hand has made the call; one left open goes only to a third team.
+- **Finding them, and many at once.** Above the table: a **search** over everything a row holds,
+  switches for **To do / Open / Started / Done / All**, **2nd / 3rd** and the **Front / Back** face
+  of the racking (odd positions one side, even the other), boxes for one aisle, level, team
+  (*Nobody yet* included) or the report's variant, and a chip per reason with how many. Every
+  heading sorts. Tick rows — the box at the top ticks every row shown — and the bar hands them to a
+  team (blank is any team), marks them done, reopens them, raises third counts, saves the rows
+  shown as a CSV, or removes them; a row that cannot take the change is left and named. Every
+  bulk change is in the log.
 - **Export 2nd & 3rd counts with the 1st (Excel)** — every bin counted again, one row a pallet:
   the report's bin and quantity, the **1st, 2nd and 3rd counts** with the team that did each, the
   **final count** and which count it is, the final against the report, and *which number stands*

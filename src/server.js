@@ -46,7 +46,7 @@ import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions
 import {
   listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
   tasksForTeam, takeRecount, finishRecount, updateRecount, deleteRecount, raiseThirdCount, thirdCountsForBins,
-  assignOpenToRecountTeam, reassignRecounts,
+  assignOpenToRecountTeam, reassignRecounts, bulkRecounts,
 } from './routes/recounts.js';
 import { generateBatch, previewBatch, binList, listBatches, deleteBatch, coverage, runSchedules, STRATEGIES, levelsOnOpenTasks } from './routes/cycles.js';
 import {
@@ -2096,6 +2096,15 @@ async function handleAdmin(req, res, url, m) {
     const body = await readJson(req);
     const out = reassignRecounts(m[1], body);
     audit(actor, 'handed second counts to another team', `${out.moved} from ${out.from ? 'team ' + out.from : 'any team'} to ${out.to ? 'team ' + out.to : 'any team'}${body.aisle ? ` in ${norm(body.aisle)}` : ''}${out.skipped.length ? `, ${out.skipped.length} left (team ${out.to} counted those bins)` : ''}`, m[1]);
+    return sendJson(req, res, 200, out);
+  }
+  // the same change to many at once, from the dashboard's selection
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts\/bulk$/)) && method === 'POST') {
+    requireAccess('assign');
+    const body = await readJson(req);
+    const out = bulkRecounts(m[1], body);
+    audit(actor, { assign: body.team ? `handed second counts to team ${norm(body.team)}` : 'handed second counts back to any team', done: 'marked second counts done', reopen: 'reopened second counts', delete: 'removed second counts', third: 'raised third counts' }[body.action] || 'changed second counts',
+      `${out.changed} of ${(body.ids || []).length}${out.skipped.length ? `, ${out.skipped.length} left as they were` : ''}`, m[1]);
     return sendJson(req, res, 200, out);
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts\/(\d+)\/third$/)) && method === 'POST') {

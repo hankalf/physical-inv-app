@@ -1,5 +1,7 @@
 import { db, norm, getSession } from '../db.js';
 import { palletReport } from './reports.js';
+import { parseBinCode } from '../util/bincode.js';
+import { loadLayout } from '../util/layouts.js';
 
 /*
  * Second counts.
@@ -36,19 +38,88 @@ export const REASONS = {
 };
 
 export function listRecounts(sessionId) {
+  const id = Number(sessionId);
+  const session = getSession(id);
+  const faces = (session && loadLayout(session.layout)?.faces) || { odd: 'Front', even: 'Back' };
   return db
     .prepare(
       `SELECT r.*,
+              l.aisle, l.level, l.zone,
+              p.sku, p.description, COALESCE(p.variant, '') AS variant, p.expected_qty, p.expected_location,
               (SELECT COUNT(*) FROM counts c WHERE c.session_id = r.session_id AND c.location_code = r.bin AND c.voided = 0 AND c.pass = 1) AS first_lines,
               (SELECT GROUP_CONCAT(pallet_id || ' ×' || qty, ', ') FROM counts c WHERE c.session_id = r.session_id AND c.location_code = r.bin AND c.voided = 0 AND c.pass = 1) AS first_result,
+              (SELECT SUM(qty) FROM counts c WHERE c.session_id = r.session_id AND c.pallet_id = r.pallet_id AND c.voided = 0 AND c.pass = 1 AND c.empty_bin = 0) AS first_qty,
               (SELECT GROUP_CONCAT(pallet_id || ' ×' || qty, ', ') FROM counts c WHERE c.session_id = r.session_id AND c.location_code = r.bin AND c.voided = 0 AND c.pass = 2) AS second_result,
               (SELECT GROUP_CONCAT(pallet_id || ' ×' || qty, ', ') FROM counts c WHERE c.session_id = r.session_id AND c.location_code = r.bin AND c.voided = 0 AND c.pass = 3) AS third_result,
               (SELECT x.id FROM recounts x WHERE x.parent_id = r.id ORDER BY x.id DESC LIMIT 1) AS third_id
          FROM recounts r
+         LEFT JOIN locations l ON l.session_id = r.session_id AND l.code = r.bin
+         LEFT JOIN pallets p ON p.session_id = r.session_id AND p.pallet_id = r.pallet_id
         WHERE r.session_id = ?
         ORDER BY CASE r.status WHEN 'open' THEN 0 WHEN 'taken' THEN 1 ELSE 2 END, r.id`
     )
-    .all(Number(sessionId));
+    .all(id)
+    .map((r) => {
+      /* where in the rack: the position from the code, and which face of the
+         aisle that is - odd positions one side, even the other, as the site's
+         layout names them. A floor bin has neither. */
+      const parsed = parseBinCode(r.bin);
+      const pos = Number(parsed.bay);
+      return {
+        ...r,
+        aisle: r.aisle || parsed.aisle || '',
+        level: (r.level || parsed.level || '').toUpperCase(),
+        position: Number.isFinite(pos) && parsed.bay ? pos : null,
+        face: Number.isFinite(pos) && parsed.bay ? (pos % 2 === 1 ? faces.odd : faces.even) : '',
+      };
+    });
+}
+
+/**
+ * The same change to many second counts at once, from the dashboard's
+ * selection: hand them to a team (or back to any team), finish them, reopen
+ * them, raise third counts, or remove them. Each one that cannot take the
+ * change says why, and the rest go through.
+ */
+export function bulkRecounts(sessionId, { ids = [], action = '', team = '' } = {}) {
+  const id = Number(sessionId);
+  if (!getSession(id)) throw Object.assign(new Error('session not found'), { status: 404 });
+  const want = [...new Set((Array.isArray(ids) ? ids : []).map(Number).filter(Number.isFinite))];
+  if (!want.length) throw Object.assign(new Error('nothing selected'), { status: 400 });
+  if (!['assign', 'done', 'reopen', 'delete', 'third'].includes(action)) throw Object.assign(new Error(`not a thing to do to second counts: ${action}`), { status: 400 });
+  const t = norm(team);
+  const out = { action, team: t, changed: 0, skipped: [] };
+  const skip = (r, why) => out.skipped.push({ id: r.id, bin: r.bin, why });
+  for (const rid of want) {
+    const r = db.prepare('SELECT * FROM recounts WHERE id = ? AND session_id = ?').get(rid, id);
+    if (!r) { out.skipped.push({ id: rid, bin: '', why: 'not on this count' }); continue; }
+    if (action === 'assign') {
+      if (r.status === 'done') { skip(r, 'already done'); continue; }
+      if (r.status === 'taken' && r.team && r.team !== t) { skip(r, `team ${r.team} has started it`); continue; }
+      if (t && !mayDo(r, t)) { skip(r, `team ${t} counted this bin itself`); continue; }
+      db.prepare('UPDATE recounts SET team = ? WHERE id = ?').run(t || null, r.id);
+      out.changed++;
+    } else if (action === 'done') {
+      if (r.status === 'done') { skip(r, 'already done'); continue; }
+      updateRecount(id, r.id, { status: 'done' });
+      out.changed++;
+    } else if (action === 'reopen') {
+      if (r.status !== 'done') { skip(r, 'not done'); continue; }
+      updateRecount(id, r.id, { status: 'open' });
+      out.changed++;
+    } else if (action === 'delete') {
+      deleteRecount(id, r.id);
+      out.changed++;
+    } else if (action === 'third') {
+      if (r.reason === 'CYCLE') { skip(r, 'a cycle count has no third count'); continue; }
+      if (Number(r.round) === 3) { skip(r, 'is a third count already'); continue; }
+      if (r.status !== 'done') { skip(r, 'the second count is not finished'); continue; }
+      if (db.prepare('SELECT 1 FROM recounts WHERE parent_id = ?').get(r.id)) { skip(r, 'has a third count'); continue; }
+      const made = raiseThirdCount(id, r.id, { team: t || null });
+      if (made.created) out.changed++; else skip(r, 'already has an open count');
+    }
+  }
+  return out;
 }
 
 function openTaskForBin(sessionId, bin) {

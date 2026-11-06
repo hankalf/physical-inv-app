@@ -99,9 +99,16 @@ beside Adjustments and Reports, with an overview of where the count stands in fr
 
 *A second count that settled nothing, the third count it raised (3rd count · …, with both earlier teams), and a second count that agreed with the first.*
 
+Above the table a **search** box finds any of them by bin, pallet, item, team, reason or note; the
+switches narrow to **To do / Done**, **2nd / 3rd** and the **Front / Back** face of the aisle; boxes
+pick one aisle, level, team or variant; a chip per **reason** says how many. Every heading sorts.
+Tick rows (or the box at the top for every row shown) and a bar hands them all to a team, marks
+them done, reopens them, raises third counts, or saves the rows on screen as a file.
+
 | Column | What it is |
 |---|---|
-| Bin, Pallet | Where to go back to, and the pallet that raised it |
+| Bin, Aisle, Lvl, Face | Where to go back to, and which side of the aisle |
+| Pallet, Item, Variant | The pallet that raised it and what it is |
 | Reason | Why — *3rd count · …* for a third count |
 | Detail | The numbers, for the office only |
 | 1st team | Who did the first count (on a third count, also who did the second) |
