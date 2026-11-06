@@ -32,6 +32,7 @@ import { listGuides, getGuide, guidePdf, guideDocx, guideImage, scannerBookletPd
 import { erpAisles, erpAisleSheet } from './routes/erp-aisles.js';
 import { archiveAisle, finalReadiness, finalReport, listArchives, archivePath } from './routes/archive.js';
 import { closeout } from './routes/closeout.js';
+import { checkMaster } from './routes/master-check.js';
 import { idleConfig, saveIdleConfig, teamClocks, checkIdle, answerIdle, openIdleAlerts, recentIdleAlerts, tellTeamsIdle, idleTick, recordSignoff, openSignon, openSignons, signoffDevice } from './routes/idle.js';
 import { practiceJobs, practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, practiceReadiness, practiceFromFile, practiceOptions, setPracticeOptions, practiceSandbox, setPracticeSandbox, practiceExport, ownerOf, practiceModes, startPracticeMode, MODE_ACCESS, practiceAll, deletePracticeOf } from './routes/practice.js';
 import { branding, saveLogo, clearLogo, saveName } from './routes/branding.js';
@@ -1108,6 +1109,14 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, handed ? { ...after, recountTeamHanded: handed } : after);
   }
 
+  // the file checked before it is loaded: duplicates, bins not on the list, odd quantities and codes
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/master\/check$/)) && method === 'POST') {
+    const kind = url.searchParams.get('kind') || 'bins';
+    if (!['bins', 'pallets'].includes(kind)) throw httpError(400, 'kind must be bins or pallets');
+    const text = await readBody(req);
+    const source = String(url.searchParams.get('source') || '').trim().slice(0, 40);
+    return sendJson(req, res, 200, checkMaster(m[1], kind, text, { source, replace: url.searchParams.get('replace') === '1' }));
+  }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/master$/)) && method === 'POST') {
     const kind = url.searchParams.get('kind') || 'bins';
     const text = await readBody(req);

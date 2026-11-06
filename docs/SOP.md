@@ -2669,6 +2669,19 @@ upload card shows exactly which columns it recognized.
 Other names for these columns are understood too (pallet id, LPN, item, SKU, qty, location, bin,
 lot code, unit, source …), as is a **Best Before** or **Expiry** column when the file has one.
 
+**The file is checked before it is loaded.** Press Upload and the file is read first, and
+anything the upload would find wrong is listed, each with what it means and the first ten
+cases: a pallet listed in **two different bins**, or under **two systems**; pallets in **bins
+not on the bin list** (the list is short, or the report names bins the warehouse has not got);
+a **quantity** that is blank, will not read as a number, is zero or negative, or is over a
+million; pallet IDs with **odd characters** (a space, a quote) that will never match a label, or
+that are bin codes (columns swapped); a **System** column half filled; pallets with no bin or no
+item; and, when counting has started, that the new report is compared against the counts as they
+stand. The bin list is checked the same way — the same bin on two rows, codes with odd characters,
+bins with no aisle, and with *Replace* ticked, the bins on the count that the file no longer has.
+Red stops the load (no pallet column, no bin column, no data rows): fix the file. Amber waits for
+**Load it anyway** or **Cancel**. Blue is for information and loads straight through.
+
 Three things in a real export, and what the upload does with them:
 
 - **Empty positions.** A row with a bin and no container (System `OPEN`) is a position the count

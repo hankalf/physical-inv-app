@@ -129,7 +129,7 @@ export function routeNeed(p, method) {
   if (w && /^\/api\/admin\/(floor-bins|devices|scanner-layout|scanner-prompts|label-layouts|default-session|sos-reasons|teams-webhook|idle-config|issue-menu|logo|pallet-system|erp\/formats|backups|adjustment-reasons|users|login-locks|onedrive|gdrive|teams-backup|crew-board|features|access-map|training)(\/|$)/.test(p)) return 'admin';
   if (w && p === '/api/admin/sessions') return 'admin';
   if (method === 'DELETE' && /^\/api\/admin\/sessions\/\d+$/.test(p)) return 'admin';
-  if (w && /^\/api\/admin\/sessions\/\d+\/(master|floor-bins|clock-schedule|trial|aisles\/block|aisles\/walk|aisles\/auto-block)$/.test(p)) return 'admin';
+  if (w && /^\/api\/admin\/sessions\/\d+\/(master|master\/check|floor-bins|clock-schedule|trial|aisles\/block|aisles\/walk|aisles\/auto-block)$/.test(p)) return 'admin';
   if (w && /^\/api\/admin\/sessions\/\d+\/status$/.test(p)) return 'close';            // closing the count at the end of the day, and reopening it
   if (/^\/api\/admin\/sessions\/\d+\/erp\//.test(p) || /^\/api\/admin\/(audit|backups)/.test(p)) return 'admin';
   // the functions

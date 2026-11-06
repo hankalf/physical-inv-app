@@ -1289,13 +1289,55 @@
     box.appendChild(list);
   }
 
-  async function uploadText(kind, text, label) {
+  /* The file is checked before it is loaded. Anything the upload would find
+     wrong - the same bin twice, a pallet in two bins, bins not on the list, a
+     quantity that will not read - is listed first, each with what it means,
+     and the person loads it knowing, or fixes the file. A fault that stops
+     the load (no pallet column) is just refused. */
+  function showFindings(out, chk, label, onLoad) {
+    const level = chk.fails ? 'err' : chk.warns ? 'warn' : 'ok';
+    const head = chk.fails ? `${label} cannot be loaded as it is` : chk.warns ? `${label}: ${chk.warns} thing${chk.warns === 1 ? '' : 's'} to look at before it is loaded` : `${label}: checked, nothing wrong`;
+    msg(out, level, head, `${chk.rows.toLocaleString()} data rows. ${chk.fails ? 'Fix the file and upload it again.' : chk.warns ? 'Load it anyway, or fix the file and upload it again.' : ''}`);
+    const ul = document.createElement('ul');
+    ul.className = 'checks';
+    ul.id = 'uploadFindings-' + out.id.replace('uploadMsg-', '');
+    for (const f of chk.findings) {
+      const li = document.createElement('li');
+      li.className = 'check ' + (f.level === 'fail' ? 'fail' : f.level === 'warn' ? 'warn' : 'ok');
+      li.dataset.finding = f.key;
+      const mark = document.createElement('span'); mark.className = 'mark'; mark.textContent = f.level === 'fail' ? '✕' : f.level === 'warn' ? '!' : 'i';
+      const what = document.createElement('div'); what.className = 'what';
+      const b = document.createElement('b'); b.textContent = f.title;
+      const d = document.createElement('span'); d.textContent = f.detail + (f.list.length ? ` — ${f.list.join(' · ')}${f.more ? ` · ${f.more} more` : ''}` : '');
+      what.append(b, d);
+      li.append(mark, what);
+      ul.appendChild(li);
+    }
+    out.appendChild(ul);
+    const row = document.createElement('div');
+    row.className = 'toolbar';
+    row.style.marginTop = '10px';
+    if (!chk.fails) { const go = button(chk.warns ? 'Load it anyway' : 'Load it', 'primary', onLoad); go.dataset.loadAnyway = '1'; row.appendChild(go); }
+    const no = button('Cancel', '', () => clearMsg(out)); no.dataset.cancelUpload = '1'; row.appendChild(no);
+    out.appendChild(row);
+  }
+
+  async function uploadText(kind, text, label, force = false) {
     const out = $('uploadMsg-' + kind);
     if (!needSession(out)) return;
+    const src = kind === 'pallets' ? ($('fSource-pallets').value || '').trim() : '';
+    const query = `kind=${kind}&replace=${$('fReplace-' + kind).checked ? 1 : 0}${src ? `&source=${encodeURIComponent(src)}` : ''}`;
+    if (!force && (kind === 'bins' || kind === 'pallets')) {
+      msg(out, 'warn', `Checking ${label}…`);
+      try {
+        const chk = await api.json(`/api/admin/sessions/${sessionId}/master/check?${query}`, { method: 'POST', headers: { 'content-type': 'text/csv' }, body: text });
+        if (chk.fails || chk.warns) { showFindings(out, chk, label, () => uploadText(kind, text, label, true)); return; }
+        lastFindings = chk;
+      } catch (err) { msg(out, 'err', 'Could not check the file', err.message); return; }
+    }
     msg(out, 'warn', `Uploading ${label}…`);
     try {
-      const src = kind === 'pallets' ? ($('fSource-pallets').value || '').trim() : '';
-      const stats = await api.json(`/api/admin/sessions/${sessionId}/master?kind=${kind}&replace=${$('fReplace-' + kind).checked ? 1 : 0}${src ? `&source=${encodeURIComponent(src)}` : ''}`,
+      const stats = await api.json(`/api/admin/sessions/${sessionId}/master?${query}`,
         { method: 'POST', headers: { 'content-type': 'text/csv' }, body: text });
       if (kind === 'pallets') refreshSources().catch(() => {});
       const t = stats.totals;
@@ -1317,6 +1359,7 @@
     } catch (err) { msg(out, 'err', 'Upload failed', err.message); }
   }
 
+  let lastFindings = null;
   /* the lists back out as files; the override box only for the site admin */
   $('btnDownload-bins').onclick = () => { if (needSession($('uploadMsg-bins'))) api.download(`/api/admin/sessions/${sessionId}/export/bins.csv`, `bins-${sessionId}.csv`); };
   $('btnDownload-pallets').onclick = () => { if (needSession($('uploadMsg-pallets'))) api.download(`/api/admin/sessions/${sessionId}/export/master.csv`, `inventory-report-${sessionId}.csv`); };

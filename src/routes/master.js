@@ -296,3 +296,6 @@ export function pruneAreaAisles(sessionId, layout) {
   if (excluded.length) bumpMasterVersion(id);
   return removed;
 }
+
+/* the column names the upload understands, for the check that runs before a file is loaded */
+export const ALIASES = { location: LOCATION_ALIASES, aisle: AISLE_ALIASES, pallet: PALLET_ALIASES, sku: SKU_ALIASES, qty: QTY_ALIASES, source: SOURCE_ALIASES };
