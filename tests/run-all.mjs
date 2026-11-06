@@ -26,7 +26,11 @@ const SUITE_ENV = {
   // these want the shipped step order (bin first), not the pallet-first one the other suites were written for
   'gun-layout.mjs': { KEEP_DEFAULT_ORDER: '1' },
   'qty-typed.mjs': { KEEP_DEFAULT_ORDER: '1' },
+  // written against the order the gun used to ship with: the lot and expiry asked before the bin
+  'lot-expiry.mjs': { ORDER: 'pallet,qty,lot,expiry,bin' },
+  'wrong-field.mjs': { ORDER: 'pallet,qty,lot,expiry,bin' },
   'access-map.mjs': {
+    KEEP_DEFAULT_ORDER: '1',                          // the harness's own login would be one more address on the map
     GEOIP_BASE: `http://127.0.0.1:${GEO_MOCK}`,      // the stand-in for the address lookup
     GEOIP_MOCK_PORT: String(GEO_MOCK),
   },
@@ -68,7 +72,7 @@ async function withServer(port, fn, extra = {}) {
        starts with that order saved - unless it says it wants the shipped one. */
     if (!extra.KEEP_DEFAULT_ORDER) {
       const tok = (await (await fetch(`${base}/api/admin/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: 'changeme' }) })).json()).token;
-      await fetch(`${base}/api/admin/scanner-layout`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + tok }, body: JSON.stringify({ order: ['pallet', 'qty', 'bin', 'lot', 'expiry'] }) });
+      await fetch(`${base}/api/admin/scanner-layout`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + tok }, body: JSON.stringify({ order: extra.ORDER ? extra.ORDER.split(',') : ['pallet', 'qty', 'bin', 'lot', 'expiry'] }) });
     }
     return await fn(base);
   } finally {

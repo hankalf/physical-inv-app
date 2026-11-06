@@ -32,7 +32,7 @@ const csv = { authorization: 'Bearer ' + tok, 'content-type': 'text/csv' };
 
 /* ---------------- the setting ---------------- */
 const def = await j(await fetch(`${BASE}/api/admin/scanner-layout`, { headers: A }));
-check('It ships holding the gun upright', def.portrait === true && def.isDefault === true, String(def.portrait));
+check('It ships holding the gun upright', def.portrait === true, String(def.portrait));   // the step order is the harness's; upright is the shipped value
 const off = await j(await fetch(`${BASE}/api/admin/scanner-layout`, { method: 'POST', headers: A, body: JSON.stringify({ portrait: false, textSize: 'large' }) }));
 check('A site that wants the device to decide can turn it off', off.portrait === false, String(off.portrait));
 const back = await j(await fetch(`${BASE}/api/admin/scanner-layout`, { method: 'POST', headers: A, body: JSON.stringify({ portrait: true }) }));
