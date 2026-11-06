@@ -126,7 +126,7 @@ export function routeNeed(p, method) {
   const w = method !== 'GET';
   // Settings - Advanced included - is admin-only: the site's setup and every change to a count
   if (p === '/api/admin/pallet-system/ticket') return null;      // seeing the system under a desk is every desk's
-  if (w && /^\/api\/admin\/(floor-bins|devices|scanner-layout|scanner-prompts|default-session|sos-reasons|teams-webhook|idle-config|issue-menu|logo|pallet-system|erp\/formats|backups|adjustment-reasons|users|login-locks|onedrive|gdrive|teams-backup|crew-board|features|access-map|training)(\/|$)/.test(p)) return 'admin';
+  if (w && /^\/api\/admin\/(floor-bins|devices|scanner-layout|scanner-prompts|label-layouts|default-session|sos-reasons|teams-webhook|idle-config|issue-menu|logo|pallet-system|erp\/formats|backups|adjustment-reasons|users|login-locks|onedrive|gdrive|teams-backup|crew-board|features|access-map|training)(\/|$)/.test(p)) return 'admin';
   if (w && p === '/api/admin/sessions') return 'admin';
   if (method === 'DELETE' && /^\/api\/admin\/sessions\/\d+$/.test(p)) return 'admin';
   if (w && /^\/api\/admin\/sessions\/\d+\/(master|floor-bins|clock-schedule|trial|aisles\/block|aisles\/auto-block)$/.test(p)) return 'admin';

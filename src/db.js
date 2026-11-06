@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { loadLayout } from './util/layouts.js';
 import { scannerPrompts, scannerLayout, defaultSessionId } from './routes/scanner-prompts.js';
+import { publicLabelLayouts } from './routes/label-layouts.js';
 import { mkdirSync, accessSync, constants } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
@@ -694,6 +695,8 @@ export const publicSession = (s) => ({
   askLot: !!s.ask_lot,
   askExpiry: !!s.ask_expiry,
   binMode: s.bin_mode === 'strict' ? 'strict' : 'warn',
+  // what each system's pallet labels look like, so the gun can tell a misread from an unknown pallet
+  labelLayouts: publicLabelLayouts(),
   autoRecount: !!s.auto_recount,
   thirdCount: !!s.third_count,
   masterVersion: s.master_version,

@@ -442,6 +442,30 @@
       </div>
 
       <hr>
+      <div class="foldsec" id="offLayouts" data-fold>
+      <h3>Pallet label layouts <span class="chip" id="layoutsChip" hidden>on</span> <span class="muted">what each system's labels look like, so a misread is not counted as a pallet</span></h3>
+      <div class="hint" style="margin-top:0">
+        Each system prints its own kind of pallet label: <i>FR</i> and eight digits from one, a <i>T</i> and six from another. Write them
+        here as masks — <b>9</b> a digit, <b>A</b> a letter, <b>X</b> either, anything else itself; several for one system with commas
+        — or press <b>Suggest from the report</b> and the count's own pallet file fills them in. With the check on, a scan that fits no
+        layout and is not on the pallet file stops the gun as <b>Not a pallet label?</b> — rescan first, count it anyway only if the label
+        really reads that. On a count with <i>Pallet ID check: no overrides</i>, such a scan is refused outright.
+      </div>
+      <div class="inline" style="margin-top:8px">
+        <div class="auto"><label class="cb"><input type="checkbox" id="fLayoutsOn"> Check unknown labels against these layouts</label></div>
+        <span class="spacer"></span>
+        <button class="fit sm" id="btnLayoutsSuggest" title="Work the masks out from the pallet file of the count picked at the top">Suggest from the report</button>
+        <button class="fit sm" id="btnLayoutsAdd">Add a system</button>
+      </div>
+      <div class="scroll" style="margin-top:10px"><table id="layoutsTable"></table></div>
+      <div class="muted" id="layoutsSuggestNote"></div>
+      <div class="inline" style="margin-top:8px">
+        <button class="primary fit" id="btnSaveLayouts">Save the layouts</button>
+      </div>
+      <div class="feedback" id="layoutsMsg"></div>
+      </div>
+
+      <hr>
       <div class="foldsec" id="offSos" data-fold>
       <h3>SOS <span class="chip" id="sosChip" hidden></span> <span class="muted">what the SOS button offers</span></h3>
       <div class="hint" style="margin-top:0">

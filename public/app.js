@@ -163,6 +163,8 @@
     if (m) return { aisle: m[1], level: m[2], bay: m[3] };
     return { aisle: code, bay: '', level: '' };
   }
+  // a label mask (9 digit, A letter, X either, else itself) as a regular expression
+  const maskRe = (mask) => new RegExp('^' + [...String(mask || '').toUpperCase()].map((ch) => (ch === '9' ? '\\d' : ch === 'A' ? '[A-Z]' : ch === 'X' ? '[A-Z0-9]' : ch.replace(/[.*+?^${}()|[\]\\/-]/g, '\\$&'))).join('') + '$');
   // "Level A · Position 009 · FRONT" - what the counter sees after scanning a bin
   function describeBin(code) {
     const p = parseBinCode(code);
@@ -1784,9 +1786,33 @@
           feedbackText: 'Duplicate accepted',
         });
       }
+      /* the systems' label layouts, when the site has set them: a label that fits
+         none is a misread or a typo, not a pallet the report missed */
+      const layouts = Array.isArray(state.session.labelLayouts) ? state.session.labelLayouts : [];
+      const fits = (v) => layouts.find((l) => (l.masks || []).some((mk) => maskRe(mk).test(v)));
+      const looksLike = !pal && layouts.length ? fits(value) : null;
+      const noLayout = !pal && layouts.length && !looksLike;
+      const layoutWords = () => layouts.map((l) => `${l.system || 'the system'}: ${l.words}`).join('; ');
       if (!pal && mode === 'strict') {
-        feedback($('scanMsg'), 'err', `${value} is not on the pallet list`, 'Rescan, or ask a supervisor.');
+        feedback($('scanMsg'), 'err', noLayout ? `${value} is not a pallet label of any system` : `${value} is not on the pallet list`,
+          noLayout ? `Labels here look like ${layoutWords()}. Rescan it - or if the label really reads this, ask a supervisor.` : 'Rescan, or ask a supervisor.');
+        $('fScan').value = ''; focusScan();
         return;
+      }
+      if (noLayout) {
+        /* it fits no system's label layout: most likely a misread - say so and
+           offer a rescan first; Yes still counts it, flagged, if the label really reads this */
+        return askOverride({
+          title: 'Not a pallet label?',
+          why: `${value} fits none of the systems' label layouts (${layoutWords()}) and is not on the pallet file. Rescan it. If the label really reads this, count it anyway and a supervisor will look at it.`,
+          rows: [['Scanned', value], ['Labels look like', layoutWords()]],
+          scanned: value,
+          offerSecondLabel: true,
+          yesNo: true,
+          yesReason: 'Fits no label layout - counted anyway',
+          apply: (reason) => { applyPallet(); addReason(reason); },
+          feedbackText: 'Counted - a supervisor will check this label',
+        });
       }
       if (!pal && mode === 'warn') {
         /* Yes or no, nothing to pick: a pallet the report does not know is still
@@ -1794,8 +1820,8 @@
            supervisor as a pallet to add - a positive adjustment. */
         return askOverride({
           title: 'Pallet not on the list',
-          why: `${value} is not in the uploaded pallet file.`,
-          rows: [['Scanned', value]],
+          why: `${value} is not in the uploaded pallet file.${looksLike ? ` It looks like a ${looksLike.system || ''} label.` : ''}`,
+          rows: [['Scanned', value], ...(looksLike ? [['Looks like', `${looksLike.system || 'a system'} label`]] : [])],
           scanned: value,
           offerSecondLabel: true,
           yesNo: true,
@@ -1867,6 +1893,14 @@
           addReason('no readable bin label');
           await advance('warn', `Recorded against ${value}`,
             'Carry on. A supervisor gets this bin on the relabel list to sort out.');
+          return;
+        }
+        /* the count refuses bins off the list outright: nothing is recorded
+           against a bin that is not there, and the gun says what to do */
+        if (state.session.binMode === 'strict') {
+          beep('err');
+          feedback($('scanMsg'), 'err', `${value} is not on the bin list`, 'Nothing is counted against it. Rescan the rack label - the one above or below is easy to catch. If the label really reads this, ask a supervisor: the bin list is fixed under Settings.');
+          $('fScan').value = ''; focusScan();
           return;
         }
         return askOverride({

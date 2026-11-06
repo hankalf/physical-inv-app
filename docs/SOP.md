@@ -943,6 +943,13 @@ under their headings — click one to open it:
 - **Override reasons** — offered when a pallet ID is not on the list and the counter is allowed
   to accept it anyway. Click a chip to remove one, type and **Add** for a new one. **Other** is
   always offered on the gun as well, whatever you configure.
+- **Pallet label layouts** — what each system's pallet labels look like, as masks (**9** a digit, **A** a letter,
+  **X** either, anything else itself: *FR99999999* is FR and eight digits), one row a system; **Suggest from the
+  report** works them out from the count's pallet file. With **Check unknown labels against these layouts** on, a
+  scan that fits no layout and is not on the pallet file stops the gun as **Not a pallet label?** — rescan first;
+  YES still counts it, flagged, if the label really reads that. On a count with *Pallet ID check: no overrides* the
+  scan is refused outright, naming the layouts. A label that fits a layout but is not on the file gets the usual
+  *Pallet not on the list*, noting which system it looks like.
 - **SOS** — the list a counter picks from when they press SOS.
 - **Report a problem** — the kinds of problem on the gun's Report a problem button, and what
   must be scanned to confirm each (see step 8).
@@ -1065,6 +1072,8 @@ questions it asks change between pallets, never mid-line.
 | Option | What it does | Suggested |
 |---|---|---|
 | **Pallet ID check** | *Validate — allow override*: a pallet not on the report asks the counter **Count it anyway? YES / NO**; YES counts it and it shows as a positive adjustment. *Validate — no overrides*: it cannot be counted. *Accept any ID*: no checking, though duplicates are still blocked. | Validate with override |
+| **Bin check** | *Validate — allow override with reason*: a bin not on the bin list asks for a reason and is counted, flagged. *No overrides*: the gun refuses the bin outright — nothing is counted against it — and says to rescan or ask a supervisor; the bin list is fixed under Lists & racking. | Allow override |
+| **Second count the report's bin when a pallet is found somewhere else** | A pallet counted in a bin other than the report's is listed under Reports → *Found in a different bin* and left out of the second counts. Tick this to raise a second count of the report's bin as well. | Off |
 | **Guided by the plan, bin by bin** | Teams are sent to their assigned aisle and warned when they scan a bin outside it. Off means anyone can count anything. | On for a wall-to-wall |
 | **Ask for comments** | Adds the optional comments step at the end of each pallet. | On |
 | **Auto second counts** | Raises a "go back and look again" task automatically when a line disagrees with the report. | On |

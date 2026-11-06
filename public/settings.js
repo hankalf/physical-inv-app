@@ -921,6 +921,67 @@
       msg($('jobsMsg'), 'ok', on.length === 4 ? 'The scanners offer every job.' : `The scanners offer ${on.map((k) => JOB_NAME[k]).join(' and ')} now.`, 'Each scanner picks it up the next time it is online.');
     } catch (err) { msg($('jobsMsg'), 'err', 'Not saved', err.message); }
   };
+  /* ------------------------------------------------- pallet label layouts
+     one row a system: its name, its masks, a note; suggested from the report */
+  let layoutRows = [];
+  function renderLayouts() {
+    const t = $('layoutsTable');
+    t.innerHTML = '';
+    const head = document.createElement('tr');
+    for (const h of ['System', 'Label masks (9 digit · A letter · X either)', 'In words', 'Note', '']) { const th = document.createElement('th'); th.textContent = h; head.appendChild(th); }
+    t.appendChild(head);
+    const words = (mask) => mask.toUpperCase().replace(/9+|A+|X+|[^9AX]+/g, (s) => (s[0] === '9' ? `${s.length} digit${s.length === 1 ? '' : 's'}` : s[0] === 'A' ? `${s.length} letter${s.length === 1 ? '' : 's'}` : s[0] === 'X' ? `${s.length} letter${s.length === 1 ? '' : 's'} or digit${s.length === 1 ? '' : 's'}` : s) + ' + ').replace(/ \+ $/, '');
+    layoutRows.forEach((r, i) => {
+      const tr = document.createElement('tr');
+      const sys = document.createElement('input'); sys.className = 'sm'; sys.style.width = '110px'; sys.value = r.system || ''; sys.placeholder = 'LIVE'; sys.dataset.layoutSystem = i;
+      sys.oninput = () => { layoutRows[i].system = sys.value; };
+      const masks = document.createElement('input'); masks.className = 'sm'; masks.style.width = '220px'; masks.value = (r.masks || []).join(', '); masks.placeholder = 'FR99999999'; masks.dataset.layoutMasks = i;
+      const inWords = document.createElement('td'); inWords.className = 'muted';
+      const say = () => { inWords.textContent = masks.value.split(/[,;\s]+/).filter(Boolean).map(words).join(' or '); };
+      masks.oninput = () => { layoutRows[i].masks = masks.value.split(/[,;\s]+/).filter(Boolean); say(); };
+      say();
+      const note = document.createElement('input'); note.className = 'sm'; note.style.width = '180px'; note.value = r.note || ''; note.placeholder = 'e.g. the receiving labels';
+      note.oninput = () => { layoutRows[i].note = note.value; };
+      const td = (el) => { const c = document.createElement('td'); c.appendChild(el); return c; };
+      const x = document.createElement('button'); x.className = 'sm ghost'; x.textContent = '✕'; x.title = 'Take this system off'; x.onclick = () => { layoutRows.splice(i, 1); renderLayouts(); };
+      tr.append(td(sys), td(masks), inWords, td(note), td(x));
+      t.appendChild(tr);
+    });
+    if (!layoutRows.length) { const tr = document.createElement('tr'); const c = document.createElement('td'); c.colSpan = 5; c.className = 'muted'; c.textContent = 'No layouts yet — press Suggest from the report, or Add a system.'; tr.appendChild(c); t.appendChild(tr); }
+  }
+  async function refreshLayouts() {
+    const d = await api.json('/api/admin/label-layouts');
+    layoutRows = d.layouts.map((l) => ({ ...l }));
+    $('fLayoutsOn').checked = !!d.on;
+    $('layoutsChip').hidden = !d.on;
+    renderLayouts();
+  }
+  $('btnLayoutsAdd').onclick = () => { layoutRows.push({ system: '', masks: [], note: '' }); renderLayouts(); const last = document.querySelector('#layoutsTable input[data-layout-system]:last-of-type'); if (last) last.focus(); };
+  $('btnLayoutsSuggest').onclick = async () => {
+    if (!needSession($('layoutsMsg'))) return;
+    try {
+      const d = await api.json(`/api/admin/sessions/${sessionId}/label-layouts/suggest`);
+      if (!d.systems.length) { msg($('layoutsMsg'), 'warn', 'No pallet file on this count yet', 'Upload the inventory report under Count setup first.'); return; }
+      for (const s of d.systems) {
+        const row = layoutRows.find((r) => (r.system || '').toUpperCase() === s.system);
+        if (row) row.masks = [...new Set([...(row.masks || []), ...s.suggested])];
+        else layoutRows.push({ system: s.system, masks: s.suggested, note: `${s.total.toLocaleString()} pallets on the report` });
+      }
+      renderLayouts();
+      $('layoutsSuggestNote').textContent = d.systems.map((s) => `${s.system || 'no system'}: ${s.masks.map((m) => `${m.mask} (${m.pct}%)`).join(', ')}`).join(' · ');
+      msg($('layoutsMsg'), 'ok', `Suggested from ${d.systems.reduce((n, s) => n + s.total, 0).toLocaleString()} pallets on the report.`, 'Masks under 2% of a system were left out as typos; the full spread is below. Check them, then Save.');
+    } catch (err) { msg($('layoutsMsg'), 'err', err.message); }
+  };
+  $('btnSaveLayouts').onclick = async () => {
+    try {
+      const saved = await api.post('/api/admin/label-layouts', { on: $('fLayoutsOn').checked, layouts: layoutRows });
+      layoutRows = saved.layouts.map((l) => ({ ...l }));
+      $('fLayoutsOn').checked = !!saved.on; $('layoutsChip').hidden = !saved.on;
+      renderLayouts();
+      msg($('layoutsMsg'), 'ok', saved.on ? 'Saved — the guns check unknown labels against these layouts.' : saved.layouts.length ? 'Saved, not checked: tick the box to have the guns use them.' : 'Saved: no layouts.', 'Scanners pick this up within about half a minute.');
+    } catch (err) { msg($('layoutsMsg'), 'err', 'Not saved', err.message); }
+  };
+
   let promptDefaults = null;
   async function refreshPrompts() {
     promptState = await api.json('/api/admin/scanner-prompts');
@@ -2826,7 +2887,7 @@
 
   async function load() {
     await refreshMe();
-    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshJobs().catch(() => {}), refreshReasons(), refreshSosSettings(), refreshIssueMenu().catch(() => {}), refreshLogo(), refreshPalletSystem().catch(() => {}), refreshOnedrive().catch(() => {}), refreshGdrive().catch(() => {}), refreshTeamsBackup().catch(() => {}), refreshCrewBoard().catch(() => {}), refreshSystems().catch(() => {})]);
+    await Promise.all([refreshDevices(), refreshErp(), refreshOps(), refreshPrompts(), refreshLayouts().catch(() => {}), refreshJobs().catch(() => {}), refreshReasons(), refreshSosSettings(), refreshIssueMenu().catch(() => {}), refreshLogo(), refreshPalletSystem().catch(() => {}), refreshOnedrive().catch(() => {}), refreshGdrive().catch(() => {}), refreshTeamsBackup().catch(() => {}), refreshCrewBoard().catch(() => {}), refreshSystems().catch(() => {})]);
     drawOverride();
     refreshAccessMap().catch(() => {});
     await refreshFeatures().catch(() => {});

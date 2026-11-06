@@ -36,6 +36,7 @@ import { practiceJobs, practiceSession, ensurePractice, resetPractice, practiceD
 import { branding, saveLogo, clearLogo, saveName } from './routes/branding.js';
 import { raiseAlert, tellTeams, listAlerts, seeAlert, closeAlert, alertsForDevice, sosReasons, saveSosReasons, DEFAULT_REASONS } from './routes/alerts.js';
 import { teamsConfig, saveTeamsConfig, postToTeams, testCard, alertCard } from './util/teams.js';
+import { labelLayouts, saveLabelLayouts, suggestLayouts } from './routes/label-layouts.js';
 import { scannerPrompts, saveScannerPrompts, defaultScannerPrompts, scannerLayout, saveScannerLayout, defaultScannerLayout, defaultSessionId, setDefaultSessionId, migrateCommentTimeout, scannerJobs, saveScannerJobs, jobsOffered, JOBS } from './routes/scanner-prompts.js';
 import { features, saveFeatures, FEATURES, PRESETS, offNames } from './routes/features.js';
 import { inventoryOverview } from './routes/inventory-control.js';
@@ -1734,6 +1735,18 @@ async function handleAdmin(req, res, url, m) {
     const jobs = saveScannerJobs(await readJson(req));
     audit(actor, 'chose which jobs the scanners offer', JOBS.filter(([k]) => jobs[k]).map(([, l]) => l).join(', '));
     return sendJson(req, res, 200, { jobs, offered: jobsOffered(jobs), all: JOBS });
+  }
+  // what each system's pallet labels look like
+  if (p === '/api/admin/label-layouts' && method === 'GET') return sendJson(req, res, 200, labelLayouts());
+  if (p === '/api/admin/label-layouts' && method === 'POST') {
+    const body = await readJson(req);
+    const saved = saveLabelLayouts(body);
+    audit(actor, 'changed the pallet label layouts', `${saved.on ? 'checked on the guns' : 'not checked'}: ${saved.layouts.map((l) => `${l.system || 'no system'} ${l.masks.join('/')}`).join(', ') || 'none'}`);
+    return sendJson(req, res, 200, saved);
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/label-layouts\/suggest$/)) && method === 'GET') {
+    if (!getSession(m[1])) throw httpError(404, 'session not found');
+    return sendJson(req, res, 200, { systems: suggestLayouts(m[1]) });
   }
   if (p === '/api/admin/scanner-prompts' && method === 'GET') {
     return sendJson(req, res, 200, { ...scannerPrompts(), defaults: defaultScannerPrompts() });
