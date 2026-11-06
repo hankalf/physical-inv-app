@@ -210,9 +210,11 @@
     $('bNoteWho').textContent = last && last.at
       ? `${last.by ? last.by + ' · ' : ''}${new Date(last.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
       : '';
-    $('bPct').textContent = d.pct;
+    $('bPct').textContent = d.complete ? '100' : String(Math.min(99.9, Number(d.pct)));
     celebrate(d);
-    $('bOf').textContent = `${n(d.pallets.found)} of ${n(d.pallets.total)} listed pallets found`;
+    $('bOf').textContent = d.bins.total && d.bins.counted >= d.bins.total && !d.complete
+      ? `every bin has a count · ${n(d.recounts.open)} second count${d.recounts.open === 1 ? '' : 's'} still open`
+      : `${n(d.pallets.found)} of ${n(d.pallets.total)} listed pallets found`;
     $('bBar').style.width = d.pct + '%';
     $('bBarText').textContent = `${n(d.bins.counted)} of ${n(d.bins.total)} bins`;
     $('bBins').textContent = `${n(d.bins.counted)} / ${n(d.bins.total)}`;
@@ -228,7 +230,7 @@
   /* ---- the end: every bin has a count. A banner, and confetti once. ---- */
   let partied = false;
   function celebrate(d) {
-    const done = d.bins && d.bins.total > 0 && d.bins.counted >= d.bins.total;
+    const done = !!d.complete;
     $('bFun').hidden = !done;
     if (!done) { partied = false; return; }
     $('bFunSub').textContent = `${n(d.bins.total)} bins · ${d.aislesDone} of ${d.aislesTotal} aisles handed back${d.clock && d.clock.started ? ' · ' + (d.clock.running ? 'on the clock since ' + at(d.clock.started) : 'took ' + spanWords(d.clock.elapsedMs)) : ''}`;

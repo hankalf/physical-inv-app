@@ -180,6 +180,8 @@
   // one side of the racking only, when two teams split an aisle: "Front side"
   const faceFor = (aisle) => { const q = (state.assignment?.queuedDetail || []).find((x) => x.aisle === aisle); return q && q.face ? `${q.faceLabel || q.face} side` : ''; };
   const faceOfCode = (code) => { const p = parseBinCode(code); const pos = Number(p.bay); return p.bay && Number.isFinite(pos) ? (pos % 2 === 1 ? 'odd' : 'even') : ''; };
+  // a queued aisle that is only its gaps: the bins nobody has counted
+  const gapsFor = (aisle) => !!(state.assignment?.queuedDetail || []).find((x) => x.aisle === aisle && x.gaps);
   // floor bins (REC, the staging spots): pallets on the floor, no levels
   const isFloorQueued = (aisle) => !!(state.assignment?.queuedDetail || []).find((x) => x.aisle === aisle && x.floor);
   const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
@@ -1067,10 +1069,11 @@
       box.querySelector('.zone-sub').textContent = (a.active.floor ? `${a.active.aisle} · floor pallets — count every pallet standing here` : `${aisleLabel(a.active.aisle, a.active.zone)} · ${levelsLabel(a.active.levels)}`)
         + (a.active.face ? ` · ${a.active.faceLabel || a.active.face} side only` : '')
         + (a.active.levelsDone ? ` · ${levelsLabel(a.active.levelsDone)} handed back, ${levelsLabel(a.active.levelsLeft)} to count` : '')
+        + (a.active.gaps ? ' · only the bins nobody has counted yet' : '')
         + (a.active.direction === 'down' ? ' · start at the far end' : '')
         + (a.active.partner ? ` · team ${a.active.partner.team} from the other end` : '');
       box.querySelector('.bins-sub').textContent = `${counted.size} of ${total} bins have a count` +
-        (a.queued.length ? ` · next: ${a.queued.map((q) => (isFloorQueued(q) ? `${q} (floor)` : aisleLabel(q, zoneFor(q)) + (levelsFor(q) ? ' ' + levelsFor(q) : '') + (faceFor(q) ? ', ' + faceFor(q) : ''))).join(', ')}` : ' · last aisle in your plan');
+        (a.queued.length ? ` · next: ${a.queued.map((q) => (isFloorQueued(q) ? `${q} (floor)` : aisleLabel(q, zoneFor(q)) + (levelsFor(q) ? ' ' + levelsFor(q) : '') + (faceFor(q) ? ', ' + faceFor(q) : '') + (gapsFor(q) ? ', the gaps' : ''))).join(', ')}` : ' · last aisle in your plan');
       const grid = box.querySelector('.bins');
       for (const b of a.bins) {
         const s = document.createElement('span');

@@ -114,6 +114,10 @@ export function boardData(sessionId) {
     lines: p.lines,
     flagged: p.exceptions,
     recounts: { open: p.recounts_open, done: p.recounts_done },
+    /* whole: every bin has a count and no second count is open - the wall says
+       100% then and not before; bins all counted with second counts still to
+       do is 99.9% and says why */
+    complete: p.bins_total > 0 && p.bins_counted >= p.bins_total && !p.recounts_open,
     aislesDone: aisles.filter((a) => a.done).length,
     aislesTotal: aisles.length,
     teams: shown.sort((a, b) => String(a.team).localeCompare(String(b.team), undefined, { numeric: true })),

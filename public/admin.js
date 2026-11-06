@@ -616,6 +616,13 @@
         const side = a.face || qa.face;   // the side still open on that aisle, else the side picked above
         const go = button((a.held ? 'Queue anyway' : 'Queue') + (side && !a.floor ? ` ${faceName(side)}` : ''), 'sm' + (a.held ? ' ghost' : ' primary'), () => nuQueue([a.aisle], side));
         go.disabled = !can; go.dataset.queue = a.aisle; if (side) go.dataset.face = side;
+        /* an aisle partly counted: the team can be sent to the gaps alone - the bins nobody has counted - and the rest never show on its gun */
+        if (a.binsCounted > 0 && a.binsLeft > 0) {
+          const gaps = button(`Queue the ${a.binsLeft.toLocaleString()} uncounted`, 'sm', () => nuQueue([a.aisle], side, true));
+          gaps.disabled = !can; gaps.dataset.queueGaps = a.aisle;
+          gaps.title = `Only the ${a.binsLeft.toLocaleString()} bins nobody has counted: the ${a.binsCounted.toLocaleString()} already counted do not show on the gun`;
+          btns.appendChild(gaps);
+        }
         go.title = a.held ? 'Another team is in that racking now; queued, it starts when they are out' : `Queue ${a.aisle} for team ${team}${a.levelsReachable ? ' on levels ' + a.levelsReachable : ''}`;
         btns.appendChild(go);
       } else {
@@ -633,11 +640,11 @@
     if (d.more) foot.appendChild(Object.assign(document.createElement('span'), { className: 'muted', textContent: `and ${d.more} more under More ways to plan` }));
     if (foot.childNodes.length) list.appendChild(foot);
   }
-  async function nuQueue(aisles, face = qa.face) {
+  async function nuQueue(aisles, face = qa.face, gaps = false) {
     if (!needSession($('nuMsg')) || !qa.team) return;
     const team = qa.team;
     const levels = [...'ABCDEF'].filter((c) => qa.levels.has(c)).join('') || 'A-F';
-    const go = (force) => postJson(`/api/admin/sessions/${sessionId}/assignments`, { team, aisles: aisles.join(', '), levels, direction: qa.dir, face: face || '', force });
+    const go = (force) => postJson(`/api/admin/sessions/${sessionId}/assignments`, { team, aisles: aisles.join(', '), levels, direction: qa.dir, face: face || '', gaps, force });
     try {
       let r;
       try { r = await go(false); }
@@ -837,7 +844,7 @@
         row.className = 'arow';
         row.append(Object.assign(document.createElement('b'), { className: 'aisle', textContent: it.aisle }));
         if (ov.zone) row.append(Object.assign(document.createElement('span'), { className: 'z', textContent: titleCase(ov.zone) }));
-        row.append(Object.assign(document.createElement('span'), { className: 'lv', textContent: `${levelsLabel(it.levels)}${it.face ? ` · ${faceName(it.face)} side` : ''}${it.direction === 'down' ? ' · from the far end ↩' : ''}${blocked ? ' ⏳' : ''}` }));
+        row.append(Object.assign(document.createElement('span'), { className: 'lv', textContent: `${levelsLabel(it.levels)}${it.face ? ` · ${faceName(it.face)} side` : ''}${it.only_uncounted ? ' · gaps only' : ''}${it.direction === 'down' ? ' · from the far end ↩' : ''}${blocked ? ' ⏳' : ''}` }));
         const state = it.status === 'active' ? 'Counting now' : it.status === 'done' ? 'Done' : blocked ? `Held · team ${holder.team}` : nextSeen ? 'Queued' : 'Next';
         if (it.status === 'queued') nextSeen = true;
         row.append(Object.assign(document.createElement('span'), { className: 'st', textContent: state }));
@@ -2973,7 +2980,7 @@
 
   async function queueAisles(force) {
     const r = await postJson(`/api/admin/sessions/${sessionId}/assignments`,
-      { team: $('fAssignTeam').value, aisles: $('fAssignAisles').value, levels: $('fAssignLevels').value, direction: $('fAssignFrom').value, face: $('fAssignFace').value, force });
+      { team: $('fAssignTeam').value, aisles: $('fAssignAisles').value, levels: $('fAssignLevels').value, direction: $('fAssignFrom').value, face: $('fAssignFace').value, gaps: $('fAssignGaps').checked, force });
     return r;
   }
 

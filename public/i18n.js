@@ -195,7 +195,7 @@
     'Bin not on the list': 'La ubicación no está en la lista', 'Not a pallet label?': '¿No es etiqueta de tarima?', 'Labels look like': 'Las etiquetas se ven así', 'Looks like': 'Parece',
     'Counted - a supervisor will check this label': 'Contada — un supervisor revisará esta etiqueta', 'Fits no label layout - counted anyway': 'No coincide con ningún formato — contada igual',
     'Not your level': 'No es tu nivel', 'Not your aisle': 'No es tu pasillo', 'Not your side': 'No es tu lado', 'Your side': 'Tu lado', 'Other-side bin accepted': 'Ubicación del otro lado aceptada',
-    'Front': 'Frente', 'Back': 'Atrás',
+    'Front': 'Frente', 'Back': 'Atrás', 'only the bins nobody has counted yet': 'solo las ubicaciones que nadie ha contado', 'the gaps': 'los huecos',
     'Unknown pallet accepted': 'Tarima desconocida aceptada',
 
     // history

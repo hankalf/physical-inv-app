@@ -67,7 +67,7 @@ export function aisleOverview(sessionId) {
               COALESCE(k.pallets_counted, 0) AS pallets_counted,
               (SELECT GROUP_CONCAT(team, ',') FROM assignments s
                 WHERE s.session_id = a.session_id AND s.aisle = a.aisle AND s.status = 'active') AS active_team,
-              (SELECT GROUP_CONCAT(team || CASE WHEN levels = '' AND face = '' THEN '' ELSE ' (' || levels || CASE WHEN face = '' THEN '' ELSE ' ' || face END || ')' END || CASE WHEN levels_done = '' THEN '' ELSE ' · ' || levels_done || ' done' END, ', ') FROM assignments s
+              (SELECT GROUP_CONCAT(team || CASE WHEN levels = '' AND face = '' THEN '' ELSE ' (' || levels || CASE WHEN face = '' THEN '' ELSE ' ' || face END || ')' END || CASE WHEN levels_done = '' THEN '' ELSE ' · ' || levels_done || ' done' END || CASE WHEN only_uncounted = 1 THEN ' · gaps only' ELSE '' END, ', ') FROM assignments s
                 WHERE s.session_id = a.session_id AND s.aisle = a.aisle AND s.status = 'active') AS active_detail,
               (SELECT GROUP_CONCAT(team || CASE WHEN levels = '' AND face = '' THEN '' ELSE ' (' || levels || CASE WHEN face = '' THEN '' ELSE ' ' || face END || ')' END, ', ') FROM assignments s
                 WHERE s.session_id = a.session_id AND s.aisle = a.aisle AND s.status = 'queued') AS queued_teams,
@@ -106,6 +106,26 @@ export const listAssignments = (sessionId) =>
         ORDER BY s.team, s.position, s.id`
     )
     .all(Number(sessionId));
+
+/* The gaps: the bins of the aisle (on the assignment's levels and side) with no
+   count line and not recorded empty, written on the assignment as it starts.
+   The team walks those and nothing else; one counted since does not show. */
+export function uncountedBins(sessionId, row) {
+  const id = Number(sessionId);
+  const inLevels = (l) => !row.levels || row.levels.includes(l || '');
+  const inFace = (code) => !row.face || faceOfCode(code) === row.face;
+  return db.prepare(`SELECT code, level FROM locations l WHERE session_id = ? AND aisle = ?
+      AND NOT EXISTS (SELECT 1 FROM counts c WHERE c.session_id = l.session_id AND c.location_code = l.code AND c.voided = 0) ORDER BY code`)
+    .all(id, row.aisle).filter((r) => inLevels(r.level) && inFace(r.code)).map((r) => r.code)
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+}
+export function listGaps(sessionId, assignmentId) {
+  const row = db.prepare('SELECT * FROM assignments WHERE id = ?').get(Number(assignmentId));
+  if (!row) return [];
+  const gaps = uncountedBins(sessionId, row);
+  db.prepare('UPDATE assignments SET gap_bins = ? WHERE id = ?').run(JSON.stringify(gaps), row.id);
+  return gaps;
+}
 
 /** The levels an assignment covers: its own, or every level the aisle has. */
 export function assignmentLevels(sessionId, row) {
@@ -219,7 +239,7 @@ export function autoBlock(sessionId, size = 2, offset = 0) {
   return aisleOverview(id);
 }
 
-export function queueAssignments(sessionId, team, aisles, levelsRaw = '', { force = false, direction = 'up', face: faceRaw = '' } = {}) {
+export function queueAssignments(sessionId, team, aisles, levelsRaw = '', { force = false, direction = 'up', face: faceRaw = '', gaps = false } = {}) {
   const dir = cleanDirection(direction);
   const wantFace = cleanFace(sessionId, faceRaw);
   const id = Number(sessionId);
@@ -265,11 +285,11 @@ export function queueAssignments(sessionId, team, aisles, levelsRaw = '', { forc
       if (existing) { skipped.push({ aisle, reason: `already ${existing.status} for team ${t}` }); continue; }
       pos += 1;
       db.prepare(
-        `INSERT INTO assignments (session_id, team, aisle, levels, position, status, created_at, direction, face)
-         VALUES (?, ?, ?, ?, ?, 'queued', ?, ?, ?)`
-      ).run(id, t, aisle, levels, pos, now(), dir, face);
+        `INSERT INTO assignments (session_id, team, aisle, levels, position, status, created_at, direction, face, only_uncounted)
+         VALUES (?, ?, ?, ?, ?, 'queued', ?, ?, ?, ?)`
+      ).run(id, t, aisle, levels, pos, now(), dir, face, gaps ? 1 : 0);
       const span = isFloor ? 'floor' : [levels, face ? faceLabel(id, face) : ''].filter(Boolean).join(', ');
-      added.push(`${span ? `${aisle} (${span})` : aisle}${dir === 'down' ? ' from the far end' : ''}`);
+      added.push(`${span ? `${aisle} (${span})` : aisle}${gaps ? ', only the bins not yet counted' : ''}${dir === 'down' ? ' from the far end' : ''}`);
     }
     db.exec('COMMIT');
   } catch (err) {
@@ -305,7 +325,8 @@ export function autoActivate(sessionId) {
     if (!next) continue;
     if (blockHolder(id, next.aisle, team, next.levels, next.direction, next.face)) continue; // another team holds those levels of the racking
     db.prepare("UPDATE assignments SET status = 'active', started_at = ? WHERE id = ?").run(now(), next.id);
-    activated.push({ team, aisle: next.aisle, levels: next.levels });
+    if (next.only_uncounted) listGaps(id, next.id);
+    activated.push({ team, aisle: next.aisle, levels: next.levels, gaps: !!next.only_uncounted });
   }
   return activated;
 }
@@ -331,6 +352,7 @@ export function setAssignmentStatus(sessionId, assignmentId, status) {
       throw Object.assign(new Error(`Team ${holder.team} is counting ${where}${lv}`), { status: 409 });
     }
     db.prepare("UPDATE assignments SET status = 'active', started_at = ? WHERE id = ?").run(now(), row.id);
+    if (row.only_uncounted) listGaps(id, row.id);
   } else {
     throw Object.assign(new Error('unknown status'), { status: 400 });
   }
@@ -412,6 +434,14 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
       .prepare('SELECT code, level FROM locations WHERE session_id = ? AND aisle = ? ORDER BY code')
       .all(id, active.aisle).filter((r) => inLevels(r.level) && inFace(r.code)).map((r) => r.code)
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    /* only the bins nobody had counted when this started: the gaps, as listed then */
+    let gaps = null;
+    if (active.only_uncounted) {
+      try { gaps = JSON.parse(active.gap_bins || 'null'); } catch { gaps = null; }
+      if (!Array.isArray(gaps)) gaps = listGaps(id, active.id);
+      const set = new Set(gaps);
+      bins = bins.filter((b) => set.has(b));
+    }
     // from the far end: the walk starts at the last bin
     if (cleanDirection(active.direction) === 'down') bins.reverse();
     /* How many pallet tags each bin already has, from any scanner, so a second
@@ -426,7 +456,7 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
           WHERE c.session_id = ? AND c.voided = 0 AND l.aisle = ?
           GROUP BY c.location_code`
       )
-      .all(norm(exceptDevice), id, active.aisle).filter((r) => inLevels(r.level) && inFace(r.code));
+      .all(norm(exceptDevice), id, active.aisle).filter((r) => inLevels(r.level) && inFace(r.code)).filter((r) => !gaps || bins.includes(r.code));
     const countedBins = rows.map((r) => r.code);
     progress = {
       bins: bins.length,
@@ -466,6 +496,8 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
       face: active.face || '', faceLabel: faceLabel(id, active.face),
       // the levels already handed back, and the ones still to count
       levelsDone: active.levels_done || '', levelsLeft: assignmentLevels(id, active).split('').filter((c) => !(active.levels_done || '').includes(c)).join(''),
+      // only the bins nobody had counted when it started
+      gaps: !!active.only_uncounted,
       // floor bins: pallets on the floor, no levels, any team
       floor: isFloorAisle(id, active.aisle),
       // the team coming the other way, when two share the aisle
@@ -474,7 +506,7 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
     bins,
     progress,
     queued: queued.map((q) => q.aisle),
-    queuedDetail: queued.map((q) => ({ aisle: q.aisle, levels: q.levels, face: q.face || '', faceLabel: faceLabel(id, q.face), direction: cleanDirection(q.direction), floor: isFloorAisle(id, q.aisle) })),
+    queuedDetail: queued.map((q) => ({ aisle: q.aisle, levels: q.levels, face: q.face || '', faceLabel: faceLabel(id, q.face), direction: cleanDirection(q.direction), floor: isFloorAisle(id, q.aisle), gaps: !!q.only_uncounted })),
     done,
     waitingOn,
   };
@@ -596,7 +628,7 @@ export function planNext(sessionId, team = '', { limit = 12 } = {}) {
     if (a.bins_counted) why.push(`${a.bins_counted} of ${a.bins} bins counted already`);
     if (doneAisles.has(a.aisle)) why.push('handed back once already');
     if (held) why.push(`held: team ${holders.map((r) => r.team).join(', ')} is in that racking`);
-    out.push({ aisle: a.aisle, zone: a.zone || '', block: a.block, bins: a.bins, binsLeft: left, binsLeftReachable: leftReachable, levels, levelsReachable: floor ? '' : (reachable || levels), floor, held, distance: dist, face: openFace, faceLabel: openFace ? faces[openFace] : '', why: why.filter(Boolean).join(' · ') });
+    out.push({ aisle: a.aisle, zone: a.zone || '', block: a.block, bins: a.bins, binsCounted: a.bins_counted || 0, binsLeft: left, binsLeftReachable: leftReachable, levels, levelsReachable: floor ? '' : (reachable || levels), floor, held, distance: dist, face: openFace, faceLabel: openFace ? faces[openFace] : '', why: why.filter(Boolean).join(' · ') });
   }
   out.sort((x, y) => Number(x.held) - Number(y.held) || (t && here ? x.distance - y.distance : 0) || y.binsLeftReachable - x.binsLeftReachable || x.aisle.localeCompare(y.aisle, undefined, { numeric: true }));
   const all = overview.length;

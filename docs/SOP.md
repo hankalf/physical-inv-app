@@ -1182,6 +1182,12 @@ dashboard. Uploading needs *Queue aisles*; the export needs *Downloads*.
   of the two hands it back. **Auto-assign the aisles → Two teams per aisle, from opposite ends**
   pairs the teams (1 with 2, 3 with 4 …) and plans it for every aisle; an odd team out works alone.
   A counting-plan file takes the same thing in an optional **Start** column: *far end* or *001 end*.
+- **The gaps only.** An aisle partly counted — a team pulled off it, a level half done, bins
+  missed — is finished by sending a team to the bins nobody has counted and nothing else. On
+  **Next up** such an aisle carries a second button, **Queue the N uncounted**; the by-hand row has
+  a **Gaps only** tick. The gun lists only those bins (*only the bins nobody has counted yet*),
+  listed as the assignment starts, so the ones already counted never show; the planning board
+  marks the card *gaps only*. Finishing it raises the MISSING second counts as usual.
 - **Two teams on the same aisle, one each side.** Racking has two faces: the odd positions
   (*Front*, F01A001, F01A003 …) and the even (*Back*, F01A002, F01A004 …) — the layout drawing can
   name them differently. Beside **Next up** pick **Front** or **Back** before pressing *Queue*; the
@@ -1905,6 +1911,11 @@ the clock, downtime, counting time, pace and *done about* — the same five figu
 dashboard, big enough for the far wall), a row per team with what they are on, their lines an
 hour and their downtime, and every aisle as a tile colored by state. It deliberately shows no
 pallet IDs and no clock-in numbers.
+
+The headline percentage is bins with a count over bins on the list, and it reads **100%** only
+when the count is whole: every bin counted **and** no second count open. Every bin counted with
+second counts still to do shows **99.9%** and says so under it; the *Second counts open* tile
+carries the number. The 100% banner and the confetti wait for the same moment.
 
 **Teams counting** lists only the teams counting right now on the shift that is on (the shift
 times are the crew board's, under Settings): a team that signed off, went quiet, finished its

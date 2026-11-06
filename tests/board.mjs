@@ -100,6 +100,7 @@ await page.close();
 /* ---------------- the end: 100% ---------------- */
 const tiny = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'board finished' }) }));
 await fetch(`${BASE}/api/admin/sessions/${tiny.id}/master?kind=bins`, { method: 'POST', headers: csv, body: 'Bin Location\nZ01A001\nZ01A002\n' });
+await fetch(`${BASE}/api/admin/sessions/${tiny.id}/settings`, { method: 'POST', headers: A, body: JSON.stringify({ autoRecount: false }) });   // no second counts: the count is whole once the two bins are in
 await fetch(`${BASE}/api/sessions/${tiny.id}/signon`, { method: 'POST', headers: D, body: JSON.stringify({ team: '1', employees: ['E1001'], deviceId: 'BOARD-01' }) });
 await fetch(`${BASE}/api/sessions/${tiny.id}/counts`, { method: 'POST', headers: D, body: JSON.stringify([
   { clientId: 'z1', palletId: 'Z-1', qty: 5, location: 'Z01A001', team: '1', employees: ['E1001'], deviceId: 'BOARD-01' },
@@ -110,6 +111,12 @@ await fin.goto(`${BASE}/board?session=${tiny.id}`);
 await fin.waitForTimeout(2200);
 check('Board at 100%: the banner is up and says 100%', await fin.isVisible('#bFun') && /100%/.test(clean(await fin.textContent('#bFun .big'))) && /wrap/.test(clean(await fin.textContent('#bFunTxt'))) && /2 bins/.test(clean(await fin.textContent('#bFunSub'))), clean(await fin.textContent('#bFun')));
 check('…and the confetti canvas is drawing', await fin.isVisible('#bConfetti') && await fin.evaluate(() => { const c = document.getElementById('bConfetti'); return c.width > 0 && c.height > 0; }));
+/* a second count still open: every bin counted is not the count whole */
+await fetch(`${BASE}/api/admin/sessions/${tiny.id}/recounts`, { method: 'POST', headers: A, body: JSON.stringify({ bin: 'Z01A001', note: 'look again' }) });
+const whole = await j(await fetch(`${BASE}/api/board?session=${tiny.id}`));
+check('With a second count open the board is not complete: 99.9, not 100, and it says why', !whole.complete && whole.recounts.open === 1 && whole.bins.counted === whole.bins.total, JSON.stringify({ complete: whole.complete, open: whole.recounts.open }));
+await fin.reload(); await fin.waitForTimeout(2200);
+check('…the wall shows 99.9 with the second counts still open, and the banner is down', (await fin.textContent('#bPct')).trim() === '99.9' && /1 second count still open/.test(clean(await fin.textContent('#bOf'))) && await fin.isHidden('#bFun'), `${await fin.textContent('#bPct')} | ${clean(await fin.textContent('#bOf'))}`);
 await fin.screenshot({ path: `${S}screenshots/board-100.png` });
 await fin.close();
 

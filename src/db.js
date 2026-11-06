@@ -554,6 +554,9 @@ if (!hasCol('assignments', 'levels')) {
 }
 // the levels of an assignment already handed back, one at a time: 'A', then 'AB' ... done when they are all in
 if (!hasCol('assignments', 'levels_done')) db.exec("ALTER TABLE assignments ADD COLUMN levels_done TEXT NOT NULL DEFAULT ''");
+// only the bins nobody has counted yet: the gaps in an aisle, listed when the assignment starts
+if (!hasCol('assignments', 'only_uncounted')) db.exec('ALTER TABLE assignments ADD COLUMN only_uncounted INTEGER NOT NULL DEFAULT 0');
+if (!hasCol('assignments', 'gap_bins')) db.exec('ALTER TABLE assignments ADD COLUMN gap_bins TEXT');
 if (!hasCol('assignments', 'face')) {
   // ...and, when two teams split an aisle, which face of the racking: the odd positions or the even ('' = both)
   db.exec("ALTER TABLE assignments ADD COLUMN face TEXT NOT NULL DEFAULT ''");

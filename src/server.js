@@ -1259,7 +1259,7 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments$/)) && method === 'POST') {
     const body = await readJson(req);
     const aisles = Array.isArray(body.aisles) ? body.aisles : String(body.aisles || '').split(/[,\s]+/);
-    const queued = queueAssignments(m[1], body.team, aisles, body.levels || '', { force: !!body.force, direction: body.direction, face: body.face || '' });
+    const queued = queueAssignments(m[1], body.team, aisles, body.levels || '', { force: !!body.force, direction: body.direction, face: body.face || '', gaps: !!body.gaps });
     audit(actor, body.force ? 'assigned aisles OVERRIDING the equipment check' : 'assigned aisles',
       `team ${body.team}: ${queued.added.join(', ') || 'nothing'} (levels ${body.levels}${body.face ? ', ' + body.face + ' side' : ''})`, m[1]);
     return sendJson(req, res, 200, queued);
