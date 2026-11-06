@@ -191,6 +191,31 @@ check('Second counts: the clean list aisle by aisle, bin by bin, with aisle, lev
 check('…and it opens in Excel-type software: sheet data, styles, the two files that name them all', ['[Content_Types].xml', '_rels/.rels', 'xl/_rels/workbook.xml.rels', 'xl/styles.xml'].every((k) => parts[k]));
 const [xdl] = await Promise.all([page.waitForEvent('download'), page.click('#btnExportRecountsXlsx')]);
 check('The button on the tab downloads it', /second-counts-by-aisle/.test(xdl.suggestedFilename()), xdl.suggestedFilename());
+/* ---------------- handing out, and the results ---------------- */
+{
+  await fetch(`${BASE}/api/admin/sessions/${S}/master?kind=bins`, { method: 'POST', headers: csv, body: 'Bin Location,Zone,Aisle\nF01A005,Freezer,F01\nF01A006,Freezer,F01\nF02A003,Freezer,F02\nF02A004,Freezer,F02\n' });
+  const r7 = await mk('F01A005', '', 'hand-out one', '');
+  const r8 = await mk('F02A003', '', 'hand-out two', '');
+  const r9 = await mk('F01A006', '', 'hand-out three', '');
+  const ho = await pj(`/api/admin/sessions/${S}/recounts/hand-out`, { teams: '21, 22' });
+  rows = await get(`/api/admin/sessions/${S}/recounts`);
+  check('Hand out: the open ones nobody has go to the teams named, whole aisles to one team - F01 (two) to team 21, then F02 to the less loaded team 22', ho.assigned === 3 && !ho.left && by(r7).team === '21' && by(r9).team === '21' && by(r8).team === '22' && ho.aisles[0].aisle === 'F01', JSON.stringify(ho));
+  check('…and the log says who got what', (await get('/api/admin/audit?limit=10')).some((x) => x.action === 'handed the open second counts out by aisle'));
+  check('No teams named: refused', (await post(`/api/admin/sessions/${S}/recounts/hand-out`, { teams: '' })).status === 400);
+  const res = await get(`/api/admin/sessions/${S}/recounts/results`);
+  check('Results: how the finished bins came out, and per team', res.done >= 2 && typeof res.byFirst === 'number' && res.byTeam && Object.keys(res.byTeam).length >= 1, JSON.stringify(res));
+  await page.waitForTimeout(600);
+  await page.reload(); await page.waitForSelector('#recountTable tr[data-recount]'); await page.waitForTimeout(600);
+  check('The tab: the Results line reads, and Hand out is away once every open one has a team', /Results · \d+ bins? finished/.test(clean(await page.textContent('#recResults'))) && await page.isHidden('#recHandout'), clean(await page.textContent('#recResults')));
+  const r10 = await mk('F02A004', '', 'in the pool', '');
+  await page.reload(); await page.waitForSelector('#recHandout:not([hidden])', { timeout: 10000 }); await page.waitForTimeout(400);
+  check('…a new one with no team brings Hand out back: a row for its aisle, with a team box and Give', (await page.locator('#recHandTable tr[data-hand-aisle="F02"]').count()) === 1 && /1 open second count nobody has yet/.test(clean(await page.textContent('#recHandoutSub'))), clean(await page.textContent('#recHandoutSub')));
+  await page.fill('#recHandTable input[data-hand-team="F02"]', '22'); await page.press('#recHandTable input[data-hand-team="F02"]', 'Enter'); await page.waitForTimeout(1000);
+  rows = await get(`/api/admin/sessions/${S}/recounts`);
+  check('Give: that aisle\'s open ones go to the team, and the row is gone', by(r10).team === '22' && /handed to team 22/.test(clean(await page.textContent('#recHandMsg'))), clean(await page.textContent('#recHandMsg')));
+  await page.click('#btnRecClear'); await page.waitForTimeout(200);
+}
+
 check('No page errors', !errors.length, errors.join(' | '));
 await browser.close();
 

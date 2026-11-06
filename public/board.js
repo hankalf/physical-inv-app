@@ -90,7 +90,7 @@
     const items = [
       [n(d.lines), 'Count lines', ''],
       [`${n(d.pallets.found)} / ${n(d.pallets.total)}`, 'Listed pallets found', ''],
-      [n(d.teams.filter((t) => t.lines > 0).length), 'Teams counting', ''],
+      [n(d.teams.length), 'Teams counting', d.shiftNow && d.shiftNow.label ? d.shiftNow.label.replace(/ · .*/, '') : ''],
       [n(d.emptyBins), 'Bins checked empty', ''],
       [n(d.flagged), 'Flagged lines', d.flagged ? 'warn' : ''],
       [n(d.recounts.open), 'Second counts open', d.recounts.open ? 'err' : ''],
@@ -120,7 +120,7 @@
     const tbody = document.createElement('tbody');
     if (!d.teams.length) {
       const tr = document.createElement('tr');
-      const td = cell('Nobody has signed on yet.');
+      const td = cell(d.teamsHidden ? `No team counting on ${d.shiftNow && d.shiftNow.label ? d.shiftNow.label.replace(/ · .*/, '') : 'this shift'} right now.` : 'Nobody has signed on yet.');
       td.colSpan = 9; td.className = 'muted';
       tr.appendChild(td); tbody.appendChild(tr);
     }
@@ -168,6 +168,18 @@
       const fill = document.createElement('i'); fill.style.width = pc + '%';
       mini.appendChild(fill);
       el.append(code, p, mini);
+      /* each level and how far it is - the aisle is handed back a level at a time */
+      if (a.levels && a.levels.length > 1) {
+        const lv = document.createElement('div'); lv.className = 'lv';
+        for (const L of a.levels) {
+          const s = document.createElement('span');
+          s.className = L.pct >= 100 ? 'full' : L.pct > 0 ? 'part' : '';
+          s.textContent = `${L.level} ${L.pct}%`;
+          s.title = `Level ${L.level}: ${n(L.counted)} of ${n(L.bins)} bins`;
+          lv.appendChild(s);
+        }
+        el.appendChild(lv);
+      }
       if (a.active) {
         const who = document.createElement('div');
         who.className = 'team';

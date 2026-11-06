@@ -549,3 +549,66 @@ export function thirdCountsForBins(sessionId, bins = []) {
   }
   return { created };
 }
+
+
+/**
+ * Handing the open second counts out: the ones nobody has yet, spread over
+ * the teams named, whole aisles to one team so a crew walks one aisle and not
+ * six, the biggest aisles first to the team with the least on its plate. A
+ * team never gets a bin it counted first. What no named team may do stays
+ * in the pool and is said.
+ */
+export function handOutRecounts(sessionId, { teams = [], aisles = [] } = {}) {
+  const id = Number(sessionId);
+  if (!getSession(id)) throw Object.assign(new Error('session not found'), { status: 404 });
+  const names = [...new Set((Array.isArray(teams) ? teams : String(teams || '').split(/[,;\s]+/)).map(norm).filter(Boolean))];
+  if (!names.length) throw Object.assign(new Error('name the teams to hand them to, e.g. 7, 8, 9'), { status: 400 });
+  const only = new Set((Array.isArray(aisles) ? aisles : String(aisles || '').split(/[,;\s]+/)).map(norm).filter(Boolean));
+  const rows = listRecounts(id).filter((r) => r.status === 'open' && !r.team && r.reason !== 'CYCLE' && (!only.size || only.has(r.aisle)));
+  const load = new Map(names.map((t) => [t, db.prepare("SELECT COUNT(*) AS n FROM recounts WHERE session_id = ? AND team = ? AND status != 'done'").get(id, t).n]));
+  const byAisle = new Map();
+  for (const r of rows) { if (!byAisle.has(r.aisle)) byAisle.set(r.aisle, []); byAisle.get(r.aisle).push(r); }
+  const out = { assigned: 0, left: 0, byTeam: Object.fromEntries(names.map((t) => [t, 0])), aisles: [] };
+  const upd = db.prepare('UPDATE recounts SET team = ? WHERE id = ?');
+  for (const [aisle, list] of [...byAisle.entries()].sort((a, b) => b[1].length - a[1].length || String(a[0]).localeCompare(String(b[0]), undefined, { numeric: true }))) {
+    // the team with the least to do that may count most of this aisle
+    const pick = [...names].sort((a, b) => load.get(a) - load.get(b) || list.filter((r) => mayDo(r, b)).length - list.filter((r) => mayDo(r, a)).length)[0];
+    let n = 0;
+    const rest = [];
+    for (const r of list) { if (mayDo(r, pick)) { upd.run(pick, r.id); n++; } else rest.push(r); }
+    load.set(pick, load.get(pick) + n); out.byTeam[pick] += n; out.assigned += n;
+    // what that team counted first goes to whoever else may
+    let n2 = 0; let other = '';
+    for (const r of rest) {
+      const who = [...names].filter((t) => t !== pick && mayDo(r, t)).sort((a, b) => load.get(a) - load.get(b))[0];
+      if (!who) { out.left++; continue; }
+      upd.run(who, r.id); load.set(who, load.get(who) + 1); out.byTeam[who]++; out.assigned++; n2++; other = who;
+    }
+    out.aisles.push({ aisle, team: pick, n, also: n2 ? { team: other, n: n2 } : null, left: rest.length - n2 });
+  }
+  return out;
+}
+
+/** How the finished second counts came out: which number stood, bin by bin, summed up - and per team. */
+export function recountResults(sessionId) {
+  const id = Number(sessionId);
+  const tasks = db.prepare("SELECT * FROM recounts WHERE session_id = ? AND reason != 'CYCLE'").all(id);
+  const bins = [...new Set(tasks.filter((t) => t.status === 'done').map((t) => t.bin))];
+  const out = { done: tasks.filter((t) => t.status === 'done').length, open: tasks.filter((t) => t.status !== 'done').length, bins: bins.length, byFirst: 0, byReport: 0, byThird: 0, unsettled: 0, thirdOpen: 0, byTeam: {} };
+  for (const bin of bins) {
+    const ts = tasks.filter((t) => t.bin === bin);
+    const hasThirdDone = ts.some((t) => Number(t.round) === 3 && t.status === 'done');
+    const thirdOpen = ts.some((t) => Number(t.round) === 3 && t.status !== 'done');
+    if (hasThirdDone) { out.byThird++; continue; }
+    if (thirdOpen) { out.thirdOpen++; continue; }
+    const v = secondCountVerdict(id, bin);
+    if (v.settled && /first/.test(v.why)) out.byFirst++; else if (v.settled) out.byReport++; else out.unsettled++;
+  }
+  for (const t of tasks) {
+    const team = t.status === 'done' ? (t.done_by_team || t.team || '') : (t.team || '');
+    if (!team) continue;
+    if (!out.byTeam[team]) out.byTeam[team] = { done: 0, open: 0 };
+    if (t.status === 'done') out.byTeam[team].done++; else out.byTeam[team].open++;
+  }
+  return out;
+}

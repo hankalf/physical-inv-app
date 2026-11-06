@@ -17,7 +17,7 @@ import { countClock, spanWords } from './count-clock.js';
 import { idleConfig } from './idle.js';
 import { clockSchedule, offPeriods } from './clock-schedule.js';
 import { xlsx, heat } from '../util/xlsx.js';
-import { siteTimezone } from '../util/localtime.js';
+import { siteTimezone, localHour } from '../util/localtime.js';
 
 const parseList = (s) => { try { const v = JSON.parse(s || '[]'); return Array.isArray(v) ? v.map(norm).filter(Boolean) : []; } catch { return String(s || '').split(/[,;]\s*/).map(norm).filter(Boolean); } };
 const perHour = (n, ms) => (ms > 0 ? Math.round((n / (ms / 3600000)) * 10) / 10 : null);
@@ -57,13 +57,14 @@ export function crewMetrics(sessionId, at = Date.now()) {
   const aislesDone = db.prepare("SELECT team, COUNT(*) AS n FROM assignments WHERE session_id = ? AND status = 'done' GROUP BY team").all(id);
   const idleBy = new Map(idle.map((r) => [r.team, r.n])), sosBy = new Map(sos.map((r) => [r.team, r.n])), doneBy = new Map(aislesDone.map((r) => [r.team, r.n]));
 
-  const blank = () => ({ lines: 0, voided: 0, bins: new Set(), pallets: new Set(), empties: 0, overrides: 0, unknownPallets: 0, unknownBins: 0, offPlan: 0, duplicates: 0, secondCounts: 0, labelIssues: 0, comments: 0, times: [], first: null, last: null, teams: new Set(), devices: new Set() });
+  const blank = () => ({ lines: 0, voided: 0, bins: new Set(), pallets: new Set(), empties: 0, overrides: 0, unknownPallets: 0, unknownBins: 0, offPlan: 0, duplicates: 0, secondCounts: 0, labelIssues: 0, comments: 0, times: [], first: null, last: null, teams: new Set(), devices: new Set(), hours: new Map() });
   const tally = (acc, l) => {
     const t = Date.parse(l.scanned_at);
     acc.teams.add(l.team); acc.devices.add(l.device_id);
     if (Number.isFinite(t)) { acc.times.push(Math.min(t, at)); acc.first = acc.first == null ? t : Math.min(acc.first, t); acc.last = acc.last == null ? t : Math.max(acc.last, t); }
     if (l.voided) { acc.voided++; return; }
     acc.lines++;
+    if (Number.isFinite(t)) { const h = localHour(new Date(t)); acc.hours.set(h, (acc.hours.get(h) || 0) + 1); }
     acc.bins.add(l.location_code);
     if (!l.empty_bin) acc.pallets.add(l.pallet_id);
     if (l.empty_bin) acc.empties++;
@@ -84,6 +85,8 @@ export function crewMetrics(sessionId, at = Date.now()) {
   }
   for (const so of signons) { if (!teams.has(so.team)) teams.set(so.team, blank()); for (const b of parseList(so.employees)) { if (!persons.has(b)) persons.set(b, blank()); persons.get(b).teams.add(so.team); } }
 
+  /* the lines in each hour of the day, site time: the shape of the shift */
+  const byHour = (hours) => [...hours.entries()].sort((a, b) => a[0] - b[0]).map(([hour, lines]) => ({ hour, lines }));
   /* the rhythm: the typical seconds between one scan and the next, quiet spells left out */
   const rhythm = (times) => { const gaps = []; for (let i = 1; i < times.length; i++) { const g = times[i] - times[i - 1]; if (g > 0 && g <= gapMs) gaps.push(g / 1000); } return gaps.length ? Math.round(median(gaps)) : null; };
   const habits = (a) => {
@@ -123,6 +126,7 @@ export function crewMetrics(sessionId, at = Date.now()) {
       overrides: a.overrides, unknownPallets: a.unknownPallets, unknownBins: a.unknownBins, offPlan: a.offPlan, duplicates: a.duplicates,
       secondCounts: a.secondCounts, labelIssues: a.labelIssues, comments: a.comments,
       idleAlerts: idleBy.get(team) || 0, sos: sosBy.get(team) || 0, aislesDone: doneBy.get(team) || 0, devices: [...a.devices],
+      linesByHour: byHour(a.hours),
       habits: habits(a),
     };
   }).sort((x, y) => String(x.team).localeCompare(String(y.team), undefined, { numeric: true }));
@@ -152,7 +156,7 @@ export function crewMetrics(sessionId, at = Date.now()) {
       lines: a.lines, bins: a.bins.size, pallets: a.pallets.size, empties: a.empties, voided: a.voided,
       linesPerHour: perHour(a.lines, counting), binsPerHour: perHour(a.bins.size, counting), secondsBetweenScans: rhythm(ts),
       overrides: a.overrides, unknownPallets: a.unknownPallets, unknownBins: a.unknownBins, offPlan: a.offPlan, duplicates: a.duplicates,
-      secondCounts: a.secondCounts, labelIssues: a.labelIssues, comments: a.comments, habits: habits(a),
+      secondCounts: a.secondCounts, labelIssues: a.labelIssues, comments: a.comments, linesByHour: byHour(a.hours), habits: habits(a),
     };
   }).sort((x, y) => (x.name || x.badge).localeCompare(y.name || y.badge));
 
@@ -171,20 +175,21 @@ export function crewMetrics(sessionId, at = Date.now()) {
 
 const when = (s) => (s ? new Date(s).toLocaleString('en-US', { timeZone: siteTimezone(), month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '');
 const span = (ms) => (ms > 0 ? spanWords(ms) : ms === 0 ? '0 min' : '');
-export const TEAM_COLUMNS = ['Team', 'Shift', 'People', 'State', 'Started', 'Last activity', 'Time on count', 'Counting time', 'Quiet spells', 'Off-task', 'Off-task %', 'Longest spell', 'In breaks', 'Lines', 'Bins', 'Pallets', 'Empty bins', 'Lines an hour', 'Bins an hour', 'Seconds between scans', 'Overrides', 'Pallets off the list', 'Bins off the list', 'Outside the plan', 'Duplicates', 'Voided', 'Second counts', 'Labels not scanning', 'Comments', 'Stopped-scanning alerts', 'SOS', 'Aisles handed back', 'Habits'];
+export const hoursWords = (list) => (list || []).map((x) => `${String(x.hour).padStart(2, '0')}:00 ${x.lines}`).join(' · ');
+export const TEAM_COLUMNS = ['Team', 'Shift', 'People', 'State', 'Started', 'Last activity', 'Time on count', 'Counting time', 'Quiet spells', 'Off-task', 'Off-task %', 'Longest spell', 'In breaks', 'Lines', 'Bins', 'Pallets', 'Empty bins', 'Lines an hour', 'Bins an hour', 'Seconds between scans', 'Lines by hour', 'Overrides', 'Pallets off the list', 'Bins off the list', 'Outside the plan', 'Duplicates', 'Voided', 'Second counts', 'Labels not scanning', 'Comments', 'Stopped-scanning alerts', 'SOS', 'Aisles handed back', 'Habits'];
 export const teamRowsOut = (rows) => rows.map((t) => ({
   'Team': t.team, 'Shift': t.shift === '1' ? '1st' : t.shift === '2' ? '2nd' : t.shift, 'People': t.people.map((p) => p.name ? `${p.name} (${p.badge})` : p.badge).join('; '), 'State': t.state,
   'Started': when(t.started), 'Last activity': when(t.lastActive), 'Time on count': span(t.elapsedMs), 'Counting time': span(t.countingMs),
   'Quiet spells': t.spells, 'Off-task': span(t.offTaskMs), 'Off-task %': t.offTaskPct, 'Longest spell': span(t.longestSpellMs), 'In breaks': span(t.scheduledOffMs),
-  'Lines': t.lines, 'Bins': t.bins, 'Pallets': t.pallets, 'Empty bins': t.empties, 'Lines an hour': t.linesPerHour ?? '', 'Bins an hour': t.binsPerHour ?? '', 'Seconds between scans': t.secondsBetweenScans ?? '',
+  'Lines': t.lines, 'Bins': t.bins, 'Pallets': t.pallets, 'Empty bins': t.empties, 'Lines an hour': t.linesPerHour ?? '', 'Bins an hour': t.binsPerHour ?? '', 'Seconds between scans': t.secondsBetweenScans ?? '', 'Lines by hour': hoursWords(t.linesByHour),
   'Overrides': t.overrides, 'Pallets off the list': t.unknownPallets, 'Bins off the list': t.unknownBins, 'Outside the plan': t.offPlan, 'Duplicates': t.duplicates, 'Voided': t.voided,
   'Second counts': t.secondCounts, 'Labels not scanning': t.labelIssues, 'Comments': t.comments, 'Stopped-scanning alerts': t.idleAlerts, 'SOS': t.sos, 'Aisles handed back': t.aislesDone, 'Habits': t.habits,
 }));
-export const PERSON_COLUMNS = ['Clock-in number', 'Name', 'Department', 'Shift', 'Teams', 'Sign-ons', 'Signed on for', 'Counting time', 'Quiet spells', 'Off-task', 'Off-task %', 'Longest spell', 'First scan', 'Last scan', 'Lines', 'Bins', 'Pallets', 'Empty bins', 'Lines an hour', 'Bins an hour', 'Seconds between scans', 'Overrides', 'Pallets off the list', 'Bins off the list', 'Outside the plan', 'Duplicates', 'Voided', 'Second counts', 'Labels not scanning', 'Comments', 'Habits'];
+export const PERSON_COLUMNS = ['Clock-in number', 'Name', 'Department', 'Shift', 'Teams', 'Sign-ons', 'Signed on for', 'Counting time', 'Quiet spells', 'Off-task', 'Off-task %', 'Longest spell', 'First scan', 'Last scan', 'Lines', 'Bins', 'Pallets', 'Empty bins', 'Lines an hour', 'Bins an hour', 'Seconds between scans', 'Lines by hour', 'Overrides', 'Pallets off the list', 'Bins off the list', 'Outside the plan', 'Duplicates', 'Voided', 'Second counts', 'Labels not scanning', 'Comments', 'Habits'];
 export const personRowsOut = (rows) => rows.map((p) => ({
   'Clock-in number': p.badge, 'Name': p.name, 'Department': p.dept, 'Shift': p.shift === '1' ? '1st' : p.shift === '2' ? '2nd' : p.shift, 'Teams': p.teams.join(', '), 'Sign-ons': p.signons,
   'Signed on for': span(p.signedOnMs), 'Counting time': span(p.countingMs), 'Quiet spells': p.spells, 'Off-task': span(p.offTaskMs), 'Off-task %': p.offTaskPct, 'Longest spell': span(p.longestSpellMs),
-  'First scan': when(p.first), 'Last scan': when(p.last), 'Lines': p.lines, 'Bins': p.bins, 'Pallets': p.pallets, 'Empty bins': p.empties, 'Lines an hour': p.linesPerHour ?? '', 'Bins an hour': p.binsPerHour ?? '', 'Seconds between scans': p.secondsBetweenScans ?? '',
+  'First scan': when(p.first), 'Last scan': when(p.last), 'Lines': p.lines, 'Bins': p.bins, 'Pallets': p.pallets, 'Empty bins': p.empties, 'Lines an hour': p.linesPerHour ?? '', 'Bins an hour': p.binsPerHour ?? '', 'Seconds between scans': p.secondsBetweenScans ?? '', 'Lines by hour': hoursWords(p.linesByHour),
   'Overrides': p.overrides, 'Pallets off the list': p.unknownPallets, 'Bins off the list': p.unknownBins, 'Outside the plan': p.offPlan, 'Duplicates': p.duplicates, 'Voided': p.voided,
   'Second counts': p.secondCounts, 'Labels not scanning': p.labelIssues, 'Comments': p.comments, 'Habits': p.habits,
 }));

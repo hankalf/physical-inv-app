@@ -158,7 +158,8 @@
       '¿Puedes leer el número? Escríbelo si puedes — sigue siendo esa tarima.',
     'Type the bin code': 'Escribe el código de la ubicación', 'Type the pallet ID': 'Escribe el número de la tarima',
     'The line will be flagged so the label gets replaced.': 'La línea queda marcada para que se cambie la etiqueta.',
-    'Counting it as a pallet with no label': 'Se cuenta como tarima sin etiqueta',
+    'Counting it as a pallet with no label': 'Se cuenta como tarima sin etiqueta', 'No label — what is on it?': 'Sin etiqueta — ¿qué tiene?', 'That': 'Eso', 'Skip — count it as unknown': 'Saltar — contar como desconocida',
+    'Tap what is on it, or type it - then carry on as normal.': 'Toca lo que tiene, o escríbelo — y sigue como siempre.', 'Type what is on it, or skip - then carry on as normal.': 'Escribe lo que tiene, o salta — y sigue como siempre.',
     'Carry on as normal. It will be named after its bin, and a supervisor gets that bin on the relabel list.':
       'Sigue normal. Tomará el nombre de su ubicación, y un supervisor la tendrá en la lista para re-etiquetar.',
     'Empty bin': 'Ubicación vacía', 'Scan the location of the empty bin.': 'Escanea la ubicación vacía.',
@@ -329,6 +330,7 @@
   const T = (s) => tr(s);
   const PATTERNS = [
     [/^Step (\d+) of (\d+)$/, (m) => `Paso ${m[1]} de ${m[2]}`],
+    [/^No label - (.+)$/, (m) => `Sin etiqueta - ${m[1]}`],
     [/^This scanner is still signed on as team (\S+) \(since (.+)\)\. That team taps Sign off first, or a supervisor signs the scanner off from the dashboard\.$/, (m) => `Este escáner sigue con sesión del equipo ${m[1]} (desde ${m[2]}). Ese equipo toca Cerrar sesión primero, o un supervisor cierra la sesión del escáner desde el panel.`],
     [/^Back to (\S+)$/, (m) => `Volver a ${m[1]}`],
     [/^Switching to (\S+)…$/, (m) => `Cambiando a ${m[1]}…`],

@@ -71,10 +71,11 @@ await gun.waitForTimeout(1500);
 await gun.click('#btnNoScan'); await gun.waitForTimeout(300);
 await gun.click('#btnNoScanNone'); await gun.waitForTimeout(600);
 const said = clean(await gun.textContent('#scanMsg'));
-check('Gun: a pallet with no readable ID is still counted rather than skipped',
-  /no label/i.test(said), said.slice(0, 140));
-check('Gun: and it moves straight on to the quantity — the counter is holding a pallet',
-  /QUANTITY/.test(await prompt()), await prompt());
+check('Gun: a pallet with no readable ID is still counted rather than skipped, and the gun asks what is on it',
+  /no label/i.test(said) && await gun.isVisible('#noLabelWhat'), said.slice(0, 140));
+await gun.fill('#fNoLabelText', 'roll stock bags'); await gun.click('#btnNoLabelType'); await gun.waitForTimeout(500);
+check('Gun: said what it is, it moves on to the quantity — the counter is holding a pallet',
+  /QUANTITY/.test(await prompt()) && /No label - roll stock bags/.test(clean(await gun.textContent('#scanMsg'))), `${await prompt()} | ${clean(await gun.textContent('#scanMsg'))}`);
 await scan('42');
 await scan('F01A002');
 await gun.waitForTimeout(2200);

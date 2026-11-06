@@ -188,6 +188,18 @@
       <button id="btnNoScanType" class="ghost">I can read it — let me type it</button>
       <button id="btnNoScanNone" class="ghost">Nothing readable on it</button>
     </div>
+    <!-- a pallet with no label: what is on it, so the office can match it - roll stock, bagged product, anything unlabelled -->
+    <div class="emptyconfirm" id="noLabelWhat" hidden>
+      <div class="ecq">No label — what is on it?</div>
+      <div class="chips" id="noLabelItems"></div>
+      <div class="row">
+        <input id="fNoLabelText" class="sm" placeholder="Type what it is, e.g. roll stock bags" autocomplete="off">
+        <button class="ghost sm" id="btnNoLabelType">That</button>
+      </div>
+      <div class="row">
+        <button class="ghost sm" id="btnNoLabelSkip">Skip — count it as unknown</button>
+      </div>
+    </div>
     <div class="row" id="recountRow" hidden>
       <button id="btnRecountDone" class="primary">Bin done — nothing more here</button>
       <button id="btnRecountSkip" class="ghost">Leave for another team</button>

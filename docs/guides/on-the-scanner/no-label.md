@@ -14,13 +14,13 @@ A pallet with no readable label is still stock. You count it anyway, and the sca
 
 1. Scan the rack label as usual. The screen asks for the pallet.
 2. Tap **Label will not scan**.
-3. Tap **Nothing readable on it**. The scanner says *Counting it as a pallet with no label*.
-4. Count the cases and type the quantity as usual.
+3. Tap **Nothing readable on it**. The scanner says *Counting it as a pallet with no label* and asks **what is on it**: tap one of the items the report expects in that bin, or type it — *roll stock bags*, *bagged product* — or skip.
+4. Count what is on it and type the quantity as usual. For roll stock or bagged product with no pallet label, the quantity is the number of bags or rolls, as the report counts them.
 5. If something is wrong with the pallet itself, pick it on the comment step, or use **Report a problem**.
 
 ## What the office sees
 
-The pallet is saved as **NO-LABEL-** and the bin, for example *NO-LABEL-F01A004-1*. A second unlabeled pallet in the same bin is *-2*. The bin goes on **Reports → Fix list** under *Labels to replace*, and the office matches the pallet to what the report expected in that bin. When a label is printed and on the pallet, the office taps **Label printed & on the pallet**.
+The pallet is saved as **NO-LABEL-** and the bin, for example *NO-LABEL-F01A004-1*. A second unlabeled pallet in the same bin is *-2*. What you said is on it goes with the line — the item, when you tapped one, and the words in the comments — so the office can match it to the report instead of guessing. The bin goes on **Reports → Fix list** under *Labels to replace*, and the office matches the pallet to what the report expected in that bin. When a label is printed and on the pallet, the office taps **Label printed & on the pallet**.
 
 ## Do not
 

@@ -480,6 +480,18 @@
       </div>
       <div class="feedback" id="recountMsg"></div>
 
+      <!-- hand them out: every aisle with open second counts nobody has, a team box each, and one button that spreads them -->
+      <div class="handout" id="recHandout" hidden>
+        <div class="inline">
+          <div class="auto"><b>Hand out</b> <span class="muted" id="recHandoutSub"></span></div>
+          <div><label for="fHandTeams">Teams to spread them over</label><input id="fHandTeams" placeholder="7, 8, 9" title="Whole aisles go to one team, the biggest first to the team with the least on its plate; a team never gets a bin it counted first"></div>
+          <div class="auto"><button class="primary" id="btnHandSpread">Spread the open ones by aisle</button></div>
+        </div>
+        <div class="scroll" style="margin-top:8px"><table id="recHandTable"></table></div>
+        <div class="feedback" id="recHandMsg"></div>
+      </div>
+      <!-- how the finished ones came out -->
+      <div class="muted recresults" id="recResults" hidden></div>
       <!-- how each team is getting on: its open, started and done second counts, with a bar; click a team to see its rows -->
       <div class="recteams" id="recTeams" hidden></div>
 

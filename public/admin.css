@@ -1104,3 +1104,11 @@ td[data-full] { cursor: help; }
 .lvdone { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 4px 0 2px; font-size: 12px; }
 .lvdone .chip-btn.lv { padding: 2px 9px; font-size: 12px; min-width: 32px; }
 .lvdone .chip-btn.lv.selected { background: var(--ok, #1d572a); border-color: var(--ok, #1d572a); color: #fff; }
+
+/* second counts: hand out, and the results line */
+.handout { margin-top: 10px; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 10px; }
+.recresults { margin-top: 8px; font-size: 12.5px; }
+
+/* lines by hour: a bar an hour */
+.hbars { display: flex; align-items: flex-end; gap: 2px; height: 18px; }
+.hbars i { display: block; width: 5px; background: var(--accent); border-radius: 2px 2px 0 0; opacity: .85; }

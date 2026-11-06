@@ -40,6 +40,21 @@ check('It carries the headline numbers', d.pct > 0 && d.bins.total === 13673 && 
 check('It carries one row per team, with the aisle they are in', d.teams.length === 1 && d.teams[0].team === '1' && d.teams[0].aisle === 'F01' && d.teams[0].crew === 2,
   JSON.stringify(d.teams[0]));
 check('It counts the second counts that are open', d.recounts.open > 0, JSON.stringify(d.recounts));
+check('Every aisle carries its levels with how far each is', d.aisles.find((a) => a.aisle === 'F01').levels.length >= 3 && d.aisles.find((a) => a.aisle === 'F01').levels[0].level === 'A' && d.aisles.find((a) => a.aisle === 'F01').levels[0].pct > 0 && d.shiftNow && d.shiftNow.shift, JSON.stringify(d.aisles.find((a) => a.aisle === 'F01').levels));
+/* the wall shows the teams counting now on the shift that is on: a team that signed off, and the other shift's team, are not on it */
+{
+  const other = d.shiftNow.shift === '1' ? '2' : '1';
+  await fetch(`${BASE}/api/admin/people/teams`, { method: 'POST', headers: A, body: JSON.stringify({ name: '9', shift: other }) });
+  const d2 = await j(await fetch(`${BASE}/api/admin/devices`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'BOARD-09' }) }));
+  const D9 = { ...hdr, authorization: 'Device ' + (await j(await fetch(`${BASE}/api/devices/${d2.uid}`, { method: 'POST' }))).token };
+  await fetch(`${BASE}/api/sessions/${sess.id}/signon`, { method: 'POST', headers: D9, body: JSON.stringify({ team: '9', employees: ['E1009'], deviceId: 'BOARD-09' }) });
+  const d3 = await j(await fetch(`${BASE}/api/admin/devices`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'BOARD-05' }) }));
+  const D5 = { ...hdr, authorization: 'Device ' + (await j(await fetch(`${BASE}/api/devices/${d3.uid}`, { method: 'POST' }))).token };
+  await fetch(`${BASE}/api/sessions/${sess.id}/signon`, { method: 'POST', headers: D5, body: JSON.stringify({ team: '5', employees: ['E1005'], deviceId: 'BOARD-05' }) });
+  await fetch(`${BASE}/api/sessions/${sess.id}/signoff`, { method: 'POST', headers: D5, body: JSON.stringify({ team: '5', deviceId: 'BOARD-05' }) });
+  const dd = await j(await fetch(`${BASE}/api/board`));
+  check('Teams on the wall: the one counting on this shift; not team 9 on the other shift, not team 5 that signed off', dd.teams.map((t) => t.team).join() === '1' && dd.teamsHidden === 2, JSON.stringify({ shown: dd.teams.map((t) => t.team), hidden: dd.teamsHidden, shift: dd.shiftNow }));
+}
 check('It carries every aisle with its progress', d.aisles.length === 28 && d.aisles.some((a) => a.aisle === 'F01' && a.counted > 0),
   `${d.aisles.length} aisles`);
 
@@ -62,6 +77,7 @@ check('Board: /board serves it with no sign-in screen', (await page.$('#fPasswor
 check('Board: the headline percentage is on screen', Number(await page.textContent('#bPct')) > 0, await page.textContent('#bPct'));
 check('Board: the team row shows who is where', /F01/.test(await page.textContent('#bTeams')) && /just now|min ago/.test(await page.textContent('#bTeams')),
   clean(await page.textContent('#bTeams')).slice(0, 110));
+check('Board: the tiles carry each level and its percentage', /A \d+%/.test(clean(await page.textContent('.ai.active'))) && /B \d+%/.test(clean(await page.textContent('.ai.active'))), clean(await page.textContent('.ai.active')));
 check('Board: every aisle gets a tile, and the one being counted is marked',
   (await page.$$('.ai')).length === 28 && (await page.$$('.ai.active')).length === 1, `${(await page.$$('.ai')).length} tiles`);
 check('Board: it fits the screen without scrolling',
@@ -104,10 +120,10 @@ const cards = await browser.newPage({ viewport: { width: 1100, height: 1400 } })
 cards.on('pageerror', (e) => errors.push('cards: ' + e.message));
 await cards.goto(`${BASE}/api/admin/print/scanner-cards?t=${tok}`);
 await cards.waitForTimeout(1600);
-check('Cards: one per scanner, each with its own QR drawn', (await cards.$$('.card')).length === 3 && (await cards.$$('.qr img, .qr canvas')).length >= 3,
+check('Cards: one per scanner, each with its own QR drawn', (await cards.$$('.card')).length === 5 && (await cards.$$('.qr img, .qr canvas')).length >= 5,
   `${(await cards.$$('.card')).length} cards`);
 check('Cards: each carries its own enrolment link, and they differ',
-  new Set(await cards.$$eval('.url', (u) => u.map((x) => x.textContent))).size === 3);
+  new Set(await cards.$$eval('.url', (u) => u.map((x) => x.textContent))).size === 5);
 check('Cards: the link on the card is the one that actually enrols that scanner',
   (await cards.$$eval('.url', (u) => u.map((x) => x.textContent))).some((t) => t.includes(dev.uid)), dev.uid);
 check('Cards: they say what to do with them', /Add to Home screen/.test(await cards.textContent('body')));

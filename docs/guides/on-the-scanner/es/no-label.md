@@ -14,7 +14,7 @@ Una tarima sin etiqueta legible sigue siendo mercancía. La cuentas de todos mod
 
 1. Escanea la etiqueta del rack como siempre. La pantalla pide la tarima.
 2. Toca **La etiqueta no escanea**.
-3. Toca **No se puede leer nada**. El escáner dice *Se cuenta como tarima sin etiqueta*.
+3. Toca **No se puede leer nada**. El escáner dice *Se cuenta como tarima sin etiqueta* y pregunta **qué tiene**: toca uno de los artículos que el reporte espera en esa ubicación, o escríbelo — *bolsas de rollo*, *producto en bolsa* — o salta.
 4. Cuenta las cajas y escribe la cantidad como siempre.
 5. Si algo está mal con la tarima, escoge el motivo en el comentario, o usa **Reportar un problema**.
 

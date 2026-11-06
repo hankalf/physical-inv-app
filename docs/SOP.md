@@ -1906,6 +1906,13 @@ dashboard, big enough for the far wall), a row per team with what they are on, t
 hour and their downtime, and every aisle as a tile colored by state. It deliberately shows no
 pallet IDs and no clock-in numbers.
 
+**Teams counting** lists only the teams counting right now on the shift that is on (the shift
+times are the crew board's, under Settings): a team that signed off, went quiet, finished its
+plan, or belongs to the other shift is not on the wall, and the tile says which shift it is. A
+team with no shift set on Teams & crew is always shown. Each **aisle tile** carries its levels
+with how far each is — *A 100% · B 40% · C 0%* — amber while a level is part way, green when it
+is whole, so the wall shows the aisle being handed back a level at a time.
+
 It follows the newest open count on its own. To pin it to a particular one, add the
 session to the address: `/board?session=12`.
 
@@ -1995,6 +2002,15 @@ A second count is a bin somebody has to walk back to. They are raised automatica
 a line disagrees with the inventory report (subject to your thresholds), or by a
 supervisor.
 
+- **Hand out**, under the buttons, whenever open second counts have no team yet: a row an aisle
+  with how many are open, who counted it first (and so may not do the second), a team box and
+  **Give** — that aisle's open ones go to that team. Or type the teams in **Teams to spread them
+  over** (*7, 8, 9*) and press **Spread the open ones by aisle**: whole aisles go to one team, the
+  biggest first to the team with the least on its plate, a team never gets a bin it counted first,
+  and what no named team may do stays in the pool and is said.
+- **Results**, a line under that: how the finished bins came out — agreed with the first count
+  (the difference is real), agreed with the report (the first count was wrong), settled by a
+  third count, waiting for one, or agreed with neither.
 - **By team**, under the buttons: a card for each team with second counts — *3 of 10 done · 1 started
   · 6 to do* with a bar (green done, amber started) — and one for the pool nobody has yet. The team new
   second counts go to is marked. Click a card to see only that team's rows; click again for all.
@@ -2104,8 +2120,10 @@ in bins and lines an hour, the typical seconds between scans, and the habits a c
 pallets and bins off the list, bins counted outside the plan, duplicates, voids, labels that would not
 scan, second counts worked, stopped-scanning alerts and SOS calls, summed up in a word (*clean*, or what
 was seen). **Teams / People** switches the table; a person is credited with every line of the gun they
-were signed on to, with their hours from the sign-ons. Downloads as an Excel workbook (both sheets,
-off-task shaded) or as two CSVs, and *Export everything* carries *Crew - teams* and *Crew - people*.
+were signed on to, with their hours from the sign-ons. **By hour** is a bar an hour of the day — the
+shape of the shift at a glance, hover for the numbers; the files carry it as *Lines by hour*. Downloads
+as an Excel workbook (both sheets, off-task shaded) or as two CSVs, and *Export everything* carries
+*Crew - teams* and *Crew - people*.
 
 **Filed as the count goes.** The moment a team hands an aisle back, the app writes that aisle to
 disk — its count lines, the pallets expected or found in it, its bins, its second counts and

@@ -2350,15 +2350,42 @@
   /* Nothing readable at all: the pallet still gets counted, and is named after
      the bin it is in once that is known - NO-LABEL-F01A001-1 is a real thing
      somebody can walk to, which "unknown" is not. */
-  function noScanNone() {
+  async function noScanNone() {
     $('noScanRow').hidden = true;
     state.draft.labelIssue = 'none';
     state.draft.palletId = 'NO LABEL';          // the real name is made at commit, from the bin
     state.draft.unknownPallet = 1;
     state.draft.comments = [state.draft.comments, 'no readable label'].filter(Boolean).join('; ');
-    advance('warn', 'Counting it as a pallet with no label',
+    /* what is on it: roll stock, bagged product, a pallet whose label fell off -
+       the items the report expects in this bin are offered to tap, or it is
+       typed, so the office can match the pallet instead of guessing */
+    const bin = state.draft.location || '';
+    const items = bin ? (await wrap(tx('pal', 'readonly').getAll())).filter((p) => p.expLoc === bin && p.sku) : [];
+    const box = $('noLabelItems');
+    box.innerHTML = '';
+    const seen = new Set();
+    for (const p of items) {
+      if (seen.has(p.sku)) continue; seen.add(p.sku);
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'chip-btn'; b.dataset.noLabelSku = p.sku;
+      b.textContent = p.desc ? `${p.sku} · ${p.desc}` : p.sku;
+      b.onclick = () => noLabelPicked(p.sku, p.desc || p.sku);
+      box.appendChild(b);
+    }
+    $('fNoLabelText').value = '';
+    $('noLabelWhat').hidden = false;
+    feedback($('scanMsg'), 'warn', 'Counting it as a pallet with no label', items.length ? 'Tap what is on it, or type it - then carry on as normal.' : 'Type what is on it, or skip - then carry on as normal.');
+    try { $('fNoLabelText').focus({ preventScroll: true }); } catch { /* fine */ }
+  }
+  function noLabelPicked(sku, what) {
+    $('noLabelWhat').hidden = true;
+    if (sku) state.draft.sku = sku;
+    if (what) state.draft.comments = [state.draft.comments, `no label: ${what}`].filter(Boolean).join('; ');
+    advance('warn', `No label - ${what || 'unknown'}`,
       'Carry on as normal. It will be named after its bin, and a supervisor gets that bin on the relabel list.');
   }
+  $('btnNoLabelType').onclick = () => { const t = $('fNoLabelText').value.trim().slice(0, 80); noLabelPicked('', t); };
+  $('fNoLabelText').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('btnNoLabelType').click(); } });
+  $('btnNoLabelSkip').onclick = () => noLabelPicked('', '');
 
   /* The name for a pallet nobody could read: its bin, and which one in that bin
      it is, so two unlabeled pallets in the same rack do not collide. */
@@ -2389,7 +2416,7 @@
       recountId: state.recount ? state.recount.id : null,
       location: d.location,
       comments: d.comments || null,
-      sku: null,        // a blind count: the server fills it in from the report
+      sku: d.sku || null,   // a blind count: the server fills it in from the report; a pallet with no label may carry what the counter said is on it
       team: state.team,
       employees: state.employees,
       deviceId: state.deviceId,

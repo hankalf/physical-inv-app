@@ -1,6 +1,8 @@
-import { db } from '../db.js';
+import { db, norm } from '../db.js';
 import { progress } from './reports.js';
 import { countClock } from './count-clock.js';
+import { teamClocks, shiftOf } from './idle.js';
+import { shiftNow } from './crew-board.js';
 
 /*
  * The office board.
@@ -67,11 +69,30 @@ export function boardData(sessionId) {
     });
   }
 
+  /* The teams on the wall are the ones counting now, on the shift that is on:
+     a crew that signed off, went quiet or finished, or the other shift's teams,
+     are not what the office is watching. Teams with no shift set are shown. */
+  const now = shiftNow();
+  const shifts = shiftOf();
+  const clocks = new Map(teamClocks(session.id).map((c) => [String(c.team), c]));
+  const rows = [...teams.values()].map((t) => ({ ...t, shift: shifts.get(norm(t.team)) || '', state: (clocks.get(t.team) || {}).state || '' }));
+  const shown = rows.filter((t) => { const c = clocks.get(t.team); return c && c.working && (!t.shift || t.shift === now.shift); });
+  const hidden = rows.length - shown.length;
+
+  /* every level of every aisle, with how far it is: A 100%, B 40%, C 0% */
+  const levelRows = db.prepare(
+    `SELECT l.aisle, UPPER(TRIM(COALESCE(l.level, ''))) AS level, COUNT(*) AS bins,
+            SUM(CASE WHEN EXISTS (SELECT 1 FROM counts c WHERE c.session_id = l.session_id AND c.location_code = l.code AND c.voided = 0) THEN 1 ELSE 0 END) AS counted
+       FROM locations l WHERE l.session_id = ? AND TRIM(COALESCE(l.level, '')) != '' GROUP BY l.aisle, level ORDER BY l.aisle, level`).all(session.id);
+  const levelsBy = new Map();
+  for (const r of levelRows) { if (!levelsBy.has(r.aisle)) levelsBy.set(r.aisle, []); levelsBy.get(r.aisle).push({ level: r.level, bins: r.bins, counted: r.counted, pct: r.bins ? Math.round((r.counted / r.bins) * 100) : 0 }); }
+
   const aisles = p.byAisle
     .filter((a) => a.bins > 0)
     .map((a) => ({
       aisle: a.aisle, zone: a.zone || '', bins: a.bins, counted: a.bins_counted,
       active: a.active_detail || '', done: !!a.done_count,
+      levels: levelsBy.get(a.aisle) || [],
     }));
 
   const notes = db.prepare('SELECT id, text, by, at, updated_at FROM board_notes WHERE session_id = ? ORDER BY id').all(session.id);
@@ -95,7 +116,9 @@ export function boardData(sessionId) {
     recounts: { open: p.recounts_open, done: p.recounts_done },
     aislesDone: aisles.filter((a) => a.done).length,
     aislesTotal: aisles.length,
-    teams: [...teams.values()].sort((a, b) => String(a.team).localeCompare(String(b.team), undefined, { numeric: true })),
+    teams: shown.sort((a, b) => String(a.team).localeCompare(String(b.team), undefined, { numeric: true })),
+    teamsHidden: hidden,                     // signed on once, but stopped, finished, signed off or on the other shift
+    shiftNow: { shift: now.shift, label: now.label },
     aisles,
     /* the clock: how long the count has run, the downtime in it, the pace and
        when it will be done - team numbers only, like the rest of the board */

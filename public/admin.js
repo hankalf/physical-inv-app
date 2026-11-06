@@ -1211,6 +1211,8 @@
     rec.rows = rows;
     rec.thirdCol = thirdOn || rows.some((x) => Number(x.round) === 3);
     renderRecTeams(rows, rteam);
+    renderHandout(rows);
+    refreshRecResults().catch(() => {});
     recFillFilters();
     renderRecounts();
   }
@@ -2503,27 +2505,41 @@
     const num = (v) => cell(v == null || v === '' ? '—' : String(v));
     const off = (ms, pct) => { const td = cell(ms > 0 ? `${spanW(ms)} · ${pct}%` : '—'); if (pct >= 25) td.appendChild(tag('high')); else if (pct >= 10) td.appendChild(tag('some')); return td; };
     const habitsCell = (h) => { const td = cell(h, 'wrap'); if (h === 'clean') td.appendChild(tag('clean')); if (h.length > 28) td.dataset.full = h; return td; };
+    /* the lines in each hour of the day as a row of tiny bars: the shape of the shift at a glance */
+    const hoursCell = (list) => {
+      const td = document.createElement('td');
+      if (!list || !list.length) { td.textContent = '—'; return td; }
+      const max = Math.max(1, ...list.map((x) => x.lines));
+      const wrap = document.createElement('div'); wrap.className = 'hbars';
+      for (const x of list) {
+        const b = document.createElement('i'); b.style.height = `${Math.max(2, Math.round((x.lines / max) * 18))}px`;
+        b.title = `${String(x.hour).padStart(2, '0')}:00 · ${x.lines} line${x.lines === 1 ? '' : 's'}`; wrap.appendChild(b);
+      }
+      td.appendChild(wrap);
+      td.dataset.full = list.map((x) => `${String(x.hour).padStart(2, '0')}:00 ${x.lines}`).join(' · ');
+      return td;
+    };
     if (crewWho === 'teams') {
       table($('crewTable'),
-        [{ label: 'Team' }, { label: 'People' }, { label: 'State' }, { label: 'Time on count' }, { label: 'Counting' }, { label: 'Quiet spells' }, { label: 'Off-task' }, { label: 'Longest spell' }, { label: 'Lines' }, { label: 'Bins' }, { label: 'Bins / h' }, { label: 'Sec. between scans' }, { label: '2nd counts' }, { label: 'Alerts · SOS' }, { label: 'Habits' }],
+        [{ label: 'Team' }, { label: 'People' }, { label: 'State' }, { label: 'Time on count' }, { label: 'Counting' }, { label: 'Quiet spells' }, { label: 'Off-task' }, { label: 'Longest spell' }, { label: 'Lines' }, { label: 'Bins' }, { label: 'Bins / h' }, { label: 'Sec. between scans' }, { label: 'By hour' }, { label: '2nd counts' }, { label: 'Alerts · SOS' }, { label: 'Habits' }],
         d.teams,
         (r) => {
           const tr = document.createElement('tr'); tr.dataset.crewTeam = r.team;
           const people = cell(r.people.map((p) => p.name || p.badge).join(', ') || '—', 'wrap'); if (people.textContent.length > 28) people.dataset.full = people.textContent;
           const st = document.createElement('td'); st.appendChild(tag(r.state)); if (r.quietNow) st.append(' quiet now');
           tr.append(cell(r.team), people, st, num(spanW(r.elapsedMs)), num(spanW(r.countingMs)), num(r.spells), off(r.offTaskMs, r.offTaskPct), num(r.longestSpellMs ? spanW(r.longestSpellMs) : ''),
-            num(r.lines), num(r.bins), num(r.binsPerHour), num(r.secondsBetweenScans), num(r.secondCounts), num(`${r.idleAlerts} · ${r.sos}`), habitsCell(r.habits));
+            num(r.lines), num(r.bins), num(r.binsPerHour), num(r.secondsBetweenScans), hoursCell(r.linesByHour), num(r.secondCounts), num(`${r.idleAlerts} · ${r.sos}`), habitsCell(r.habits));
           return tr;
         }, 'No team has counted yet.');
     } else {
       table($('crewTable'),
-        [{ label: 'Person' }, { label: 'Teams' }, { label: 'Signed on' }, { label: 'Counting' }, { label: 'Quiet spells' }, { label: 'Off-task' }, { label: 'Longest spell' }, { label: 'Lines' }, { label: 'Bins' }, { label: 'Bins / h' }, { label: 'Sec. between scans' }, { label: '2nd counts' }, { label: 'Habits' }],
+        [{ label: 'Person' }, { label: 'Teams' }, { label: 'Signed on' }, { label: 'Counting' }, { label: 'Quiet spells' }, { label: 'Off-task' }, { label: 'Longest spell' }, { label: 'Lines' }, { label: 'Bins' }, { label: 'Bins / h' }, { label: 'Sec. between scans' }, { label: 'By hour' }, { label: '2nd counts' }, { label: 'Habits' }],
         d.people,
         (r) => {
           const tr = document.createElement('tr'); tr.dataset.crewBadge = r.badge;
           const who = cell(r.name || r.badge); if (r.name) who.appendChild(Object.assign(document.createElement('div'), { className: 'muted', textContent: `${r.badge}${r.dept ? ' · ' + r.dept : ''}` }));
           tr.append(who, cell(r.teams.join(', ')), num(`${spanW(r.signedOnMs) || '0 min'}${r.onNow ? ' · on now' : ''}`), num(spanW(r.countingMs)), num(r.spells), off(r.offTaskMs, r.offTaskPct), num(r.longestSpellMs ? spanW(r.longestSpellMs) : ''),
-            num(r.lines), num(r.bins), num(r.binsPerHour), num(r.secondsBetweenScans), num(r.secondCounts), habitsCell(r.habits));
+            num(r.lines), num(r.bins), num(r.binsPerHour), num(r.secondsBetweenScans), hoursCell(r.linesByHour), num(r.secondCounts), habitsCell(r.habits));
           return tr;
         }, 'Nobody has signed on yet.');
     }
@@ -2537,6 +2553,68 @@
   $('btnExportCrewXlsx').onclick = () => api.download(`/api/admin/sessions/${sessionId}/export/crew-metrics.xlsx`, `crew-metrics-session-${sessionId}.xlsx`).catch((err) => msg($('crewMsg'), 'err', err.message));
   $('btnExportCrewTeams').onclick = () => api.download(`/api/admin/sessions/${sessionId}/export/crew-teams.csv`, `crew-teams-session-${sessionId}.csv`);
   $('btnExportCrewPeople').onclick = () => api.download(`/api/admin/sessions/${sessionId}/export/crew-people.csv`, `crew-people-session-${sessionId}.csv`);
+
+  /* handing out: the aisles with open second counts nobody has yet */
+  function renderHandout(rows) {
+    const box = $('recHandout');
+    if (!box) return;
+    const pool = rows.filter((r) => r.status === 'open' && !r.team && r.reason !== 'CYCLE');
+    box.hidden = !pool.length;
+    if (box.hidden) return;
+    const byAisle = new Map();
+    for (const r of pool) { if (!byAisle.has(r.aisle)) byAisle.set(r.aisle, []); byAisle.get(r.aisle).push(r); }
+    $('recHandoutSub').textContent = `${pool.length} open second count${pool.length === 1 ? '' : 's'} nobody has yet, in ${byAisle.size} aisle${byAisle.size === 1 ? '' : 's'}`;
+    const can = api.can('assign');
+    $('btnHandSpread').disabled = !can;
+    table($('recHandTable'),
+      [{ label: 'Aisle' }, { label: 'Open, nobody yet' }, { label: 'First counted by' }, { label: 'Give to team' }, { label: '' }],
+      [...byAisle.entries()].sort((a, b) => b[1].length - a[1].length || String(a[0]).localeCompare(String(b[0]), undefined, { numeric: true })),
+      ([aisle, list]) => {
+        const tr = document.createElement('tr'); tr.dataset.handAisle = aisle;
+        const firsts = [...new Set(list.map((r) => r.first_team).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true }));
+        const inp = document.createElement('input'); inp.className = 'sm'; inp.style.width = '70px'; inp.placeholder = 'team'; inp.dataset.handTeam = aisle; inp.disabled = !can;
+        const go = button('Give', 'sm primary', async () => {
+          const team = inp.value.trim().toUpperCase();
+          if (!team) { inp.focus(); return; }
+          try {
+            const r = await postJson(`/api/admin/sessions/${sessionId}/recounts/bulk`, { ids: list.map((x) => x.id), action: 'assign', team });
+            msg($('recHandMsg'), r.skipped.length ? 'warn' : 'ok', `${r.changed} second count${r.changed === 1 ? '' : 's'} in ${aisle} handed to team ${team}.`, r.skipped.map((x) => `${x.bin}: ${x.why}`).join(' · '));
+            await refreshRecounts();
+          } catch (err) { msg($('recHandMsg'), 'err', err.message); }
+        });
+        go.disabled = !can;
+        inp.onkeydown = (e) => { if (e.key === 'Enter') go.click(); };
+        const tdIn = document.createElement('td'); tdIn.appendChild(inp);
+        const tdGo = document.createElement('td'); tdGo.appendChild(go);
+        tr.append(cell(aisle), cell(String(list.length)), cell(firsts.length ? `team ${firsts.join(', ')} - not them` : '—'), tdIn, tdGo);
+        return tr;
+      }, 'Every open second count has a team.');
+  }
+  $('btnHandSpread').onclick = async () => {
+    if (!needSession($('recHandMsg'))) return;
+    const teams = $('fHandTeams').value.trim();
+    if (!teams) { msg($('recHandMsg'), 'err', 'Which teams?', 'Type the teams to spread them over, e.g. 7, 8, 9.'); $('fHandTeams').focus(); return; }
+    try {
+      const r = await postJson(`/api/admin/sessions/${sessionId}/recounts/hand-out`, { teams });
+      msg($('recHandMsg'), r.left ? 'warn' : 'ok', `${r.assigned} second count${r.assigned === 1 ? '' : 's'} handed out: ${r.aisles.map((a) => `${a.aisle} → team ${a.team} (${a.n})${a.also ? ` + team ${a.also.team} (${a.also.n})` : ''}`).join(', ') || 'nothing to hand out'}.`, r.left ? `${r.left} left in the pool: every team named counted those bins first.` : '');
+      await refreshRecounts();
+    } catch (err) { msg($('recHandMsg'), 'err', err.message); }
+  };
+  /* how the finished ones came out */
+  async function refreshRecResults() {
+    const box = $('recResults');
+    if (!box || !sessionId) return;
+    const r = await apiJson(`/api/admin/sessions/${sessionId}/recounts/results`);
+    box.hidden = !r.done;
+    if (box.hidden) return;
+    const bits = [`${r.bins} bin${r.bins === 1 ? '' : 's'} finished`];
+    if (r.byFirst) bits.push(`${r.byFirst} agreed with the first count (the difference is real)`);
+    if (r.byReport) bits.push(`${r.byReport} agreed with the report (the first count was wrong)`);
+    if (r.byThird) bits.push(`${r.byThird} settled by a third count`);
+    if (r.thirdOpen) bits.push(`${r.thirdOpen} waiting for a third count`);
+    if (r.unsettled) bits.push(`${r.unsettled} agreed with neither`);
+    box.textContent = 'Results · ' + bits.join(' · ') + (r.open ? ` · ${r.open} still open` : '');
+  }
 
   /* second counts by team: how far each team is with the bins it has been
      handed - open, started, done - and the pool nobody has yet. A team's

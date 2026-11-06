@@ -49,8 +49,7 @@ import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions
 import {
   listRecounts, createRecount, generateFromVariances, autoAfterCounts, autoAfterAisle,
   tasksForTeam, takeRecount, finishRecount, updateRecount, deleteRecount, raiseThirdCount, thirdCountsForBins,
-  assignOpenToRecountTeam, reassignRecounts, bulkRecounts,
-} from './routes/recounts.js';
+  assignOpenToRecountTeam, reassignRecounts, bulkRecounts, handOutRecounts, recountResults } from './routes/recounts.js';
 import { generateBatch, previewBatch, binList, listBatches, deleteBatch, coverage, runSchedules, STRATEGIES, levelsOnOpenTasks } from './routes/cycles.js';
 import {
   listEmployees, upsertEmployee, updateEmployee, setGear, gearReport, deleteEmployee, importEmployees, importHelpers,
@@ -2176,6 +2175,17 @@ async function handleAdmin(req, res, url, m) {
     return sendJson(req, res, 200, out);
   }
   // the same change to many at once, from the dashboard's selection
+  // hand the open second counts out over teams, whole aisles to one team; and how the finished ones came out
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts\/hand-out$/)) && method === 'POST') {
+    requireAccess('assign');
+    const body = await readJson(req);
+    const out = handOutRecounts(m[1], body);
+    audit(actor, 'handed the open second counts out by aisle', `${out.assigned} to ${Object.entries(out.byTeam).filter(([, n]) => n).map(([t, n]) => `team ${t} (${n})`).join(', ') || 'nobody'}${out.left ? `, ${out.left} left in the pool` : ''}`, m[1]);
+    return sendJson(req, res, 200, out);
+  }
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts\/results$/)) && method === 'GET') {
+    return sendJson(req, res, 200, recountResults(m[1]));
+  }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts\/bulk$/)) && method === 'POST') {
     requireAccess('assign');
     const body = await readJson(req);
