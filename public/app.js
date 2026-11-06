@@ -1690,9 +1690,10 @@
     if (!a || !a.active || !Array.isArray(a.bins)) return null;
     const redo = redoBinCode();
     if (redo) return redo;
-    // a.bins is the assigned aisle and levels already; code order is 001, 002, 003 ... - or from the far end back
-    const ordered = [...a.bins].sort((x, y) => String(x).localeCompare(String(y), undefined, { numeric: true }));
-    if (a.active.direction === 'down') ordered.reverse();
+    /* a.bins is the assigned aisle and levels already, in the order the office set
+       for the aisle (a level at a time, a bay at a time, a snake) and from the far
+       end back when the plan says so: the server's order, followed as given */
+    const ordered = [...a.bins];
     /* forward first: the next unfinished bin after the last one this gun counted,
        so a bin the team walked past (the report expects two, one was there) does
        not drag them back mid-aisle - it comes up again at the end, as "Go back to" */
@@ -1705,8 +1706,7 @@
   function passedBins() {
     const a = state.assignment;
     if (!a || !a.active || !Array.isArray(a.bins)) return [];
-    const ordered = [...a.bins].sort((x, y) => String(x).localeCompare(String(y), undefined, { numeric: true }));
-    if (a.active.direction === 'down') ordered.reverse();
+    const ordered = [...a.bins];
     const at = ordered.indexOf(state.lastBin);
     return at > 0 ? ordered.slice(0, at).filter((b) => !binFinished(b)) : [];
   }

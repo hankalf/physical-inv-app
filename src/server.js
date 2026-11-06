@@ -44,7 +44,7 @@ import { features, saveFeatures, FEATURES, PRESETS, offNames } from './routes/fe
 import { inventoryOverview } from './routes/inventory-control.js';
 import { withEntries, markEntered, markFromFile, worksheetRows, WORKSHEET_COLUMNS, withErpMarks } from './routes/erp-entries.js';
 import {
-  aisleOverview, listAssignments, setBlock, autoBlock, queueAssignments,
+  aisleOverview, listAssignments, setBlock, setWalk, WALKS, autoBlock, queueAssignments,
   setAssignmentStatus, deleteAssignment, reorderAssignments, teamStatus, applyLayoutBlocks, partnerOf, planRows, planTeams, PLAN_COLUMNS, planNext, markLevelDone } from './routes/assignments.js';
 import { sourcesOf, progress, palletReport, uncountedBins, rawCounts, exceptions, mapData, findLot, labelsToReplace, fixLabel, movedPallets, movedRows, MOVED_COLUMNS, flaggedLines, valueReconciliation, VALUE_COLUMNS } from './routes/reports.js';
 import {
@@ -1193,6 +1193,18 @@ async function handleAdmin(req, res, url, m) {
     return send(req, res, 200, floorLabels(m[1], barcodeSvg, { countName: sess.name }), { 'content-type': 'text/html; charset=utf-8' });
   }
 
+  // how an aisle is walked: a level at a time, a bay at a time, or a snake
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/aisles\/walk$/)) && method === 'POST') {
+    const body = await readJson(req);
+    const updates = Array.isArray(body) ? body : [body];
+    for (const u of updates) {
+      if (!norm(u.aisle)) throw httpError(400, 'aisle required');
+      if (!WALKS.includes(String(u.walk || '').toLowerCase())) throw httpError(400, `walk must be one of ${WALKS.join(', ')}`);
+      setWalk(m[1], u.aisle, u.walk);
+    }
+    audit(actor, 'set the walk order', updates.map((u) => `${norm(u.aisle)}: ${String(u.walk).toLowerCase()}`).join(', '), m[1]);
+    return sendJson(req, res, 200, aisleOverview(m[1]));
+  }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/aisles\/block$/)) && method === 'POST') {
     const body = await readJson(req);
     const updates = Array.isArray(body) ? body : [body];

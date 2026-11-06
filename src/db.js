@@ -532,6 +532,8 @@ if (!hasCol('sessions', 'recount_wrong_bin')) db.exec('ALTER TABLE sessions ADD 
 if (!hasCol('sessions', 'bin_mode')) db.exec("ALTER TABLE sessions ADD COLUMN bin_mode TEXT NOT NULL DEFAULT 'warn'");
 /* sign-on held until the count-day check has no red item: nobody counts into a count that is not set up */
 if (!hasCol('sessions', 'hold_until_ready')) db.exec('ALTER TABLE sessions ADD COLUMN hold_until_ready INTEGER NOT NULL DEFAULT 0');
+/* how an aisle is walked: a level at a time (default), a bay at a time (every level of a bay before the next), or a snake (a level up, the next back) */
+if (!hasCol('aisles', 'walk')) db.exec("ALTER TABLE aisles ADD COLUMN walk TEXT NOT NULL DEFAULT 'level'");
 if (!hasCol('pallets', 'abc')) db.exec('ALTER TABLE pallets ADD COLUMN abc TEXT');
 /* The report's unit cost and amount (quantity × cost): a difference is read in
    money as well as cases, and the thresholds below can be set in money. */

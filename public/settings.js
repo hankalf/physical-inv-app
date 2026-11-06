@@ -1431,7 +1431,7 @@
   /* ------------------------------------------------------------ aisles & blocks */
   function renderAisles(aisles) {
     table($('aisleTable'),
-      [{ label: 'Aisle' }, { label: 'Block' }, { label: 'Bins', num: true }, { label: 'Counted', num: true }, { label: 'Progress' }, { label: 'Status' }],
+      [{ label: 'Aisle' }, { label: 'Block' }, { label: 'Walk' }, { label: 'Bins', num: true }, { label: 'Counted', num: true }, { label: 'Progress' }, { label: 'Status' }],
       aisles,
       (a) => {
         const tr = document.createElement('tr');
@@ -1447,7 +1447,24 @@
           catch (err) { msg($('aisleMsg'), 'err', err.message); }
         };
         tdBlock.appendChild(inp);
-        tr.append(tdBlock, cell(a.bins, 'num'), cell(a.bins_counted, 'num'));
+        /* how the gun walks the aisle: a level at a time, a bay at a time, or a snake */
+        const tdWalk = document.createElement('td');
+        if (!a.floor) {
+          const sel = document.createElement('select');
+          sel.className = 'sm';
+          sel.dataset.walk = a.aisle;
+          sel.title = 'The order the scanner leads a team through this aisle';
+          for (const [v, l] of [['level', 'A level at a time'], ['bay', 'A bay at a time'], ['snake', 'Snake: a level up, the next back']]) {
+            const o = document.createElement('option'); o.value = v; o.textContent = l; sel.appendChild(o);
+          }
+          sel.value = a.walk || 'level';
+          sel.onchange = async () => {
+            try { renderAisles(await api.post(`/api/admin/sessions/${sessionId}/aisles/walk`, { aisle: a.aisle, walk: sel.value })); clearMsg($('aisleMsg')); }
+            catch (err) { msg($('aisleMsg'), 'err', err.message); }
+          };
+          tdWalk.appendChild(sel);
+        } else tdWalk.textContent = '—';
+        tr.append(tdBlock, tdWalk, cell(a.bins, 'num'), cell(a.bins_counted, 'num'));
         const td = document.createElement('td');
         const bar = document.createElement('div'); bar.className = 'bar';
         const i = document.createElement('i'); i.style.width = (a.bins ? Math.round((a.bins_counted / a.bins) * 100) : 0) + '%';

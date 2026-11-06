@@ -58,6 +58,7 @@ export function aisleOverview(sessionId) {
     .prepare(
       `SELECT a.aisle,
               a.block,
+              COALESCE(a.walk, 'level') AS walk,
               (SELECT l.zone FROM locations l
                 WHERE l.session_id = a.session_id AND l.aisle = a.aisle AND COALESCE(l.zone, '') != ''
                 GROUP BY l.zone ORDER BY COUNT(*) DESC LIMIT 1) AS zone,
@@ -194,6 +195,49 @@ export function partnerOf(sessionId, row) {
   return db.prepare("SELECT team, levels, direction, face FROM assignments WHERE session_id = ? AND aisle = ? AND status = 'active' AND team != ?")
     .all(Number(sessionId), row.aisle, row.team)
     .find((r) => levelsOverlap(r.levels, row.levels) && facesOverlap(r.face, row.face) && cleanDirection(r.direction) !== cleanDirection(row.direction)) || null;
+}
+
+/* ---- the walk order of an aisle: the order the gun leads a team through its bins */
+export const WALKS = ['level', 'bay', 'snake'];
+export const cleanWalk = (w) => (WALKS.includes(String(w || '').toLowerCase()) ? String(w).toLowerCase() : 'level');
+export function aisleWalk(sessionId, aisle) {
+  const r = db.prepare('SELECT walk FROM aisles WHERE session_id = ? AND aisle = ?').get(Number(sessionId), norm(aisle));
+  return cleanWalk(r && r.walk);
+}
+export function setWalk(sessionId, aisle, walk) {
+  db.prepare(
+    `INSERT INTO aisles (session_id, aisle, block, walk) VALUES (?, ?, ?, ?)
+     ON CONFLICT(session_id, aisle) DO UPDATE SET walk = excluded.walk`
+  ).run(Number(sessionId), norm(aisle), norm(aisle), cleanWalk(walk));
+}
+const BAY_SIZE = 4; // pallet positions in a bay: 001-004, 005-008, ...
+/**
+ * Bins in walking order. 'level': 001, 002, 003 ... along level A, then B, then C.
+ * 'bay': every level of the first bay (A001-A004, B001-B004, C001-C004), then the
+ * next bay - the team clears a bay before it moves along. 'snake': a level at a
+ * time, but the next level walked back the way they came, so nobody walks an
+ * empty aisle to start the next level. A code that does not parse goes last.
+ */
+export function walkOrder(bins, walk = 'level') {
+  const nat = (a, b) => String(a).localeCompare(String(b), undefined, { numeric: true });
+  const w = cleanWalk(walk);
+  const parsed = bins.map((code) => { const p = parseBinCode(code); const pos = Number(p.bay); return { code, level: p.level || '', pos: Number.isFinite(pos) ? pos : null }; });
+  if (w === 'bay') {
+    return parsed.sort((a, b) => {
+      if (a.pos == null || b.pos == null) return a.pos == null && b.pos == null ? nat(a.code, b.code) : a.pos == null ? 1 : -1;
+      const ba = Math.ceil(a.pos / BAY_SIZE), bb = Math.ceil(b.pos / BAY_SIZE);
+      return ba - bb || nat(a.level, b.level) || a.pos - b.pos || nat(a.code, b.code);
+    }).map((x) => x.code);
+  }
+  const byLevel = [...bins].sort(nat);
+  if (w !== 'snake') return byLevel;
+  const levels = [...new Set(parsed.map((x) => x.level))].sort(nat);
+  const out = [];
+  levels.forEach((lv, i) => {
+    const run = byLevel.filter((code) => (parseBinCode(code).level || '') === lv);
+    out.push(...(i % 2 ? run.reverse() : run));
+  });
+  return out;
 }
 
 export function setBlock(sessionId, aisle, block) {
@@ -430,10 +474,10 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
     // one face of the racking only, when the aisle is split between two teams
     const inFace = (code) => !active.face || faceOfCode(code) === active.face;
     // in walking order: PRYSTG#2 before PRYSTG#10, as the numbers read
-    bins = db
+    const walk = aisleWalk(id, active.aisle);
+    bins = walkOrder(db
       .prepare('SELECT code, level FROM locations WHERE session_id = ? AND aisle = ? ORDER BY code')
-      .all(id, active.aisle).filter((r) => inLevels(r.level) && inFace(r.code)).map((r) => r.code)
-      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+      .all(id, active.aisle).filter((r) => inLevels(r.level) && inFace(r.code)).map((r) => r.code), walk);
     /* only the bins nobody had counted when this started: the gaps, as listed then */
     let gaps = null;
     if (active.only_uncounted) {
@@ -442,7 +486,7 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
       const set = new Set(gaps);
       bins = bins.filter((b) => set.has(b));
     }
-    // from the far end: the walk starts at the last bin
+    // from the far end: the walk starts at the last bin (the order is the server's: the gun follows it as given)
     if (cleanDirection(active.direction) === 'down') bins.reverse();
     /* How many pallet tags each bin already has, from any scanner, so a second
        device on the same team sees the same picture - and so the handheld knows
@@ -492,6 +536,7 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
     active: active ? {
       id: active.id, aisle: active.aisle, levels: active.levels, zone: zoneOf(active.aisle), startedAt: active.started_at,
       direction: cleanDirection(active.direction),
+      walk: aisleWalk(id, active.aisle),
       // one side of the racking only ('' = both), and what the site calls it
       face: active.face || '', faceLabel: faceLabel(id, active.face),
       // the levels already handed back, and the ones still to count

@@ -512,6 +512,14 @@ reliable than counting aisles off by hand.
 
 *Aisles paired into racking blocks. F01+F02 share racking, so only one team works that block at a time.*
 
+**Walk order.** The same table has a **Walk** column: the order the scanner leads a team through
+that aisle. *A level at a time* (the default) goes 001, 002, 003 … along level A, then B, then C.
+*A bay at a time* clears every level of a bay — A001–A004, B001–B004, C001–C004 — before moving
+along, for a team with a reach truck that works a bay and moves on. *Snake* is a level at a time
+with the next level walked back the way they came, so nobody walks an empty aisle to start the
+next level. **From the far end** on the plan still reverses whichever order the aisle has. Change
+it any time; a scanner on the aisle picks it up within a minute. Floor areas have no walk order.
+
 ### Step 8 — Register the scanners
 
 **Settings → Scanners → Scanner setup.**
