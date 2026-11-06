@@ -78,7 +78,24 @@ await page.waitForTimeout(1200);
 check('Board: when it cannot reach the server it keeps the last numbers and says so',
   (await page.textContent('#bPct')) === before, `still ${await page.textContent('#bPct')}%`);
 await page.unroute('**/api/board*');
+check('Board: no banner and no confetti while bins are left', await page.isHidden('#bFun'));
 await page.close();
+
+/* ---------------- the end: 100% ---------------- */
+const tiny = await j(await fetch(`${BASE}/api/admin/sessions`, { method: 'POST', headers: A, body: JSON.stringify({ name: 'board finished' }) }));
+await fetch(`${BASE}/api/admin/sessions/${tiny.id}/master?kind=bins`, { method: 'POST', headers: csv, body: 'Bin Location\nZ01A001\nZ01A002\n' });
+await fetch(`${BASE}/api/sessions/${tiny.id}/signon`, { method: 'POST', headers: D, body: JSON.stringify({ team: '1', employees: ['E1001'], deviceId: 'BOARD-01' }) });
+await fetch(`${BASE}/api/sessions/${tiny.id}/counts`, { method: 'POST', headers: D, body: JSON.stringify([
+  { clientId: 'z1', palletId: 'Z-1', qty: 5, location: 'Z01A001', team: '1', employees: ['E1001'], deviceId: 'BOARD-01' },
+  { clientId: 'z2', palletId: 'Z-2', qty: 5, location: 'Z01A002', team: '1', employees: ['E1001'], deviceId: 'BOARD-01' }]) });
+const fin = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+fin.on('pageerror', (e) => errors.push('finished: ' + e.message));
+await fin.goto(`${BASE}/board?session=${tiny.id}`);
+await fin.waitForTimeout(2200);
+check('Board at 100%: the banner is up and says 100%', await fin.isVisible('#bFun') && /100%/.test(clean(await fin.textContent('#bFun .big'))) && /wrap/.test(clean(await fin.textContent('#bFunTxt'))) && /2 bins/.test(clean(await fin.textContent('#bFunSub'))), clean(await fin.textContent('#bFun')));
+check('…and the confetti canvas is drawing', await fin.isVisible('#bConfetti') && await fin.evaluate(() => { const c = document.getElementById('bConfetti'); return c.width > 0 && c.height > 0; }));
+await fin.screenshot({ path: `${S}screenshots/board-100.png` });
+await fin.close();
 
 /* ---------------- the printed setup cards ---------------- */
 for (const n of ['BOARD-02', 'BOARD-03']) await fetch(`${BASE}/api/admin/devices`, { method: 'POST', headers: A, body: JSON.stringify({ name: n }) });

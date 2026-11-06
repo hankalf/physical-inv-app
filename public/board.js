@@ -199,6 +199,7 @@
       ? `${last.by ? last.by + ' · ' : ''}${new Date(last.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
       : '';
     $('bPct').textContent = d.pct;
+    celebrate(d);
     $('bOf').textContent = `${n(d.pallets.found)} of ${n(d.pallets.total)} listed pallets found`;
     $('bBar').style.width = d.pct + '%';
     $('bBarText').textContent = `${n(d.bins.counted)} of ${n(d.bins.total)} bins`;
@@ -210,6 +211,44 @@
     tiles(d);
     teams(d);
     aisles(d);
+  }
+
+  /* ---- the end: every bin has a count. A banner, and confetti once. ---- */
+  let partied = false;
+  function celebrate(d) {
+    const done = d.bins && d.bins.total > 0 && d.bins.counted >= d.bins.total;
+    $('bFun').hidden = !done;
+    if (!done) { partied = false; return; }
+    $('bFunSub').textContent = `${n(d.bins.total)} bins · ${d.aislesDone} of ${d.aislesTotal} aisles handed back${d.clock && d.clock.started ? ' · ' + (d.clock.running ? 'on the clock since ' + at(d.clock.started) : 'took ' + spanWords(d.clock.elapsedMs)) : ''}`;
+    if (partied) return;
+    partied = true;
+    confetti();
+  }
+  function spanWords(ms) { const m = Math.round(ms / 60000); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min`; }
+  function confetti() {
+    const cv = $('bConfetti');
+    if (!cv || !cv.getContext) return;
+    cv.hidden = false;
+    const ctx = cv.getContext('2d');
+    const fit = () => { cv.width = window.innerWidth; cv.height = window.innerHeight; };
+    fit();
+    const colors = ['#3fcf68', '#ffd54a', '#4f9cff', '#ff7b7b', '#b388ff', '#ffffff'];
+    const bits = Array.from({ length: 220 }, () => ({
+      x: Math.random() * cv.width, y: -20 - Math.random() * cv.height * 0.5, w: 6 + Math.random() * 8, h: 8 + Math.random() * 10,
+      vx: (Math.random() - 0.5) * 2.2, vy: 2 + Math.random() * 3.5, rot: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.25, c: colors[Math.floor(Math.random() * colors.length)],
+    }));
+    const t0 = Date.now();
+    const tick = () => {
+      const t = (Date.now() - t0) / 1000;
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      for (const b of bits) {
+        b.x += b.vx + Math.sin(t * 2 + b.y / 60) * 0.6; b.y += b.vy; b.rot += b.vr;
+        if (b.y > cv.height + 20 && t < 7) { b.y = -20; b.x = Math.random() * cv.width; }
+        ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.rot); ctx.fillStyle = b.c; ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); ctx.restore();
+      }
+      if (t < 9) requestAnimationFrame(tick); else { ctx.clearRect(0, 0, cv.width, cv.height); cv.hidden = true; }
+    };
+    requestAnimationFrame(tick);
   }
 
   function clock(ok) {

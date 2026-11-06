@@ -89,6 +89,14 @@
   .bnote .txt .line + .line { margin-top: .25em; }
   .bnote .txt { font-size: clamp(18px, 2.2vw, 38px); font-weight: 800; color: #ffd479; line-height: 1.15; }
   .bnote .who { margin-left: auto; color: var(--muted); font-size: clamp(11px, 1vw, 15px); font-weight: 600; white-space: nowrap; }
+
+  /* the end: every bin has a count */
+  .bfun { display: flex; align-items: center; gap: 2vw; background: linear-gradient(90deg, #1b4332, #2d6a4f 50%, #1b4332); border: 2px solid var(--ok); border-radius: var(--radius); padding: 1.6vh 2vw; animation: bfun-in .8s ease-out; }
+  .bfun .big { font-size: clamp(40px, 6vw, 96px); font-weight: 900; letter-spacing: -.03em; color: #b7f5c8; line-height: 1; }
+  .bfun .txt { font-size: clamp(18px, 2.4vw, 40px); font-weight: 800; color: #fff; }
+  .bfun .sub { font-size: clamp(12px, 1.1vw, 18px); color: #cfe9d6; font-weight: 600; margin-top: .3em; }
+  @keyframes bfun-in { from { transform: scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+  #bConfetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
 </style>
 </head>
 <body>
@@ -99,6 +107,12 @@
     <span class="sess" id="bSession"></span>
     <span class="clock" id="bClock"></span>
   </div>
+
+  <div class="bfun" id="bFun" hidden>
+    <div class="big">100%</div>
+    <div><div class="txt" id="bFunTxt">Every bin has a count — that's a wrap!</div><div class="sub" id="bFunSub"></div></div>
+  </div>
+  <canvas id="bConfetti" hidden></canvas>
 
   <div class="bnote" id="bNote" hidden>
     <div class="txt" id="bNoteText"></div>
