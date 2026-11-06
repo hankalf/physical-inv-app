@@ -59,7 +59,7 @@ await count('P6', 'F01A006');
 check('At the end of the aisle it brings the team back: "Go back to F01A002 · passed earlier · 2 to go back to"', /Go back to\s*F01A002/.test(await banner()) && /passed earlier · 2 to go back to/.test(await banner()), await banner());
 await gun.click('#btnBinDone').catch(() => {});   // not offered here: Go back to has a Skip instead
 /* skip one of them: a reason, the fix list, the guide moves on */
-check('A Skip this bin button is offered on the guide', await gun.isVisible('#btnBinSkip'));
+check('A small Skip is offered on the guide', await gun.isVisible('#btnBinSkip') && clean(await gun.textContent('#btnBinSkip')) === 'Skip');
 await gun.click('#btnBinSkip'); await gun.waitForTimeout(200);
 check('…tapping it shows the reasons', await gun.isVisible('#binSkipReasons') && (await gun.locator('#binSkipReasons button[data-skip-reason]').count()) === 4);
 await gun.click('#binSkipReasons button[data-skip-reason="Cannot reach it"]'); await gun.waitForTimeout(1200);

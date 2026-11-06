@@ -8,12 +8,12 @@ The guide at the top of the counting screen walks the aisle with you. A bin you 
 
 ![](../../images/gun-skip-bin.png)
 
-*Skip this bin: pick why, and the guide moves on.*
+*Skip, on the guide's progress line: pick why, and the guide moves on.*
 
 ## What to do
 
-1. Tap **Skip this bin** on the guide.
-2. Pick why: **Cannot reach it**, **Blocked — trailer, forklift or stock in the way**, **No bin or no label where the list says**, or **Will come back to it**.
+1. Tap the small **Skip** beside the progress count on the guide.
+2. Pick why: **Cannot reach it**, **Blocked** (a trailer, a forklift, stock in the way), **No bin or label here**, or **Will come back**.
 3. The guide moves on to the next bin. The scanner says *F01A005 skipped*.
 4. At the end of the aisle the guide names what you skipped. Go back if you can — counting the bin takes it off the list.
 5. If you walked past a bin without finishing it, the guide brings it up at the end as **Go back to**.

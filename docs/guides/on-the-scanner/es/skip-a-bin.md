@@ -8,12 +8,12 @@ La guía arriba de la pantalla de conteo recorre el pasillo contigo. Una ubicaci
 
 ![](../../../images/gun-skip-bin-es.png)
 
-*Saltar esta ubicación: escoge por qué, y la guía sigue.*
+*Saltar, en la línea de avance de la guía: escoge por qué, y la guía sigue.*
 
 ## Qué hacer
 
-1. Toca **Saltar esta ubicación** en la guía.
-2. Escoge por qué: **No la alcanzo**, **Bloqueada — tráiler, montacargas o producto estorba**, **No hay ubicación ni etiqueta donde dice la lista**, o **Vuelvo después**.
+1. Toca el pequeño **Saltar** junto al contador de avance de la guía.
+2. Escoge por qué: **No la alcanzo**, **Bloqueada** (un tráiler, un montacargas, producto que estorba), **No hay ubicación ni etiqueta aquí**, o **Vuelvo después**.
 3. La guía pasa a la siguiente ubicación. El escáner dice *F01A005 saltada*.
 4. Al final del pasillo la guía dice cuáles saltaste. Regresa si puedes — contar la ubicación la quita de la lista.
 5. Si pasaste una ubicación sin terminarla, la guía te la muestra al final como **Regresa a**.

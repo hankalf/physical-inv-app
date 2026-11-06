@@ -134,7 +134,7 @@
     'SOS — I need help': 'SOS — necesito ayuda',
     'Take your time — tap Skip or press Enter when done': 'Con calma — toca Saltar o Enter al terminar',
     'Still in this bin': 'Sigues en esta ubicación', 'Next bin': 'Siguiente ubicación',
-    'Nothing more here →': 'No hay más aquí →', 'Skip this bin': 'Saltar esta ubicación', 'Cannot reach it': 'No la alcanzo', 'Blocked - trailer, forklift or stock in the way': 'Bloqueada — tráiler, montacargas o producto estorba', 'No bin or no label where the list says': 'No hay ubicación ni etiqueta donde dice la lista', 'Will come back to it': 'Vuelvo después', 'passed earlier': 'pasada antes', 'passed': 'pasadas',
+    'Nothing more here →': 'No hay más aquí →', 'Skip': 'Saltar', 'Cannot reach it': 'No la alcanzo', 'Blocked': 'Bloqueada', 'No bin or label here': 'No hay ubicación ni etiqueta aquí', 'Will come back': 'Vuelvo después', 'passed earlier': 'pasada antes', 'passed': 'pasadas',
     'Your aisle': 'Tu pasillo', 'Pallet': 'Tarima', 'Qty': 'Cant.', 'Bin': 'Ubicación', 'Scanned': 'Escaneado',
     'Now enter what you count': 'Ahora escribe lo que cuentas',
     'Not in the pallet list': 'No está en la lista de tarimas',

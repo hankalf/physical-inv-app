@@ -1461,8 +1461,8 @@ to find before they walk on.
   aisle turns amber, **Go back to F01A003 · passed earlier · 2 to go back to**, until each is counted,
   recorded empty, or skipped. Tags the team's other gun counts arrive while counting, every twenty
   seconds, so the guide does not wait in a bin the other gun has already finished.
-- **Skip this bin** sits on the guide for a bin that cannot be counted now: tap it and pick why -
-  *Cannot reach it*, *Blocked*, *No bin or no label where the list says*, *Will come back to it*. The
+- **Skip**, a small link on the guide's progress line, is for a bin that cannot be counted now: tap it
+  and pick why - *Cannot reach it*, *Blocked*, *No bin or label here*, *Will come back*. The
   guide moves on, and the skip goes on the **Fix list** as a blocked bin with the reason and the team,
   so the office knows which bins still need somebody. The end-of-aisle banner names what was skipped;
   counting the bin later takes it off. A bin that is simply empty is **Bin is EMPTY**, not a skip.

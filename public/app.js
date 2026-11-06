@@ -1644,7 +1644,7 @@
      pointing at it all the way down the aisle. The skip goes on the fix list
      with its reason, queued like any report, so the office knows which bins
      still need somebody; and a line counted there later takes it off. */
-  const SKIP_REASONS = ['Cannot reach it', 'Blocked - trailer, forklift or stock in the way', 'No bin or no label where the list says', 'Will come back to it'];
+  const SKIP_REASONS = ['Cannot reach it', 'Blocked', 'No bin or label here', 'Will come back'];
   async function skipBin(code, reason) {
     if (!code) return;
     if (state.redoBin === code) state.redoBin = '';
@@ -1766,7 +1766,7 @@
     /* Skip: for a bin that cannot be counted now. A reason, then the guide moves on. */
     const skip = document.createElement('button');
     skip.className = 'nb-skip'; skip.id = 'btnBinSkip'; skip.type = 'button';
-    skip.textContent = 'Skip this bin';
+    skip.textContent = 'Skip';
     skip.title = 'Cannot count it now? Pick a reason: it goes on the fix list and the guide moves on';
     const reasons = document.createElement('div');
     reasons.className = 'nb-reasons'; reasons.id = 'binSkipReasons'; reasons.hidden = true;
