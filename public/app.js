@@ -878,7 +878,7 @@
         try {
           state.assignment = await api(`/api/sessions/${session.id}/signon`, {
             method: 'POST',
-            body: JSON.stringify({ deviceId: state.deviceId, deviceUid: state.deviceUid || null, team, employees: state.employees }),
+            body: JSON.stringify({ deviceId: state.deviceId, deviceUid: state.deviceUid || null, team, employees: state.employees, solo: solo || undefined }),
           });
           await metaSet('assignment', state.assignment);
           if (state.assignment.crew) { state.crew = state.assignment.crew; await metaSet('crew', state.crew); updateChips(); }

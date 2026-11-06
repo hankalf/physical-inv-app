@@ -1403,8 +1403,8 @@ A clock-in number that is not on the crew list is turned away: *"…is not on th
 a supervisor"*, who adds the person under Teams & crew. **One team per scanner:** a gun still signed
 on as another team is not taken over — *"This scanner is still signed on as team 3 (since 7:10).
 That team taps Sign off first, or a supervisor signs the scanner off from the dashboard."* The same
-team signing on again (a crew change) is fine, and a cycle count - one person, their own team, a gun
-handed along - is not held. On the dashboard's Progress table each team's
+team signing on again (a crew change) is fine, and a cycle count, Front2Back or Not in Location - one person,
+their own team, a gun handed along - is not held, nor does a gun left on one of those jobs hold a count team off. On the dashboard's Progress table each team's
 scanner has a **Sign off** button (the *Alerts* function) for a gun a crew walked off with. On the jobs one person does alone — a
 **cycle count**, **Front2Back** and **Not in Location** — the bar at the top of the scanner shows
 **the person's name** from the crew list (*GUN-03 · Rosa Delgado*) rather than their number, so

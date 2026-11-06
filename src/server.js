@@ -561,9 +561,13 @@ async function handleHandheld(req, res, url, m) {
        signs the scanner off from the dashboard. The same team signing on again
        (a crew change) is fine - the earlier sign-on ends. */
     const devName = device ? device.name : body.deviceId;
-    // on a cycle count each person is their own team and a gun is handed along: no hold there
-    const held = sess && (sess.mode || 'full') !== 'cycle' ? openSignon(m[1], devName) : null;
-    if (held && held.team !== norm(body.team)) {
+    /* on a cycle count, and on the one-person jobs (Front2Back, Not in Location), each
+       person is their own team and a gun is handed along: no hold there, and a gun
+       left signed on to such a job does not hold a count team off either */
+    const soloJob = !!body.solo || (sess && (sess.mode || 'full') === 'cycle');
+    const held = soloJob ? null : openSignon(m[1], devName);
+    const heldSolo = held && (() => { try { return JSON.parse(held.employees || '[]').map(norm).includes(held.team); } catch { return false; } })();
+    if (held && !heldSolo && held.team !== norm(body.team)) {
       const since = new Date(held.started_at).toLocaleTimeString('en-US', { timeZone: siteTimezone(), hour: 'numeric', minute: '2-digit' });
       audit(devName, 'refused a sign-on: the scanner is signed on as another team', `team ${norm(body.team)} tried; team ${held.team} has it since ${since}`, m[1]);
       throw Object.assign(httpError(409, `This scanner is still signed on as team ${held.team} (since ${since}). That team taps Sign off first, or a supervisor signs the scanner off from the dashboard.`), { code: 'signedOn', team: held.team, since: held.started_at });
