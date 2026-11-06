@@ -549,6 +549,16 @@ async function handleHandheld(req, res, url, m) {
        supervisor, who adds the person under Teams & crew. The practice count
        in the Testing Suite is exempt - its numbers are made up. */
     const sess = getSession(m[1]);
+    /* Sign-on held until the count-day check passes: with the option on, a red
+       item on Settings → Ready for count day turns every sign-on away, naming
+       the items, until a supervisor clears them or turns the hold off. */
+    if (sess && !sess.practice && sess.hold_until_ready) {
+      const r = readiness(sess.id);
+      if (r.hold.held) {
+        audit(device ? device.name : body.deviceId, 'refused a sign-on: the count is not ready', r.hold.blockers.join('; '), m[1]);
+        throw Object.assign(httpError(409, `Sign-on is held until the count-day check passes: ${r.hold.blockers.join('; ')}. A supervisor clears it under Settings → Ready for count day, or turns the hold off on the count.`), { code: 'notReady', blockers: r.hold.blockers });
+      }
+    }
     if (sess && !sess.practice && listEmployees().length) {
       const known = crewCheck(Array.isArray(body.employees) ? body.employees : [], body.team);
       if (known.unknown.length) {
@@ -1053,6 +1063,7 @@ async function handleAdmin(req, res, url, m) {
     const binMode = ['warn', 'strict'].includes(body.binMode) ? body.binMode : s.bin_mode;
     const layout = body.layout === undefined ? s.layout : (body.layout && loadLayout(body.layout) ? body.layout : null);
     if (body.recountWrongBin != null) db.prepare('UPDATE sessions SET recount_wrong_bin = ? WHERE id = ?').run(body.recountWrongBin ? 1 : 0, s.id);
+    if (body.holdUntilReady != null) db.prepare('UPDATE sessions SET hold_until_ready = ? WHERE id = ?').run(body.holdUntilReady ? 1 : 0, s.id);
     db.prepare('UPDATE sessions SET bin_mode = ? WHERE id = ?').run(binMode, s.id);
     // how big a difference has to be before somebody walks back to the bin
     const num = (v, fallback, max) => (v == null || v === '' ? fallback : Math.max(0, Math.min(max, Number(v) || 0)));
@@ -2782,7 +2793,7 @@ location.replace(${JSON.stringify(path)});
     const status = err.status || 500;
     if (status >= 500) console.error(err);
     // a code lets the gun tell "your scanner was pulled" from "the Wi-Fi died"
-    return sendJson(req, res, status, err.code ? { error: err.message, code: err.code } : { error: err.message || 'server error' });
+    return sendJson(req, res, status, err.code ? { error: err.message, code: err.code, ...(err.blockers ? { blockers: err.blockers } : {}) } : { error: err.message || 'server error' });
   }
 });
 

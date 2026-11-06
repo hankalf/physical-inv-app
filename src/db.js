@@ -530,6 +530,8 @@ if (!hasCol('sessions', 'practice')) db.exec('ALTER TABLE sessions ADD COLUMN pr
 if (!hasCol('sessions', 'recount_wrong_bin')) db.exec('ALTER TABLE sessions ADD COLUMN recount_wrong_bin INTEGER NOT NULL DEFAULT 0');
 // a bin not on the bin list: counted anyway with a reason (warn), or refused outright (strict)
 if (!hasCol('sessions', 'bin_mode')) db.exec("ALTER TABLE sessions ADD COLUMN bin_mode TEXT NOT NULL DEFAULT 'warn'");
+/* sign-on held until the count-day check has no red item: nobody counts into a count that is not set up */
+if (!hasCol('sessions', 'hold_until_ready')) db.exec('ALTER TABLE sessions ADD COLUMN hold_until_ready INTEGER NOT NULL DEFAULT 0');
 if (!hasCol('pallets', 'abc')) db.exec('ALTER TABLE pallets ADD COLUMN abc TEXT');
 /* The report's unit cost and amount (quantity × cost): a difference is read in
    money as well as cases, and the thresholds below can be set in money. */

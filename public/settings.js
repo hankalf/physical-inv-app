@@ -2630,6 +2630,7 @@
     $('fAskLot').checked = !!s.ask_lot;
     $('fAskExpiry').checked = !!s.ask_expiry;
     $('fRequireApproval').checked = !!s.require_approval;
+    $('fHoldUntilReady').checked = !!s.hold_until_ready;
     $('fApprMinQty').value = s.approval_min_qty || 0;
     $('fApprMinPct').value = s.approval_min_pct || 0;
     $('fShowOnGuns').checked = s.show_on_guns !== 0;
@@ -2751,6 +2752,7 @@
         recountMinValue: $('fRecMinValue').value, thirdMinValue: $('fThirdMinValue').value, approvalMinValue: $('fApprMinValue').value,
         askLot: $('fAskLot').checked, askExpiry: $('fAskExpiry').checked,
         requireApproval: $('fRequireApproval').checked,
+        holdUntilReady: $('fHoldUntilReady').checked,
         approvalMinQty: $('fApprMinQty').value, approvalMinPct: $('fApprMinPct').value,
         showOnGuns: $('fShowOnGuns').checked,
       });
@@ -2858,7 +2860,8 @@
     const head = r.state === 'ready' ? 'Everything the site needs for a count is in place.'
       : r.fails ? `${r.fails} thing${r.fails === 1 ? '' : 's'} will stop the count going as planned${r.warns ? `, and ${r.warns} worth a look` : ''}.`
       : `${r.warns} thing${r.warns === 1 ? '' : 's'} worth a look before count day.`;
-    msg($('readyMsg'), r.state === 'ready' ? 'ok' : r.fails ? 'err' : 'warn', head, r.session ? `Checked against "${r.session.name}" and the site's settings.` : 'There is no full count to check against yet.');
+    const holdNote = r.hold && r.hold.on ? (r.hold.held ? ' Sign-on to it is HELD until the red items are fixed — no scanner can sign on.' : ' Sign-on is held on it while anything is red; nothing is, so the scanners are let in.') : '';
+    msg($('readyMsg'), r.state === 'ready' ? 'ok' : r.fails ? 'err' : 'warn', head, (r.session ? `Checked against "${r.session.name}" and the site's settings.` : 'There is no full count to check against yet.') + holdNote);
     const list = $('readyList');
     list.replaceChildren();
     for (const c of r.checks) {

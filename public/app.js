@@ -894,6 +894,14 @@
             feedback($('signonMsg'), 'err', 'Scanner already signed on', err.message);
             return;
           }
+          // the count is not set up yet and the office holds sign-on until it is
+          if (err.code === 'notReady') {
+            state.session = null; state.team = '';
+            showScreen('scrSignon');
+            beep('err');
+            feedback($('signonMsg'), 'err', 'Not signed on — the count is not ready', err.message);
+            return;
+          }
           // a clock-in number the site does not know: no sign-on at all
           if (err.code === 'crew') {
             state.session = null; state.team = '';

@@ -154,7 +154,10 @@ export function readiness(sessionId) {
 
   const fails = checks.filter((c) => c.level === 'fail').length;
   const warns = checks.filter((c) => c.level === 'warn').length;
+  /* the gate: with Hold sign-on on the count, a red item keeps every scanner off it */
+  const holdOn = !!(s && s.hold_until_ready);
   return {
+    hold: { on: holdOn, held: holdOn && fails > 0, blockers: holdOn ? checks.filter((c) => c.level === 'fail').map((c) => c.title) : [] },
     session: s ? { id: s.id, name: s.name, status: s.status } : null,
     state: fails ? 'not-ready' : warns ? 'nearly' : 'ready',
     fails, warns,
