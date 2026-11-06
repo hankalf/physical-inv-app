@@ -188,7 +188,7 @@ const SANDBOX_START = JSON.stringify({ prompts: { commentTimeout: 5 }, layout: {
 
 function buildPractice(owner) {
   const s = createSession({ name: PRACTICE_NAME, mode: 'full', palletMode: 'warn', guided: 1, askComments: 1 });
-  db.prepare('UPDATE sessions SET practice = 1, practice_owner = ?, sandbox = ?, auto_recount = 0 WHERE id = ?').run(owner, SANDBOX_START, s.id);
+  db.prepare('UPDATE sessions SET practice = 1, practice_owner = ?, sandbox = ?, auto_recount = 0, recount_wrong_bin = 1 WHERE id = ?').run(owner, SANDBOX_START, s.id);
   importMaster(s.id, 'bins', binCsv());
   importMaster(s.id, 'pallets', reportCsv());
   queueAssignments(s.id, PRACTICE_TEAM, ['F01', 'F02'], 'A-F', { force: true });
@@ -246,7 +246,7 @@ export function readPracticeFile(text) {
 
 function buildFromRows(owner, rows, label) {
   const s = createSession({ name: `${PRACTICE_NAME} — ${label}`.slice(0, 80), mode: 'full', palletMode: 'warn', guided: 1, askComments: 1 });
-  db.prepare("UPDATE sessions SET practice = 1, practice_owner = ?, practice_source = 'upload', practice_rows = ?, sandbox = ?, auto_recount = 0 WHERE id = ?")
+  db.prepare("UPDATE sessions SET practice = 1, practice_owner = ?, practice_source = 'upload', practice_rows = ?, sandbox = ?, auto_recount = 0, recount_wrong_bin = 1 WHERE id = ?")
     .run(owner, JSON.stringify({ label, rows }), SANDBOX_START, s.id);
   importMaster(s.id, 'bins', binCsv([...new Set(rows.map((r) => r.bin))]));
   let report = 'Pallet ID,SKU,Description,UOM,Qty,Location,Lot Code,Best Before\n';
@@ -796,7 +796,7 @@ const PRACTICE_MISSING = [
 
 function buildCyclePractice(owner) {
   const s = createSession({ name: PRACTICE_CYCLE_NAME, mode: 'cycle', palletMode: 'warn', askComments: 1 });
-  db.prepare('UPDATE sessions SET practice = 1, practice_owner = ?, sandbox = ?, auto_recount = 0 WHERE id = ?').run(owner, SANDBOX_START, s.id);
+  db.prepare('UPDATE sessions SET practice = 1, practice_owner = ?, sandbox = ?, auto_recount = 0, recount_wrong_bin = 1 WHERE id = ?').run(owner, SANDBOX_START, s.id);
   importMaster(s.id, 'bins', binCsv());
   importMaster(s.id, 'pallets', reportCsv());
   // today's list, the way the office's "generate a batch" writes one

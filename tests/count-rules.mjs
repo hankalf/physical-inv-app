@@ -83,6 +83,8 @@ check('A plan file with a Start column: "far end" starts that team at the far en
 
 /* ================= 3. a pallet in another bin: the report's bin is checked for a duplicate label ================= */
 const s4 = await count('Label check');
+/* a pallet found elsewhere is a move, on its own report, unless the count asks for the second count of the report's bin - this one does */
+await post(`/api/admin/sessions/${s4.id}/settings`, { recountWrongBin: true });
 const L = await gunToken('LABEL-01');
 const l4 = (id, pallet, bin, extra = {}) => ({ clientId: id, palletId: pallet, qty: 40, location: bin, team: '1', deviceId: 'LABEL-01', scannedAt: new Date().toISOString(), ...extra });
 await post(`/api/sessions/${s4.id}/counts`, [l4('k1', 'P-3', 'F01A005')], L.H);
