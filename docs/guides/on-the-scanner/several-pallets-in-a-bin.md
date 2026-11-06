@@ -18,6 +18,7 @@ Two, three or four pallets in one spot is normal. The scanner keeps you at that 
 4. When every pallet the report expects is counted, the box goes back to **Next bin** by itself.
 5. The scanner expects more but there are none: tap **Nothing more here →**.
 6. A spot the report has nothing for stays open after a pallet, because there may be more. Tap **Nothing more here →** when you have counted them all.
+7. Walked on already? The guide walks with you and brings the passed bin up at the end of the aisle as **Go back to**.
 
 ## What the office sees
 

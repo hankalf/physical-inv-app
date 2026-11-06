@@ -160,7 +160,7 @@ check('Gun 2: a bin code with # in it scans and is recorded', /Counted STG-001.*
 await g2.waitForTimeout(400);
 check('…then the guide moves to PRYSTG#2, not PRYSTG#10', (await nextCode(g2)) === 'PRYSTG#2' && /1 of 16/.test(clean(await g2.textContent('#nextBin'))), clean(await g2.textContent('#nextBin')).slice(0, 80));
 await s2('STG-010'); await s2('12'); await s2('PRYSTG#10');
-check('…counting spot 10 out of order is fine, the guide still says 2 next', !(await g2.$('#scrOverride.active')) && (await nextCode(g2)) === 'PRYSTG#2' && /2 of 16/.test(clean(await g2.textContent('#nextBin'))), clean(await g2.textContent('#nextBin')).slice(0, 80));
+check('…counting spot 10 out of order is fine: the guide walks on to 11 and notes the 8 spots passed', !(await g2.$('#scrOverride.active')) && (await nextCode(g2)) === 'PRYSTG#11' && /2 of 16 · 8 passed/.test(clean(await g2.textContent('#nextBin'))), clean(await g2.textContent('#nextBin')).slice(0, 80));
 await g2.click('#btnEmpty').catch(() => {}); await g2.waitForTimeout(250); await s2('PRYSTG#2');
 check('…an empty staging spot is checked off as empty, and the guide goes on to 3', /PRYSTG#2 recorded as EMPTY/.test(clean(await g2.textContent('#scanMsg'))) && (await nextCode(g2)) === 'PRYSTG#3' && /3 of 16/.test(clean(await g2.textContent('#nextBin'))), clean(await g2.textContent('#scanMsg')).slice(0, 60) + ' | ' + clean(await g2.textContent('#nextBin')).slice(0, 50));
 /* a run of empty staging spots: from #3 to #16, the numbers in order, not a dictionary slice */

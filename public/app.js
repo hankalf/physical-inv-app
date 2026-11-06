@@ -1581,6 +1581,7 @@
   let tagsInBin = new Map();          // bin -> pallet tags counted in it, by anyone
   let expectInBin = new Map();        // bin -> pallets the inventory report puts there
   let closedBins = new Set();         // bins recorded EMPTY, or closed by the counter
+  let skippedBins = new Set();        // bins the counter skipped on the guide, with a reason sent to the fix list
 
   /** What the report expects in each bin of this aisle, read from the cached list. */
   async function expectedPerBin(bins) {
@@ -1593,10 +1594,11 @@
   }
 
   const closedKey = () => `closedBins:${state.session?.id}:${state.assignment?.active?.aisle || ''}`;
+  const skippedKey = () => `skippedBins:${state.session?.id}:${state.assignment?.active?.aisle || ''}`;
 
   async function refreshCounted() {
     const a = state.assignment;
-    if (!a || !a.active) { countedInAisle = new Set(); tagsInBin = new Map(); expectInBin = new Map(); closedBins = new Set(); return; }
+    if (!a || !a.active) { countedInAisle = new Set(); tagsInBin = new Map(); expectInBin = new Map(); closedBins = new Set(); skippedBins = new Set(); return; }
     /* Everyone else's tags come from the server; this scanner's come from what it
        holds, queued lines included. Added together that is each tag once, never
        twice - and never fewer than the server has seen, which is what a scanner
@@ -1615,11 +1617,13 @@
       ...localEmpty,
       ...((await metaGet(closedKey())) || []),
     ]);
+    // a skipped bin counted since the skip (more tags in it than when it was skipped) is no longer skipped
+    skippedBins = new Set(((await metaGet(skippedKey())) || []).filter((x) => !closedBins.has(x.code) && (tagsInBin.get(x.code) || 0) <= x.tags).map((x) => x.code));
   }
 
   /** Nothing more to do in this bin: the report is satisfied, or somebody said so. */
   function binFinished(code) {
-    if (closedBins.has(code)) return true;
+    if (closedBins.has(code) || skippedBins.has(code)) return true;
     const got = tagsInBin.get(code) || 0;
     if (!got) return false;
     const want = expectInBin.get(code) || 0;
@@ -1633,6 +1637,32 @@
     const key = closedKey();
     await metaSet(key, [...new Set([...((await metaGet(key)) || []), code])]);
     renderNextBin();
+  }
+
+  /* Skipping a bin on the guide: the counter cannot count it now - out of reach,
+     blocked, no bin where the list says - so the guide moves on instead of
+     pointing at it all the way down the aisle. The skip goes on the fix list
+     with its reason, queued like any report, so the office knows which bins
+     still need somebody; and a line counted there later takes it off. */
+  const SKIP_REASONS = ['Cannot reach it', 'Blocked - trailer, forklift or stock in the way', 'No bin or no label where the list says', 'Will come back to it'];
+  async function skipBin(code, reason) {
+    if (!code) return;
+    if (state.redoBin === code) state.redoBin = '';
+    skippedBins.add(code);
+    const key = skippedKey();
+    await metaSet(key, [...((await metaGet(key)) || []).filter((x) => x.code !== code), { code, tags: tagsInBin.get(code) || 0 }]);
+    const line = {
+      clientId: uuid(), kind: 'blocked', target: 'bin', label: 'Skipped on the gun', confirm: 'none',
+      reason: `Skipped on the gun: ${reason}`, note: '', palletId: '', bin: code, aisle: state.assignment?.active?.aisle || '',
+      confirmed: '', confirmedAs: '', confirmedHow: '', team: state.team, deviceId: state.deviceId, employees: state.employees,
+    };
+    state.issuesPending = [...(state.issuesPending || []), line];
+    await metaSet('issuesPending', state.issuesPending);
+    flushIssues();
+    beep('ok');
+    feedback($('scanMsg'), 'warn', `${code} skipped`, `${reason}. It is on the fix list for a supervisor; count it later and it comes off.`);
+    renderNextBin();
+    focusScan();
   }
 
   /** The bin a line was just voided in, while nothing has been counted there since. */
@@ -1651,7 +1681,22 @@
     // a.bins is the assigned aisle and levels already; code order is 001, 002, 003 ... - or from the far end back
     const ordered = [...a.bins].sort((x, y) => String(x).localeCompare(String(y), undefined, { numeric: true }));
     if (a.active.direction === 'down') ordered.reverse();
+    /* forward first: the next unfinished bin after the last one this gun counted,
+       so a bin the team walked past (the report expects two, one was there) does
+       not drag them back mid-aisle - it comes up again at the end, as "Go back to" */
+    const at = ordered.indexOf(state.lastBin);
+    const ahead = at >= 0 ? ordered.slice(at + 1).find((b) => !binFinished(b)) : null;
+    if (ahead) return ahead;
     return ordered.find((b) => !binFinished(b)) || null;
+  }
+  /** Unfinished bins before the last one counted: passed over, to go back to at the end. */
+  function passedBins() {
+    const a = state.assignment;
+    if (!a || !a.active || !Array.isArray(a.bins)) return [];
+    const ordered = [...a.bins].sort((x, y) => String(x).localeCompare(String(y), undefined, { numeric: true }));
+    if (a.active.direction === 'down') ordered.reverse();
+    const at = ordered.indexOf(state.lastBin);
+    return at > 0 ? ordered.slice(0, at).filter((b) => !binFinished(b)) : [];
   }
 
   /** The bin being worked right now: the last one counted, while it is unfinished. */
@@ -1676,7 +1721,9 @@
     el.innerHTML = '';
     if (!open && !next) {
       el.className = 'nextbin done';
-      el.append(`Every bin in ${a.active.aisle} has a count — tell your supervisor. Your next aisle shows here once they mark this one done.`);
+      const sk = [...skippedBins].filter((b) => (a.bins || []).includes(b)).sort((x, y) => String(x).localeCompare(String(y), undefined, { numeric: true }));
+      if (sk.length) el.append(`Every bin in ${a.active.aisle} has a count except ${sk.length} skipped: ${sk.join(', ')}. Go back to them if you can, or tell your supervisor — they are on the fix list.`);
+      else el.append(`Every bin in ${a.active.aisle} has a count — tell your supervisor. Your next aisle shows here once they mark this one done.`);
       return;
     }
 
@@ -1708,12 +1755,33 @@
       return;
     }
 
-    el.className = 'nextbin' + (redo ? ' redo' : '');
-    lead.textContent = redo ? 'Go back to' : 'Next bin';
+    const passed = passedBins();
+    const back = !redo && passed.includes(next);   // nothing left ahead: back to what was passed
+    el.className = 'nextbin' + (redo ? ' redo' : back ? ' back' : '');
+    lead.textContent = redo ? 'Go back to' : back ? 'Go back to' : 'Next bin';
     code.textContent = next;
     where.textContent = describeBin(next) || '';
-    prog.textContent = redo ? 'a line was voided here' : `${countedInAisle.size} of ${total}`;
+    prog.textContent = redo ? 'a line was voided here' : back ? `passed earlier · ${passed.length} to go back to` : `${countedInAisle.size} of ${total}${passed.length ? ` · ${passed.length} passed` : ''}`;
     el.append(lead, code, where, prog);
+    /* Skip: for a bin that cannot be counted now. A reason, then the guide moves on. */
+    const skip = document.createElement('button');
+    skip.className = 'nb-skip'; skip.id = 'btnBinSkip'; skip.type = 'button';
+    skip.textContent = 'Skip this bin';
+    skip.title = 'Cannot count it now? Pick a reason: it goes on the fix list and the guide moves on';
+    const reasons = document.createElement('div');
+    reasons.className = 'nb-reasons'; reasons.id = 'binSkipReasons'; reasons.hidden = true;
+    for (const r of SKIP_REASONS) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip-btn'; b.textContent = r; b.dataset.skipReason = r;
+      b.onclick = () => skipBin(next, r);
+      reasons.appendChild(b);
+    }
+    const cancel = document.createElement('button');
+    cancel.type = 'button'; cancel.className = 'chip-btn ghost'; cancel.textContent = 'Cancel';
+    cancel.onclick = () => { reasons.hidden = true; focusScan(); };
+    reasons.appendChild(cancel);
+    skip.onclick = () => { reasons.hidden = !reasons.hidden; };
+    el.append(skip, reasons);
   }
 
   async function refreshNextBin() {
@@ -3808,6 +3876,10 @@
   setInterval(() => { updateChips(); flushPending(); flushSos(); flushMoves(); flushIssues(); syncQueue(); checkForUpdate(); }, 20000);
   // on My aisle, the supervisor's "done" and the next aisle arrive without a tap
   setInterval(() => { if ($('scrAssign').classList.contains('active') && !state.recount) refreshAssignment(true); }, 15000);
+  /* and while counting: the tags the team's other gun put in a bin, and a
+     supervisor's "done", arrive without a trip back to My aisle - otherwise the
+     guide waits in a bin the other gun already finished */
+  setInterval(() => { if ($('scrScan').classList.contains('active') && state.session?.guided && !state.recount && state.assignment?.active) refreshAssignment(true); }, 20000);
   /* An SOS is not a count: a counter waiting to hear that somebody has seen it
      should not wait out the twenty-second tick, so this looks more often. */
   setInterval(() => { refreshSos(); }, 6000);

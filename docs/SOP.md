@@ -1455,6 +1455,17 @@ to find before they walk on.
 - A bin the report lists nothing for stays open after a count, for the same reason — there
   may be a second pallet in it that the ERP has never heard of. Tap **Nothing more here →**
   when it is clear.
+- **The guide walks forward.** It points at the next bin after the last one this gun counted. A bin
+  the team walked past - the report expected two pallets and one was there, or nobody pressed Empty
+  - does not drag them back mid-aisle: the banner notes *3 of 94 · 2 passed*, and at the end of the
+  aisle turns amber, **Go back to F01A003 · passed earlier · 2 to go back to**, until each is counted,
+  recorded empty, or skipped. Tags the team's other gun counts arrive while counting, every twenty
+  seconds, so the guide does not wait in a bin the other gun has already finished.
+- **Skip this bin** sits on the guide for a bin that cannot be counted now: tap it and pick why -
+  *Cannot reach it*, *Blocked*, *No bin or no label where the list says*, *Will come back to it*. The
+  guide moves on, and the skip goes on the **Fix list** as a blocked bin with the reason and the team,
+  so the office knows which bins still need somebody. The end-of-aisle banner names what was skipped;
+  counting the bin later takes it off. A bin that is simply empty is **Bin is EMPTY**, not a skip.
 - **Bin is EMPTY** closes a bin outright. When the gun asks for the **bin first**, the bin is
   already scanned by then: the gun asks *Mark F01A004 EMPTY?* — **Yes** records it, **No** goes
   back — and never asks for the same bin twice. When the pallet comes first, it is **Bin is EMPTY

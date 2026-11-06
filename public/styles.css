@@ -286,6 +286,11 @@ button.sos:active { background: #4a181d; }
    code on the banner is where you are or where you are going next */
 .nextbin.staying { background: #2a2110; border-color: #8a6a1f; }
 .nextbin.redo { border-color: var(--bad, #ff5a5f); }
+.nextbin.back { border-color: #8a6a1f; }
+.nextbin.back .nb-lead { color: #ffd479; }
+.nextbin .nb-skip { flex: none; margin-left: 8px; padding: 6px 10px; font-size: 13px; font-weight: 700; border-radius: 8px; border: 1px solid var(--line, #3a4350); background: transparent; color: var(--muted); }
+.nextbin .nb-reasons { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.nextbin .nb-reasons .chip-btn { font-size: 14px; padding: 8px 12px; }
 .nextbin.redo .nb-lead { color: var(--bad, #ff5a5f); }
 .nextbin.staying .nb-code { color: #ffd479; }
 .nextbin .nb-done {

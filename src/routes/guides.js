@@ -21,7 +21,7 @@ const NAME = /^[a-z0-9-]+$/;
 // the order they are listed in: the first full count from scratch, then the count's own work
 const ORDER = ['first-full-count', 'second-and-third-counts', 'set-up-second-and-third-counts', 'erp-upload-by-aisle', 'reports-and-exports', 'employees-teams-and-gear', 'live-and-test', 'run-the-training-day', 'count-day-for-supervisors',
   // on the scanner, in the order they come up on the floor
-  'two-or-more-labels', 'label-will-not-scan', 'no-label', 'bin-label-will-not-scan', 'several-pallets-in-a-bin', 'empty-bin', 'several-empty-bins', 'pallet-not-on-the-list', 'bin-not-on-the-list', 'pallet-already-counted', 'not-your-aisle-or-level', 'pallet-in-the-wrong-bin', 'wrong-label-in-the-wrong-box', 'a-big-quantity', 'lot-and-expiry', 'comments', 'fixing-a-mistake', 'no-wifi', 'report-a-problem', 'sos', 'message-from-the-office', 'second-counts', 'finishing-the-aisle'];
+  'two-or-more-labels', 'label-will-not-scan', 'no-label', 'bin-label-will-not-scan', 'several-pallets-in-a-bin', 'empty-bin', 'several-empty-bins', 'pallet-not-on-the-list', 'bin-not-on-the-list', 'pallet-already-counted', 'not-your-aisle-or-level', 'skip-a-bin', 'pallet-in-the-wrong-bin', 'wrong-label-in-the-wrong-box', 'a-big-quantity', 'lot-and-expiry', 'comments', 'fixing-a-mistake', 'no-wifi', 'report-a-problem', 'sos', 'message-from-the-office', 'second-counts', 'finishing-the-aisle'];
 
 const cache = new Map();                      // path -> { mtime, guide }
 

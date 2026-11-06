@@ -18,6 +18,7 @@ Dos, tres o cuatro tarimas en un lugar es normal. El escáner te mantiene en ese
 4. Cuando están contadas todas las que espera el reporte, el cuadro regresa solo a **Siguiente ubicación**.
 5. ¿El escáner espera más pero no hay? Toca **No hay más aquí →**.
 6. Un lugar donde el reporte no tiene nada se queda abierto después de una tarima, porque puede haber más. Toca **No hay más aquí →** cuando termines.
+7. ¿Ya seguiste adelante? La guía sigue contigo y al final del pasillo te muestra la ubicación que pasaste como **Regresa a**.
 
 ## Lo que ve la oficina
 

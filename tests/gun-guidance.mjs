@@ -75,8 +75,8 @@ check('Gun: then 003 — it walks the aisle 001, 002, 003', /Next bin\s*F01A003/
 
 // counting out of order is allowed, and the guide simply skips what is done
 await countBin('F01A005');
-check('Gun: counting out of order is fine — it just points at the next one still open',
-  /Next bin\s*F01A003/.test(clean(await gun.textContent('#nextBin'))), clean(await gun.textContent('#nextBin')).slice(0, 60));
+check('Gun: counting out of order is fine — the guide walks on from where the team is, and notes what was passed',
+  /Next bin\s*F01A006/.test(clean(await gun.textContent('#nextBin'))) && /2 passed/.test(clean(await gun.textContent('#nextBin'))), clean(await gun.textContent('#nextBin')).slice(0, 90));
 await gun.screenshot({ path: `${S}screenshots/gun-next-bin.png` });
 
 const prog = clean(await gun.textContent('#nextBin'));
