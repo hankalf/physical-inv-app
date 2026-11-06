@@ -2454,7 +2454,20 @@ async function handleAdmin(req, res, url, m) {
   }
 
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/adjustments$/)) && method === 'GET') {
-    return sendJson(req, res, 200, listAdjustments(m[1], { status: url.searchParams.get('status') || '' }));
+    /* each line with its ERP mark, so approving and keying are one pass on one table */
+    const out = listAdjustments(m[1], { status: url.searchParams.get('status') || '' });
+    out.adjustments = withErpMarks(m[1], out.adjustments);
+    const signed = out.adjustments.filter((r) => r.status === 'approved' || r.status === 'auto');
+    out.keyed = { approved: signed.length, keyed: signed.filter((r) => r.erp_uploaded).length };
+    return sendJson(req, res, 200, out);
+  }
+  // the approved lines not yet keyed into the ERP, one system at a time if asked
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/approved-not-keyed\.csv$/))) {
+    const src = url.searchParams.has('source') ? url.searchParams.get('source') : null;
+    const rows = withErpMarks(m[1], listAdjustments(m[1]).adjustments)
+      .filter((r) => (r.status === 'approved' || r.status === 'auto') && !r.erp_uploaded && (src == null || (r.source || '') === src));
+    return sendCsv(req, res, `approved-not-keyed${src ? '-' + src.toLowerCase() : ''}-session-${m[1]}.csv`,
+      toCsv(rows, ['pallet_id', 'source', 'sku', 'location', 'kind', 'expected_qty', 'counted_qty', 'variance_qty', 'status', 'reason', 'decided_by', 'decided_at']));
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/adjustments\/decide$/)) && method === 'POST') {
     const body = await readJson(req);

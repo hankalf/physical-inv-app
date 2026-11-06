@@ -633,11 +633,14 @@
         </div>
         <div class="toolbar" style="margin-top:6px">
           <label class="cb"><input type="checkbox" id="fAdjPendingOnly" checked> Only the ones still waiting</label>
+          <label class="cb"><input type="checkbox" id="fAdjHideKeyed"> Hide lines keyed into the ERP</label>
           <label class="cb" style="gap:6px">System
             <select id="fAdjSource" class="sm" style="width:auto;padding:4px 8px"><option value="">Every system</option></select></label>
           <span class="spacer"></span>
           <button id="btnAdjAll">Select all shown</button>
           <button id="btnAdjNone">Select none</button>
+          <button id="btnAdjKeyShown" title="Every approved line shown that is not yet keyed">Mark shown as keyed</button>
+          <button id="btnExportNotKeyed" title="The approved lines still to key, for the system picked">Approved, not keyed CSV</button>
         </div>
         <div class="feedback" id="adjustMsg"></div>
         <div class="scroll" style="margin-top:10px"><table id="adjustTable"></table></div>

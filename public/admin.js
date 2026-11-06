@@ -2349,6 +2349,7 @@
     document.body.appendChild(a); a.click(); a.remove();
   };
 
+  let adjustShown = [];
   async function refreshAdjustments() {
     refreshPositiveNegative().catch(() => {});
     const s = sessions.find((x) => x.id === sessionId);
@@ -2381,6 +2382,7 @@
       [sum.rejected, 'Rejected — the system keeps its number'],
       [sum.auto, `Under the threshold${data.thresholds.minQty || data.thresholds.minPct ? '' : ' (none set)'}`],
       [Math.round(sum.units.pending).toLocaleString(), 'Units still unsigned'],
+      [(data.keyed ? data.keyed.approved - data.keyed.keyed : 0).toLocaleString(), `Approved, not yet keyed${data.keyed && data.keyed.keyed ? ` · ${data.keyed.keyed} keyed` : ''}`],
     ]) {
       const d = document.createElement('div');
       d.className = 'stat';
@@ -2392,13 +2394,15 @@
 
     const pendingOnly = $('fAdjPendingOnly').checked;
     const adjSrc = sourceParam('fAdjSource');
-    const rows = data.adjustments.filter((r) => (!pendingOnly || r.status === 'pending') && (adjSrc == null || (r.source || '') === adjSrc));
+    const hideKeyed = $('fAdjHideKeyed').checked;
+    const rows = data.adjustments.filter((r) => (!pendingOnly || r.status === 'pending') && (adjSrc == null || (r.source || '') === adjSrc) && (!hideKeyed || !r.erp_uploaded));
+    adjustShown = rows;
     for (const id of [...picked]) if (!rows.some((r) => r.pallet_id === id)) picked.delete(id);
 
     table($('adjustTable'),
       [{ label: '' }, { label: 'Pallet' }, { label: 'System' }, { label: 'Item' }, { label: 'Bin' }, { label: 'Found' },
         { label: 'Report qty', num: true }, { label: 'Counted', num: true }, { label: 'Adjustment', num: true },
-        { label: 'Status' }, { label: 'Reason' }, { label: 'Signed by' }],
+        { label: 'Status' }, { label: 'Reason' }, { label: 'Signed by' }, { label: 'Keyed' }],
       rows,
       (r) => {
         const tr = document.createElement('tr');
@@ -2418,6 +2422,19 @@
         const st = document.createElement('td');
         st.appendChild(tag(r.status === 'auto' ? 'AUTO' : r.status.toUpperCase()));
         tr.append(st, cell(r.reason || '—', 'wrap'), cell(r.decided_by || '—'));
+        /* approve and key in one pass: a signed line carries its ERP tick on the same row */
+        const keyed = document.createElement('td');
+        if (r.status === 'approved' || r.status === 'auto') {
+          const k = document.createElement('input'); k.type = 'checkbox'; k.dataset.keyed = r.pallet_id; k.checked = !!r.erp_uploaded;
+          k.title = r.erp_uploaded ? `keyed by ${r.erp_by || '?'} ${r.erp_at ? new Date(r.erp_at).toLocaleString() : ''}${r.erp_changed ? ' · changed since' : ''}` : 'tick when this line is in the ERP';
+          k.onchange = async () => {
+            try { await postJson(`/api/admin/sessions/${sessionId}/erp-entries`, { pallets: [r.pallet_id], on: k.checked }); await refreshAdjustments(); }
+            catch (err) { k.checked = !k.checked; msg($('adjustMsg'), 'err', err.message); }
+          };
+          keyed.appendChild(k);
+          if (r.erp_changed) keyed.appendChild(tag('CHANGED'));
+        } else keyed.textContent = '—';
+        tr.appendChild(keyed);
         return tr;
       },
       'Nothing differs from the report on this count.');
@@ -2461,6 +2478,21 @@
   $('btnAdjNone').onclick = () => { picked.clear(); refreshAdjustments().catch(() => {}); };
   $('btnExportAdjust').onclick = () =>
     api.download(`/api/admin/sessions/${sessionId}/export/adjustments.csv`, `adjustments-session-${sessionId}.csv`);
+  $('fAdjHideKeyed').onchange = () => refreshAdjustments().catch(() => {});
+  /* every approved line on the screen that is not keyed yet, marked in one go */
+  $('btnAdjKeyShown').onclick = async () => {
+    const pallets = adjustShown.filter((r) => (r.status === 'approved' || r.status === 'auto') && !r.erp_uploaded).map((r) => r.pallet_id);
+    if (!pallets.length) { msg($('adjustMsg'), 'err', 'Nothing to mark', 'No approved line shown is still to key — untick "Only the ones still waiting" to see the approved ones.'); return; }
+    try {
+      const out = await postJson(`/api/admin/sessions/${sessionId}/erp-entries`, { pallets, on: true });
+      msg($('adjustMsg'), 'ok', `${out.marked} line${out.marked === 1 ? '' : 's'} marked as keyed into the ERP`, out.already ? `${out.already} were marked already.` : '');
+      await refreshAdjustments();
+    } catch (err) { msg($('adjustMsg'), 'err', err.message); }
+  };
+  $('btnExportNotKeyed').onclick = () => {
+    const src = sourceParam('fAdjSource');
+    api.download(`/api/admin/sessions/${sessionId}/export/approved-not-keyed.csv${src == null ? '' : `?source=${encodeURIComponent(src)}`}`, `approved-not-keyed${src ? '-' + src.toLowerCase() : ''}-session-${sessionId}.csv`);
+  };
 
   /* ----------------------------------------------------- labels to replace
      A label that would not scan is a pallet the next person cannot scan either.

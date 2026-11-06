@@ -2279,6 +2279,16 @@ ERP by hand, from the worksheet, over a day or two — and must not key a line t
 4. Or mark a few at a time from the table: tick the lines, **Mark as entered**; **Take the mark
    off** undoes it. **Hide lines already in the ERP** leaves only what is still to key.
 
+**Approve and key in one pass: the Adjustments table itself.** Every approved (or AUTO) line
+carries a **Keyed** tick on its own row — untick *Only the ones still waiting* to see them. Tick a
+line as it goes into the ERP and the mark is kept with who and when (hover the tick); untick it
+to take the mark off; a line counted again since it was keyed shows *CHANGED* beside the tick.
+**Mark shown as keyed** marks every approved line on the screen that is not yet keyed — pick a
+system first to do one system at a time — and **Approved, not keyed CSV** downloads what is still
+to key, for the system picked. *Hide lines keyed into the ERP* leaves only what remains, and the
+tile *Approved, not yet keyed* keeps the score. These are the same marks as the worksheet's below
+and the aisle sheets', so the three never disagree.
+
 **An aisle at a time: Dashboard → Adjustments → ERP upload, an aisle at a time.** For putting a
 wall-to-wall into the ERP aisle by aisle, as the aisles are finished:
 
