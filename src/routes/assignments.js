@@ -1,5 +1,6 @@
-import { db, norm, resolveAisle } from '../db.js';
-import { aisleNumber, normLevels, levelsOverlap, levelsLabel } from '../util/bincode.js';
+import { db, norm, resolveAisle, getSession } from '../db.js';
+import { aisleNumber, normLevels, levelsOverlap, levelsLabel, parseBinCode } from '../util/bincode.js';
+import { loadLayout } from '../util/layouts.js';
 import { reachShortfall, listTeams } from './people.js';
 import { isFloorAisle, floorAisleNames } from './floor-bins.js';
 
@@ -22,6 +23,34 @@ if (!db.prepare("PRAGMA table_info('assignments')").all().some((c) => c.name ===
 }
 export const cleanDirection = (d) => (String(d || '').toLowerCase() === 'down' ? 'down' : 'up');
 
+/* Which face of the racking: the odd positions or the even. The layout drawing
+   names them (Front/Back unless it says otherwise); an assignment stores the
+   side as 'odd' or 'even', and '' for both, so the names can change and the
+   plan still holds. */
+export const facesOf = (sessionId) => loadLayout(getSession(Number(sessionId))?.layout)?.faces || { odd: 'Front', even: 'Back' };
+export function cleanFace(sessionId, raw) {
+  const t = String(raw || '').trim().toLowerCase();
+  if (!t || t === 'both' || t === 'all' || t === '*') return '';
+  if (t === 'odd' || t === 'even') return t;
+  const f = facesOf(sessionId);
+  if (t === String(f.odd).toLowerCase()) return 'odd';
+  if (t === String(f.even).toLowerCase()) return 'even';
+  if (t === 'front') return 'odd';
+  if (t === 'back') return 'even';
+  throw Object.assign(new Error(`face must be ${f.odd}, ${f.even} or both`), { status: 400 });
+}
+export const faceLabel = (sessionId, face) => (face ? String(facesOf(sessionId)[face] || face) : '');
+/** 'odd' / 'even' / '' for a bin code: which side its position is on; '' when the code has no position */
+export function faceOfCode(code) {
+  const p = parseBinCode(code);
+  const pos = Number(p.bay);
+  if (!p.bay || !Number.isFinite(pos)) return '';
+  return pos % 2 === 1 ? 'odd' : 'even';
+}
+export const facesOverlap = (a, b) => !a || !b || a === b;
+/** "A-C" or "A-C, Front" - how an assignment reads on a plan */
+export const spanLabel = (sessionId, levels, face) => [levels ? levelsCell(levels) : '', face ? faceLabel(sessionId, face) : ''].filter(Boolean).join(', ');
+
 export function aisleOverview(sessionId) {
   const id = Number(sessionId);
   const floorNames = floorAisleNames();
@@ -38,9 +67,9 @@ export function aisleOverview(sessionId) {
               COALESCE(k.pallets_counted, 0) AS pallets_counted,
               (SELECT GROUP_CONCAT(team, ',') FROM assignments s
                 WHERE s.session_id = a.session_id AND s.aisle = a.aisle AND s.status = 'active') AS active_team,
-              (SELECT GROUP_CONCAT(team || CASE WHEN levels = '' THEN '' ELSE ' (' || levels || ')' END, ', ') FROM assignments s
+              (SELECT GROUP_CONCAT(team || CASE WHEN levels = '' AND face = '' THEN '' ELSE ' (' || levels || CASE WHEN face = '' THEN '' ELSE ' ' || face END || ')' END, ', ') FROM assignments s
                 WHERE s.session_id = a.session_id AND s.aisle = a.aisle AND s.status = 'active') AS active_detail,
-              (SELECT GROUP_CONCAT(team || CASE WHEN levels = '' THEN '' ELSE ' (' || levels || ')' END, ', ') FROM assignments s
+              (SELECT GROUP_CONCAT(team || CASE WHEN levels = '' AND face = '' THEN '' ELSE ' (' || levels || CASE WHEN face = '' THEN '' ELSE ' ' || face END || ')' END, ', ') FROM assignments s
                 WHERE s.session_id = a.session_id AND s.aisle = a.aisle AND s.status = 'queued') AS queued_teams,
               (SELECT COUNT(*) FROM assignments s
                 WHERE s.session_id = a.session_id AND s.aisle = a.aisle AND s.status = 'done') AS done_count
@@ -84,11 +113,11 @@ export const blockOf = (sessionId, aisle) =>
 // Two teams may share a block (even an aisle) as long as their levels don't overlap -
 // that is how a forklift crew and a crew on foot work the same racking. And two
 // may share the very same aisle and levels when they start at opposite ends.
-export function blockHolder(sessionId, aisle, exceptTeam, levels = '', direction = 'up') {
+export function blockHolder(sessionId, aisle, exceptTeam, levels = '', direction = 'up', face = '') {
   const block = blockOf(sessionId, aisle);
   const rows = db
     .prepare(
-      `SELECT s.team, s.aisle, s.levels, s.direction
+      `SELECT s.team, s.aisle, s.levels, s.direction, s.face
          FROM assignments s
          LEFT JOIN aisles a ON a.session_id = s.session_id AND a.aisle = s.aisle
         WHERE s.session_id = ? AND s.status = 'active'
@@ -97,16 +126,18 @@ export function blockHolder(sessionId, aisle, exceptTeam, levels = '', direction
     .all(Number(sessionId), block);
   const a = norm(aisle);
   const dir = cleanDirection(direction);
+  // two teams on the same aisle, one each side of it, do not hold each other up
   return rows.find((r) => r.team !== norm(exceptTeam) && levelsOverlap(r.levels, levels)
+    && !(r.aisle === a && !facesOverlap(r.face, face))
     && !(r.aisle === a && cleanDirection(r.direction) !== dir)) || null;
 }
 
 /** The other team in this aisle from the other end, if there is one. */
 export function partnerOf(sessionId, row) {
   if (!row) return null;
-  return db.prepare("SELECT team, levels, direction FROM assignments WHERE session_id = ? AND aisle = ? AND status = 'active' AND team != ?")
+  return db.prepare("SELECT team, levels, direction, face FROM assignments WHERE session_id = ? AND aisle = ? AND status = 'active' AND team != ?")
     .all(Number(sessionId), row.aisle, row.team)
-    .find((r) => levelsOverlap(r.levels, row.levels) && cleanDirection(r.direction) !== cleanDirection(row.direction)) || null;
+    .find((r) => levelsOverlap(r.levels, row.levels) && facesOverlap(r.face, row.face) && cleanDirection(r.direction) !== cleanDirection(row.direction)) || null;
 }
 
 export function setBlock(sessionId, aisle, block) {
@@ -152,8 +183,9 @@ export function autoBlock(sessionId, size = 2, offset = 0) {
   return aisleOverview(id);
 }
 
-export function queueAssignments(sessionId, team, aisles, levelsRaw = '', { force = false, direction = 'up' } = {}) {
+export function queueAssignments(sessionId, team, aisles, levelsRaw = '', { force = false, direction = 'up', face: faceRaw = '' } = {}) {
   const dir = cleanDirection(direction);
+  const wantFace = cleanFace(sessionId, faceRaw);
   const id = Number(sessionId);
   const t = norm(team);
   const wantLevels = normLevels(levelsRaw);
@@ -190,16 +222,18 @@ export function queueAssignments(sessionId, team, aisles, levelsRaw = '', { forc
       }
       const isFloor = floor(aisle);
       const levels = isFloor ? '' : wantLevels;
+      const face = isFloor ? '' : wantFace;   // floor spots have no sides
       const existing = db
-        .prepare('SELECT status FROM assignments WHERE session_id = ? AND team = ? AND aisle = ? AND levels = ?')
-        .get(id, t, aisle, levels);
+        .prepare('SELECT status FROM assignments WHERE session_id = ? AND team = ? AND aisle = ? AND levels = ? AND face = ?')
+        .get(id, t, aisle, levels, face);
       if (existing) { skipped.push({ aisle, reason: `already ${existing.status} for team ${t}` }); continue; }
       pos += 1;
       db.prepare(
-        `INSERT INTO assignments (session_id, team, aisle, levels, position, status, created_at, direction)
-         VALUES (?, ?, ?, ?, ?, 'queued', ?, ?)`
-      ).run(id, t, aisle, levels, pos, now(), dir);
-      added.push(`${isFloor ? `${aisle} (floor)` : levels ? `${aisle} (${levels})` : aisle}${dir === 'down' ? ' from the far end' : ''}`);
+        `INSERT INTO assignments (session_id, team, aisle, levels, position, status, created_at, direction, face)
+         VALUES (?, ?, ?, ?, ?, 'queued', ?, ?, ?)`
+      ).run(id, t, aisle, levels, pos, now(), dir, face);
+      const span = isFloor ? 'floor' : [levels, face ? faceLabel(id, face) : ''].filter(Boolean).join(', ');
+      added.push(`${span ? `${aisle} (${span})` : aisle}${dir === 'down' ? ' from the far end' : ''}`);
     }
     db.exec('COMMIT');
   } catch (err) {
@@ -233,7 +267,7 @@ export function autoActivate(sessionId) {
       )
       .get(id, team);
     if (!next) continue;
-    if (blockHolder(id, next.aisle, team, next.levels, next.direction)) continue; // another team holds those levels of the racking
+    if (blockHolder(id, next.aisle, team, next.levels, next.direction, next.face)) continue; // another team holds those levels of the racking
     db.prepare("UPDATE assignments SET status = 'active', started_at = ? WHERE id = ?").run(now(), next.id);
     activated.push({ team, aisle: next.aisle, levels: next.levels });
   }
@@ -291,8 +325,8 @@ export function reorderAssignments(sessionId, team, ids = []) {
     for (const r of rows) {
       // the same aisle and levels twice on one team is the one thing the plan refuses
       if (r.team !== t) {
-        const dup = db.prepare('SELECT 1 FROM assignments WHERE session_id = ? AND team = ? AND aisle = ? AND levels = ? AND id != ?').get(id, t, r.aisle, r.levels, r.id);
-        if (dup) throw Object.assign(new Error(`${r.aisle} (${r.levels || 'every level'}) is already on team ${t}'s plan`), { status: 409 });
+        const dup = db.prepare('SELECT 1 FROM assignments WHERE session_id = ? AND team = ? AND aisle = ? AND levels = ? AND face = ? AND id != ?').get(id, t, r.aisle, r.levels, r.face || '', r.id);
+        if (dup) throw Object.assign(new Error(`${r.aisle} (${r.levels || 'every level'}${r.face ? ', ' + faceLabel(id, r.face) : ''}) is already on team ${t}'s plan`), { status: 409 });
       }
     }
     // the queued ones go after whatever is not queued, in the order given; the team's other queued aisles after those
@@ -334,10 +368,12 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
   let progress = null;
   if (active) {
     const inLevels = (l) => !active.levels || active.levels.includes(l || '');
+    // one face of the racking only, when the aisle is split between two teams
+    const inFace = (code) => !active.face || faceOfCode(code) === active.face;
     // in walking order: PRYSTG#2 before PRYSTG#10, as the numbers read
     bins = db
       .prepare('SELECT code, level FROM locations WHERE session_id = ? AND aisle = ? ORDER BY code')
-      .all(id, active.aisle).filter((r) => inLevels(r.level)).map((r) => r.code)
+      .all(id, active.aisle).filter((r) => inLevels(r.level) && inFace(r.code)).map((r) => r.code)
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
     // from the far end: the walk starts at the last bin
     if (cleanDirection(active.direction) === 'down') bins.reverse();
@@ -353,7 +389,7 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
           WHERE c.session_id = ? AND c.voided = 0 AND l.aisle = ?
           GROUP BY c.location_code`
       )
-      .all(norm(exceptDevice), id, active.aisle).filter((r) => inLevels(r.level));
+      .all(norm(exceptDevice), id, active.aisle).filter((r) => inLevels(r.level) && inFace(r.code));
     const countedBins = rows.map((r) => r.code);
     progress = {
       bins: bins.length,
@@ -371,10 +407,10 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
   // If nothing is active, say who the team is waiting on rather than just "none".
   let waitingOn = null;
   if (!active && queued.length) {
-    const holder = blockHolder(id, queued[0].aisle, t, queued[0].levels, queued[0].direction);
+    const holder = blockHolder(id, queued[0].aisle, t, queued[0].levels, queued[0].direction, queued[0].face);
     waitingOn = holder
-      ? { aisle: queued[0].aisle, levels: queued[0].levels, blockedByTeam: holder.team, blockedByAisle: holder.aisle, blockedByLevels: holder.levels }
-      : { aisle: queued[0].aisle, levels: queued[0].levels, blockedByTeam: null, blockedByAisle: null };
+      ? { aisle: queued[0].aisle, levels: queued[0].levels, face: queued[0].face || '', faceLabel: faceLabel(id, queued[0].face), blockedByTeam: holder.team, blockedByAisle: holder.aisle, blockedByLevels: holder.levels }
+      : { aisle: queued[0].aisle, levels: queued[0].levels, face: queued[0].face || '', faceLabel: faceLabel(id, queued[0].face), blockedByTeam: null, blockedByAisle: null };
   }
 
   const zoneOf = (aisle) => db.prepare(
@@ -389,6 +425,8 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
     active: active ? {
       id: active.id, aisle: active.aisle, levels: active.levels, zone: zoneOf(active.aisle), startedAt: active.started_at,
       direction: cleanDirection(active.direction),
+      // one side of the racking only ('' = both), and what the site calls it
+      face: active.face || '', faceLabel: faceLabel(id, active.face),
       // floor bins: pallets on the floor, no levels, any team
       floor: isFloorAisle(id, active.aisle),
       // the team coming the other way, when two share the aisle
@@ -397,7 +435,7 @@ export function teamStatus(sessionId, team, { exceptDevice = '' } = {}) {
     bins,
     progress,
     queued: queued.map((q) => q.aisle),
-    queuedDetail: queued.map((q) => ({ aisle: q.aisle, levels: q.levels, direction: cleanDirection(q.direction), floor: isFloorAisle(id, q.aisle) })),
+    queuedDetail: queued.map((q) => ({ aisle: q.aisle, levels: q.levels, face: q.face || '', faceLabel: faceLabel(id, q.face), direction: cleanDirection(q.direction), floor: isFloorAisle(id, q.aisle) })),
     done,
     waitingOn,
   };
@@ -445,13 +483,14 @@ export const levelsCell = (l) => {
   return run ? (s.length === 1 ? s : `${s[0]}-${s[s.length - 1]}`) : [...s].join(', ');
 };
 const STATE = { queued: 'queued', active: 'counting', done: 'done' };
-export const PLAN_COLUMNS = ['Team', 'Aisle', 'Levels', 'Start', 'Status'];
+export const PLAN_COLUMNS = ['Team', 'Aisle', 'Levels', 'Face', 'Start', 'Status'];
 
 /** Every assignment on the count, team by team in counting order. Status is for reading; the upload ignores it. */
 export function planRows(sessionId) {
-  return db.prepare('SELECT team, aisle, levels, direction, status, position, id FROM assignments WHERE session_id = ?').all(Number(sessionId))
+  const id = Number(sessionId);
+  return db.prepare('SELECT team, aisle, levels, face, direction, status, position, id FROM assignments WHERE session_id = ?').all(id)
     .sort((a, b) => String(a.team).localeCompare(String(b.team), undefined, { numeric: true }) || a.position - b.position || a.id - b.id)
-    .map((a) => ({ Team: a.team, Aisle: a.aisle, Levels: levelsCell(a.levels), Start: a.direction === 'down' ? 'far end' : '001 end', Status: STATE[a.status] || a.status }));
+    .map((a) => ({ Team: a.team, Aisle: a.aisle, Levels: levelsCell(a.levels), Face: a.face ? faceLabel(id, a.face) : '', Start: a.direction === 'down' ? 'far end' : '001 end', Status: STATE[a.status] || a.status }));
 }
 
 /** The teams on Teams & crew, with what they reach: the rows the plan starts from. */
@@ -474,7 +513,7 @@ export function planNext(sessionId, team = '', { limit = 12 } = {}) {
   const id = Number(sessionId);
   const t = norm(team);
   const overview = aisleOverview(id);
-  const rows = db.prepare('SELECT team, aisle, levels, status FROM assignments WHERE session_id = ?').all(id);
+  const rows = db.prepare('SELECT team, aisle, levels, face, status FROM assignments WHERE session_id = ?').all(id);
   const levelsIn = new Map(db.prepare("SELECT aisle, GROUP_CONCAT(DISTINCT UPPER(TRIM(level))) AS lv FROM locations WHERE session_id = ? AND TRIM(COALESCE(level, '')) != '' GROUP BY aisle").all(id).map((r) => [r.aisle, [...new Set(String(r.lv || '').split(','))].filter(Boolean).sort().join('')]));
   const leftByLevel = new Map(db.prepare(`SELECT l.aisle, UPPER(TRIM(COALESCE(l.level, ''))) AS lv, COUNT(*) AS n FROM locations l
       WHERE l.session_id = ? AND NOT EXISTS (SELECT 1 FROM counts c WHERE c.session_id = l.session_id AND c.location_code = l.code AND c.voided = 0) GROUP BY l.aisle, lv`).all(id).map((r) => [`${r.aisle}|${r.lv}`, r.n]));
@@ -487,8 +526,12 @@ export function planNext(sessionId, team = '', { limit = 12 } = {}) {
   const num = (a) => Number(String(a || '').replace(/\D/g, '')) || 0;
   const prefix = (a) => String(a || '').replace(/\d.*$/, '');
   const blockOfA = new Map(overview.map((a) => [a.aisle, a.block || a.aisle]));
-  const busyBlocks = new Set(rows.filter((r) => r.status === 'active' && r.team !== t).map((r) => blockOfA.get(r.aisle)));
-  const planned = new Set(rows.filter((r) => r.status !== 'done').map((r) => r.aisle));
+  /* an aisle is planned when somebody has it whole, or both its faces are spoken for */
+  const facesPlanned = new Map();
+  for (const r of rows.filter((r) => r.status !== 'done')) facesPlanned.set(r.aisle, new Set([...(facesPlanned.get(r.aisle) || []), r.face || 'both']));
+  const planned = new Set([...facesPlanned].filter(([, f]) => f.has('both') || (f.has('odd') && f.has('even'))).map(([a]) => a));
+  const faces = facesOf(id);
+  const faceLeft = (aisle) => { const f = facesPlanned.get(aisle); return !f ? '' : f.has('odd') ? 'even' : f.has('even') ? 'odd' : ''; };
   const doneAisles = new Set(rows.filter((r) => r.status === 'done').map((r) => r.aisle));
   const out = [];
   for (const a of overview) {
@@ -499,23 +542,28 @@ export function planNext(sessionId, team = '', { limit = 12 } = {}) {
     const reachable = floor || !reach || !levels ? (floor || !levels ? '' : levels) : [...levels].filter((c) => reach.includes(c)).join('');
     const leftReachable = floor || !levels ? left : [...(reachable || '')].reduce((n, lv) => n + (leftByLevel.get(`${a.aisle}|${lv}`) || 0), 0);
     if (t && reach && levels && !floor && !reachable) continue;        // nothing there this team can reach
-    const held = busyBlocks.has(blockOfA.get(a.aisle));
+    const openFace = floor ? '' : faceLeft(a.aisle);
+    // held while another team is in that racking - unless it is on the other side of this very aisle
+    const holders = rows.filter((r) => r.status === 'active' && r.team !== t && blockOfA.get(r.aisle) === blockOfA.get(a.aisle)
+      && !(r.aisle === a.aisle && openFace && r.face && r.face !== openFace));
+    const held = holders.length > 0;
     const dist = !here ? 0 : a.aisle === here ? 0 : (blockOfA.get(a.aisle) === blockOfA.get(here) ? 1 : (prefix(a.aisle) === prefix(here) ? 2 + Math.abs(num(a.aisle) - num(here)) : 60 + Math.abs(num(a.aisle) - num(here))));
     const why = [];
+    if (openFace) why.push(`the ${faces[openFace]} side only: team ${rows.filter((r) => r.aisle === a.aisle && r.status !== 'done').map((r) => r.team).join(', ')} has the other`);
     if (floor) why.push('floor pallets, no levels');
     else if (t && reach && levels) why.push(reachable === levels ? `every level (${levelsCell(levels)})` : `levels ${levelsCell(reachable)} of ${levelsCell(levels)}`);
     else if (levels) why.push(`levels ${levelsCell(levels)}`);
     if (here && a.aisle !== here) why.push(dist === 1 ? `same racking as ${here}` : dist <= 4 ? `next to ${here}` : '');
     if (a.bins_counted) why.push(`${a.bins_counted} of ${a.bins} bins counted already`);
     if (doneAisles.has(a.aisle)) why.push('handed back once already');
-    if (held) why.push(`held: team ${rows.filter((r) => r.status === 'active' && blockOfA.get(r.aisle) === blockOfA.get(a.aisle)).map((r) => r.team).join(', ')} is in that racking`);
-    out.push({ aisle: a.aisle, zone: a.zone || '', block: a.block, bins: a.bins, binsLeft: left, binsLeftReachable: leftReachable, levels, levelsReachable: floor ? '' : (reachable || levels), floor, held, distance: dist, why: why.filter(Boolean).join(' · ') });
+    if (held) why.push(`held: team ${holders.map((r) => r.team).join(', ')} is in that racking`);
+    out.push({ aisle: a.aisle, zone: a.zone || '', block: a.block, bins: a.bins, binsLeft: left, binsLeftReachable: leftReachable, levels, levelsReachable: floor ? '' : (reachable || levels), floor, held, distance: dist, face: openFace, faceLabel: openFace ? faces[openFace] : '', why: why.filter(Boolean).join(' · ') });
   }
   out.sort((x, y) => Number(x.held) - Number(y.held) || (t && here ? x.distance - y.distance : 0) || y.binsLeftReachable - x.binsLeftReachable || x.aisle.localeCompare(y.aisle, undefined, { numeric: true }));
   const all = overview.length;
   const totalLeft = overview.reduce((n, a) => n + Math.max(0, a.bins - a.bins_counted), 0);
   return {
-    team: t, reach, reachLabel: reach ? levelsCell(reach) : '', here,
+    team: t, reach, reachLabel: reach ? levelsCell(reach) : '', here, faces,
     unplanned: out.length, binsLeft: totalLeft, aisles: all,
     suggestions: out.slice(0, Math.max(1, Number(limit) || 12)),
     more: Math.max(0, out.length - Math.max(1, Number(limit) || 12)),

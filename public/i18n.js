@@ -191,7 +191,8 @@
     'Cancel — rescan': 'Cancelar — volver a escanear',
     'Pallet already counted': 'Tarima ya contada',
     'Bin not on the list': 'La ubicación no está en la lista',
-    'Not your level': 'No es tu nivel', 'Not your aisle': 'No es tu pasillo',
+    'Not your level': 'No es tu nivel', 'Not your aisle': 'No es tu pasillo', 'Not your side': 'No es tu lado', 'Your side': 'Tu lado', 'Other-side bin accepted': 'Ubicación del otro lado aceptada',
+    'Front': 'Frente', 'Back': 'Atrás',
     'Unknown pallet accepted': 'Tarima desconocida aceptada',
 
     // history
@@ -371,6 +372,7 @@
     [/^This cycle count is for bin (\S+)$/, (m) => `Este conteo cíclico es para la ubicación ${m[1]}`],
     [/^You scanned (\S+)\. Scan (\S+), or tap Bin done\.$/, (m) => `Escaneaste ${m[1]}. Escanea ${m[2]}, o toca Ubicación terminada.`],
     [/^Bin (\S+) is on level (\S+)\. Your team is assigned (.+) of this aisle\.$/, (m) => `La ubicación ${m[1]} está en el nivel ${m[2]}. A tu equipo le tocan ${T(m[3])} de este pasillo.`],
+    [/^Bin (\S+) is on the (\S+) side of this aisle\. Your team has the (\S+) side(?: — team (\S+) has the other)?\.$/, (m) => `La ubicación ${m[1]} está en el lado ${T(m[2])} de este pasillo. Tu equipo tiene el lado ${T(m[3])}${m[4] ? ` — el equipo ${m[4]} tiene el otro` : ''}.`],
     [/^It is another label on the pallet with (\S+)$/, (m) => `Es otra etiqueta de la tarima con ${m[1]}`],
     [/^Another label on the pallet just counted \((\S+)\)$/, (m) => `Otra etiqueta en la tarima recién contada (${m[1]})`],
     [/^Done — that was every label \((\d+)\)$/, (m) => `Listo — eran todas las etiquetas (${m[1]})`],

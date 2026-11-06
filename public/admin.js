@@ -476,7 +476,9 @@
      Aisles are dragged from the list onto a team, up and down a team's queue,
      across to another team, or back to the list to come off the plan. */
   /* ---- quick assign: a team, its levels, the aisles in order, one button ---- */
-  const qa = { team: '', levels: new Set(), dir: 'up', aisles: [], teams: new Map(), overview: [], rows: [] };
+  const qa = { team: '', levels: new Set(), dir: 'up', face: '', aisles: [], teams: new Map(), overview: [], rows: [] };
+  // what the site calls the two sides of its racking (the layout drawing names them)
+  const faceName = (f) => (f ? ((nu.data && nu.data.faces) || { odd: 'Front', even: 'Back' })[f] || f : '');
   const qaLevelsText = () => { const l = [...'ABCDEF'].filter((c) => qa.levels.has(c)).join(''); return levelsBox(l); };
   function qaRender() {
     const can = api.can('assign');
@@ -535,6 +537,7 @@
     }
     if (!qa.overview.length) box.appendChild(Object.assign(document.createElement('span'), { className: 'muted', textContent: 'No aisles yet — upload the bin list under Settings.' }));
     for (const b of $('qaFrom').querySelectorAll('button')) b.classList.toggle('selected', b.dataset.dir === qa.dir);
+    for (const b of document.querySelectorAll('#qaFace button, #nuFace button')) { b.classList.toggle('selected', (b.dataset.face || '') === qa.face); if (b.dataset.face) b.textContent = faceName(b.dataset.face); }
     const go = $('btnQuickQueue');
     // floor bins (REC, the staging spots) have no levels: a pick of those alone needs none ticked
     const floorSet = new Set(qa.overview.filter((a) => a.floor).map((a) => a.aisle));
@@ -542,7 +545,7 @@
     const ready = can && qa.team && qa.aisles.length && (qa.levels.size || !needLevels);
     go.disabled = !ready;
     go.textContent = !qa.team ? 'Pick a team and an aisle' : !qa.aisles.length ? `Pick the aisles for team ${qa.team}` : !qa.levels.size && needLevels ? 'Tick at least one level'
-      : `Queue ${qa.aisles.join(' → ')} for team ${qa.team}${needLevels ? ` · ${levelsLabel([...'ABCDEF'].filter((c) => qa.levels.has(c)).join(''))}` : ' · floor pallets, no levels'}${qa.dir === 'down' ? ' · from the far end' : ''}`;
+      : `Queue ${qa.aisles.join(' → ')} for team ${qa.team}${needLevels ? ` · ${levelsLabel([...'ABCDEF'].filter((c) => qa.levels.has(c)).join(''))}` : ' · floor pallets, no levels'}${qa.face && needLevels ? ` · ${faceName(qa.face)} side` : ''}${qa.dir === 'down' ? ' · from the far end' : ''}`;
   }
   /* a team picked - by its chip, its card scanned, or its number typed: its levels ticked, the aisles next */
   function qaPickTeam(name) {
@@ -597,8 +600,9 @@
       mid.append(left, why);
       const btns = document.createElement('div'); btns.className = 'nu-btns';
       if (team) {
-        const go = button(a.held ? 'Queue anyway' : 'Queue', 'sm' + (a.held ? ' ghost' : ' primary'), () => nuQueue([a.aisle]));
-        go.disabled = !can; go.dataset.queue = a.aisle;
+        const side = a.face || qa.face;   // the side still open on that aisle, else the side picked above
+        const go = button((a.held ? 'Queue anyway' : 'Queue') + (side && !a.floor ? ` ${faceName(side)}` : ''), 'sm' + (a.held ? ' ghost' : ' primary'), () => nuQueue([a.aisle], side));
+        go.disabled = !can; go.dataset.queue = a.aisle; if (side) go.dataset.face = side;
         go.title = a.held ? 'Another team is in that racking now; queued, it starts when they are out' : `Queue ${a.aisle} for team ${team}${a.levelsReachable ? ' on levels ' + a.levelsReachable : ''}`;
         btns.appendChild(go);
       } else {
@@ -616,11 +620,11 @@
     if (d.more) foot.appendChild(Object.assign(document.createElement('span'), { className: 'muted', textContent: `and ${d.more} more under More ways to plan` }));
     if (foot.childNodes.length) list.appendChild(foot);
   }
-  async function nuQueue(aisles) {
+  async function nuQueue(aisles, face = qa.face) {
     if (!needSession($('nuMsg')) || !qa.team) return;
     const team = qa.team;
     const levels = [...'ABCDEF'].filter((c) => qa.levels.has(c)).join('') || 'A-F';
-    const go = (force) => postJson(`/api/admin/sessions/${sessionId}/assignments`, { team, aisles: aisles.join(', '), levels, direction: qa.dir, force });
+    const go = (force) => postJson(`/api/admin/sessions/${sessionId}/assignments`, { team, aisles: aisles.join(', '), levels, direction: qa.dir, face: face || '', force });
     try {
       let r;
       try { r = await go(false); }
@@ -685,12 +689,13 @@
     };
     tick();
   };
-  $('btnQaClear').onclick = () => { qa.team = ''; qa.aisles = []; qa.levels = new Set(); qa.dir = 'up'; qaRender(); refreshNextUp().catch(() => {}); };
+  $('btnQaClear').onclick = () => { qa.team = ''; qa.aisles = []; qa.levels = new Set(); qa.dir = 'up'; qa.face = ''; qaRender(); refreshNextUp().catch(() => {}); };
   for (const b of $('qaFrom').querySelectorAll('button')) b.onclick = () => { qa.dir = b.dataset.dir; qaRender(); };
+  for (const b of document.querySelectorAll('#qaFace button, #nuFace button')) b.onclick = () => { qa.face = b.dataset.face || ''; qaRender(); renderNextUp(); };
   $('btnQuickQueue').onclick = async () => {
     if (!needSession($('assignMsg'))) return;
-    const team = qa.team, aisles = qa.aisles.join(', '), levels = qaLevelsText(), direction = qa.dir;
-    const go = (force) => postJson(`/api/admin/sessions/${sessionId}/assignments`, { team, aisles, levels, direction, force });
+    const team = qa.team, aisles = qa.aisles.join(', '), levels = qaLevelsText(), direction = qa.dir, face = qa.face;
+    const go = (force) => postJson(`/api/admin/sessions/${sessionId}/assignments`, { team, aisles, levels, direction, face, force });
     try {
       let r;
       try { r = await go(false); }
@@ -793,7 +798,7 @@
       head.innerHTML = `<span>Team <b></b></span><span class="muted"></span>`;
       head.querySelector('b').textContent = team;
       head.querySelector('.muted').textContent = !items.length ? 'nothing queued'
-        : active ? `in ${aisleLabel(active.aisle, zoneByAisle.get(active.aisle))}, ${levelsLabel(active.levels)}` : (items.every((i) => i.status === 'done') ? 'finished' : 'waiting');
+        : active ? `in ${aisleLabel(active.aisle, zoneByAisle.get(active.aisle))}, ${levelsLabel(active.levels)}${active.face ? `, ${faceName(active.face)} side` : ''}` : (items.every((i) => i.status === 'done') ? 'finished' : 'waiting');
       box.appendChild(head);
       const meta = [ct && ct.shift ? (ct.shift === '1' ? '1st shift' : '2nd shift') : '', ct && ct.reach ? `reaches ${ct.reachLabel}` : '', ct ? (ct.people ? `${ct.people} ${ct.people === 1 ? 'person' : 'people'}` : 'nobody on it yet') : 'not on Teams & crew'].filter(Boolean).join(' · ');
       if (meta) box.appendChild(Object.assign(document.createElement('div'), { className: 'tmeta', textContent: meta }));
@@ -810,6 +815,7 @@
         a.dataset.id = it.id;
         // a team coming the other way down the same aisle is a partner, not a hold
         const holder = (activeInBlock.get(blockOf.get(it.aisle) || it.aisle) || []).find((h) => h.team !== team && overlap(h.levels, it.levels)
+          && !(h.aisle === it.aisle && h.face && it.face && h.face !== it.face)
           && !(h.aisle === it.aisle && (h.direction || 'up') !== (it.direction || 'up')));
         const blocked = it.status === 'queued' && !!holder;
         if (blocked) a.classList.add('blocked');
@@ -818,7 +824,7 @@
         row.className = 'arow';
         row.append(Object.assign(document.createElement('b'), { className: 'aisle', textContent: it.aisle }));
         if (ov.zone) row.append(Object.assign(document.createElement('span'), { className: 'z', textContent: titleCase(ov.zone) }));
-        row.append(Object.assign(document.createElement('span'), { className: 'lv', textContent: `${levelsLabel(it.levels)}${it.direction === 'down' ? ' · from the far end ↩' : ''}${blocked ? ' ⏳' : ''}` }));
+        row.append(Object.assign(document.createElement('span'), { className: 'lv', textContent: `${levelsLabel(it.levels)}${it.face ? ` · ${faceName(it.face)} side` : ''}${it.direction === 'down' ? ' · from the far end ↩' : ''}${blocked ? ' ⏳' : ''}` }));
         const state = it.status === 'active' ? 'Counting now' : it.status === 'done' ? 'Done' : blocked ? `Held · team ${holder.team}` : nextSeen ? 'Queued' : 'Next';
         if (it.status === 'queued') nextSeen = true;
         row.append(Object.assign(document.createElement('span'), { className: 'st', textContent: state }));
@@ -2746,7 +2752,7 @@
 
   async function queueAisles(force) {
     const r = await postJson(`/api/admin/sessions/${sessionId}/assignments`,
-      { team: $('fAssignTeam').value, aisles: $('fAssignAisles').value, levels: $('fAssignLevels').value, direction: $('fAssignFrom').value, force });
+      { team: $('fAssignTeam').value, aisles: $('fAssignAisles').value, levels: $('fAssignLevels').value, direction: $('fAssignFrom').value, face: $('fAssignFace').value, force });
     return r;
   }
 

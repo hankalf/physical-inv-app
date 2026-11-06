@@ -47,7 +47,7 @@ One page for each thing on a full count that is not the plain rack label, pallet
 | [A pallet that is not on the list](on-the-scanner/pallet-not-on-the-list.md) | [PDF](on-the-scanner/pallet-not-on-the-list.pdf) |
 | [A bin that is not on the list](on-the-scanner/bin-not-on-the-list.md) | [PDF](on-the-scanner/bin-not-on-the-list.pdf) |
 | [A pallet that was already counted](on-the-scanner/pallet-already-counted.md) | [PDF](on-the-scanner/pallet-already-counted.pdf) |
-| [Not your aisle, or not your level](on-the-scanner/not-your-aisle-or-level.md) | [PDF](on-the-scanner/not-your-aisle-or-level.pdf) |
+| [Not your aisle, not your level, or not your side](on-the-scanner/not-your-aisle-or-level.md) | [PDF](on-the-scanner/not-your-aisle-or-level.pdf) |
 | [A pallet in a different bin from the report](on-the-scanner/pallet-in-the-wrong-bin.md) | [PDF](on-the-scanner/pallet-in-the-wrong-bin.pdf) |
 | [The wrong label in the wrong box](on-the-scanner/wrong-label-in-the-wrong-box.md) | [PDF](on-the-scanner/wrong-label-in-the-wrong-box.pdf) |
 | [A very large quantity](on-the-scanner/a-big-quantity.md) | [PDF](on-the-scanner/a-big-quantity.pdf) |

@@ -1143,8 +1143,8 @@ nothing queued has **Queue aisles for this team**, which fills the team and the 
 **?** opens how the plan works; **⇅ Plan file** opens the file tools:
 
 - **⬇ Export the plan (CSV)** — every team's aisles in counting order: **Team**, **Aisle**,
-  **Levels** (*A-C*), **Start** (*001 end* / *far end*) and **Status** (*counting*, *queued*,
-  *done*). It is the same layout the upload reads, so the way to rework a plan is to export it,
+  **Levels** (*A-C*), **Face** (*Front* / *Back*, blank for both sides), **Start** (*001 end* /
+  *far end*) and **Status** (*counting*, *queued*, *done*). It is the same layout the upload reads, so the way to rework a plan is to export it,
   change it in Excel, and bring it back; *Status* is for reading and ignored on the way in.
 - **Upload a plan** — a CSV or Excel file, then **Upload**. It adds to what is queued; tick
   **Replace what is queued** to take every aisle still queued or being counted off first
@@ -1169,6 +1169,13 @@ dashboard. Uploading needs *Queue aisles*; the export needs *Downloads*.
   of the two hands it back. **Auto-assign the aisles → Two teams per aisle, from opposite ends**
   pairs the teams (1 with 2, 3 with 4 …) and plans it for every aisle; an odd team out works alone.
   A counting-plan file takes the same thing in an optional **Start** column: *far end* or *001 end*.
+- **Two teams on the same aisle, one each side.** Racking has two faces: the odd positions
+  (*Front*, F01A001, F01A003 …) and the even (*Back*, F01A002, F01A004 …) — the layout drawing can
+  name them differently. Beside **Next up** pick **Front** or **Back** before pressing *Queue*; the
+  by-hand row has a **Side** box; a plan file takes a **Face** column. Each team's gun lists its
+  side's bins only, says *Front side only* on its aisle card, and stops a bin from the other side
+  with **Not your side** (an override, with a reason, like *Not your level*). The two teams do not
+  hold each other up, and *Next up* offers an aisle whose Front is taken as *the Back side only*.
 
 **The buttons on an aisle.** Each card has what fits its state: **start** on one
 waiting (if its racking block is free); **done** on the one being counted — the gun has no button for this: finishing an

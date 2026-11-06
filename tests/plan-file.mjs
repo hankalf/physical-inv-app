@@ -34,11 +34,11 @@ await post(`/api/admin/sessions/${S}/assignments`, { team: '32', aisles: 'P13', 
 r = await fetch(`${BASE}/api/admin/sessions/${S}/export/plan.csv`, { headers: A });
 const out = await r.text();
 const lines = out.trim().split(/\r?\n/);
-check('Export the plan: a CSV named for the count, in the upload\'s columns plus Status', r.status === 200 && /plan-Plan-file-count\.csv/.test(r.headers.get('content-disposition') || '') && lines[0] === 'Team,Aisle,Levels,Start,Status', `${r.headers.get('content-disposition')} | ${lines[0]}`);
-check('…a row per assignment, team by team in counting order, levels as a range', lines.slice(1).join('|') === '31,P11,A-C,001 end,counting|31,P12,A-C,001 end,queued|32,P13,A-F,far end,counting', lines.slice(1).join('|'));
+check('Export the plan: a CSV named for the count, in the upload\'s columns plus Status', r.status === 200 && /plan-Plan-file-count\.csv/.test(r.headers.get('content-disposition') || '') && lines[0] === 'Team,Aisle,Levels,Face,Start,Status', `${r.headers.get('content-disposition')} | ${lines[0]}`);
+check('…a row per assignment, team by team in counting order, levels as a range', lines.slice(1).join('|') === '31,P11,A-C,,001 end,counting|31,P12,A-C,,001 end,queued|32,P13,A-F,,far end,counting', lines.slice(1).join('|'));
 
 /* round trip: the exported file comes back, replacing what is queued, with one line changed */
-const edited = out.replace('31,P12,A-C,001 end,queued', '33,P14,D-F,001 end,queued') + '33,P15,D-F,far end,\n31,NOPE,A-C,,\n';
+const edited = out.replace('31,P12,A-C,,001 end,queued', '33,P14,D-F,,001 end,queued') + '33,P15,D-F,,far end,\n31,NOPE,A-C,,,\n';
 r = await post(`/api/admin/sessions/${S}/plan?replace=1`, edited, csv(A));
 let st = await j(r);
 check('Upload it back with Replace: every row taken, the unknown aisle skipped and said', r.status === 200 && st.planned === 4 && st.skipped === 1, JSON.stringify({ planned: st.planned, skipped: st.skipped }));

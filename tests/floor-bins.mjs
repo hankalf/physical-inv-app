@@ -86,7 +86,7 @@ const G = { authorization: 'Device ' + (await j(await fetch(`${BASE}/api/devices
 const st = await j(await fetch(`${BASE}/api/sessions/${S1}/team-status?team=8`, { headers: G }));
 check('The team\'s walk: PRYSTG#1, #2 … #9, #10 … #16 in the order the numbers read, and the aisle is marked floor', st.active && st.active.floor === true && st.bins.join(',') === Array.from({ length: 16 }, (_, i) => `PRYSTG#${i + 1}`).join(','), st.bins.slice(0, 12).join(','));
 const plan = await (await fetch(`${BASE}/api/admin/sessions/${S1}/export/plan.csv`, { headers: A })).text();
-check('The plan file has the floor rows with blank levels', /S1-DS07,REC,,001 end/.test(plan) && /8,PRYSTG,,001 end/.test(plan), plan.split('\n').filter((l) => /REC|PRYSTG/.test(l)).join(' | '));
+check('The plan file has the floor rows with blank levels', /S1-DS07,REC,,,001 end/.test(plan) && /8,PRYSTG,,,001 end/.test(plan), plan.split('\n').filter((l) => /REC|PRYSTG/.test(l)).join(' | '));
 const planUp = await j(await fetch(`${BASE}/api/admin/sessions/${S1}/plan?replace=1`, { method: 'POST', headers: csv, body: 'Team,Aisle,Levels\n9,PRYSTG,\n9,F02,\n' }));
 check('…and a plan upload takes a floor row with no levels, while a rack row without them is still skipped', planUp.planned === 1 && planUp.skipped === 1 && planUp.skippedNoLevels === 1, JSON.stringify([planUp.planned, planUp.skipped]));
 await fetch(`${BASE}/api/admin/sessions/${S1}/plan?replace=1`, { method: 'POST', headers: csv, body: 'Team,Aisle,Levels\nS1-DS07,REC,\n8,PRYSTG,\n' });

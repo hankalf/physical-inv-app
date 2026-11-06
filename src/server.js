@@ -1233,9 +1233,9 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/assignments$/)) && method === 'POST') {
     const body = await readJson(req);
     const aisles = Array.isArray(body.aisles) ? body.aisles : String(body.aisles || '').split(/[,\s]+/);
-    const queued = queueAssignments(m[1], body.team, aisles, body.levels || '', { force: !!body.force, direction: body.direction });
+    const queued = queueAssignments(m[1], body.team, aisles, body.levels || '', { force: !!body.force, direction: body.direction, face: body.face || '' });
     audit(actor, body.force ? 'assigned aisles OVERRIDING the equipment check' : 'assigned aisles',
-      `team ${body.team}: ${queued.added.join(', ') || 'nothing'} (levels ${body.levels})`, m[1]);
+      `team ${body.team}: ${queued.added.join(', ') || 'nothing'} (levels ${body.levels}${body.face ? ', ' + body.face + ' side' : ''})`, m[1]);
     return sendJson(req, res, 200, queued);
   }
   // the planning board's drag: a team's queued aisles in a new order, or an aisle brought over from another team

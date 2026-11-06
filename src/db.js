@@ -550,8 +550,12 @@ if (!hasCol('users', 'invite_expires')) db.exec('ALTER TABLE users ADD COLUMN in
 if (!hasCol('assignments', 'levels')) {
   // a team is assigned an aisle AND the levels it has the equipment for
   db.exec("ALTER TABLE assignments ADD COLUMN levels TEXT NOT NULL DEFAULT ''");
+}
+if (!hasCol('assignments', 'face')) {
+  // ...and, when two teams split an aisle, which face of the racking: the odd positions or the even ('' = both)
+  db.exec("ALTER TABLE assignments ADD COLUMN face TEXT NOT NULL DEFAULT ''");
   db.exec('DROP INDEX IF EXISTS idx_assign_unique');
-  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_assign_unique ON assignments(session_id, team, aisle, levels)');
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_assign_unique ON assignments(session_id, team, aisle, levels, face)');
 }
 
 export const norm = (v) => (v == null ? '' : String(v).trim().toUpperCase());

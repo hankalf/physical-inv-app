@@ -1078,3 +1078,7 @@ td[data-full] { cursor: help; }
 .cellpop { position: fixed; z-index: 1200; background: var(--surface-2); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(0,0,0,.35); display: flex; gap: 10px; align-items: flex-start; }
 .cellpop .cp-text { flex: 1; font-size: 13px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; user-select: text; }
 .cellpop button { flex: none; }
+
+/* the side of the racking, picked beside Next up */
+.nu-face { margin: 0; }
+.qa-h .spacer { flex: 1; }

@@ -175,6 +175,9 @@
     return bits.join(' · ');
   }
   const levelsFor = (aisle) => { const q = (state.assignment?.queuedDetail || []).find((x) => x.aisle === aisle); return q ? q.levels : ''; };
+  // one side of the racking only, when two teams split an aisle: "Front side"
+  const faceFor = (aisle) => { const q = (state.assignment?.queuedDetail || []).find((x) => x.aisle === aisle); return q && q.face ? `${q.faceLabel || q.face} side` : ''; };
+  const faceOfCode = (code) => { const p = parseBinCode(code); const pos = Number(p.bay); return p.bay && Number.isFinite(pos) ? (pos % 2 === 1 ? 'odd' : 'even') : ''; };
   // floor bins (REC, the staging spots): pallets on the floor, no levels
   const isFloorQueued = (aisle) => !!(state.assignment?.queuedDetail || []).find((x) => x.aisle === aisle && x.floor);
   const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
@@ -1052,10 +1055,11 @@
       box.innerHTML = `<div class="sub">Team ${a.team} — your aisle</div><div class="aisle"></div><div class="sub zone-sub"></div><div class="sub bins-sub"></div><div class="bins"></div>`;
       box.querySelector('.aisle').textContent = a.active.aisle;
       box.querySelector('.zone-sub').textContent = (a.active.floor ? `${a.active.aisle} · floor pallets — count every pallet standing here` : `${aisleLabel(a.active.aisle, a.active.zone)} · ${levelsLabel(a.active.levels)}`)
+        + (a.active.face ? ` · ${a.active.faceLabel || a.active.face} side only` : '')
         + (a.active.direction === 'down' ? ' · start at the far end' : '')
         + (a.active.partner ? ` · team ${a.active.partner.team} from the other end` : '');
       box.querySelector('.bins-sub').textContent = `${counted.size} of ${total} bins have a count` +
-        (a.queued.length ? ` · next: ${a.queued.map((q) => (isFloorQueued(q) ? `${q} (floor)` : aisleLabel(q, zoneFor(q)) + (levelsFor(q) ? ' ' + levelsFor(q) : ''))).join(', ')}` : ' · last aisle in your plan');
+        (a.queued.length ? ` · next: ${a.queued.map((q) => (isFloorQueued(q) ? `${q} (floor)` : aisleLabel(q, zoneFor(q)) + (levelsFor(q) ? ' ' + levelsFor(q) : '') + (faceFor(q) ? ', ' + faceFor(q) : ''))).join(', ')}` : ' · last aisle in your plan');
       const grid = box.querySelector('.bins');
       for (const b of a.bins) {
         const s = document.createElement('span');
@@ -1064,7 +1068,7 @@
         grid.appendChild(s);
       }
       card.appendChild(box);
-      $('btnCount').textContent = a.active.floor ? `Count ${a.active.aisle} (floor pallets)` : `Count ${aisleLabel(a.active.aisle, a.active.zone)} (${levelsLabel(a.active.levels)})`;
+      $('btnCount').textContent = a.active.floor ? `Count ${a.active.aisle} (floor pallets)` : `Count ${aisleLabel(a.active.aisle, a.active.zone)} (${levelsLabel(a.active.levels)}${a.active.face ? `, ${a.active.faceLabel || a.active.face} side` : ''})`;
       return;
     }
     if (a.waitingOn) {
@@ -1074,7 +1078,7 @@
       box.className = 'assign waiting';
       box.innerHTML = `<div class="sub">Team ${a.team} — next aisle</div><div class="aisle"></div><div class="sub zone-sub"></div><div class="sub why"></div>`;
       box.querySelector('.aisle').textContent = w.aisle;
-      box.querySelector('.zone-sub').textContent = isFloorQueued(w.aisle) ? `${w.aisle} · floor pallets` : `${aisleLabel(w.aisle, zoneFor(w.aisle))} · ${levelsLabel(w.levels)}`;
+      box.querySelector('.zone-sub').textContent = isFloorQueued(w.aisle) ? `${w.aisle} · floor pallets` : `${aisleLabel(w.aisle, zoneFor(w.aisle))} · ${levelsLabel(w.levels)}${w.face ? ` · ${w.faceLabel || w.face} side` : ''}`;
       box.querySelector('.why').textContent = w.blockedByTeam
         ? `Waiting: team ${w.blockedByTeam} is still in ${aisleLabel(w.blockedByAisle, zoneFor(w.blockedByAisle))}${w.blockedByLevels ? ' (' + levelsLabel(w.blockedByLevels) + ')' : ''}` +
           `${w.blockedByAisle === w.aisle ? '' : ', which shares racking with ' + w.aisle}. Refresh when they finish.`
@@ -1885,6 +1889,17 @@
           rows: [['Bin', value], ['Where', describeBin(value)], ['Your levels', levelsLabel(myLevels)]],
           apply: (reason) => { applyBin(); state.draft.offAssignment = 1; addReason(reason); },
           feedbackText: 'Off-level bin accepted',
+        });
+      }
+      const myFace = state.recount || !state.session.guided ? '' : (state.assignment?.active?.face || '');
+      if (state.session.guided && loc.aisle === active && myFace && faceOfCode(value) && faceOfCode(value) !== myFace) {
+        const names = state.session.faces || { odd: 'Front', even: 'Back' };
+        return askOverride({
+          title: 'Not your side',
+          why: `Bin ${value} is on the ${names[faceOfCode(value)]} side of this aisle. Your team has the ${names[myFace]} side${state.assignment?.active?.partner ? ` — team ${state.assignment.active.partner.team} has the other` : ''}.`,
+          rows: [['Bin', value], ['Where', describeBin(value)], ['Your side', names[myFace]]],
+          apply: (reason) => { applyBin(); state.draft.offAssignment = 1; addReason(reason); },
+          feedbackText: 'Other-side bin accepted',
         });
       }
       if (!state.recount && state.session.guided && loc.aisle !== active) {

@@ -1,7 +1,9 @@
-Team,Aisle,Levels,Start
-1,A01,A-F,001 end
-1,B01,A-F,001 end
-2,A01,A-F,far end
-2,B01,A-F,far end
-3,A02,A-C,001 end
-4,A02,D-F,001 end
+Team,Aisle,Levels,Face,Start
+1,A01,A-F,,001 end
+1,B01,A-F,,001 end
+2,A01,A-F,,far end
+2,B01,A-F,,far end
+3,A02,A-C,,001 end
+4,A02,D-F,,001 end
+5,A03,A-F,Front,001 end
+6,A03,A-F,Back,001 end

@@ -1,6 +1,6 @@
 import { db, norm, bumpMasterVersion, getSession, resolveAisle } from '../db.js';
 import { parseBinCode, normLevels } from '../util/bincode.js';
-import { autoActivate } from './assignments.js';
+import { autoActivate, cleanFace } from './assignments.js';
 import { loadLayout, classifyByRules } from '../util/layouts.js';
 import { parseRecords, pick } from '../util/csv.js';
 import { ensureFloorBins, floorOn, isFloorAisle } from './floor-bins.js';
@@ -227,11 +227,15 @@ export function importMaster(sessionId, kind, text, { replace = false, source = 
         // an optional "Start" column: "far end" (or back, end, down, reverse) starts the team at the far end of the aisle
         const from = String(pick(rec, ['start', 'startfrom', 'from', 'direction', 'end', 'startat'])).trim().toLowerCase();
         const direction = /^(far|far end|back|end|down|reverse|high|last|z)/.test(from) ? 'down' : 'up';
+        // an optional "Face" column: one side of the racking (Front/Back, or whatever the layout calls them); blank = both
+        let face = '';
+        try { face = isFloorAisle(id, aisle) ? '' : cleanFace(id, pick(rec, ['face', 'side', 'faceofracking'])); }
+        catch { stats.skipped++; stats.skippedBadFace = (stats.skippedBadFace || 0) + 1; continue; }
         db.prepare(
-          `INSERT INTO assignments (session_id, team, aisle, levels, position, status, created_at, direction)
-           VALUES (?, ?, ?, ?, ?, 'queued', ?, ?)
-           ON CONFLICT(session_id, team, aisle, levels) DO NOTHING`
-        ).run(id, team, aisle, levels, pos, new Date().toISOString(), direction);
+          `INSERT INTO assignments (session_id, team, aisle, levels, position, status, created_at, direction, face)
+           VALUES (?, ?, ?, ?, ?, 'queued', ?, ?, ?)
+           ON CONFLICT(session_id, team, aisle, levels, face) DO NOTHING`
+        ).run(id, team, aisle, levels, pos, new Date().toISOString(), direction, face);
         stats.planned++;
         continue;
       }

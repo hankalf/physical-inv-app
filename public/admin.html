@@ -305,7 +305,11 @@
           </div>
           <div class="feedback" id="qaScanMsg"></div>
           <div class="qa-chips" id="qaTeams"></div>
-        <div class="qa-h" style="margin-top:10px"><span class="qa-n">2</span><b>Next up</b><span class="muted" id="nuLeft"></span></div>
+        <div class="qa-h" style="margin-top:10px"><span class="qa-n">2</span><b>Next up</b><span class="muted" id="nuLeft"></span>
+          <span class="spacer"></span>
+          <div class="qa-chips nu-face" id="nuFace" title="Queue one side of the racking only - the odd positions (Front) or the even (Back) - so two teams can split an aisle">
+            <button type="button" class="chip-btn selected" data-face="">Both sides</button><button type="button" class="chip-btn" data-face="odd">Front</button><button type="button" class="chip-btn" data-face="even">Back</button>
+          </div></div>
         <div class="feedback" id="nuMsg"></div>
         <div class="nu-list" id="nuList"></div>
       </div>
@@ -324,6 +328,9 @@
           <div class="qa-chips" id="qaFrom" title="From the far end, a second team can count the same aisle and levels as one starting at the 001 end: they meet in the middle">
             <button type="button" class="chip-btn selected" data-dir="up">From the 001 end</button><button type="button" class="chip-btn" data-dir="down">From the far end</button>
           </div>
+          <div class="qa-chips" id="qaFace" title="One side of the racking only: the odd positions (Front) or the even (Back). Two teams can then split an aisle, one each side">
+            <button type="button" class="chip-btn selected" data-face="">Both sides</button><button type="button" class="chip-btn" data-face="odd">Front</button><button type="button" class="chip-btn" data-face="even">Back</button>
+          </div>
           <button type="button" class="primary" id="btnQuickQueue" disabled>Pick a team and an aisle</button>
           <button type="button" class="ghost" id="btnQaClear">Clear</button>
           <span class="spacer"></span>
@@ -337,6 +344,8 @@
         <div class="auto"><label for="fAssignTeam">Team</label><input id="fAssignTeam" class="sm" style="width:70px" placeholder="3" list="planTeamNames" autocomplete="off"></div>
         <div><label for="fAssignAisles">Aisles, in order</label><input id="fAssignAisles" placeholder="F01, F03, F05"></div>
         <div class="auto"><label for="fAssignLevels">Levels</label><input id="fAssignLevels" class="sm" placeholder="A-C" required title="Which levels this team counts, by equipment: A-C on foot, D-F with the lift, A-F for every level."></div>
+        <div class="auto"><label for="fAssignFace">Side</label>
+          <select id="fAssignFace" class="sm" title="One side of the racking only, so two teams can split an aisle"><option value="">Both</option><option value="odd">Front</option><option value="even">Back</option></select></div>
         <div class="auto"><label for="fAssignFrom">Start from</label>
           <select id="fAssignFrom" class="sm"><option value="up">The 001 end</option><option value="down">The far end</option></select></div>
         <div class="auto"><button class="fit" id="btnAssign">Queue</button></div>
