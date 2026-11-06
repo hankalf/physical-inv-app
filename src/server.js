@@ -31,6 +31,7 @@ import { recountSideBySide, secondCountsWorkbook } from './routes/recount-sheet.
 import { listGuides, getGuide, guidePdf, guideDocx, guideImage, scannerBookletPdf, scannerBookletDocx } from './routes/guides.js';
 import { erpAisles, erpAisleSheet } from './routes/erp-aisles.js';
 import { archiveAisle, finalReadiness, finalReport, listArchives, archivePath } from './routes/archive.js';
+import { closeout } from './routes/closeout.js';
 import { idleConfig, saveIdleConfig, teamClocks, checkIdle, answerIdle, openIdleAlerts, recentIdleAlerts, tellTeamsIdle, idleTick, recordSignoff, openSignon, openSignons, signoffDevice } from './routes/idle.js';
 import { practiceJobs, practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, practiceReadiness, practiceFromFile, practiceOptions, setPracticeOptions, practiceSandbox, setPracticeSandbox, practiceExport, ownerOf, practiceModes, startPracticeMode, MODE_ACCESS, practiceAll, deletePracticeOf } from './routes/practice.js';
 import { branding, saveLogo, clearLogo, saveName } from './routes/branding.js';
@@ -2599,6 +2600,10 @@ async function handleAdmin(req, res, url, m) {
     'erp_uploaded', 'erp_by', 'erp_at', 'erp_changed',
   ];
   // --- what has been filed as the count went, and the final report at the end
+  // the close-out checklist: what stands between now and done
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/closeout$/)) && method === 'GET') {
+    return sendJson(req, res, 200, closeout(m[1]));
+  }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/archives$/)) && method === 'GET') {
     return sendJson(req, res, 200, { archives: listArchives(m[1]), readiness: finalReadiness(m[1]) });
   }

@@ -2032,10 +2032,44 @@
   function shown(name) { const pane = document.querySelector(`[data-sub="${name}"]`); return !!pane && (pane.classList.contains('active') || pane.getClientRects().length > 0); }
   function paneJobs() {
     return {
-      progress: [refreshNotes, refreshProgress], teams: [refreshAssignments], reports: [refreshPallets, refreshLabels, refreshMoved, refreshFlagged, refreshCrew, refreshArchives], map: [refreshMap],
+      progress: [refreshNotes, refreshProgress, refreshCloseout], teams: [refreshAssignments], reports: [refreshPallets, refreshLabels, refreshMoved, refreshFlagged, refreshCrew, refreshArchives], map: [refreshMap],
       overview: [refreshOverview], second: [refreshRecounts], alerts: [refreshMessages, refreshAlerts], adjust: [refreshAdjustments, () => refreshErpAisles().catch(() => {})],
     };
   }
+  /* ------------------------------------------------------- the close-out checklist
+     What stands between now and done: a line an item, with its number, where it
+     stands, and a button to the tab that clears it. */
+  async function refreshCloseout() {
+    if (!sessionId || !$('closeoutList')) return;
+    const d = await apiJson(`/api/admin/sessions/${sessionId}/closeout`);
+    const n = (v) => Number(v || 0).toLocaleString();
+    $('closeoutSub').textContent = d.session.closed ? 'this count is closed'
+      : !d.binsTotal ? 'no bin list yet'
+      : d.clean ? 'nothing left — the count can be closed'
+      : d.ready ? `the final report can be filed · ${d.open} thing${d.open === 1 ? '' : 's'} to tidy`
+      : `${d.blocking} thing${d.blocking === 1 ? '' : 's'} hold${d.blocking === 1 ? 's' : ''} the final report · ${d.open} open in all`;
+    const list = $('closeoutList');
+    list.replaceChildren();
+    for (const it of d.items) {
+      const li = document.createElement('li');
+      li.className = 'check ' + (it.n === 0 ? 'ok' : it.blocks ? 'fail' : 'warn');
+      li.dataset.closeout = it.key;
+      const mark = document.createElement('span'); mark.className = 'mark'; mark.textContent = it.n === 0 ? '✓' : it.blocks ? '!' : '…';
+      const what = document.createElement('div'); what.className = 'what';
+      const b = document.createElement('b'); b.textContent = it.n === 0 ? it.label : `${n(it.n)} · ${it.label.toLowerCase()}`;
+      const sp = document.createElement('span'); sp.textContent = it.detail;
+      what.append(b, sp);
+      li.append(mark, what);
+      if (it.n > 0 && it.tab !== 'progress' && tab(it.tab)) {
+        const go = document.createElement('button'); go.type = 'button'; go.className = 'sm'; go.dataset.go = it.tab;
+        go.textContent = { teams: 'Team plan →', second: 'Second counts →', reports: 'Reports →', adjust: 'Adjustments →' }[it.tab] || 'Open →';
+        go.onclick = () => api.showSub(it.tab);
+        li.appendChild(go);
+      }
+      list.appendChild(li);
+    }
+  }
+
   /* ------------------------------------------------------- Inventory Control's overview
      Where the count stands for inventory control, in one read. */
   async function refreshOverview() {

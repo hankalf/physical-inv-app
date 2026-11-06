@@ -87,7 +87,7 @@ function tabOf(p, method) {
   const w = method !== 'GET';
   if (/^\/api\/admin\/sessions\/\d+\//.test(p)) {
     const rest = p.replace(/^\/api\/admin\/sessions\/\d+\//, '');
-    if (/^(progress|clocks|notes?|signoff)(\/|$)/.test(rest)) return 'dashboard.progress';
+    if (/^(progress|clocks|notes?|signoff|closeout)(\/|$)/.test(rest)) return 'dashboard.progress';
     if (/^map$/.test(rest) || rest === 'aisles/apply-layout') return 'dashboard.map';
     if (/^assignments(\/|$)/.test(rest) || /^plan(\/|$)/.test(rest) || rest === 'export/plan.csv') return 'dashboard.teams';
     if (/^(alerts|messages)(\/|$)/.test(rest)) return 'dashboard.alerts';

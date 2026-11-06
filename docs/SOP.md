@@ -2005,6 +2005,20 @@ round; *Inventory Control* is also a page of its own in a login's access list.
 
 *Inventory Control → Overview: where the count stands, in one read.*
 
+**The close-out checklist** sits at the bottom of the dashboard's **Progress** tab: one line an
+item, with its number, where it stands, and a button to the tab that clears it. The first three
+hold the final report — *bins without a count* (by aisle, the aisle with the most first), *second
+counts open* (by team, and how many have no team yet) and *third counts waiting*; the rest are the
+tidy-up before the count is closed — *aisles not handed back* (a team still on an aisle, and which
+levels it has handed back), *bins skipped on the gun* and not counted since, with the reason given,
+the *fix list*, *adjustments to approve* (when approvals are on) and *lines not keyed into the ERP*.
+Every line green reads *nothing left — the count can be closed*; the line under the heading says
+otherwise what holds the final report.
+
+![](images/progress-closeout.png)
+
+*Progress → Close-out: what stands between now and done, each line with the tab that clears it.*
+
 ### Step 18 — Work the second counts
 
 **Dashboard → Second counts.**
