@@ -1138,6 +1138,7 @@
     } catch (err) { msg($('recountMsg'), 'err', err.message); }
   };
   $('btnExportRecounts').onclick = () => download(`/api/admin/sessions/${sessionId}/export/recounts.csv`, `second-counts-session-${sessionId}.csv`);
+  $('btnExportRecountsXlsx').onclick = () => download(`/api/admin/sessions/${sessionId}/export/second-counts.xlsx`, `second-counts-by-aisle-${sessionId}.xlsx`);
   /* every bin counted again: the first, second and third counts beside the report, one aisle or all */
   $('btnExportSideBySide').onclick = async () => {
     if (!needSession($('recountMsg'))) return;

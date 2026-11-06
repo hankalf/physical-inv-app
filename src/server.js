@@ -26,7 +26,7 @@ import { buildMoves, importMoves, listMoves, movesForGun, finishMove, clearOpenM
 import { autoPlan, applyPlan } from './routes/auto-plan.js';
 import { endTrial, setTrial } from './routes/trial.js';
 import { exportEverything } from './routes/export-all.js';
-import { recountSideBySide } from './routes/recount-sheet.js';
+import { recountSideBySide, secondCountsWorkbook } from './routes/recount-sheet.js';
 import { listGuides, getGuide, guidePdf, guideDocx, guideImage, scannerBookletPdf, scannerBookletDocx } from './routes/guides.js';
 import { erpAisles, erpAisleSheet } from './routes/erp-aisles.js';
 import { archiveAisle, finalReadiness, finalReport, listArchives, archivePath } from './routes/archive.js';
@@ -2122,6 +2122,12 @@ async function handleAdmin(req, res, url, m) {
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/recounts\/(\d+)$/)) && method === 'DELETE') {
     audit(actor, 'removed a second count', `#${m[2]}`, m[1]);
     return sendJson(req, res, 200, { deleted: deleteRecount(m[1], m[2]) });
+  }
+  // the second counts by aisle, with a heat map: a workbook the server writes, colour and all
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/second-counts\.xlsx$/)) && method === 'GET') {
+    const out = secondCountsWorkbook(m[1]);
+    audit(actor, 'exported the second counts by aisle', `${out.rows} second counts in ${out.aisles} aisles, ${out.open} open`, m[1]);
+    return send(req, res, 200, out.buffer, { 'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'content-disposition': `attachment; filename="${out.filename}"`, 'cache-control': 'no-cache' });
   }
   // second and third counts beside the first, for Excel (the browser writes the workbook)
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/export\/recounts-side-by-side$/)) && method === 'GET') {

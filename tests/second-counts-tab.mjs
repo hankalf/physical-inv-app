@@ -7,6 +7,7 @@
  * count, remove - goes to all of them at once.
  */
 import { chromium } from 'playwright-core';
+import { inflateRawSync } from 'node:zlib';
 import { signIn, pickSession, expandSubTabs } from './helpers.mjs';
 
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
@@ -143,6 +144,25 @@ check('Mark done: both done, with a confirm first', /2 second counts marked done
 const [dl] = await Promise.all([page.waitForEvent('download'), (async () => { await page.click('#recState button[data-state="done"]'); await page.waitForTimeout(200); await page.click(`#recountTable tr[data-recount="${r2}"] input[data-pick]`); await page.click('#btnBulkExport'); })()]);
 check('Shown as CSV: a file of the rows on screen', /second-counts-shown/.test(dl.suggestedFilename()));
 check('The 3rd count button still sits on a finished second count with none', (await page.locator(`#recountTable button[data-third="${r2}"]`).count()) === 1);
+
+/* ---------------- the workbook by aisle, with the heat map ---------------- */
+const xr = await fetch(`${BASE}/api/admin/sessions/${S}/export/second-counts.xlsx`, { headers: A });
+const xbuf = Buffer.from(await xr.arrayBuffer());
+const parts = {};
+{ let off = 0; while (off < xbuf.length && xbuf.readUInt32LE(off) === 0x04034b50) { const nlen = xbuf.readUInt16LE(off + 26), elen = xbuf.readUInt16LE(off + 28), clen = xbuf.readUInt32LE(off + 18); const name = xbuf.toString('utf8', off + 30, off + 30 + nlen); parts[name] = inflateRawSync(xbuf.subarray(off + 30 + nlen + elen, off + 30 + nlen + elen + clen)).toString('utf8'); off += 30 + nlen + elen + clen; } }
+const cellsOf = (xml) => Object.fromEntries([...xml.matchAll(/<c r="([A-Z]+\d+)"[^>]*?(?:\/>|>(.*?)<\/c>)/g)].map((m) => [m[1], (m[2] || '').replace(/<[^>]+>/g, '')]));
+check('The workbook downloads as an .xlsx with three sheets: By aisle, Heat map, Second counts', xr.status === 200 && /second-counts-by-aisle/.test(xr.headers.get('content-disposition')) && (parts['xl/workbook.xml'] || '').includes('name="By aisle"') && parts['xl/workbook.xml'].includes('name="Heat map"') && parts['xl/workbook.xml'].includes('name="Second counts"'), Object.keys(parts).join());
+const s1 = cellsOf(parts['xl/worksheets/sheet1.xml'] || '');
+const aisleRow = Object.entries(s1).find(([k, v]) => /^A\d+$/.test(k) && v === 'F01')?.[0]?.slice(1);
+check('By aisle: one row an aisle with its bins, second counts, open, started, done, by reason, and who holds the open ones', aisleRow && s1[`C${aisleRow}`] === '4' && s1[`D${aisleRow}`] === '5' && s1[`E${aisleRow}`] === '2' && s1['H1'] === 'Manual' && Object.values(s1).includes('Every aisle'), JSON.stringify([s1[`C${aisleRow}`], s1[`D${aisleRow}`], s1[`E${aisleRow}`], s1[`G${aisleRow}`]]));
+const s2 = cellsOf(parts['xl/worksheets/sheet2.xml'] || '');
+check('Heat map: aisles down, levels across, the open ones then all of them', Object.values(s2).includes('Level A') && Object.values(s2).includes('Level B') && Object.values(s2).some((v) => /^OPEN second counts/.test(v)) && Object.values(s2).some((v) => /^ALL second counts/.test(v)) && Object.values(s2).includes('F02'));
+check('…shaded: the styles carry solid fills in the heat colours, and the grid cells use them', (parts['xl/styles.xml'].match(/patternType="solid"/g) || []).length >= 3 && /FFFFF3E0|FFFFE0B2|FFFFCC80|FFFFB74D|FFFF9800|FFF57C00|FFE65100/.test(parts['xl/styles.xml']) && (parts['xl/worksheets/sheet2.xml'].match(/ s="\d+"/g) || []).length > 10);
+const s3 = cellsOf(parts['xl/worksheets/sheet3.xml'] || '');
+check('Second counts: the clean list aisle by aisle, bin by bin, with aisle, level, face, state, pallet, item, variant', s3['A1'] === 'Aisle' && s3['B1'] === 'Bin' && s3['D1'] === 'Face' && s3['L1'] === 'Variant' && s3['A2'] === 'F01' && s3['B2'] === 'F01A001' && s3['D2'] === 'Front' && s3['L2'] === 'DIST' && s3['B3'] === 'F01A002', JSON.stringify([s3['A2'], s3['B2'], s3['B3'], s3['B4']]));
+check('…and it opens in Excel-type software: sheet data, styles, the two files that name them all', ['[Content_Types].xml', '_rels/.rels', 'xl/_rels/workbook.xml.rels', 'xl/styles.xml'].every((k) => parts[k]));
+const [xdl] = await Promise.all([page.waitForEvent('download'), page.click('#btnExportRecountsXlsx')]);
+check('The button on the tab downloads it', /second-counts-by-aisle/.test(xdl.suggestedFilename()), xdl.suggestedFilename());
 check('No page errors', !errors.length, errors.join(' | '));
 await browser.close();
 
