@@ -1187,6 +1187,7 @@
     api.subCount('second', open);   // so an open second count is visible from any tab
     rec.rows = rows;
     rec.thirdCol = thirdOn || rows.some((x) => Number(x.round) === 3);
+    renderRecTeams(rows, rteam);
     recFillFilters();
     renderRecounts();
   }
@@ -2513,6 +2514,59 @@
   $('btnExportCrewXlsx').onclick = () => api.download(`/api/admin/sessions/${sessionId}/export/crew-metrics.xlsx`, `crew-metrics-session-${sessionId}.xlsx`).catch((err) => msg($('crewMsg'), 'err', err.message));
   $('btnExportCrewTeams').onclick = () => api.download(`/api/admin/sessions/${sessionId}/export/crew-teams.csv`, `crew-teams-session-${sessionId}.csv`);
   $('btnExportCrewPeople').onclick = () => api.download(`/api/admin/sessions/${sessionId}/export/crew-people.csv`, `crew-people-session-${sessionId}.csv`);
+
+  /* second counts by team: how far each team is with the bins it has been
+     handed - open, started, done - and the pool nobody has yet. A team's
+     done ones are the ones it finished, whoever they were raised for. */
+  function renderRecTeams(rows, rteam) {
+    const box = $('recTeams');
+    if (!box) return;
+    const live = rows.filter((r) => r.reason !== 'CYCLE');
+    const by = new Map();
+    const at = (t) => { if (!by.has(t)) by.set(t, { team: t, open: 0, started: 0, done: 0, late: 0 }); return by.get(t); };
+    for (const r of live) {
+      if (r.status === 'done') at(r.done_by_team || r.team || '').done++;
+      else { const k = at(r.team || ''); if (r.status === 'taken') k.started++; else k.open++; }
+    }
+    const pool = by.get('') || { open: 0, started: 0, done: 0 };
+    by.delete('');
+    const teams = [...by.values()].sort((a, b) => (b.team === rteam) - (a.team === rteam) || (b.open + b.started) - (a.open + a.started) || String(a.team).localeCompare(String(b.team), undefined, { numeric: true }));
+    box.hidden = !teams.length && !pool.open;
+    box.innerHTML = '';
+    if (box.hidden) return;
+    const head = document.createElement('div'); head.className = 'rt-head';
+    const totalLeft = live.filter((r) => r.status !== 'done').length, totalDone = live.length - totalLeft;
+    head.textContent = `By team · ${totalDone} of ${live.length} done${pool.open ? ` · ${pool.open} in the pool for any team` : ''}`;
+    box.appendChild(head);
+    const strip = document.createElement('div'); strip.className = 'rt-strip';
+    for (const t of teams) {
+      const total = t.open + t.started + t.done;
+      const pct = total ? Math.round((t.done / total) * 100) : 0;
+      const card = document.createElement('button');
+      card.type = 'button'; card.className = 'rt-card' + (rec.team === t.team ? ' selected' : '') + (!t.open && !t.started ? ' finished' : ''); card.dataset.recTeam = t.team;
+      card.title = `Team ${t.team}: ${t.done} done, ${t.started} started, ${t.open} still to do${t.team === rteam ? ' — new second counts go to this team' : ''}. Click to see its rows.`;
+      const name = document.createElement('b'); name.textContent = `Team ${t.team}`;
+      if (t.team === rteam) name.appendChild(Object.assign(document.createElement('span'), { className: 'rt-tag', textContent: 'gets new ones' }));
+      const nums = document.createElement('span'); nums.className = 'rt-nums';
+      nums.textContent = `${t.done} of ${total} done${t.started ? ` · ${t.started} started` : ''}${t.open ? ` · ${t.open} to do` : ''}`;
+      const bar = document.createElement('div'); bar.className = 'bar rt-bar'; bar.innerHTML = '<i></i><u></u>';
+      bar.querySelector('i').style.width = pct + '%';
+      bar.querySelector('u').style.left = pct + '%'; bar.querySelector('u').style.width = (total ? Math.round((t.started / total) * 100) : 0) + '%';
+      const pctEl = document.createElement('span'); pctEl.className = 'rt-pct'; pctEl.textContent = `${pct}%`;
+      card.append(name, nums, bar, pctEl);
+      card.onclick = () => { rec.team = rec.team === t.team ? '' : t.team; $('fRecTeamFilter').value = rec.team; renderRecTeams(rows, rteam); renderRecounts(); };
+      strip.appendChild(card);
+    }
+    if (pool.open) {
+      const card = document.createElement('button');
+      card.type = 'button'; card.className = 'rt-card pool' + (rec.team === '~none' ? ' selected' : ''); card.dataset.recTeam = '~none';
+      card.title = 'Second counts no team has yet: any team that did not do the first count may take them. Click to see them.';
+      card.append(Object.assign(document.createElement('b'), { textContent: 'Any team' }), Object.assign(document.createElement('span'), { className: 'rt-nums', textContent: `${pool.open} waiting for a team` }));
+      card.onclick = () => { rec.team = rec.team === '~none' ? '' : '~none'; $('fRecTeamFilter').value = rec.team; renderRecTeams(rows, rteam); renderRecounts(); };
+      strip.appendChild(card);
+    }
+    box.appendChild(strip);
+  }
 
   /* found in a different bin: the moves, aisle by aisle */
   async function refreshMoved() {

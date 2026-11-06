@@ -1984,6 +1984,9 @@ A second count is a bin somebody has to walk back to. They are raised automatica
 a line disagrees with the inventory report (subject to your thresholds), or by a
 supervisor.
 
+- **By team**, under the buttons: a card for each team with second counts — *3 of 10 done · 1 started
+  · 6 to do* with a bar (green done, amber started) — and one for the pool nobody has yet. The team new
+  second counts go to is marked. Click a card to see only that team's rows; click again for all.
 - **Raise from all variances now** goes through everything that currently disagrees and raises the
   tasks. It deliberately leaves alone pallets in aisles nobody has counted yet — mid-count
   those are not missing, just not reached — and tells you how many it skipped and why.

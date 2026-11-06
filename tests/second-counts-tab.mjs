@@ -83,6 +83,13 @@ check('Every second count shows, with its aisle, level, face, item and variant c
 check('…the reasons as chips with how many, the aisles, levels, teams and variants as boxes', /MANUAL\s*6/.test(clean(await page.textContent('#recReasons'))) && /F01 \(5\)/.test(clean(await page.textContent('#fRecAisleFilter'))) && /Level B \(1\)/.test(clean(await page.textContent('#fRecLevelFilter'))) && /Team 7 \(1\)/.test(clean(await page.textContent('#fRecTeamFilter'))) && /DIST \(3\)/.test(clean(await page.textContent('#fRecVariantFilter'))), [clean(await page.textContent('#fRecAisleFilter')), clean(await page.textContent('#fRecVariantFilter'))].join(' | '));
 check('…and the two faces of the racking as a switch', (await page.$$eval('#recFace button', (b) => b.map((x) => x.textContent))).join() === 'Back,Front,Both');
 
+/* by team: a card a team with its bar, and the pool */
+check('By team: a card for each team with second counts, saying done, started and to do, and one for the pool', await page.isVisible('#recTeams') && (await page.locator('#recTeams .rt-card[data-rec-team]').count()) >= 3 && /0 of 1 done · 1 to do/.test(clean(await page.textContent('#recTeams .rt-card[data-rec-team="7"]'))) && /waiting for a team/.test(clean(await page.textContent('#recTeams .rt-card[data-rec-team="~none"]'))) && /By team · \d+ of 6 done/.test(clean(await page.textContent('#recTeams .rt-head'))), clean(await page.textContent('#recTeams')).slice(0, 240));
+await page.click('#recTeams .rt-card[data-rec-team="7"]'); await page.waitForTimeout(250);
+check('…click a team: only its rows, the card lit, the team box set', (await shownBins()).join() === 'F02A001' && (await page.$eval('#recTeams .rt-card[data-rec-team="7"]', (c) => c.classList.contains('selected'))) && (await page.inputValue('#fRecTeamFilter')) === '7');
+await page.click('#recTeams .rt-card[data-rec-team="7"]'); await page.waitForTimeout(250);
+check('…click it again: every row back', (await count()) === 6 && (await page.inputValue('#fRecTeamFilter')) === '');
+
 /* search */
 await page.fill('#fRecSearch', 'mango'); await page.waitForTimeout(250);
 check('Search by description: one row', (await shownBins()).join() === 'F02A001' && /1 of 6/.test(clean(await page.textContent('#recShown'))), (await shownBins()).join());
