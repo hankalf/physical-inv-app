@@ -31,7 +31,7 @@ import { recountSideBySide, secondCountsWorkbook } from './routes/recount-sheet.
 import { listGuides, getGuide, guidePdf, guideDocx, guideImage, scannerBookletPdf, scannerBookletDocx } from './routes/guides.js';
 import { erpAisles, erpAisleSheet } from './routes/erp-aisles.js';
 import { archiveAisle, finalReadiness, finalReport, listArchives, archivePath } from './routes/archive.js';
-import { idleConfig, saveIdleConfig, teamClocks, checkIdle, answerIdle, openIdleAlerts, recentIdleAlerts, tellTeamsIdle, idleTick, recordSignoff } from './routes/idle.js';
+import { idleConfig, saveIdleConfig, teamClocks, checkIdle, answerIdle, openIdleAlerts, recentIdleAlerts, tellTeamsIdle, idleTick, recordSignoff, openSignon, openSignons, signoffDevice } from './routes/idle.js';
 import { practiceJobs, practiceSession, ensurePractice, resetPractice, practiceDevice, practiceSheet, practiceHistory, practiceReadiness, practiceFromFile, practiceOptions, setPracticeOptions, practiceSandbox, setPracticeSandbox, practiceExport, ownerOf, practiceModes, startPracticeMode, MODE_ACCESS, practiceAll, deletePracticeOf } from './routes/practice.js';
 import { branding, saveLogo, clearLogo, saveName } from './routes/branding.js';
 import { raiseAlert, tellTeams, listAlerts, seeAlert, closeAlert, alertsForDevice, sosReasons, saveSosReasons, DEFAULT_REASONS } from './routes/alerts.js';
@@ -556,6 +556,17 @@ async function handleHandheld(req, res, url, m) {
         throw Object.assign(httpError(403, `${known.unknown.join(', ')} ${known.unknown.length === 1 ? 'is' : 'are'} not on the crew list — see a supervisor`), { code: 'crew', unknown: known.unknown });
       }
     }
+    /* One team per scanner. A gun still signed on as another team is not
+       taken over by a second sign-on: that team taps Sign off, or a supervisor
+       signs the scanner off from the dashboard. The same team signing on again
+       (a crew change) is fine - the earlier sign-on ends. */
+    const devName = device ? device.name : body.deviceId;
+    const held = openSignon(m[1], devName);
+    if (held && held.team !== norm(body.team)) {
+      const since = new Date(held.started_at).toLocaleTimeString('en-US', { timeZone: siteTimezone(), hour: 'numeric', minute: '2-digit' });
+      audit(devName, 'refused a sign-on: the scanner is signed on as another team', `team ${norm(body.team)} tried; team ${held.team} has it since ${since}`, m[1]);
+      throw Object.assign(httpError(409, `This scanner is still signed on as team ${held.team} (since ${since}). That team taps Sign off first, or a supervisor signs the scanner off from the dashboard.`), { code: 'signedOn', team: held.team, since: held.started_at });
+    }
     recordSignon(m[1], {
       deviceId: body.deviceId,
       team: body.team,
@@ -775,9 +786,18 @@ async function handleAdmin(req, res, url, m) {
     }
     return sendJson(req, res, 200, {
       clocks: teamClocks(m[1]), open: openIdleAlerts(m[1]), recent: recentIdleAlerts(m[1], 30),
+      signons: openSignons(m[1]),                 // the scanners still signed on, team by team
       config: idleConfig(), now: new Date().toISOString(),
       count: countClock(m[1]),                    // the clock on the whole count: time, downtime, pace, finish
     });
+  }
+  // a supervisor signs a scanner off: the team on it walked away without tapping Sign off
+  if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/signoff$/)) && method === 'POST') {
+    const body = await readJson(req);
+    if (!norm(body.deviceId)) throw httpError(400, 'deviceId required');
+    const out = signoffDevice(m[1], body.deviceId);
+    audit(actor, 'signed a scanner off', `${norm(body.deviceId)}: ${out.ended ? `team ${out.teams.join(', ')}` : 'nobody was signed on'}`, m[1]);
+    return sendJson(req, res, 200, out);
   }
   if ((m = p.match(/^\/api\/admin\/sessions\/(\d+)\/clocks\/(\d+)$/)) && method === 'POST') {
     const body = await readJson(req);

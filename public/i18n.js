@@ -220,7 +220,7 @@
     'Scan the rack label of the bin this pallet is in.': 'Escanea la etiqueta del rack de la ubicación donde está esta tarima.',
     'SECOND COUNT': 'SEGUNDO CONTEO',
     'THIRD COUNT': 'TERCER CONTEO',
-    'Not signed on — see a supervisor': 'Sin sesión — habla con un supervisor',
+    'Not signed on — see a supervisor': 'Sin sesión — habla con un supervisor', 'Scanner already signed on': 'El escáner ya tiene sesión',
     'A comment is needed on this pallet': 'Esta tarima necesita un comentario',
     'Tap a reason below or type a note, then Enter.': 'Toca un motivo abajo o escribe una nota, luego Enter.',
     'It opens on its own screen. Sign in there, make the move, then come back here and tap next.': 'Se abre en su propia pantalla. Entra ahí, haz el movimiento, y luego regresa aquí y toca siguiente.',
@@ -328,6 +328,7 @@
   const T = (s) => tr(s);
   const PATTERNS = [
     [/^Step (\d+) of (\d+)$/, (m) => `Paso ${m[1]} de ${m[2]}`],
+    [/^This scanner is still signed on as team (\S+) \(since (.+)\)\. That team taps Sign off first, or a supervisor signs the scanner off from the dashboard\.$/, (m) => `Este escáner sigue con sesión del equipo ${m[1]} (desde ${m[2]}). Ese equipo toca Cerrar sesión primero, o un supervisor cierra la sesión del escáner desde el panel.`],
     [/^Back to (\S+)$/, (m) => `Volver a ${m[1]}`],
     [/^Switching to (\S+)…$/, (m) => `Cambiando a ${m[1]}…`],
     [/^Could not switch to (\S+)$/, (m) => `No se pudo cambiar a ${m[1]}`],

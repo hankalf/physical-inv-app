@@ -1400,7 +1400,11 @@ English, so the office reads one language whoever counted.
    that count and can work from then on **with no signal**.
 
 A clock-in number that is not on the crew list is turned away: *"…is not on the crew list — see
-a supervisor"*, who adds the person under Teams & crew. On the jobs one person does alone — a
+a supervisor"*, who adds the person under Teams & crew. **One team per scanner:** a gun still signed
+on as another team is not taken over — *"This scanner is still signed on as team 3 (since 7:10).
+That team taps Sign off first, or a supervisor signs the scanner off from the dashboard."* The same
+team signing on again (a crew change) is fine. On the dashboard's Progress table each team's
+scanner has a **Sign off** button (the *Alerts* function) for a gun a crew walked off with. On the jobs one person does alone — a
 **cycle count**, **Front2Back** and **Not in Location** — the bar at the top of the scanner shows
 **the person's name** from the crew list (*GUN-03 · Rosa Delgado*) rather than their number, so
 anyone glancing at the gun knows whose it is.

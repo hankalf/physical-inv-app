@@ -137,10 +137,13 @@ await post(`/api/admin/sessions/${sess.id}/assignments/${a8.id}`, { status: 'don
 c = await get(`/api/admin/sessions/${sess.id}/clocks`);
 check('A team with no aisle left is finished, and its clock stops', clock('8').state === 'finished' && !clock('8').working);
 
-/* a scanner re-used by another crew ends the first crew */
+/* one team per scanner: another crew cannot sign on over the first; once it signs off, they can */
+const taken = await fetch(`${BASE}/api/sessions/${sess.id}/signon`, { method: 'POST', headers: G8, body: JSON.stringify({ deviceId: 'CLK-08', team: '9', employees: ['E3'] }) });
+check('Another crew signing on to a scanner still signed on as team 8 is refused, and told who has it', taken.status === 409 && /signed on as team 8/.test((await taken.json()).error));
+await post(`/api/sessions/${sess.id}/signoff`, { deviceId: 'CLK-08', team: '8' }, G8);
 await post(`/api/sessions/${sess.id}/signon`, { deviceId: 'CLK-08', team: '9', employees: ['E3'] }, G8);
 c = await get(`/api/admin/sessions/${sess.id}/clocks`);
-check('When another crew signs on to a scanner, the crew before it has signed off', clock('9') && ['finished', 'signed off'].includes(clock('8').state));
+check('Once team 8 signs off, team 9 signs on, and team 8 has signed off', clock('9') && ['finished', 'signed off'].includes(clock('8').state));
 
 /* ---------------- the setting ---------------- */
 const off = await post('/api/admin/idle-config', { minutes: 0 });

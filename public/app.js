@@ -884,6 +884,14 @@
           if (state.assignment.crew) { state.crew = state.assignment.crew; await metaSet('crew', state.crew); updateChips(); }
           await refreshRecounts();
         } catch (err) {
+          // the scanner is still another team's: no sign-on at all
+          if (err.code === 'signedOn') {
+            state.session = null; state.team = '';
+            showScreen('scrSignon');
+            beep('err');
+            feedback($('signonMsg'), 'err', 'Scanner already signed on', err.message);
+            return;
+          }
           // a clock-in number the site does not know: no sign-on at all
           if (err.code === 'crew') {
             state.session = null; state.team = '';

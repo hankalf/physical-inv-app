@@ -87,7 +87,7 @@ function tabOf(p, method) {
   const w = method !== 'GET';
   if (/^\/api\/admin\/sessions\/\d+\//.test(p)) {
     const rest = p.replace(/^\/api\/admin\/sessions\/\d+\//, '');
-    if (/^(progress|clocks|notes?)(\/|$)/.test(rest)) return 'dashboard.progress';
+    if (/^(progress|clocks|notes?|signoff)(\/|$)/.test(rest)) return 'dashboard.progress';
     if (/^map$/.test(rest) || rest === 'aisles/apply-layout') return 'dashboard.map';
     if (/^assignments(\/|$)/.test(rest) || /^plan(\/|$)/.test(rest) || rest === 'export/plan.csv') return 'dashboard.teams';
     if (/^(alerts|messages)(\/|$)/.test(rest)) return 'dashboard.alerts';
@@ -135,7 +135,7 @@ export function routeNeed(p, method) {
   // the functions
   if (/\/adjustments\/decide$/.test(p)) return 'approve';
   if (w && /\/messages(\/\d+)?$/.test(p)) return 'messages';
-  if (/\/alerts\/\d+\/(seen|close)$/.test(p) || (w && /\/clocks\/\d+$/.test(p))) return 'alerts';
+  if (/\/alerts\/\d+\/(seen|close)$/.test(p) || (w && /\/clocks\/\d+$/.test(p)) || (w && /\/sessions\/\d+\/signoff$/.test(p))) return 'alerts';
   if ((w && /\/assignments(\/|$)/.test(p)) || (w && /\/sessions\/\d+\/plan$/.test(p)) || (w && /\/recounts(\/|$)/.test(p)) || /\/aisles\/apply-layout$/.test(p) || (w && /\/notes?(\/\d+)?$/.test(p))) return 'assign';
   // the pages' own data
   if (/\/erp-entries(\/|$)/.test(p)) return 'approve';            // marking lines as keyed into the ERP is inventory control's

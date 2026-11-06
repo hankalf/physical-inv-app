@@ -217,7 +217,20 @@
         else if (k && k.spells) down.title = `${k.spells} quiet spell${k.spells === 1 ? '' : 's'} over ${clockData.count.gapMinutes} min`;
         const pace = cell(k && k.linesPerHour != null ? String(k.linesPerHour) : '—', 'num');
         if (k && k.linesPerHour != null) pace.title = `${k.binsPerHour} bins an hour, over ${span(k.countingMs)} of counting`;
-        tr.append(cell(c && c.person ? `${t.team} · ${c.person}` : t.team), cell(c && c.shift ? SHIFT_NAME[c.shift] : '—'), cell(t.devices || '—'), Object.assign(cell(t.employees || '—', 'wrap'), { title: t.badges || '' }),
+        /* the scanners still signed on as this team, each with a Sign off for the supervisor: one team per scanner, so a gun
+           a crew walked off with is freed here, not by the next crew signing on over them */
+        const scanners = cell(t.devices || '—');
+        for (const so of (clockData.signons || []).filter((x) => x.team === t.team)) {
+          const b = button('Sign off', 'sm ghost', async () => {
+            if (!confirm(`Sign ${so.deviceId} off team ${t.team}? Whoever picks it up next signs on fresh.`)) return;
+            try { await postJson(`/api/admin/sessions/${sessionId}/signoff`, { deviceId: so.deviceId }); await refreshClocks(); }
+            catch (err) { alert(err.message); }
+          });
+          b.dataset.signoff = so.deviceId; b.title = `${so.deviceId} has been signed on as team ${t.team} since ${new Date(so.since).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+          b.disabled = !api.can('alerts');
+          scanners.append(' ', b);
+        }
+        tr.append(cell(c && c.person ? `${t.team} · ${c.person}` : t.team), cell(c && c.shift ? SHIFT_NAME[c.shift] : '—'), scanners, Object.assign(cell(t.employees || '—', 'wrap'), { title: t.badges || '' }),
           (() => { const a = t.active_aisle || (c && c.aisle); return cell(a ? aisleLabel(a, zoneByAisle.get(a)) : '—'); })(),
           st, timer, down, quiet, cell(t.lines || 0, 'num'), cell(t.bins || 0, 'num'), pace);
         return tr;

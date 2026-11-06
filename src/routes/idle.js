@@ -205,6 +205,25 @@ export async function idleTick({ dashboard = '' } = {}) {
 }
 
 /** A gun signing off: that crew's clock stops and nobody is told it went quiet. */
+/** The crew still signed on to a scanner on this count, if any: one team per scanner. */
+export function openSignon(sessionId, deviceId, at = Date.now()) {
+  const cutoff = new Date(at - SHIFT_HOURS * 3600000).toISOString();
+  return db.prepare('SELECT id, team, employees, started_at FROM signons WHERE session_id = ? AND device_id = ? AND ended_at IS NULL AND started_at > ? ORDER BY id DESC LIMIT 1')
+    .get(Number(sessionId), norm(deviceId), cutoff) || null;
+}
+/** Every scanner still signed on to the count, with its team: what the dashboard can sign off. */
+export function openSignons(sessionId, at = Date.now()) {
+  const cutoff = new Date(at - SHIFT_HOURS * 3600000).toISOString();
+  return db.prepare('SELECT device_id AS deviceId, team, employees, started_at AS since FROM signons WHERE session_id = ? AND ended_at IS NULL AND started_at > ? ORDER BY team, device_id')
+    .all(Number(sessionId), cutoff).map((r) => { let e = []; try { e = JSON.parse(r.employees || '[]'); } catch { e = []; } return { ...r, employees: e }; });
+}
+/** A supervisor signs a scanner off from the dashboard: whoever was on it is off it. */
+export function signoffDevice(sessionId, deviceId) {
+  const rows = db.prepare('SELECT id, team FROM signons WHERE session_id = ? AND device_id = ? AND ended_at IS NULL').all(Number(sessionId), norm(deviceId));
+  for (const r of rows) db.prepare('UPDATE signons SET ended_at = ? WHERE id = ?').run(now(), r.id);
+  return { ended: rows.length, teams: [...new Set(rows.map((r) => r.team))] };
+}
+
 export function recordSignoff(sessionId, { deviceId, team }) {
   const t = norm(team);
   const row = db.prepare(
